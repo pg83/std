@@ -2,10 +2,14 @@
 
 #include <std/os/types.h>
 
-#define stdErr (::Std::stderrStream())
-#define stdOut (::Std::stdoutStream())
+#define stdE (::Std::stderrStream())
+#define stdO (::Std::stdoutStream())
+#define endL (::Std::EndLine())
 
 namespace Std {
+    struct EndLine {
+    };
+
     struct Output;
 
     template <typename T>
@@ -20,7 +24,7 @@ namespace Std {
             }
         }
 
-        inline void write(char ch) {
+        inline void write(u8 ch) {
             write(&ch, 1);
         }
 
@@ -31,8 +35,20 @@ namespace Std {
             return out;
         }
 
+        inline void flush() {
+            flushImpl();
+        }
+
+        inline void finish() {
+            finishImpl();
+        }
+
     private:
         virtual void writeImpl(const void* data, size_t len) = 0;
+
+        // have sensible defaults
+        virtual void flushImpl();
+        virtual void finishImpl();
     };
 
     Output& stdoutStream() noexcept;

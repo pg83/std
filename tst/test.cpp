@@ -1,14 +1,17 @@
+#include <std/tl/range.h>
 #include <std/tl/buffer.h>
 #include <std/io/output.h>
+#include <std/tl/string/dynamic.h>
 
 using namespace Std;
 
 int main() {
-    Buffer buf(1024);
+    DynString buf;
 
-    buf.append("qw", 2);
-    buf.append("er", 2);
-    buf.append("\n", 1);
+    buf.append(u8"qw", 2);
+    buf.append(u8"er", 2);
 
-    stdOut << buf;
+    for (auto ch : range(buf)) {
+        stdO << ch << endL;
+    }
 }

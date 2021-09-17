@@ -1,19 +1,21 @@
 HDRS = \
-    $(wildcard std/tl/*.h) \
     $(wildcard std/os/*.h) \
-    $(wildcard std/io/*.h)
+    $(wildcard std/io/*.h) \
+    $(wildcard std/tl/*.h) \
+    $(wildcard std/tl/string/*.h)
 
 LIBS = \
-    $(wildcard std/tl/*.cpp) \
     $(wildcard std/os/*.cpp) \
-    $(wildcard std/io/*.cpp)
+    $(wildcard std/io/*.cpp) \
+    $(wildcard std/tl/*.cpp) \
+    $(wildcard std/tl/string/*.cpp)
 
 LIBO = $(LIBS:%=%.o)
 
 TSTS = $(wildcard tst/*.cpp)
 TSTO = $(TSTS:%=%.o)
 
-CXXF = -I. -std=c++2a $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
+CXXF = -I. -W -Wall -O2 -std=c++2a $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 
 all: libstd.a test
 
@@ -23,6 +25,10 @@ libstd.a: $(LIBO) Makefile
 	ranlib libstd.a
 
 std/tl/%.cpp.o: std/tl/%.cpp $(HDRS) Makefile
+	-mkdir -p `dirname $@`
+	$(CXX) $(CXXF) -o $@ -c $<
+
+std/tl/string/%.cpp.o: std/tl/string/%.cpp $(HDRS) Makefile
 	-mkdir -p `dirname $@`
 	$(CXX) $(CXXF) -o $@ -c $<
 

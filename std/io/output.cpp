@@ -38,10 +38,29 @@ namespace {
 Output::~Output() {
 }
 
-Output& Std::stdoutStream() noexcept {
-    return singleton<StdOut>();
+void Output::flushImpl() {
 }
 
-Output& Std::stderrStream() noexcept {
-    return singleton<StdErr>();
+void Output::finishImpl() {
+}
+
+namespace Std {
+    Output& stdoutStream() noexcept {
+        return singleton<StdOut>();
+    }
+
+    Output& stderrStream() noexcept {
+        return singleton<StdErr>();
+    }
+
+    template <>
+    void output<EndLine>(Output& out, const EndLine&) {
+        out.write('\n');
+        out.flush();
+    }
+
+    template <>
+    void output<c8>(Output& out, const c8& ch) {
+        out.write(&ch, 1);
+    }
 }
