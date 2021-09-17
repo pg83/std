@@ -6,3 +6,5 @@
 *#
 bld
 *bld*
+test
+libstd.a
