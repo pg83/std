@@ -35,6 +35,9 @@ namespace {
     };
 }
 
+Output::~Output() {
+}
+
 Output& Std::stdoutStream() noexcept {
     return singleton<StdOut>();
 }

@@ -12,6 +12,8 @@ namespace Std {
     void output(Output& out, const T& t);
 
     struct Output {
+        virtual ~Output();
+
         inline void write(const void* data, size_t len) {
             if (len) {
                 writeImpl(data, len);
