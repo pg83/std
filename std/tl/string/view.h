@@ -15,6 +15,12 @@ namespace Std {
         {
         }
 
+        template <typename Other>
+        inline StringView(const Other& str) noexcept
+            : StringView(str.data(), str.length())
+        {
+        }
+
         inline StringView(const c8* ptr, size_t len) noexcept
              : ptr_(ptr)
              , len_(len)

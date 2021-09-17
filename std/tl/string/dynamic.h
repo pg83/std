@@ -1,6 +1,8 @@
 #pragma once
 
+#include "ize.h"
 #include "ops.h"
+#include "view.h"
 
 #include <std/os/types.h>
 
@@ -15,19 +17,13 @@ namespace Std {
         inline DynString() noexcept {
         }
 
-        template <typename Other>
-        inline DynString(const Other& str)
-            : DynString(str.data(), str.size())
-        {
+        template <class Other>
+        inline DynString(const Other& str) {
+            append(stringize(str));
         }
 
         inline DynString(DynString&& str) noexcept
             : buf_(move(str.buf_))
-        {
-        }
-
-        inline DynString(const u8* ptr, size_t len)
-            : buf_(ptr, len)
         {
         }
 
@@ -47,18 +43,28 @@ namespace Std {
             return buf_.capacity();
         }
 
-        inline void append(const c8* ptr, size_t len) {
-            buf_.append(ptr, len);
-        }
-
-        inline void pushBack(c8 ch) {
-            append(&ch, 1);
-        }
-
         inline void grow(size_t len) {
             buf_.grow(len);
         }
 
         const char* cStr();
+
+        inline DynString& append(const c8* ptr, size_t len) {
+            buf_.append(ptr, len);
+
+            return *this;
+        }
+
+        template <typename Other>
+        friend inline DynString operator+(const DynString& l, const Other& r) {
+            return DynString(l) += r;
+        }
+
+        template <typename Other>
+        inline DynString& operator+=(const Other& r) {
+            auto tmp = stringize(r);
+
+            return append(tmp.data(), tmp.length());
+        }
     };
 }

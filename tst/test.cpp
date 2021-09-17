@@ -11,6 +11,10 @@ int main() {
     buf.append(u8"qw", 2);
     buf.append(u8"er", 2);
 
+    for (size_t i = 0; i < 10; ++i) {
+        buf += 'x';
+    }
+
     for (auto ch : range(buf)) {
         stdO << ch << endL;
     }
