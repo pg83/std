@@ -1,3 +1,4 @@
+#include "bits.h"
 #include "buffer.h"
 
 #include <std/os/bss.h>
@@ -66,7 +67,7 @@ void Buffer::shrinkToFit() {
 
 void Buffer::grow(size_t size) {
     if (size > capacity()) {
-        Buffer buf(size);
+        Buffer buf(clp2(size + sizeof(Header)) - sizeof(Header));
 
         buf.appendUnsafe(data(), used());
         buf.swap(*this);
@@ -79,8 +80,13 @@ void Buffer::append(const void* ptr, size_t len) {
 }
 
 void Buffer::appendUnsafe(const void* ptr, size_t len) {
-    memcpy((char*)data() + used(), ptr, len);
-    header()->used += len;
+    if (len == 1) {
+        *(char*)data() = *(const char*)ptr;
+        header()->used += 1;
+    } else {
+        memcpy((char*)data() + used(), ptr, len);
+        header()->used += len;
+    }
 }
 
 template <>

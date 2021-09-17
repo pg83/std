@@ -1,5 +1,7 @@
 #include "alloc.h"
 
+#include <std/io/output.h>
+
 #include <stdlib.h>
 
 void* Std::allocateMemory(size_t len) {

@@ -70,3 +70,13 @@ template <>
 void Std::output<c8>(Output& out, const c8& ch) {
     out.write(&ch, 1);
 }
+
+#include <string.h>
+
+template <>
+void Std::output<u64>(Output& out, const u64& v) {
+    char buf[100];
+
+    sprintf(buf, "%u", (unsigned)v);
+    out.write(buf, strlen(buf));
+}
