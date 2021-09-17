@@ -1,18 +1,33 @@
-SRCD =
+SRCD = 
 BLDD = bld/
-SRCS = $(wildcard $(SRCD)std/tl/*.cpp)
+
 HDRS = $(wildcard $(SRCD)std/io/*.h)
-OBJS = $(SRCS:%=$(BLDD)%.o)
+
+LIBS = $(wildcard $(SRCD)std/tl/*.cpp)
+LIBO = $(LIBS:%=$(BLDD)%.o)
 LIBA = $(BLDD)libstd.a
-CXXF = $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 
-all: $(LIBA)
+TSTS = $(wildcard $(SRCD)tst/*.cpp)
+TSTO = $(TSTS:%=$(BLDD)%.o)
 
-$(LIBA): $(OBJS) Makefile
+CXXF = -I$(SRCD)./ $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
+
+all: $(LIBA) $(BLDD)test
+
+$(LIBA): $(LIBO) Makefile
 	-rm $(LIBA)
-	ar q $(LIBA) $(OBJS)
+	ar q $(LIBA) $(LIBO)
 	ranlib $(LIBA)
 
-$(BLDD)std/tl/%.cpp.o: $(SRCD)std/tl/%.cpp Makefile
+$(BLDD)std/tl/%.cpp.o: $(SRCD)std/tl/%.cpp $(HDRS) Makefile
 	-mkdir -p `dirname $@`
-	$(CC) $(CXXF) -c -o $@ $<
+	$(CC) $(CXXF) -o $@ -c $<
+
+$(BLDD)test: $(TSTO) $(LIBA) Makefile
+	-mkdir -p `dirname $@`
+	$(CC) $(LDFLAGS) -o $@ $(TSTO) $(LIBA)
+
+$(BLDD)tst/%.cpp.o: $(SRCD)tst/%.cpp $(HDRS) Makefile
+	-mkdir -p `dirname $@`
+	$(CC) $(CXXF) -o $@ -c $<
+ 
