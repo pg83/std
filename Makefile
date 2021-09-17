@@ -1,33 +1,44 @@
-SRCD = 
-BLDD = bld/
+HDRS = \
+    $(wildcard std/tl/*.h) \
+    $(wildcard std/os/*.h) \
+    $(wildcard std/io/*.h)
 
-HDRS = $(wildcard $(SRCD)std/io/*.h)
+LIBS = \
+    $(wildcard std/tl/*.cpp) \
+    $(wildcard std/os/*.cpp) \
+    $(wildcard std/io/*.cpp)
 
-LIBS = $(wildcard $(SRCD)std/tl/*.cpp)
-LIBO = $(LIBS:%=$(BLDD)%.o)
-LIBA = $(BLDD)libstd.a
+LIBO = $(LIBS:%=%.o)
 
-TSTS = $(wildcard $(SRCD)tst/*.cpp)
-TSTO = $(TSTS:%=$(BLDD)%.o)
+TSTS = $(wildcard tst/*.cpp)
+TSTO = $(TSTS:%=%.o)
 
-CXXF = -I$(SRCD)./ $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
+CXXF = -I. -std=c++2a $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 
-all: $(LIBA) $(BLDD)test
+all: libstd.a test
 
-$(LIBA): $(LIBO) Makefile
-	-rm $(LIBA)
-	ar q $(LIBA) $(LIBO)
-	ranlib $(LIBA)
+libstd.a: $(LIBO) Makefile
+	-rm libstd.a
+	ar q libstd.a $(LIBO)
+	ranlib libstd.a
 
-$(BLDD)std/tl/%.cpp.o: $(SRCD)std/tl/%.cpp $(HDRS) Makefile
+std/tl/%.cpp.o: std/tl/%.cpp $(HDRS) Makefile
 	-mkdir -p `dirname $@`
-	$(CC) $(CXXF) -o $@ -c $<
+	$(CXX) $(CXXF) -o $@ -c $<
 
-$(BLDD)test: $(TSTO) $(LIBA) Makefile
+std/io/%.cpp.o: std/io/%.cpp $(HDRS) Makefile
 	-mkdir -p `dirname $@`
-	$(CC) $(LDFLAGS) -o $@ $(TSTO) $(LIBA)
+	$(CXX) $(CXXF) -o $@ -c $<
 
-$(BLDD)tst/%.cpp.o: $(SRCD)tst/%.cpp $(HDRS) Makefile
+std/os/%.cpp.o: std/os/%.cpp $(HDRS) Makefile
 	-mkdir -p `dirname $@`
-	$(CC) $(CXXF) -o $@ -c $<
+	$(CXX) $(CXXF) -o $@ -c $<
+
+test: $(TSTO) libstd.a Makefile
+	-mkdir -p `dirname $@`
+	$(CXX) $(LDFLAGS) -o $@ $(TSTO) libstd.a
+
+tst/%.cpp.o: tst/%.cpp $(HDRS) Makefile
+	-mkdir -p `dirname $@`
+	$(CXX) $(CXXF) -o $@ -c $<
  
