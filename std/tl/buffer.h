@@ -23,10 +23,6 @@ namespace Std {
             static void free(Header* ptr) noexcept;
         };
 
-        inline Header* header() const noexcept {
-            return (Header*)data_ - 1;
-        }
-
     public:
         ~Buffer();
 
@@ -57,7 +53,7 @@ namespace Std {
             return data_;
         }
 
-        inline size_t size() const noexcept {
+        inline size_t capacity() const noexcept {
             return header()->size;
         }
 
@@ -72,5 +68,12 @@ namespace Std {
         void shrinkToFit();
         void grow(size_t size);
         void append(const void* data, size_t len);
+
+    private:
+        inline Header* header() const noexcept {
+            return (Header*)data_ - 1;
+        }
+
+        void appendUnsafe(const void* data, size_t len);
     };
 }

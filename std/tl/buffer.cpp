@@ -3,7 +3,10 @@
 #include <std/os/bss.h>
 #include <std/os/alloc.h>
 
+#include <std/io/output.h>
+
 #include <new>
+#include <string.h>
 
 using namespace Std;
 
@@ -41,14 +44,14 @@ Buffer::Buffer(size_t len)
 }
 
 Buffer::Buffer(const Buffer& buf)
-    : Buffer(buf.data(), buf.size())
+    : Buffer(buf.data(), buf.used())
 {
 }
 
-Buffer::Buffer(const void* data, size_t len)
+Buffer::Buffer(const void* ptr, size_t len)
     : Buffer()
 {
-    append(data, len);
+    append(ptr, len);
 }
 
 Buffer::Buffer(Buffer&& buf) noexcept
@@ -62,7 +65,25 @@ void Buffer::shrinkToFit() {
 }
 
 void Buffer::grow(size_t size) {
+    if (size > capacity()) {
+        Buffer buf(size);
+
+        buf.appendUnsafe(data(), used());
+        buf.swap(*this);
+    }
 }
 
-void Buffer::append(const void* data, size_t len) {
+void Buffer::append(const void* ptr, size_t len) {
+    grow(used() + len);
+    appendUnsafe(ptr, len);
+}
+
+void Buffer::appendUnsafe(const void* ptr, size_t len) {
+    memcpy((char*)data() + used(), ptr, len);
+    header()->used += len;
+}
+
+template <>
+void Std::output<Buffer>(Output& out, const Buffer& buf) {
+    out.write(buf.data(), buf.used());
 }
