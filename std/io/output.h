@@ -2,12 +2,16 @@
 
 #include <std/os/types.h>
 
-#define stdE (::Std::stderrStream())
+#define flsH (::Std::FlushFunc())
 #define stdO (::Std::stdoutStream())
-#define endL (::Std::EndLine())
+#define endL (::Std::EndLineFunc())
+#define stdE (::Std::stderrStream())
 
 namespace Std {
-    struct EndLine {
+    struct EndLineFunc {
+    };
+
+    struct FlushFunc {
     };
 
     struct Output;

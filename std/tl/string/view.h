@@ -21,6 +21,12 @@ namespace Std {
         {
         }
 
+        template <size_t N>
+        inline StringView(const c8 (&str)[N])
+            : StringView(str, N - 1)
+        {
+        }
+
         inline StringView(const c8* ptr, size_t len) noexcept
              : ptr_(ptr)
              , len_(len)

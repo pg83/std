@@ -14,12 +14,11 @@ namespace Std {
         Buffer buf_;
 
     public:
-        inline DynString() noexcept {
-        }
+        inline DynString() noexcept = default;
 
         template <class Other>
         inline DynString(const Other& str) {
-            append(stringize(str));
+            *this += str;
         }
 
         inline DynString(DynString&& str) noexcept

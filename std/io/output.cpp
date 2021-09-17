@@ -17,6 +17,10 @@ namespace {
             fwrite(data, 1, len, stream);
         }
 
+        void flushImpl() override {
+            fflush(stream);
+        }
+
         FILE* stream;
     };
 
@@ -44,23 +48,25 @@ void Output::flushImpl() {
 void Output::finishImpl() {
 }
 
-namespace Std {
-    Output& stdoutStream() noexcept {
-        return singleton<StdOut>();
-    }
+Output& Std::stdoutStream() noexcept {
+    return singleton<StdOut>();
+}
 
-    Output& stderrStream() noexcept {
-        return singleton<StdErr>();
-    }
+Output& Std::stderrStream() noexcept {
+    return singleton<StdErr>();
+}
 
-    template <>
-    void output<EndLine>(Output& out, const EndLine&) {
-        out.write('\n');
-        out.flush();
-    }
+template <>
+void Std::output<EndLineFunc>(Output& out, const EndLineFunc&) {
+    out << u8'\n' << flsH;
+}
 
-    template <>
-    void output<c8>(Output& out, const c8& ch) {
-        out.write(&ch, 1);
-    }
+template <>
+void Std::output<FlushFunc>(Output& out, const FlushFunc&) {
+    out.flush();
+}
+
+template <>
+void Std::output<c8>(Output& out, const c8& ch) {
+    out.write(&ch, 1);
 }

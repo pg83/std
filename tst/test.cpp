@@ -6,7 +6,7 @@
 using namespace Std;
 
 int main() {
-    DynString buf;
+    DynString buf = u8"test";
 
     buf.append(u8"qw", 2);
     buf.append(u8"er", 2);
