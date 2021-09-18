@@ -13,7 +13,7 @@ CXXF = -I. -W -Wall -O2 -std=c++2a $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 all: libstd.a test
 
 libstd.a: $(LIBO) Makefile
-	@-rm libstd.a
+	@-rm libstd.a 2>/dev/null
 	ar q libstd.a $(LIBO)
 	ranlib libstd.a
 
