@@ -38,6 +38,7 @@ namespace Std {
         void flush();
         void finish();
 
+
         inline Output& stream() noexcept {
             return *out_;
         }
