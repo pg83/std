@@ -4,12 +4,12 @@
 
 using namespace Std;
 
-const char* DynString::cStr() {
+char* DynString::cStr() {
     grow(length() + 1);
 
     *mutEnd() = 0;
 
-    return (const char*)begin();
+    return (char*)mutBegin();
 }
 
 template <>

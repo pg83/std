@@ -4,7 +4,7 @@
 #include "view.h"
 
 namespace Std {
-    inline auto stringize(c8 ch) noexcept {
+    inline auto stringize(u8 ch) noexcept {
         return OneCharString(ch);
     }
 

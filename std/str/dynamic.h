@@ -29,11 +29,11 @@ namespace Std {
         }
 
         inline auto data() noexcept {
-            return (c8*)buf_.data();
+            return (u8*)buf_.data();
         }
 
         inline auto data() const noexcept {
-            return (const c8*)buf_.data();
+            return (const u8*)buf_.data();
         }
 
         inline size_t length() const noexcept {
@@ -48,9 +48,9 @@ namespace Std {
             buf_.grow(len);
         }
 
-        const char* cStr();
+        char* cStr();
 
-        inline DynString& append(const c8* ptr, size_t len) {
+        inline DynString& append(const u8* ptr, size_t len) {
             buf_.append(ptr, len);
 
             return *this;

@@ -3,5 +3,5 @@
 #include <std/sys/types.h>
 
 namespace Std {
-    void panic(const c8* what, int line, const c8* file, const c8* func);
+    void panic(const u8* what, u32 line, const u8* file);
 }

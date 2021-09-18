@@ -8,5 +8,5 @@ StringOutput::~StringOutput() {
 }
 
 void StringOutput::writeImpl(const void* ptr, size_t len) {
-    str_->append((const c8*)ptr, len);
+    str_->append((const u8*)ptr, len);
 }

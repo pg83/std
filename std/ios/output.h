@@ -1,5 +1,7 @@
 #pragma once
 
+#include "param.h"
+
 #include <std/sys/types.h>
 
 #define flsH (::Std::FlushFunc())
@@ -17,7 +19,7 @@ namespace Std {
     struct Output;
 
     template <typename T>
-    void output(Output& out, const T& t);
+    void output(Output& out, FuncParam<T> t);
 
     struct Output {
         virtual ~Output();
@@ -34,7 +36,7 @@ namespace Std {
 
         template <typename Out, typename T>
         friend inline Out& operator<<(Out& out, const T& t) {
-            output(out, t);
+            output<T>(out, t);
 
             return out;
         }

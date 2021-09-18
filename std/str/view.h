@@ -6,7 +6,7 @@
 
 namespace Std {
     class StringView: public StringOps<StringView> {
-        const c8* ptr_;
+        const u8* ptr_;
         size_t len_;
 
     public:
@@ -22,12 +22,12 @@ namespace Std {
         }
 
         template <size_t N>
-        inline StringView(const c8 (&str)[N])
+        inline StringView(const u8 (&str)[N])
             : StringView(str, N - 1)
         {
         }
 
-        inline StringView(const c8* ptr, size_t len) noexcept
+        inline StringView(const u8* ptr, size_t len) noexcept
              : ptr_(ptr)
              , len_(len)
         {

@@ -2,6 +2,7 @@
 
 #include <std/lib/singleton.h>
 
+#include <string.h>
 #include <stdio.h>
 
 using namespace Std;
@@ -56,6 +57,7 @@ Output& Std::stderrStream() noexcept {
     return singleton<StdErr>();
 }
 
+// modifiers
 template <>
 void Std::output<EndLineFunc>(Output& out, const EndLineFunc&) {
     out << u8'\n' << flsH;
@@ -66,15 +68,30 @@ void Std::output<FlushFunc>(Output& out, const FlushFunc&) {
     out.flush();
 }
 
+// strings
 template <>
-void Std::output<c8>(Output& out, const c8& ch) {
+void Std::output<const u8*>(Output& out, const u8* str) {
+    out.write(str, strlen((const char*)str));
+}
+
+// std types
+template <>
+void Std::output<u8>(Output& out, u8 ch) {
     out.write(&ch, 1);
 }
 
-#include <string.h>
+template <>
+void Std::output<u16>(Output& out, u16 v) {
+    out << (u64)v;
+}
 
 template <>
-void Std::output<u64>(Output& out, const u64& v) {
+void Std::output<u32>(Output& out, u32 v) {
+    out << (u64)v;
+}
+
+template <>
+void Std::output<u64>(Output& out, u64 v) {
     char buf[100];
 
     sprintf(buf, "%u", (unsigned)v);

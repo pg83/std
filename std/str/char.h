@@ -6,10 +6,10 @@
 
 namespace Std {
     class OneCharString: public StringOps<OneCharString> {
-        c8 char_;
+        u8 char_;
 
     public:
-        inline OneCharString(c8 c) noexcept
+        inline OneCharString(u8 c) noexcept
             : char_(c)
         {
         }

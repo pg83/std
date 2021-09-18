@@ -2,6 +2,7 @@
 
 #include <std/str/view.h>
 #include <std/sys/types.h>
+#include <std/dbg/insist.h>
 
 namespace Std {
     struct TestFunc {
