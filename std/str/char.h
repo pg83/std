@@ -2,7 +2,7 @@
 
 #include "ops.h"
 
-#include <std/os/types.h>
+#include <std/sys/types.h>
 
 namespace Std {
     class OneCharString: public StringOps<OneCharString> {

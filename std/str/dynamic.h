@@ -4,10 +4,10 @@
 #include "ops.h"
 #include "view.h"
 
-#include <std/os/types.h>
+#include <std/sys/types.h>
 
-#include <std/tl/buffer.h>
-#include <std/tl/support.h>
+#include <std/lib/buffer.h>
+#include <std/lib/support.h>
 
 namespace Std {
     class DynString: public StringOps<DynString> {

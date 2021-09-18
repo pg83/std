@@ -1,14 +1,16 @@
 HDRS = \
-    $(wildcard std/os/*.h) \
-    $(wildcard std/io/*.h) \
-    $(wildcard std/tl/*.h) \
-    $(wildcard std/tl/string/*.h)
+    $(wildcard std/sys/*.h) \
+    $(wildcard std/ios/*.h) \
+    $(wildcard std/lib/*.h) \
+    $(wildcard std/str/*.h) \
+    $(wildcard std/mem/*.h)
 
 LIBS = \
-    $(wildcard std/os/*.cpp) \
-    $(wildcard std/io/*.cpp) \
-    $(wildcard std/tl/*.cpp) \
-    $(wildcard std/tl/string/*.cpp)
+    $(wildcard std/sys/*.cpp) \
+    $(wildcard std/ios/*.cpp) \
+    $(wildcard std/lib/*.cpp) \
+    $(wildcard std/str/*.cpp) \
+    $(wildcard std/mem/*.cpp)
 
 LIBO = $(LIBS:%=%.o)
 
@@ -24,19 +26,23 @@ libstd.a: $(LIBO) Makefile
 	ar q libstd.a $(LIBO)
 	ranlib libstd.a
 
-std/tl/%.cpp.o: std/tl/%.cpp $(HDRS) Makefile
+std/lib/%.cpp.o: std/lib/%.cpp $(HDRS) Makefile
 	-mkdir -p `dirname $@`
 	$(CXX) $(CXXF) -o $@ -c $<
 
-std/tl/string/%.cpp.o: std/tl/string/%.cpp $(HDRS) Makefile
+std/str/%.cpp.o: std/str/%.cpp $(HDRS) Makefile
 	-mkdir -p `dirname $@`
 	$(CXX) $(CXXF) -o $@ -c $<
 
-std/io/%.cpp.o: std/io/%.cpp $(HDRS) Makefile
+std/ios/%.cpp.o: std/ios/%.cpp $(HDRS) Makefile
 	-mkdir -p `dirname $@`
 	$(CXX) $(CXXF) -o $@ -c $<
 
-std/os/%.cpp.o: std/os/%.cpp $(HDRS) Makefile
+std/sys/%.cpp.o: std/sys/%.cpp $(HDRS) Makefile
+	-mkdir -p `dirname $@`
+	$(CXX) $(CXXF) -o $@ -c $<
+
+std/mem/%.cpp.o: std/mem/%.cpp $(HDRS) Makefile
 	-mkdir -p `dirname $@`
 	$(CXX) $(CXXF) -o $@ -c $<
 
@@ -47,4 +53,3 @@ test: $(TSTO) libstd.a Makefile
 tst/%.cpp.o: tst/%.cpp $(HDRS) Makefile
 	-mkdir -p `dirname $@`
 	$(CXX) $(CXXF) -o $@ -c $<
- 

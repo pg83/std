@@ -1,10 +1,9 @@
 #include "bits.h"
 #include "buffer.h"
 
-#include <std/os/bss.h>
-#include <std/os/alloc.h>
-
-#include <std/io/output.h>
+#include <std/mem/bss.h>
+#include <std/mem/alloc.h>
+#include <std/ios/output.h>
 
 #include <new>
 #include <string.h>

@@ -1,6 +1,6 @@
 #include "alloc.h"
 
-#include <std/io/output.h>
+#include <std/ios/output.h>
 
 #include <stdlib.h>
 

@@ -1,7 +1,7 @@
-#include <std/tl/range.h>
-#include <std/tl/buffer.h>
-#include <std/io/output.h>
-#include <std/tl/string/dynamic.h>
+#include <std/lib/range.h>
+#include <std/lib/buffer.h>
+#include <std/ios/output.h>
+#include <std/str/dynamic.h>
 
 //#include <string>
 

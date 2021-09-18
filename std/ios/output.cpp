@@ -1,6 +1,6 @@
 #include "output.h"
 
-#include <std/tl/singleton.h>
+#include <std/lib/singleton.h>
 
 #include <stdio.h>
 

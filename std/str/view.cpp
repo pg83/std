@@ -1,6 +1,6 @@
 #include "view.h"
 
-#include <std/io/output.h>
+#include <std/ios/output.h>
 
 using namespace Std;
 
