@@ -17,6 +17,6 @@ STD_TEST_SUITE(vector) {
         }
 
         STD_INSIST(vec.length() == 1000);
-        STD_INSIST(!vec.empty());
+        STD_INSIST(vec.empty());
     }
 }
