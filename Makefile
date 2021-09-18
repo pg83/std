@@ -10,6 +10,8 @@ TSTO = $(TSTS:%=%.o)
 
 CXXF = -isystem . -W -Wall -O2 -std=c++2a $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 
+#-fdata-sections -ffunction-sections 
+
 all: libstd.a test
 
 libstd.a: $(LIBO) Makefile

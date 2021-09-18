@@ -11,7 +11,7 @@ namespace Std {
     struct Output;
 
     template <typename T>
-    void output(OutBuf& out, FuncParam<T> t);
+    void output(OutBuf& out, Meta::FuncParam<T> t);
 
     class OutBuf {
         Output* out_;
