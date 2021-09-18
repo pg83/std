@@ -15,14 +15,10 @@ libstd.a: $(LIBO) Makefile
 	ar q libstd.a $(LIBO)
 	ranlib libstd.a
 
-std/%.cpp.o: std/%.cpp $(HDRS) Makefile
-	-mkdir -p `dirname $@`
-	$(CXX) $(CXXF) -o $@ -c $<
-
 test: $(TSTO) libstd.a Makefile
 	-mkdir -p `dirname $@`
 	$(CXX) $(LDFLAGS) -o $@ $(TSTO) libstd.a
 
-tst/%.cpp.o: tst/%.cpp $(HDRS) Makefile
+%.cpp.o: %.cpp $(HDRS) Makefile
 	-mkdir -p `dirname $@`
 	$(CXX) $(CXXF) -o $@ -c $<
