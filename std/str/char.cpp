@@ -5,6 +5,6 @@
 using namespace Std;
 
 template <>
-void Std::output<OneCharString>(OutBuf& out, const OneCharString& str) {
+void Std::output<OneCharString>(OutBuf& out, OneCharString str) {
     out.write(str.data(), str.length());
 }

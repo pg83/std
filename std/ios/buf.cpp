@@ -55,17 +55,17 @@ void OutBuf::swap(OutBuf& buf) noexcept {
 
 // modifiers
 template <>
-void Std::output<Flush>(OutBuf& out, const Flush&) {
+void Std::output<Flush>(OutBuf& out, Flush) {
     out.flush();
 }
 
 template <>
-void Std::output<Finish>(OutBuf& out, const Finish&) {
+void Std::output<Finish>(OutBuf& out, Finish) {
     out.finish();
 }
 
 template <>
-void Std::output<EndLine>(OutBuf& out, const EndLine&) {
+void Std::output<EndLine>(OutBuf& out, EndLine) {
     out << u8'\n';
 }
 

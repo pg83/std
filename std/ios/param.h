@@ -1,41 +1,27 @@
 #pragma once
 
+namespace Std::Meta {
+    template <typename T>
+    struct PassByValue {
+        enum {
+            R = sizeof(T) <= sizeof(void*) && __is_trivially_copyable(T)
+        };
+    };
+
+    template <bool, typename T1, typename T2>
+    struct Select {
+        using R = T1;
+    };
+
+    template <typename T1, typename T2>
+    struct Select<false, T1, T2> {
+        using R = T2;
+    };
+
+    template <typename T>
+    using FuncParam = typename Select<PassByValue<T>::R, T, const T&>::R;
+}
+
 namespace Std {
-    template <bool>
-    struct Bool {
-        enum {
-            Result = true
-        };
-    };
-
-    template <>
-    struct Bool<false> {
-        enum {
-            Result = false
-        };
-    };
-
-    namespace Private {
-        template <typename T>
-        char test(int T::*);
-
-        template <typename T>
-        int test(...);
-    };
-
-    template <typename T>
-    using IsClass = Bool<sizeof(Private::test<T>(nullptr)) == 1>;
-
-    template <typename T, bool>
-    struct FuncParamImpl {
-        using Result = T;
-    };
-
-    template <typename T>
-    struct FuncParamImpl<T, false> {
-        using Result = const T&;
-    };
-
-    template <typename T>
-    using FuncParam = typename FuncParamImpl<T, !IsClass<T>::Result && (sizeof(T) <= sizeof(void*))>::Result;
+    using Meta::FuncParam;
 }
