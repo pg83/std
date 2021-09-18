@@ -74,6 +74,10 @@ namespace Std {
             ::Std::swap(data_, buf.data_);
         }
 
+        inline void reset() noexcept {
+            header()->used = 0;
+        }
+
         void shrinkToFit();
         void grow(size_t size);
         void append(const void* data, size_t len);

@@ -1,10 +1,10 @@
 #include "view.h"
 
-#include <std/ios/output.h>
+#include <std/ios/buf.h>
 
 using namespace Std;
 
 template <>
-void Std::output<StringView>(Output& out, const StringView& str) {
+void Std::output<StringView>(OutBuf& out, const StringView& str) {
     out.write(str.data(), str.length());
 }

@@ -1,11 +1,11 @@
 #include "buffer.h"
 
+#include <std/ios/buf.h>
+
 #include <std/mem/bss.h>
 #include <std/mem/alloc.h>
 
 #include <std/alg/bits.h>
-
-#include <std/ios/output.h>
 
 #include <new>
 #include <string.h>
@@ -81,16 +81,18 @@ void Buffer::append(const void* ptr, size_t len) {
 }
 
 void Buffer::appendUnsafe(const void* ptr, size_t len) {
+    auto cur = (char*)data() + used();
+
     if (len == 1) {
-        *(char*)data() = *(const char*)ptr;
+        *cur = *(const char*)ptr;
         header()->used += 1;
     } else {
-        memcpy((char*)data() + used(), ptr, len);
+        memcpy(cur, ptr, len);
         header()->used += len;
     }
 }
 
 template <>
-void Std::output<Buffer>(Output& out, const Buffer& buf) {
+void Std::output<Buffer>(OutBuf& out, const Buffer& buf) {
     out.write(buf.data(), buf.used());
 }

@@ -1,6 +1,6 @@
 #include "dynamic.h"
 
-#include <std/ios/output.h>
+#include <std/ios/buf.h>
 
 using namespace Std;
 
@@ -13,6 +13,6 @@ char* DynString::cStr() {
 }
 
 template <>
-void Std::output<DynString>(Output& out, const DynString& s) {
+void Std::output<DynString>(OutBuf& out, const DynString& s) {
     out.write(s.data(), s.length());
 }

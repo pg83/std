@@ -4,22 +4,8 @@
 
 #include <std/sys/types.h>
 
-#define flsH (::Std::FlushFunc())
-#define stdO (::Std::stdoutStream())
-#define endL (::Std::EndLineFunc())
-#define stdE (::Std::stderrStream())
-
 namespace Std {
-    struct EndLineFunc {
-    };
-
-    struct FlushFunc {
-    };
-
     struct Output;
-
-    template <typename T>
-    void output(Output& out, FuncParam<T> t);
 
     struct Output {
         virtual ~Output();
@@ -28,17 +14,6 @@ namespace Std {
             if (len) {
                 writeImpl(data, len);
             }
-        }
-
-        inline void write(u8 ch) {
-            write(&ch, 1);
-        }
-
-        template <typename Out, typename T>
-        friend inline Out& operator<<(Out& out, const T& t) {
-            output<T>(out, t);
-
-            return out;
         }
 
         inline void flush() {
@@ -56,7 +31,4 @@ namespace Std {
         virtual void flushImpl();
         virtual void finishImpl();
     };
-
-    Output& stdoutStream() noexcept;
-    Output& stderrStream() noexcept;
 }

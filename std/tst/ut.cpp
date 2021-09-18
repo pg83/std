@@ -1,7 +1,7 @@
 #include "ut.h"
 
+#include <std/ios/sys.h>
 #include <std/alg/range.h>
-#include <std/ios/output.h>
 #include <std/lib/vector.h>
 #include <std/lib/singleton.h>
 
@@ -23,7 +23,7 @@ namespace {
 
         inline void run() {
             for (auto test : range(tests)) {
-                stdE << test.suite << StringView(u8"::") << test.name << endL;
+                sysE << test.suite << StringView(u8"::") << test.name << endL;
 
                 test.func->execute();
             }
