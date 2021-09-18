@@ -3,6 +3,7 @@ HDRS = \
     $(wildcard std/ios/*.h) \
     $(wildcard std/lib/*.h) \
     $(wildcard std/str/*.h) \
+    $(wildcard std/alg/*.h) \
     $(wildcard std/mem/*.h)
 
 LIBS = \
@@ -10,6 +11,7 @@ LIBS = \
     $(wildcard std/ios/*.cpp) \
     $(wildcard std/lib/*.cpp) \
     $(wildcard std/str/*.cpp) \
+    $(wildcard std/alg/*.cpp) \
     $(wildcard std/mem/*.cpp)
 
 LIBO = $(LIBS:%=%.o)
@@ -25,6 +27,10 @@ libstd.a: $(LIBO) Makefile
 	-rm libstd.a
 	ar q libstd.a $(LIBO)
 	ranlib libstd.a
+
+std/alg/%.cpp.o: std/alg/%.cpp $(HDRS) Makefile
+	-mkdir -p `dirname $@`
+	$(CXX) $(CXXF) -o $@ -c $<
 
 std/lib/%.cpp.o: std/lib/%.cpp $(HDRS) Makefile
 	-mkdir -p `dirname $@`

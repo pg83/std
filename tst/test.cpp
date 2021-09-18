@@ -1,4 +1,4 @@
-#include <std/lib/range.h>
+#include <std/alg/range.h>
 #include <std/lib/buffer.h>
 #include <std/lib/vector.h>
 #include <std/ios/output.h>
