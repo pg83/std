@@ -82,6 +82,14 @@ namespace Std {
             header()->used = 0;
         }
 
+        inline void seekRelative(size_t len) noexcept {
+            seekAbsolute(used() + len);
+        }
+
+        inline void seekAbsolute(size_t pos) noexcept {
+            header()->used = pos;
+        }
+
         void shrinkToFit();
         void grow(size_t size);
         void append(const void* data, size_t len);

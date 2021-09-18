@@ -2,8 +2,9 @@
 #include "manip.h"
 #include "output.h"
 
+#include <std/str/fmt.h>
+
 #include <string.h>
-#include <stdio.h>
 
 using namespace Std;
 using namespace Std::Manip;
@@ -31,6 +32,7 @@ size_t OutBuf::imbue(void** ptr) noexcept {
 }
 
 void OutBuf::write(const void* ptr, size_t len) {
+    buf_.grow(256);
     buf_.append(ptr, len);
 
     if (buf_.used() > 16 * 1024) {
@@ -93,8 +95,13 @@ void Std::output<u32>(OutBuf& out, u32 v) {
 
 template <>
 void Std::output<u64>(OutBuf& out, u64 v) {
-    char buf[100];
+    void* ptr;
 
-    sprintf(buf, "%u", (unsigned)v);
-    out.write(buf, strlen(buf));
+    if (auto len = out.imbue(&ptr); len >= 24) {
+        out.bump(formatU64Base10(v, ptr));
+    } else {
+        char buf[24];
+
+        out.write(buf, formatU64Base10(v, buf));
+    }
 }

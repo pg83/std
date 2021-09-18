@@ -36,7 +36,10 @@ namespace Std {
 
         // zero-copy
         size_t imbue(void** ptr) noexcept;
-        void bump(size_t len) noexcept;
+
+        inline void bump(size_t len) noexcept {
+            buf_.seekRelative(len);
+        }
 
         // non-recursive
         void flush();
