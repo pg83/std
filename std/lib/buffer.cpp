@@ -3,7 +3,7 @@
 #include <std/ios/buf.h>
 
 #include <std/mem/bss.h>
-#include <std/mem/alloc.h>
+#include <std/sys/crt.h>
 
 #include <std/alg/bits.h>
 

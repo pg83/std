@@ -1,5 +1,6 @@
 #pragma once
 
+#include <std/sys/crt.h>
 #include <std/sys/types.h>
 
 namespace Std {
@@ -15,6 +16,18 @@ namespace Std {
         }
 
     public:
+        inline auto length() const noexcept {
+            return base()->length();
+        }
+
+        inline auto data() noexcept {
+            return base()->data();
+        }
+
+        inline auto data() const noexcept {
+            return base()->data();
+        }
+
         // iterator ops
         inline auto begin() const noexcept {
             return base()->data();
@@ -49,4 +62,15 @@ namespace Std {
             return *(end() - 1);
         }
     };
+
+    // compare ops
+    template <typename L, typename R>
+    inline bool operator==(const StringOps<L>& l, const StringOps<R>& r) noexcept {
+        return (l.length() == r.length()) && (memCmp(l.data(), r.data(), l.length()) == 0);
+    }
+
+    template <typename L, typename R>
+    inline bool operator!=(const StringOps<L>& l, const StringOps<R>& r) noexcept {
+        return !(l == r);
+    }
 }

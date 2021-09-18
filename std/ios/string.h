@@ -9,8 +9,8 @@ namespace Std {
     public:
         virtual ~StringOutput();
 
-        inline StringOutput(DynString* str) noexcept
-            : str_(str)
+        inline StringOutput(DynString& str) noexcept
+            : str_(&str)
         {
         }
 
