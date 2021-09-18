@@ -44,5 +44,9 @@ namespace Std {
         inline bool empty() const noexcept {
             return base()->length() == 0;
         }
+
+        inline const auto& back() const noexcept {
+            return *(end() - 1);
+        }
     };
 }

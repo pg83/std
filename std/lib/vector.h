@@ -47,5 +47,13 @@ namespace Std {
         inline const auto& operator[](size_t i) const noexcept {
             return *(begin() + i);
         }
+
+        inline const auto& back() const noexcept {
+            return *(end() - 1);
+        }
+
+        inline auto& mutBack() noexcept {
+            return *(mutEnd() - 1);
+        }
     };
 }

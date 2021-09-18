@@ -2,6 +2,7 @@
 
 #include "support.h"
 
+#include <std/alg/swap.h>
 #include <std/sys/types.h>
 
 namespace Std {
