@@ -17,12 +17,9 @@ namespace {
     struct Tests: public Vector<Test>  {
         inline void run() {
             for (auto test : range(*this)) {
-                sysE << test << StringView(u8" -") << finI;
-
+                sysE << StringView(u8"- ") << test << finI;
                 test.func->execute();
-
-                sysE << StringView(u8"\r")
-                     << test << StringView(u8" +") << endL << finI;
+                sysE << StringView(u8"\r+ ") << test << endL << finI;
             }
         }
 
