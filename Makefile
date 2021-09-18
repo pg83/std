@@ -1,9 +1,11 @@
 HDRS = $(wildcard std/*/*.h)
+SRCS = $(wildcard std/*/*.cpp)
+TMPS = $(subst _ut.cpp,_ut.u,$(SRCS))
 
-LIBS = $(wildcard std/*/*.cpp)
+LIBS = $(filter %.cpp,$(TMPS))
 LIBO = $(LIBS:%=%.o)
 
-TSTS = $(wildcard tst/*.cpp)
+TSTS = $(wildcard tst/*.cpp) $(subst _ut.u,_ut.cpp,$(filter %.u,$(TMPS)))
 TSTO = $(TSTS:%=%.o)
 
 CXXF = -I. -W -Wall -O2 -std=c++2a $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
