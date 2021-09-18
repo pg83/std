@@ -59,11 +59,11 @@ Buffer::Buffer(const void* ptr, size_t len)
 Buffer::Buffer(Buffer&& buf) noexcept
     : Buffer()
 {
-    buf.swap(*this);
+    buf.xchg(*this);
 }
 
 void Buffer::shrinkToFit() {
-    Buffer(*this).swap(*this);
+    Buffer(*this).xchg(*this);
 }
 
 void Buffer::grow(size_t size) {
@@ -71,7 +71,7 @@ void Buffer::grow(size_t size) {
         Buffer buf(clp2(size + sizeof(Header)) - sizeof(Header));
 
         buf.appendUnsafe(data(), used());
-        buf.swap(*this);
+        buf.xchg(*this);
     }
 }
 

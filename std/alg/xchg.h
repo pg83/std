@@ -2,7 +2,7 @@
 
 namespace Std {
     template <typename T>
-    inline void swap(T& l, T& r) noexcept {
+    inline void xchg(T& l, T& r) noexcept {
         T t = l;
 
         l = r;

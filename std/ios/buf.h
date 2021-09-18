@@ -27,10 +27,10 @@ namespace Std {
         inline OutBuf(OutBuf&& buf) noexcept
             : OutBuf()
         {
-            buf.swap(*this);
+            buf.xchg(*this);
         }
 
-        void swap(OutBuf& buf) noexcept;
+        void xchg(OutBuf& buf) noexcept;
 
         void write(const void* ptr, size_t len);
 

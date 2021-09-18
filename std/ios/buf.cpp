@@ -49,9 +49,9 @@ void OutBuf::finish() {
     out_ = nullptr;
 }
 
-void OutBuf::swap(OutBuf& buf) noexcept {
-    ::Std::swap(out_, buf.out_);
-    buf_.swap(buf.buf_);
+void OutBuf::xchg(OutBuf& buf) noexcept {
+    ::Std::xchg(out_, buf.out_);
+    buf_.xchg(buf.buf_);
 }
 
 // modifiers

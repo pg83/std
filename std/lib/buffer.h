@@ -2,7 +2,7 @@
 
 #include "support.h"
 
-#include <std/alg/swap.h>
+#include <std/alg/xchg.h>
 #include <std/sys/types.h>
 
 namespace Std {
@@ -35,13 +35,13 @@ namespace Std {
         Buffer(Buffer&& buf) noexcept;
 
         inline Buffer& operator=(const Buffer& buf) {
-            Buffer(buf).swap(*this);
+            Buffer(buf).xchg(*this);
 
             return *this;
         }
 
         inline Buffer& operator=(Buffer&& buf) noexcept {
-            Buffer(move(buf)).swap(*this);
+            Buffer(move(buf)).xchg(*this);
 
             return *this;
         }
@@ -74,8 +74,8 @@ namespace Std {
             return capacity() - used();
         }
 
-        inline void swap(Buffer& buf) {
-            ::Std::swap(data_, buf.data_);
+        inline void xchg(Buffer& buf) {
+            ::Std::xchg(data_, buf.data_);
         }
 
         inline void reset() noexcept {
