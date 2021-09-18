@@ -6,6 +6,5 @@ using namespace Std;
 
 STD_TEST_SUITE(ut) {
     STD_TEST(test1) {
-        stdE << StringView(u8"here") << endL;
     }
 }

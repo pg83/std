@@ -15,11 +15,11 @@ namespace Std {
 #define STD_TEST_SUITE(name) \
     static const auto SUITE_NAME = ::Std::StringView(u8 ## #name); namespace meth
 
-#define STD_TEST(name) \
-    static struct name: public ::Std::TestFunc { \
-        inline name() { \
+#define STD_TEST(name)                                          \
+    static struct name: public ::Std::TestFunc {                \
+        inline name() {                                         \
             ::Std::registerTest(SUITE_NAME, u8 ## #name, this); \
-        }\
-        void execute() override;\
-    } REG;\
-    void name::execute() \
+        }                                                       \
+        void execute() override;                                \
+    } REG_ ## name;                                             \
+    void name::execute()
