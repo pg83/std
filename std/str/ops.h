@@ -32,12 +32,17 @@ namespace Std {
             return mutBegin() + base()->length();
         }
 
+        // array ops
         inline auto& operator[](size_t i) noexcept {
             return *(begin() + i);
         }
 
         inline const auto& operator[](size_t i) const noexcept {
             return *(begin() + i);
+        }
+
+        inline bool empty() const noexcept {
+            return base()->length() == 0;
         }
     };
 }

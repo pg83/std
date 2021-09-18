@@ -61,6 +61,14 @@ namespace Std {
             return header()->used;
         }
 
+        inline size_t length() const noexcept {
+            return used();
+        }
+
+        inline bool empty() const noexcept {
+            return used() == 0;
+        }
+
         inline void swap(Buffer& buf) {
             ::Std::swap(data_, buf.data_);
         }
