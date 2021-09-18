@@ -70,6 +70,10 @@ namespace Std {
             return used() == 0;
         }
 
+        inline bool left() const noexcept {
+            return capacity() - used();
+        }
+
         inline void swap(Buffer& buf) {
             ::Std::swap(data_, buf.data_);
         }

@@ -24,6 +24,12 @@ OutBuf::OutBuf() noexcept
 {
 }
 
+size_t OutBuf::imbue(void** ptr) noexcept {
+    *ptr = buf_.used() + (u8*)buf_.data();
+
+    return buf_.left();
+}
+
 void OutBuf::write(const void* ptr, size_t len) {
     buf_.append(ptr, len);
 

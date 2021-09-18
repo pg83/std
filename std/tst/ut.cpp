@@ -8,24 +8,21 @@
 using namespace Std;
 
 namespace {
-    struct Tests {
-        struct Test {
-            StringView suite;
-            StringView name;
-            TestFunc* func;
-        };
+    struct Test {
+        StringView suite;
+        StringView name;
+        TestFunc* func;
+    };
 
-        Vector<Test> tests;
-
-        inline void reg(const StringView& suite, const StringView& name, TestFunc* func) {
-            tests.pushBack(Test{suite, name, func});
-        }
-
+    struct Tests: public Vector<Test>  {
         inline void run() {
-            for (auto test : range(tests)) {
-                sysE << test.suite << StringView(u8"::") << test.name << endL;
+            for (auto test : range(*this)) {
+                sysE << test << StringView(u8" -") << finI;
 
                 test.func->execute();
+
+                sysE << StringView(u8"\r")
+                     << test << StringView(u8" +") << endL << finI;
             }
         }
 
@@ -35,10 +32,15 @@ namespace {
     };
 }
 
+template <>
+void Std::output<Test>(OutBuf& buf, const Test& test) {
+    buf << test.suite << StringView(u8"::") << test.name;
+}
+
 void Std::runTests() {
     Tests::instance().run();
 }
 
 void Std::registerTest(const StringView& suite, const StringView& name, TestFunc* test) {
-    Tests::instance().reg(suite, name, test);
+    Tests::instance().pushBack(Test{suite, name, test});
 }

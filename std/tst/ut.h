@@ -14,7 +14,7 @@ namespace Std {
 }
 
 #define STD_TEST_SUITE(name) \
-    static const auto SUITE_NAME = ::Std::StringView(u8 ## #name); namespace meth
+    static const auto SUITE_NAME = ::Std::StringView(u8 ## #name); namespace name
 
 #define STD_TEST(name)                                          \
     static struct name: public ::Std::TestFunc {                \

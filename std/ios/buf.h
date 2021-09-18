@@ -34,6 +34,10 @@ namespace Std {
 
         void write(const void* ptr, size_t len);
 
+        // zero-copy
+        size_t imbue(void** ptr) noexcept;
+        void bump(size_t len) noexcept;
+
         // non-recursive
         void flush();
         void finish();
