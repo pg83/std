@@ -1,7 +1,7 @@
 #include "bss.h"
 
 namespace {
-    alignas(128) static const char BSS[4096] = {};
+    alignas(128) static const char BSS[1024] = {};
 }
 
 const void* Std::bss() noexcept {
