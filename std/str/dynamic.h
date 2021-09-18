@@ -21,6 +21,8 @@ namespace Std {
             *this += str;
         }
 
+        inline DynString(const DynString&) = default;
+
         inline DynString(DynString&& str) noexcept
             : buf_(move(str.buf_))
         {
