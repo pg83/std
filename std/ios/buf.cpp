@@ -3,8 +3,7 @@
 #include "output.h"
 
 #include <std/str/fmt.h>
-
-#include <string.h>
+#include <std/sys/crt.h>
 
 using namespace Std;
 using namespace Std::Manip;
@@ -74,7 +73,7 @@ void Std::output<EndLine>(OutBuf& out, EndLine) {
 // strings
 template <>
 void Std::output<const u8*>(OutBuf& out, const u8* str) {
-    out.write(str, strlen((const char*)str));
+    out.write(str, strLen(str));
 }
 
 // std types

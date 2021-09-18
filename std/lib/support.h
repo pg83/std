@@ -4,21 +4,21 @@ namespace Std {
     // remove reference
     template <typename T>
     struct RemoveReferenceHelper {
-        using Result = T;
+        using R = T;
     };
 
     template <typename T>
     struct RemoveReferenceHelper<T&> {
-        using Result = T;
+        using R = T;
     };
 
     template <typename T>
     struct RemoveReferenceHelper<T&&> {
-        using Result = T;
+        using R = T;
     };
 
     template <typename T>
-    using RemoveReference = typename RemoveReferenceHelper<T>::Result;
+    using RemoveReference = typename RemoveReferenceHelper<T>::R;
 
     //move semantics
     template <typename T>
