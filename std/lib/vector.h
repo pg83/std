@@ -21,11 +21,11 @@ namespace Std {
         }
 
         inline auto mutBegin() noexcept {
-            return (T*)buf_.data();
+            return const_cast<T*>(begin());
         }
 
         inline auto mutEnd() noexcept {
-            return (T*)((char*)buf_.data() + buf_.length());
+            return const_cast<T*>(end());
         }
 
         inline size_t length() const noexcept {
@@ -40,7 +40,7 @@ namespace Std {
             return buf_.empty();
         }
 
-        inline auto& operator[](size_t i) noexcept {
+        inline auto& mut(size_t i) noexcept {
             return *(mutBegin() + i);
         }
 

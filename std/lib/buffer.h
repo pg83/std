@@ -51,11 +51,11 @@ namespace Std {
             return *this;
         }
 
-        inline auto data() noexcept {
+        inline auto data() const noexcept {
             return data_;
         }
 
-        inline auto data() const noexcept {
+        inline auto mutData() noexcept {
             return data_;
         }
 
