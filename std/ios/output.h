@@ -33,7 +33,7 @@ namespace Std {
     };
 
     struct ZeroCopyOutput: public Output {
-        virtual ~ZeroCopyOutput();
+        ~ZeroCopyOutput() override;
 
         // zero-copy interface
         inline size_t imbue(void** ptr) noexcept {
@@ -45,7 +45,7 @@ namespace Std {
         }
 
         inline void bump(const void* ptr) noexcept {
-            return bumpImpl(ptr);
+            bumpImpl(ptr);
         }
 
         inline void bump(const UnboundBuffer& buf) noexcept {
@@ -64,6 +64,6 @@ namespace Std {
     inline EnableForDerived<ZeroCopyOutput, O, O&&> operator<<(O&& out, const T& t) {
         output<ZeroCopyOutput, T>(out, t);
 
-        return static_cast<O&&>(out);
+        return forward<O>(out);
     }
 }

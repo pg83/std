@@ -7,7 +7,7 @@ namespace Std {
         DynString* str_;
 
     public:
-        virtual ~StringOutput();
+        ~StringOutput() override;
 
         inline StringOutput(DynString& str) noexcept
             : str_(&str)

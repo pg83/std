@@ -28,8 +28,14 @@ namespace Std {
         return static_cast<RemoveReference<T>&&>(t);
     }
 
+    // perfect forwarding
     template <typename T>
-    constexpr T&& forward(T&& t) noexcept {
+    constexpr T&& forward(RemoveReference<T>& t) noexcept {
+        return static_cast<T&&>(t);
+    }
+
+    template <typename T>
+    constexpr T&& forward(RemoveReference<T>&& t) noexcept {
         return static_cast<T&&>(t);
     }
 }

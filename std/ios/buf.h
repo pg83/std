@@ -11,7 +11,7 @@ namespace Std {
         Buffer buf_;
 
     public:
-        ~OutBuf();
+        ~OutBuf() override;
 
         OutBuf(Output& out) noexcept;
 
