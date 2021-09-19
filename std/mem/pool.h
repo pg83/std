@@ -2,11 +2,11 @@
 
 #include <std/sys/types.h>
 
-#include <std/ptr/ref_count.h>
+#include <std/ptr/arc.h>
 #include <std/ptr/intrusive.h>
 
 namespace Std {
-    struct Pool: public AtomicRefCount {
+    struct Pool: public ARC {
         using Ref = IntrusivePtr<Pool>;
 
         virtual ~Pool();

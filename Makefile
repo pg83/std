@@ -11,7 +11,6 @@ TSTO = $(TSTS:%=%.o)
 OPTF = -O2 -fdata-sections -ffunction-sections -fcommon
 CXXF = -isystem . -W -Wall -std=c++2a $(OPTF) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 
-
 all: libstd.a test
 
 libstd.a: $(LIBO) Makefile
