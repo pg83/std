@@ -7,11 +7,11 @@ using namespace Std;
 
 STD_TEST_SUITE(IntrusivePtr) {
     struct Int: public ARC {
-        int v = 1;
+        u32 v = 1;
     };
 
     STD_TEST(testOps) {
-        IntrusivePtr<Int> v(new Int());
+        auto v = IntrusivePtr<Int>::make();
 
         STD_INSIST(v->refCount() == 1);
         STD_INSIST(v->v == 1);
@@ -29,6 +29,8 @@ STD_TEST_SUITE(IntrusivePtr) {
 
             STD_INSIST(v->v == 2);
             STD_INSIST(c->v == 2);
+
+            STD_INSIST(&*c == &*v);
         }
 
         STD_INSIST(v->refCount() == 1);

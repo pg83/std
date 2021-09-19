@@ -21,12 +21,20 @@ namespace Std {
             O::unref(t_);
         }
 
+        static inline auto make() {
+            return RefCountPtr(new T());
+        }
+
         inline auto ptr() const noexcept {
             return O::ptr(t_);
         }
 
         inline auto mutPtr() noexcept {
             return O::mutPtr(t_);
+        }
+
+        inline auto refCount() const noexcept {
+            return t_->refCount();
         }
 
         // sugar

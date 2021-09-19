@@ -2,7 +2,7 @@
 
 #include "refcount.h"
 
-namespace Std::IPP {
+namespace Std::SPP {
     template <typename T>
     struct Ops {
         static inline auto ref(T* t) noexcept {
@@ -16,16 +16,26 @@ namespace Std::IPP {
         }
 
         static inline auto ptr(const T* t) noexcept {
-            return t;
+            return &t->t;
         }
 
         static inline auto mutPtr(T* t) noexcept {
-            return t;
+            return &t->t;
         }
+    };
+
+    template <typename T, typename R>
+    struct Base: public R {
+        T t;
     };
 }
 
 namespace Std {
+    class ARC;
+
+    template <typename T, typename R>
+    using SharedPtr = RefCountPtr<SPP::Base<T, R>, SPP::Ops<SPP::Base<T, R>>>;
+
     template <typename T>
-    using IntrusivePtr = RefCountPtr<T, IPP::Ops<T>>;
+    using AtomicSharedPtr = SharedPtr<T, ARC>;
 }
