@@ -3,7 +3,7 @@
 #include "outable.h"
 
 namespace Std {
-    struct UnboundBuffer: public OutAble {
+    struct UnboundBuffer {
         void* ptr;
 
         inline UnboundBuffer(void* _ptr) noexcept
@@ -11,4 +11,11 @@ namespace Std {
         {
         }
     };
+
+    template <typename T>
+    inline UnboundBuffer&& operator<<(UnboundBuffer&& out, const T& t) {
+        output<UnboundBuffer, T>(out, t);
+
+        return static_cast<UnboundBuffer&&>(out);
+    }
 }

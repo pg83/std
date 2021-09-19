@@ -82,12 +82,12 @@ void Std::output<OutBuf, const u8*>(OutBuf& out, const u8* str) {
     out.write(str, strLen(str));
 }
 
-// std types
 template <>
 void Std::output<OutBuf, u8>(OutBuf& out, u8 ch) {
     out.write(&ch, 1);
 }
 
+// std types - unsigned
 template <>
 void Std::output<OutBuf, u16>(OutBuf& out, u16 v) {
     out << (u64)v;
@@ -100,5 +100,21 @@ void Std::output<OutBuf, u32>(OutBuf& out, u32 v) {
 
 template <>
 void Std::output<OutBuf, u64>(OutBuf& out, u64 v) {
+    out.bump(out.imbue(24) << v);
+}
+
+// std types - signed
+template <>
+void Std::output<OutBuf, i16>(OutBuf& out, i16 v) {
+    out << (i64)v;
+}
+
+template <>
+void Std::output<OutBuf, i32>(OutBuf& out, i32 v) {
+    out << (i64)v;
+}
+
+template <>
+void Std::output<OutBuf, i64>(OutBuf& out, i64 v) {
     out.bump(out.imbue(24) << v);
 }

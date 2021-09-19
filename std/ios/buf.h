@@ -6,12 +6,11 @@
 
 #include <std/sys/types.h>
 #include <std/lib/buffer.h>
-#include <std/lib/support.h>
 
 namespace Std {
     struct Output;
 
-    class OutBuf: public OutAble {
+    class OutBuf {
         Output* out_;
         Buffer buf_;
 
@@ -63,4 +62,11 @@ namespace Std {
             return *out_;
         }
     };
+
+    template <typename O, typename T>
+    inline EnableForDerived<OutBuf, O, O&&> operator<<(O&& out, const T& t) {
+        output<OutBuf, T>(out, t);
+
+        return static_cast<O&&>(out);
+    }
 }

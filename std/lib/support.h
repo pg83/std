@@ -27,4 +27,9 @@ namespace Std {
     constexpr RemoveReference<T>&& move(T&& t) noexcept {
         return static_cast<RemoveReference<T>&&>(t);
     }
+
+    template <typename T>
+    constexpr T&& forward(T&& t) noexcept {
+        return static_cast<T&&>(t);
+    }
 }

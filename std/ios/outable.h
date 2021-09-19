@@ -8,19 +8,13 @@ namespace Std {
     template <typename O, typename T>
     void output(O& out, Meta::FuncParam<T> t);
 
-    struct OutAble {
-        template <typename O, typename T>
-        friend inline O& operator<<(O& out, const T& t) {
-            output<O, T>(out, t);
-
-            return out;
-        }
-
-        template <typename O, typename T>
-        friend inline O&& operator<<(O&& out, const T& t) {
-            output<O, T>(out, t);
-
-            return move(out);
-        }
+    template <typename B, typename D>
+    struct IsBaseOf {
+        enum {
+            R = __is_base_of(B, D)
+        };
     };
+
+    template <typename B, typename D, typename T>
+    using EnableForDerived = Meta::EnableIf<IsBaseOf<B, RemoveReference<D>>::R, T>;
 }

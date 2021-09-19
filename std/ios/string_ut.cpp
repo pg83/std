@@ -1,6 +1,8 @@
+#include "buf.h"
 #include "string.h"
 
 #include <std/tst/ut.h>
+#include <std/ios/sys.h>
 #include <std/str/dynamic.h>
 
 using namespace Std;
@@ -19,5 +21,17 @@ STD_TEST_SUITE(StringIO) {
         }
 
         STD_INSIST(str == StringView(u8"123456789101112"));
+    }
+
+    struct String: public DynString, public StringOutput, public OutBuf {
+        inline String() noexcept
+            : StringOutput(*(DynString*)this)
+            , OutBuf(*(StringOutput*)this)
+        {
+        }
+    };
+
+    STD_TEST(numbers) {
+        STD_INSIST((String() << 1 << -2 << finI) == StringView(u8"1-2"));
     }
 }
