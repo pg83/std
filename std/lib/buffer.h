@@ -14,6 +14,7 @@ namespace Std {
     class Buffer {
         void* data_;
 
+    private:
         struct Header {
             size_t used;
             size_t size;
