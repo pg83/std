@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Std {
+namespace Std::Private {
     // remove reference
     template <typename T>
     struct RemoveReferenceHelper {
@@ -16,9 +16,11 @@ namespace Std {
     struct RemoveReferenceHelper<T&&> {
         using R = T;
     };
+}
 
+namespace Std {
     template <typename T>
-    using RemoveReference = typename RemoveReferenceHelper<T>::R;
+    using RemoveReference = typename Private::RemoveReferenceHelper<T>::R;
 
     //move semantics
     template <typename T>
