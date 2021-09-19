@@ -6,6 +6,11 @@
 #include <std/sys/types.h>
 
 namespace Std {
+    template <typename T>
+    inline constexpr T* advancePtr(T* ptr, size_t len) noexcept {
+        return (T*)(len + (const u8*)ptr);
+    }
+
     class Buffer {
         void* data_;
 
@@ -46,12 +51,20 @@ namespace Std {
             return *this;
         }
 
-        inline void* data() noexcept {
+        inline auto data() noexcept {
             return data_;
         }
 
-        inline const void* data() const noexcept {
+        inline auto data() const noexcept {
             return data_;
+        }
+
+        inline auto current() const noexcept {
+            return advancePtr(data(), used());
+        }
+
+        inline auto mutCurrent() noexcept {
+            return (void*)current();
         }
 
         inline size_t capacity() const noexcept {
@@ -101,6 +114,10 @@ namespace Std {
         void shrinkToFit();
         void grow(size_t size);
         void append(const void* data, size_t len);
+
+        inline void growDelta(size_t len) {
+            grow(used() + len);
+        }
 
     private:
         inline Header* header() const noexcept {

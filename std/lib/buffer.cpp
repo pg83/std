@@ -76,15 +76,15 @@ void Buffer::grow(size_t size) {
 }
 
 void Buffer::append(const void* ptr, size_t len) {
-    grow(used() + len);
+    growDelta(len);
     appendUnsafe(ptr, len);
 }
 
 void Buffer::appendUnsafe(const void* ptr, size_t len) {
-    auto cur = (char*)data() + used();
+    auto cur = (u8*)mutCurrent();
 
     if (len == 1) {
-        *cur = *(const char*)ptr;
+        *cur = *(const u8*)ptr;
         header()->used += 1;
     } else {
         memcpy(cur, ptr, len);

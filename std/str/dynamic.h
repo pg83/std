@@ -36,16 +36,29 @@ namespace Std {
             return (const u8*)buf_.data();
         }
 
-        inline size_t length() const noexcept {
+        inline auto length() const noexcept {
             return buf_.used();
         }
 
-        inline size_t capacity() const noexcept {
+        inline auto capacity() const noexcept {
             return buf_.capacity();
+        }
+
+        inline auto left() const noexcept {
+            return buf_.left();
+        }
+
+        template <typename T>
+        inline void markInitialized(T position) noexcept {
+            buf_.seekAbsolute(position);
         }
 
         inline void grow(size_t len) {
             buf_.grow(len);
+        }
+
+        inline void growDelta(size_t delta) {
+            buf_.growDelta(delta);
         }
 
         char* cStr();

@@ -23,10 +23,9 @@ STD_TEST_SUITE(StringIO) {
         STD_INSIST(str == StringView(u8"123456789101112"));
     }
 
-    struct String: public DynString, public StringOutput, public OutBuf {
+    struct String: public DynString, public StringOutput {
         inline String() noexcept
             : StringOutput(*(DynString*)this)
-            , OutBuf(*(StringOutput*)this)
         {
         }
     };
