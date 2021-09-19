@@ -1,42 +1,29 @@
 #pragma once
 
+#include "refcount.h"
+
 namespace Std {
     template <typename T>
-    class IntrusivePtr {
-        T* t_;
-
-    public:
-        inline IntrusivePtr(T* t) noexcept
-            : t_(t)
-        {
-            t_->ref();
+    struct IntrusiveOps {
+        static inline auto ref(T* t) noexcept {
+            t->ref();
         }
 
-        inline IntrusivePtr(const IntrusivePtr& ptr) noexcept
-            : IntrusivePtr(ptr.t_)
-        {
-        }
-
-        inline ~IntrusivePtr() noexcept {
-            if (t_->refCount() == 1 || t_->unref() == 0) {
-                delete t_;
+        static inline auto unref(T* t) noexcept {
+            if (t->refCount() == 1 || t->unref() == 0) {
+                delete t;
             }
         }
 
-        inline const T* ptr() const noexcept {
-            return t_;
+        static inline auto ptr(const T* t) noexcept {
+            return t;
         }
 
-        inline T* mutPtr() noexcept {
-            return t_;
-        }
-
-        inline T* operator->() noexcept {
-            return mutPtr();
-        }
-
-        inline const T* operator->() const noexcept {
-            return ptr();
+        static inline auto mutPtr(T* t) noexcept {
+            return t;
         }
     };
+
+    template <typename T>
+    using IntrusivePtr = RefCountPtr<T, IntrusiveOps<T>>;
 }
