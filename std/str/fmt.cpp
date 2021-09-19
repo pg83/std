@@ -2,7 +2,7 @@
 
 #include <std/alg/reverse.h>
 
-size_t Std::formatU64Base10(u64 v, void* ptr) noexcept {
+void* Std::formatU64Base10(u64 v, void* ptr) noexcept {
     u8* b = (u8*)ptr;
     u8* e = b;
 
@@ -13,5 +13,5 @@ size_t Std::formatU64Base10(u64 v, void* ptr) noexcept {
 
     reverse(b, e);
 
-    return e - b;
+    return e;
 }

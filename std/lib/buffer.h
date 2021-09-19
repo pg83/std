@@ -90,6 +90,14 @@ namespace Std {
             header()->used = pos;
         }
 
+        inline void seekAbsolute(const void* ptr) noexcept {
+            seekAbsolute(offsetOf(ptr));
+        }
+
+        inline size_t offsetOf(const void* ptr) noexcept {
+            return (const u8*)ptr - (const u8*)data();
+        }
+
         void shrinkToFit();
         void grow(size_t size);
         void append(const void* data, size_t len);

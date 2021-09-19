@@ -93,6 +93,6 @@ void Buffer::appendUnsafe(const void* ptr, size_t len) {
 }
 
 template <>
-void Std::output<Buffer>(OutBuf& out, const Buffer& buf) {
+void Std::output<OutBuf, Buffer>(OutBuf& out, const Buffer& buf) {
     out.write(buf.data(), buf.used());
 }

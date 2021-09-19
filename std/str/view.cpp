@@ -5,6 +5,6 @@
 using namespace Std;
 
 template <>
-void Std::output<StringView>(OutBuf& out, const StringView& str) {
+void Std::output<OutBuf, StringView>(OutBuf& out, const StringView& str) {
     out.write(str.data(), str.length());
 }

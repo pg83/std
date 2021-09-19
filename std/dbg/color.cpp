@@ -5,7 +5,7 @@
 using namespace Std;
 
 template <>
-void Std::output<Color>(OutBuf& buf, Color color) {
+void Std::output<OutBuf, Color>(OutBuf& buf, Color color) {
     buf << StringView(u8"\033[");
 
     if (color.color == AnsiColor::Reset) {
