@@ -54,4 +54,17 @@ namespace Std {
             return *ptr();
         }
     };
+
+    template <typename T>
+    struct RefCountOps {
+        static inline auto ref(T* t) noexcept {
+            t->ref();
+        }
+
+        static inline auto unref(T* t) noexcept {
+            if (t->refCount() == 1 || t->unref() == 0) {
+                delete t;
+            }
+        }
+    };
 }

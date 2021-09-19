@@ -4,17 +4,7 @@
 
 namespace Std::IPP {
     template <typename T>
-    struct Ops {
-        static inline auto ref(T* t) noexcept {
-            t->ref();
-        }
-
-        static inline auto unref(T* t) noexcept {
-            if (t->refCount() == 1 || t->unref() == 0) {
-                delete t;
-            }
-        }
-
+    struct Ops: public RefCountOps<T> {
         static inline auto ptr(const T* t) noexcept {
             return t;
         }
