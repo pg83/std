@@ -21,9 +21,19 @@ void Std::freeMemory(void* ptr) noexcept {
 }
 
 int Std::memCmp(const void* l, const void* r, size_t len) noexcept {
+    if (len == 0) {
+        return 0;
+    }
+
     return memcmp(l, r, len);
 }
 
+void* Std::memCpy(void* to, const void* from, size_t len) noexcept {
+    memcpy(to, from, len);
+
+    return len + (u8*)to;
+}
+
 size_t Std::strLen(const u8* s) noexcept {
-    return strlen((const char*)s);
+    return s ? strlen((const char*)s) : 0;
 }

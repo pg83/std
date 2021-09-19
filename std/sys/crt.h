@@ -9,5 +9,6 @@ namespace Std {
 
     // string ops
     int memCmp(const void* l, const void* r, size_t len) noexcept;
+    void* memCpy(void* to, const void* from, size_t len) noexcept;
     size_t strLen(const u8* s) noexcept;
 }

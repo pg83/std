@@ -9,7 +9,7 @@ TSTS = $(wildcard tst/*.cpp) $(subst _ut.u,_ut.cpp,$(filter %.u,$(TMPS)))
 TSTO = $(TSTS:%=%.o)
 
 OPTF = -O2 -fdata-sections -ffunction-sections -fcommon
-CXXF = -isystem . -W -Wall -std=c++2a $(OPTF) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
+CXXF = -I. -W -Wall -std=c++2a $(OPTF) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 
 all: libstd.a test
 

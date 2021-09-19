@@ -37,7 +37,7 @@ namespace {
 }
 
 template <>
-void Std::output<OutBuf, Test>(OutBuf& buf, const Test& test) {
+void Std::output<ZeroCopyOutput, Test>(ZeroCopyOutput& buf, const Test& test) {
     buf << test.suite << StringView(u8"::") << test.name;
 }
 

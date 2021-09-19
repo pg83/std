@@ -13,6 +13,6 @@ char* DynString::cStr() {
 }
 
 template <>
-void Std::output<OutBuf, DynString>(OutBuf& out, const DynString& s) {
+void Std::output<ZeroCopyOutput, DynString>(ZeroCopyOutput& out, const DynString& s) {
     out.write(s.data(), s.length());
 }
