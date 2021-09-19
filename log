@@ -1,8 +1,0 @@
-[39m- ioString::write[0m[29m+ ioString::write[0m
-[39m- reverse::testEmpty[0m[29m+ reverse::testEmpty[0m
-[39m- reverse::testOne[0m[29m+ reverse::testOne[0m
-[39m- reverse::testTwo[0m[29m+ reverse::testTwo[0m
-[39m- reverse::testThree[0m[29m+ reverse::testThree[0m
-[39m- bits::testClp2[0m[29m+ bits::testClp2[0m
-[39m- ut::test1[0m[29m+ ut::test1[0m
-[39m- vector::pushBack[0m[29m+ vector::pushBack[0m
