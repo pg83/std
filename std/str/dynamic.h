@@ -5,14 +5,13 @@
 #include "view.h"
 
 #include <std/sys/types.h>
-#include <std/lib/buffer.h>
+#include <std/lib/vector.h>
 #include <std/typ/support.h>
 
 namespace Std {
-    class DynString: public StringOps<DynString> {
-        Buffer buf_;
+    using DynStringBase = Vector<u8>;
 
-    public:
+    struct DynString: public DynStringBase {
         inline DynString() noexcept = default;
 
         template <class Other>
@@ -23,47 +22,15 @@ namespace Std {
         inline DynString(const DynString&) = default;
 
         inline DynString(DynString&& str) noexcept
-            : buf_(move(str.buf_))
+            : DynString()
         {
-        }
-
-        inline auto data() const noexcept {
-            return (const u8*)buf_.data();
-        }
-
-        inline auto mutData() noexcept {
-            return (u8*)data();
-        }
-
-        inline auto length() const noexcept {
-            return buf_.used();
-        }
-
-        inline auto capacity() const noexcept {
-            return buf_.capacity();
-        }
-
-        inline auto left() const noexcept {
-            return buf_.left();
-        }
-
-        template <typename T>
-        inline void markInitialized(T position) noexcept {
-            buf_.seekAbsolute(position);
-        }
-
-        inline void grow(size_t len) {
-            buf_.grow(len);
-        }
-
-        inline void growDelta(size_t delta) {
-            buf_.growDelta(delta);
+            str.xchg(*this);
         }
 
         char* cStr();
 
         inline DynString& append(const u8* ptr, size_t len) {
-            buf_.append(ptr, len);
+            DynStringBase::append(ptr, ptr + len);
 
             return *this;
         }

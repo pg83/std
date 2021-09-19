@@ -8,7 +8,6 @@
 #include <std/alg/bits.h>
 
 #include <new>
-#include <string.h>
 
 using namespace Std;
 
@@ -89,7 +88,7 @@ void Buffer::appendUnsafe(const void* ptr, size_t len) {
         *cur = *(const u8*)ptr;
         header()->used += 1;
     } else {
-        memcpy(cur, ptr, len);
+        memCpy(cur, ptr, len);
         header()->used += len;
     }
 }

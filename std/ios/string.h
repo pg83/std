@@ -1,7 +1,7 @@
 #include "output.h"
 
 namespace Std {
-    class DynString;
+    struct DynString;
 
     class StringOutput: public ZeroCopyOutput {
         DynString* str_;

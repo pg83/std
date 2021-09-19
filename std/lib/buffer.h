@@ -64,7 +64,15 @@ namespace Std {
         }
 
         inline auto mutCurrent() noexcept {
-            return (void*)current();
+            return const_cast<void*>(current());
+        }
+
+        inline auto storageEnd() const noexcept {
+            return advancePtr(data(), capacity());
+        }
+
+        inline auto mutStorageEnd() noexcept {
+            return const_cast<void*>(storageEnd());
         }
 
         inline size_t capacity() const noexcept {

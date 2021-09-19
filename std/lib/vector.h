@@ -12,12 +12,24 @@ namespace Std {
         inline Vector(Vector&&) = default;
         inline Vector(const Vector&) = default;
 
-        inline auto begin() const noexcept {
+        inline auto data() const noexcept {
             return (const T*)buf_.data();
         }
 
+        inline auto begin() const noexcept {
+            return data();
+        }
+
         inline auto end() const noexcept {
-            return (const T*)((const char*)buf_.data() + buf_.length());
+            return (const T*)buf_.current();
+        }
+
+        inline auto storageEnd() const noexcept {
+            return (const T*)buf_.storageEnd();
+        }
+
+        inline auto mutData() noexcept {
+            return const_cast<T*>(data());
         }
 
         inline auto mutBegin() noexcept {
@@ -28,7 +40,15 @@ namespace Std {
             return const_cast<T*>(end());
         }
 
-        inline size_t length() const noexcept {
+        inline auto mutStorageEnd() noexcept {
+            return const_cast<T*>(storageEnd());
+        }
+
+        inline auto left() const noexcept {
+            return storageEnd() - end();
+        }
+
+        inline auto length() const noexcept {
             return end() - begin();
         }
 
@@ -54,6 +74,33 @@ namespace Std {
 
         inline auto& mutBack() noexcept {
             return *(mutEnd() - 1);
+        }
+
+        template <typename P>
+        inline void markInitialized(P position) noexcept {
+            static_assert(sizeof(T) == 1);
+
+            buf_.seekAbsolute(position);
+        }
+
+        inline void grow(size_t len) {
+            buf_.grow(len * sizeof(T));
+        }
+
+        inline void growDelta(size_t delta) {
+            grow(length() + delta);
+        }
+
+        inline void append(const T* b, const T* e) {
+            buf_.append((const u8*)b, (const u8*)e - (const u8*)b);
+        }
+
+        inline void append(const T* b, size_t len) {
+            append(b, b + len);
+        }
+
+        inline void xchg(Vector& v) noexcept {
+            buf_.xchg(v.buf_);
         }
     };
 }

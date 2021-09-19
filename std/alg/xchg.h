@@ -2,9 +2,9 @@
 
 namespace Std {
     template <typename T>
-    inline void xchg(T&& l, T&& r) noexcept {
+    inline void xchg(T& l, T& r) noexcept {
         if constexpr (__is_class(T)) {
-            l.swap(r);
+            l.xchg(r);
         } else {
             T t = l;
 

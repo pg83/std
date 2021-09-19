@@ -20,7 +20,7 @@ STD_TEST_SUITE(StringIO) {
             out.write(u8"89101112", 8);
         }
 
-        STD_INSIST(str == StringView(u8"123456789101112"));
+        STD_INSIST(StringView(str) == StringView(u8"123456789101112"));
     }
 
     struct String: public DynString, public StringOutput {
@@ -31,6 +31,6 @@ STD_TEST_SUITE(StringIO) {
     };
 
     STD_TEST(numbers) {
-        STD_INSIST((String() << 1 << -2 << finI) == StringView(u8"1-2"));
+        STD_INSIST(StringView(String() << 1 << -2 << finI) == StringView(u8"1-2"));
     }
 }
