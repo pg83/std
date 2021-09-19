@@ -17,8 +17,5 @@ void Std::output<UnboundBuffer, i64>(UnboundBuffer& buf, i64 v) {
 
 template <>
 void Std::output<UnboundBuffer, StringView>(UnboundBuffer& buf, const StringView& v) {
-    auto len = v.length();
-
-    memCpy(buf.ptr, v.data(), len);
-    buf.ptr = len + (u8*)buf.ptr;
+    buf.ptr = memCpy(buf.ptr, v.data(), v.length());
 }

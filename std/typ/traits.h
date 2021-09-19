@@ -35,9 +35,10 @@ namespace Std::Traits {
     using RemoveReference = typename Private::RemoveReferenceHelper<T>::R;
 
     template <typename B, typename D>
-    struct IsBaseOf {
-        enum {
-            R = __is_base_of(B, D)
-        };
+    struct IsBaseOf: public Meta::Bool<__is_base_of(B, D)> {
+    };
+
+    template <typename C>
+    struct IsClass: public Meta::Bool<__is_class(C)> {
     };
 }
