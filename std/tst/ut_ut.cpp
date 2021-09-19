@@ -4,7 +4,7 @@
 
 using namespace Std;
 
-STD_TEST_SUITE(ut) {
+STD_TEST_SUITE(UT) {
     STD_TEST(test1) {
     }
 }

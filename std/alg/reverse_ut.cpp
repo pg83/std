@@ -6,7 +6,7 @@
 
 using namespace Std;
 
-STD_TEST_SUITE(reverse) {
+STD_TEST_SUITE(Reverse) {
     STD_TEST(testEmpty) {
         Vector<u32> x;
 

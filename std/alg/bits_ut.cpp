@@ -4,7 +4,7 @@
 
 using namespace Std;
 
-STD_TEST_SUITE(bits) {
+STD_TEST_SUITE(BitOps) {
     STD_TEST(testClp2) {
         STD_INSIST(clp2(0) == 1);
         STD_INSIST(clp2(1) == 1);

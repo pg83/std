@@ -14,13 +14,13 @@ namespace Std {
 }
 
 #define STD_TEST_SUITE(name) \
-    static const auto SUITE_NAME = ::Std::StringView(u8 ## #name); namespace _ ## name
+    static const auto SUITE_NAME = ::Std::StringView(u8 ## #name); namespace Suite_ ## name
 
 #define STD_TEST(name)                                          \
-    static struct _ ## name: public ::Std::TestFunc {           \
-        inline _ ## name() {                                    \
+    static struct Test_ ## name: public ::Std::TestFunc {       \
+        inline Test_ ## name() {                                \
             ::Std::registerTest(SUITE_NAME, u8 ## #name, this); \
         }                                                       \
         void execute() override;                                \
     } REG_ ## name;                                             \
-    void _ ## name::execute()
+    void Test_ ## name::execute()

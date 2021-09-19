@@ -5,7 +5,7 @@
 
 using namespace Std;
 
-STD_TEST_SUITE(ioString) {
+STD_TEST_SUITE(StringIO) {
     STD_TEST(write) {
         DynString str;
 

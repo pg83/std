@@ -17,6 +17,7 @@ OutBuf::~OutBuf() {
 OutBuf::OutBuf(Output& out) noexcept
     : out_(&out)
 {
+    buf_.grow(256);
 }
 
 OutBuf::OutBuf() noexcept
@@ -31,7 +32,6 @@ size_t OutBuf::imbue(void** ptr) noexcept {
 }
 
 void OutBuf::write(const void* ptr, size_t len) {
-    buf_.grow(256);
     buf_.append(ptr, len);
 
     if (buf_.used() > 16 * 1024) {

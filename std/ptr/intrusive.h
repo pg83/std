@@ -1,7 +1,5 @@
 #pragma once
 
-#include "support.h"
-
 namespace Std {
     template <typename T>
     class IntrusivePtr {

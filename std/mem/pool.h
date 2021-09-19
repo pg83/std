@@ -1,7 +1,7 @@
 #pragma once
 
-#include <std/lib/ptr.h>
 #include <std/sys/types.h>
+#include <std/ptr/intrusive.h>
 
 namespace Std {
     struct Pool: public RefCount {

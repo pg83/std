@@ -4,7 +4,7 @@
 
 using namespace Std;
 
-STD_TEST_SUITE(vector) {
+STD_TEST_SUITE(Vector) {
     STD_TEST(pushBack) {
         Vector<size_t> vec;
 
