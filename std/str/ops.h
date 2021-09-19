@@ -20,8 +20,8 @@ namespace Std {
             return base()->length();
         }
 
-        inline auto data() noexcept {
-            return base()->data();
+        inline auto mutData() noexcept {
+            return base()->mutData();
         }
 
         inline auto data() const noexcept {
@@ -38,7 +38,7 @@ namespace Std {
         }
 
         inline auto mutBegin() noexcept {
-            return base()->data();
+            return mutData();
         }
 
         inline auto mutEnd() noexcept {
@@ -46,8 +46,8 @@ namespace Std {
         }
 
         // array ops
-        inline auto& operator[](size_t i) noexcept {
-            return *(begin() + i);
+        inline auto& mut(size_t i) noexcept {
+            return *(mutBegin() + i);
         }
 
         inline const auto& operator[](size_t i) const noexcept {

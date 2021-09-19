@@ -28,12 +28,12 @@ namespace Std {
         {
         }
 
-        inline auto data() noexcept {
-            return (u8*)buf_.data();
-        }
-
         inline auto data() const noexcept {
             return (const u8*)buf_.data();
+        }
+
+        inline auto mutData() noexcept {
+            return (u8*)data();
         }
 
         inline auto length() const noexcept {

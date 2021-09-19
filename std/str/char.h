@@ -14,7 +14,7 @@ namespace Std {
         {
         }
 
-        inline auto data() noexcept {
+        inline auto mutData() noexcept {
             return &char_;
         }
 
