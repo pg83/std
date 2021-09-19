@@ -12,6 +12,8 @@
 
 using namespace Std;
 
+static_assert(sizeof(Buffer) == sizeof(void*));
+
 Buffer::Header* Buffer::Header::null() noexcept {
     return (Header*)bss();
 }

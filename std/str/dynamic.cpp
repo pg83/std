@@ -4,6 +4,8 @@
 
 using namespace Std;
 
+static_assert(sizeof(DynString) == sizeof(void*));
+
 char* DynString::cStr() {
     grow(length() + 1);
 
