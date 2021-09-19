@@ -1,10 +1,12 @@
 #pragma once
 
 #include <std/sys/types.h>
+
+#include <std/ptr/ref_count.h>
 #include <std/ptr/intrusive.h>
 
 namespace Std {
-    struct Pool: public RefCount {
+    struct Pool: public AtomicRefCount {
         using Ref = IntrusivePtr<Pool>;
 
         virtual ~Pool();

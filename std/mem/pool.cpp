@@ -22,6 +22,9 @@ namespace {
     };
 }
 
+Pool::~Pool() {
+}
+
 Pool::Ref Pool::fromMemory() {
     return new DebugPool();
 }

@@ -30,22 +30,13 @@ namespace Std {
         inline T* mutPtr() noexcept {
             return t_;
         }
-    };
 
-    class RefCount {
-        int counter_ = 0;
-
-    public:
-        inline int ref() noexcept {
-            return ++counter_;
+        inline T* operator->() noexcept {
+            return mutPtr();
         }
 
-        inline int refCount() const noexcept {
-            return counter_;
-        }
-
-        inline int unref() noexcept {
-            return --counter_;
+        inline const T* operator->() const noexcept {
+            return ptr();
         }
     };
 }
