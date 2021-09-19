@@ -1,4 +1,5 @@
 #include "panic.h"
+#include "color.h"
 
 #include <std/str/view.h>
 
@@ -8,10 +9,10 @@
 #include <stdlib.h>
 
 void Std::panic(const u8* what, u32 line, const u8* file) {
-    sysE << endL
+    sysE << endL << Color::bright(AnsiColor::Red)
          << what << StringView(u8" failed, at ")
          << file << StringView(u8":")
-         << line << endL << finI;
+         << line << Color::reset() << endL << finI;
 
     abort();
 }

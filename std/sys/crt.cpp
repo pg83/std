@@ -1,5 +1,6 @@
 #include "crt.h"
 
+#include <std/dbg/insist.h>
 #include <std/ios/output.h>
 
 #include <stdlib.h>
@@ -10,7 +11,9 @@ void* Std::allocateMemory(size_t len) {
         return ret;
     }
 
-    abort();
+    STD_INSIST(false);
+
+    return 0;
 }
 
 void Std::freeMemory(void* ptr) noexcept {
