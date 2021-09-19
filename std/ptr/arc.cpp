@@ -8,14 +8,14 @@ ARC::ARC() noexcept {
     stdAtomicStore(&counter_, 0, MemoryOrder::Relaxed);
 }
 
-int ARC::ref() noexcept {
+i32 ARC::ref() noexcept {
     return stdAtomicAddAndFetch(&counter_, 1, MemoryOrder::Acquire);
 }
 
-int ARC::refCount() const noexcept {
+i32 ARC::refCount() const noexcept {
     return stdAtomicFetch(&counter_, MemoryOrder::Relaxed);
 }
 
-int ARC::unref() noexcept {
+i32 ARC::unref() noexcept {
     return stdAtomicSubAndFetch(&counter_, 1, MemoryOrder::Release);
 }
