@@ -30,6 +30,8 @@ namespace Std {
             buf.xchg(*this);
         }
 
+        OutBuf(const OutBuf&) = delete;
+
         void xchg(OutBuf& buf) noexcept;
 
         void write(const void* ptr, size_t len);

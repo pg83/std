@@ -2,6 +2,7 @@
 
 #include <std/ios/sys.h>
 #include <std/alg/range.h>
+#include <std/dbg/color.h>
 #include <std/lib/vector.h>
 #include <std/lib/singleton.h>
 
@@ -17,9 +18,15 @@ namespace {
     struct Tests: public Vector<Test>  {
         inline void run() {
             for (auto test : range(*this)) {
-                sysE << StringView(u8"- ") << test << finI;
+                sysE << Color::bright(AnsiColor::Yellow)
+                     << StringView(u8"- ") << test
+                     << Color::reset() << finI;
+
                 test.func->execute();
-                sysE << StringView(u8"\r+ ") << test << endL << finI;
+
+                sysE << Color::bright(AnsiColor::Green)
+                     << StringView(u8"\r+ ") << test
+                     << Color::reset() << endL << finI;
             }
         }
 

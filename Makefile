@@ -8,7 +8,7 @@ LIBO = $(LIBS:%=%.o)
 TSTS = $(wildcard tst/*.cpp) $(subst _ut.u,_ut.cpp,$(filter %.u,$(TMPS)))
 TSTO = $(TSTS:%=%.o)
 
-CXXF = -isystem . -W -Wall -O2 -std=c++20 $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
+CXXF = -isystem . -W -Wall -O2 -std=c++2a $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 
 # -fdata-sections -ffunction-sections 
 
