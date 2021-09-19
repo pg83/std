@@ -21,9 +21,7 @@ namespace Std {
 
         inline DynString(const DynString&) = default;
 
-        inline DynString(DynString&& str) noexcept
-            : DynString()
-        {
+        inline DynString(DynString&& str) noexcept {
             str.xchg(*this);
         }
 
@@ -37,7 +35,7 @@ namespace Std {
 
         template <typename Other>
         friend inline DynString operator+(const DynString& l, const Other& r) {
-            return DynString(l) += r;
+            return move(DynString(l) += r);
         }
 
         template <typename Other>
