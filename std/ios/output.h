@@ -1,10 +1,13 @@
 #pragma once
 
-#include "param.h"
 #include "unbound.h"
 #include "outable.h"
 
 #include <std/sys/types.h>
+
+#include <std/typ/meta.h>
+#include <std/typ/traits.h>
+#include <std/typ/support.h>
 
 namespace Std {
     struct Output {
@@ -60,8 +63,11 @@ namespace Std {
         virtual void bumpImpl(const void* ptr) noexcept = 0;
     };
 
+    template <typename B, typename D>
+    using EnableDerived = Meta::EnableIf<Traits::IsBaseOf<B, Traits::RemoveReference<D>>::R, D&&>;
+
     template <typename O, typename T>
-    inline EnableForDerived<ZeroCopyOutput, O, O&&> operator<<(O&& out, const T& t) {
+    inline EnableDerived<ZeroCopyOutput, O> operator<<(O&& out, const T& t) {
         output<ZeroCopyOutput, T>(out, t);
 
         return forward<O>(out);

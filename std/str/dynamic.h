@@ -5,9 +5,8 @@
 #include "view.h"
 
 #include <std/sys/types.h>
-
 #include <std/lib/buffer.h>
-#include <std/lib/support.h>
+#include <std/typ/support.h>
 
 namespace Std {
     class DynString: public StringOps<DynString> {
