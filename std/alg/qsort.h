@@ -4,7 +4,7 @@
 
 #include <std/typ/support.h>
 
-namespace Std::QuickSort {
+namespace Std::QSP {
     template <typename I, typename C>
     struct Context {
         C* f;
@@ -40,7 +40,7 @@ namespace Std::QuickSort {
 namespace Std {
     template <typename I, typename C>
     inline void quickSort(I b, I e, C&& f) {
-        QuickSort::Context<I, C>{.f = &f}.sort(b, e);
+        QSP::Context<I, C>{.f = &f}.sort(b, e);
     }
 
     template <typename I>
