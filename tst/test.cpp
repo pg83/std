@@ -1,5 +1,5 @@
 #include <std/tst/ut.h>
 
-int main() {
-    Std::runTests();
+int main(int argc, char** argv) {
+    Std::runTests(argc, argv);
 }

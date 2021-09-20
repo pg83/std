@@ -1,6 +1,7 @@
 #include "ut.h"
 
 #include <std/ios/sys.h>
+#include <std/mem/pool.h>
 #include <std/alg/qsort.h>
 #include <std/alg/range.h>
 #include <std/dbg/color.h>
@@ -11,17 +12,21 @@ using namespace Std;
 
 namespace {
     struct Test {
-        StringView suite;
-        StringView name;
+        StringView fullName;
         TestFunc* func;
 
         auto key() const noexcept {
-            return suite.length() + name.length();
+            return func->suite().length() + func->name().length();
         }
     };
 
-    struct Tests: public Vector<Test>  {
-        inline void run() {
+    struct GetOpt {
+        bool listTests = false;
+        Vector<StringView> includes;
+    };
+
+    struct Tests: public Vector<Test> {
+        inline void run(int argc, char** argv) {
             Vector<const Test*> tests;
 
             for (auto& t : range(*this)) {
@@ -45,6 +50,10 @@ namespace {
             }
         }
 
+        inline void reg(TestFunc* func) {
+            pushBack(Test{.func = func});
+        }
+
         static inline auto& instance() noexcept {
             return singleton<Tests>();
         }
@@ -53,13 +62,13 @@ namespace {
 
 template <>
 void Std::output<ZeroCopyOutput, Test>(ZeroCopyOutput& buf, const Test& test) {
-    buf << test.suite << StringView(u8"::") << test.name;
+    buf << test.func->suite() << StringView(u8"::") << test.func->name();
 }
 
-void Std::runTests() {
-    Tests::instance().run();
+void Std::runTests(int argc, char** argv) {
+    Tests::instance().run(argc, argv);
 }
 
-void Std::registerTest(const StringView& suite, const StringView& name, TestFunc* test) {
-    Tests::instance().pushBack(Test{suite, name, test});
+void Std::registerTest(TestFunc* test) {
+    Tests::instance().reg(test);
 }

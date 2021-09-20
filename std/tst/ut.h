@@ -7,20 +7,28 @@
 namespace Std {
     struct TestFunc {
         virtual void execute() const = 0;
+        virtual StringView suite() const = 0;
+        virtual StringView name() const = 0;
     };
 
-    void registerTest(const StringView& suite, const StringView& name, TestFunc* test);
-    void runTests();
+    void registerTest(TestFunc* test);
+    void runTests(int argc, char** argv);
 }
 
-#define STD_TEST_SUITE(name) \
-    static const auto SUITE_NAME = ::Std::StringView(u8 ## #name); namespace Suite_ ## name
+#define STD_TEST_SUITE(_name) \
+    static const auto SUITE_NAME = ::Std::StringView(u8 ## #_name); namespace Suite_ ## _name
 
-#define STD_TEST(name)                                          \
-    static struct Test_ ## name: public ::Std::TestFunc {       \
-        inline Test_ ## name() {                                \
-            ::Std::registerTest(SUITE_NAME, u8 ## #name, this); \
-        }                                                       \
-        void execute() const override;                          \
-    } REG_ ## name;                                             \
-    void Test_ ## name::execute() const
+#define STD_TEST(_name) \
+    static struct Test_ ## _name: public ::Std::TestFunc { \
+        inline Test_ ## _name() {                          \
+            ::Std::registerTest(this);                     \
+        }                                                  \
+        ::Std::StringView suite() const override {         \
+            return SUITE_NAME;                             \
+        }                                                  \
+        ::Std::StringView name() const override {          \
+            return u8 ## #_name;                           \
+        }                                                  \
+        void execute() const override;                     \
+    } REG_ ## _name;                                       \
+    void Test_ ## _name::execute() const
