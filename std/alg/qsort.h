@@ -3,6 +3,7 @@
 #include "xchg.h"
 
 #include <std/rng/pcg.h>
+#include <std/lib/vector.h>
 #include <std/typ/support.h>
 
 #include <initializer_list>
@@ -10,8 +11,14 @@
 namespace Std::QSP {
     template <typename I, typename C>
     struct Context {
+        struct WorkItem {
+            I b;
+            I e;
+        };
+
         C& f;
         PCG32 r;
+        Vector<WorkItem> w;
 
         inline Context(C& _f) noexcept
             : f(_f)
@@ -23,16 +30,6 @@ namespace Std::QSP {
             for (auto i = b + 1; i != e; ++i) {
                 for (auto j = i; j != b && f(*j, *(j - 1)); --j) {
                     xchg(*j, *(j - 1));
-                }
-            }
-        }
-
-        inline void shellSort(I b, I e) {
-            for (auto gap : {57, 23, 10, 4, 1}) {
-                for (auto i = b + gap; i < e; i += gap) {
-                    for (auto j = i; (j >= (b + gap)) && f(*j, *(j - gap)); j -= gap) {
-                        xchg(*j, *(j - gap));
-                    }
                 }
             }
         }
@@ -72,7 +69,7 @@ namespace Std::QSP {
             return c;
         }
 
-        inline void qSort(I b, I e) {
+        inline void qSortStep(I b, I e) {
             auto len = e - b;
 
             if (len < 2) {
@@ -96,8 +93,21 @@ namespace Std::QSP {
             xchg(*p, *l);
 
             // recurse
-            qSort(b, p);
-            qSort(p + 1, e);
+            w.pushBack(Work{b, p});
+            w.pushBack(Work{p + 1, e});
+        }
+
+        inline void qSortLoop() {
+            while (!w.empty()) {
+                auto item = w.popBack();
+
+                qSortStep(item.b, item.e);
+            }
+        }
+
+        inline void qSort(I b, I e) {
+            qSortStep(b, e);
+            qSortLoop();
         }
     };
 }

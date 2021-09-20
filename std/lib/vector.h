@@ -52,10 +52,6 @@ namespace Std {
             return end() - begin();
         }
 
-        inline void pushBack(const T& t) {
-            buf_.append(&t, sizeof(t));
-        }
-
         inline bool empty() const noexcept {
             return buf_.empty();
         }
@@ -89,6 +85,18 @@ namespace Std {
 
         inline void growDelta(size_t delta) {
             grow(length() + delta);
+        }
+
+        inline void pushBack(const T& t) {
+            buf_.append(&t, sizeof(t));
+        }
+
+        inline auto popBack() {
+            auto res = back();
+
+            buf_.seekAbsolute(end() - 1);
+
+            return res;
         }
 
         inline void append(const T* b, const T* e) {
