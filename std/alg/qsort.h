@@ -5,6 +5,8 @@
 #include <std/rng/pcg.h>
 #include <std/typ/support.h>
 
+#include <initializer_list>
+
 namespace Std::QSP {
     template <typename I, typename C>
     struct Context {
@@ -18,14 +20,21 @@ namespace Std::QSP {
         }
 
         inline void insertionSort(I b, I e) {
-            for (auto i = b + 1; i < e; ++i) {
-                for (auto j = i; j > b && f(*j, *(j - 1)); --j) {
+            for (auto i = b + 1; i != e; ++i) {
+                for (auto j = i; j != b && f(*j, *(j - 1)); --j) {
                     xchg(*j, *(j - 1));
                 }
             }
         }
 
         inline void shellSort(I b, I e) {
+            for (auto gap : {57, 23, 10, 4, 1}) {
+                for (auto i = b + gap; i < e; i += gap) {
+                    for (auto j = i; (j >= (b + gap)) && f(*j, *(j - gap)); j -= gap) {
+                        xchg(*j, *(j - gap));
+                    }
+                }
+            }
         }
 
         inline void sortIt(I& a, I& b) {
@@ -64,23 +73,30 @@ namespace Std::QSP {
             return c;
         }
 
-        inline void sort(I b, I e) {
-            // already sorted
+        inline void qSort(I b, I e) {
             auto len = e - b;
 
             if (len < 2) {
+                // already sorted
                 return;
             }
 
-            if (len < 32) {
-                insertionSort(b, e);
+            if (len < 64) {
+                /*
+                if (len < 16) {
+                    insertionSort(b, e);
+                } else {
+                    shellSort(b, e);
+                }
+                */
+                shellSort(b, e);
             } else {
                 xchg(*choosePivot(b, e), *(e - 1));
 
                 auto p = partition(b, e - 1, e - 1);
 
-                sort(b, p);
-                sort(p + 1, e);
+                qSort(b, p);
+                qSort(p + 1, e);
             }
         }
     };
@@ -89,7 +105,7 @@ namespace Std::QSP {
 namespace Std {
     template <typename I, typename C>
     inline void quickSort(I b, I e, C&& f) {
-        QSP::Context<I, C>(f).sort(b, e);
+        QSP::Context<I, C>(f).qSort(b, e);
     }
 
     template <typename I>

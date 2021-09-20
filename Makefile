@@ -10,7 +10,7 @@ TSTS = $(wildcard tst/*.cpp) $(subst _ut.u,_ut.cpp,$(filter %.u,$(TMPS)))
 TSTO = $(TSTS:%=%.o)
 TSTA = tst/test
 
-OPTF = -O2 -fdata-sections -ffunction-sections -fcommon
+OPTF = -O3 -flto -fdata-sections -ffunction-sections -fcommon
 CXXF = -I. -W -Wall -std=c++2a $(OPTF) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 
 all: $(LIBA) $(TSTA)
@@ -21,7 +21,7 @@ $(LIBA): $(LIBO) Makefile
 	ranlib $(LIBA)
 
 $(TSTA): $(TSTO) $(LIBA) Makefile
-	$(CXX) $(LDFLAGS) -o $@ $(TSTO) $(LIBA)
+	$(CXX) $(OPTF) $(LDFLAGS) -o $@ $(TSTO) $(LIBA)
 
 %.cpp.o: %.cpp $(HDRS) Makefile
 	$(CXX) $(CXXF) -o $@ -c $<

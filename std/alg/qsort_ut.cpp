@@ -55,7 +55,7 @@ STD_TEST_SUITE(QuickSort) {
     }
 
     STD_TEST(testStress) {
-        for (size_t n = 1; n < 1000; ++n) {
+        for (size_t n = 1; n < 500; ++n) {
             Vector<u32> v;
             PCG32 r(n);
 
