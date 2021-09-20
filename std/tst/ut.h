@@ -6,7 +6,7 @@
 
 namespace Std {
     struct TestFunc {
-        virtual void execute() = 0;
+        virtual void execute() const = 0;
     };
 
     void registerTest(const StringView& suite, const StringView& name, TestFunc* test);
@@ -21,6 +21,6 @@ namespace Std {
         inline Test_ ## name() {                                \
             ::Std::registerTest(SUITE_NAME, u8 ## #name, this); \
         }                                                       \
-        void execute() override;                                \
+        void execute() const override;                          \
     } REG_ ## name;                                             \
-    void Test_ ## name::execute()
+    void Test_ ## name::execute() const
