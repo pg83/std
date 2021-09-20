@@ -2,6 +2,7 @@
 #include "range.h"
 
 #include <std/tst/ut.h>
+#include <std/rng/pcg.h>
 #include <std/lib/vector.h>
 
 using namespace Std;
@@ -50,6 +51,23 @@ STD_TEST_SUITE(QuickSort) {
 
         for (size_t i = 0; i < 10; ++i) {
             STD_INSIST(v[i] == i);
+        }
+    }
+
+    STD_TEST(testStress) {
+        for (size_t n = 1; n < 1000; ++n) {
+            Vector<u32> v;
+            PCG32 r(n);
+
+            for (size_t i = 0; i < n; ++i) {
+                v.pushBack(r.nextU32());
+            }
+
+            quickSort(mutRange(v));
+
+            for (size_t i = 1; i < v.length(); ++i) {
+                STD_INSIST(v[i - 1] <= v[i]);
+            }
         }
     }
 }
