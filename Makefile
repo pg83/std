@@ -4,27 +4,27 @@ TMPS = $(subst _ut.cpp,_ut.u,$(SRCS))
 
 LIBS = $(filter %.cpp,$(TMPS))
 LIBO = $(LIBS:%=%.o)
+LIBA = std/libstd.a
 
 TSTS = $(wildcard tst/*.cpp) $(subst _ut.u,_ut.cpp,$(filter %.u,$(TMPS)))
 TSTO = $(TSTS:%=%.o)
+TSTA = tst/test
 
 OPTF = -O2 -fdata-sections -ffunction-sections -fcommon
 CXXF = -I. -W -Wall -std=c++2a $(OPTF) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 
-all: libstd.a test
+all: $(LIBA) $(TSTA)
 
-libstd.a: $(LIBO) Makefile
-	@-rm libstd.a 2>/dev/null
-	ar q libstd.a $(LIBO)
-	ranlib libstd.a
+$(LIBA): $(LIBO) Makefile
+	@-rm $(LIBA) 2>/dev/null
+	ar q $(LIBA) $(LIBO)
+	ranlib $(LIBA)
 
-test: $(TSTO) libstd.a Makefile
-	@-mkdir -p `dirname $@`
-	$(CXX) $(LDFLAGS) -o $@ $(TSTO) libstd.a
+$(TSTA): $(TSTO) $(LIBA) Makefile
+	$(CXX) $(LDFLAGS) -o $@ $(TSTO) $(LIBA)
 
 %.cpp.o: %.cpp $(HDRS) Makefile
-	@-mkdir -p `dirname $@`
 	$(CXX) $(CXXF) -o $@ -c $<
 
 clear:
-	(echo test; echo libstd.a; (find . | grep '\.o')) | xargs rm
+	rm -rf $(LIBA) $(TSTA) $(TSTO) $(LIBO)
