@@ -82,22 +82,23 @@ namespace Std::QSP {
             }
 
             if (len < 64) {
-                /*
-                if (len < 16) {
-                    insertionSort(b, e);
-                } else {
-                    shellSort(b, e);
-                }
-                */
-                shellSort(b, e);
-            } else {
-                xchg(*choosePivot(b, e), *(e - 1));
-
-                auto p = partition(b, e - 1, e - 1);
-
-                qSort(b, p);
-                qSort(p + 1, e);
+                return insertionSort(b, e);
             }
+
+            if (0 && len < 64) {
+                if (0 && len < 16) {
+                    return insertionSort(b, e);
+                }
+
+                return shellSort(b, e);
+            }
+
+            xchg(*choosePivot(b, e), *(e - 1));
+
+            auto p = partition(b, e - 1, e - 1);
+
+            qSort(b, p);
+            qSort(p + 1, e);
         }
     };
 }

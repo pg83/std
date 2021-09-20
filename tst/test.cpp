@@ -4,8 +4,7 @@
 #include <std/alg/range.h>
 #include <std/lib/vector.h>
 
-//#include <algorithm>
-//#include <vector>
+#include <algorithm>
 
 using namespace Std;
 
@@ -22,8 +21,7 @@ int main(int argc, char** argv) {
             //v.pushBack(i);
         }
 
-        //std::sort(v.begin(), v.end());
+        //std::sort(v.mutBegin(), v.mutEnd());
         quickSort(mutRange(v));
-        //quickSort(v.data(), v.data() + v.size());
     }
 }
