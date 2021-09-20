@@ -79,6 +79,10 @@ namespace Std {
             buf_.seekAbsolute(position);
         }
 
+        inline void clear() noexcept {
+            buf_.reset();
+        }
+
         inline void grow(size_t len) {
             buf_.grow(len * sizeof(T));
         }

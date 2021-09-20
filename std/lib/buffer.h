@@ -100,7 +100,7 @@ namespace Std {
         }
 
         inline void reset() noexcept {
-            header()->used = 0;
+            seekAbsolute((size_t)0);
         }
 
         inline void seekRelative(size_t len) noexcept {
@@ -108,7 +108,9 @@ namespace Std {
         }
 
         inline void seekAbsolute(size_t pos) noexcept {
-            header()->used = pos;
+            if (header()->used != pos) {
+                header()->used = pos;
+            }
         }
 
         inline void seekAbsolute(const void* ptr) noexcept {

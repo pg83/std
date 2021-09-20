@@ -1,10 +1,18 @@
 #include "ut.h"
 
 #include <std/ios/sys.h>
+#include <std/ios/string.h>
+
 #include <std/mem/pool.h>
+
+#include <std/str/view.h>
+#include <std/str/dynamic.h>
+
 #include <std/alg/qsort.h>
 #include <std/alg/range.h>
+
 #include <std/dbg/color.h>
+
 #include <std/lib/vector.h>
 #include <std/lib/singleton.h>
 
@@ -12,11 +20,11 @@ using namespace Std;
 
 namespace {
     struct Test {
-        StringView fullName;
         TestFunc* func;
+        StringView fullName;
 
         auto key() const noexcept {
-            return func->suite().length() + func->name().length();
+            return fullName.length();
         }
     };
 
@@ -26,6 +34,9 @@ namespace {
     };
 
     struct Tests: public Vector<Test> {
+        DynString tmp;
+        Pool::Ref pool = Pool::fromMemory();
+
         inline void run(int argc, char** argv) {
             Vector<const Test*> tests;
 
@@ -39,19 +50,23 @@ namespace {
 
             for (auto test : range(tests)) {
                 sysE << Color::bright(AnsiColor::Yellow)
-                     << StringView(u8"- ") << *test
+                     << StringView(u8"- ") << test->fullName
                      << Color::reset() << finI;
 
                 test->func->execute();
 
                 sysE << Color::bright(AnsiColor::Green)
-                     << StringView(u8"\r+ ") << *test
+                     << StringView(u8"\r+ ") << test->fullName
                      << Color::reset() << endL << finI;
             }
         }
 
         inline void reg(TestFunc* func) {
-            pushBack(Test{.func = func});
+            tmp.clear();
+
+            StringOutput(tmp) << *func;
+
+            pushBack(Test{.func = func, .fullName = pool->intern(tmp)});
         }
 
         static inline auto& instance() noexcept {
@@ -61,8 +76,8 @@ namespace {
 }
 
 template <>
-void Std::output<ZeroCopyOutput, Test>(ZeroCopyOutput& buf, const Test& test) {
-    buf << test.func->suite() << StringView(u8"::") << test.func->name();
+void Std::output<ZeroCopyOutput, TestFunc>(ZeroCopyOutput& buf, const TestFunc& test) {
+    buf << test.suite() << StringView(u8"::") << test.name();
 }
 
 void Std::runTests(int argc, char** argv) {

@@ -4,6 +4,7 @@
 #include "unbound.h"
 
 #include <std/sys/crt.h>
+#include <std/str/view.h>
 
 using namespace Std;
 using namespace Std::Manip;
@@ -42,10 +43,16 @@ void OutBuf::bumpImpl(const void* ptr) noexcept {
 }
 
 void OutBuf::writeImpl(const void* ptr, size_t len) {
-    buf_.append(ptr, len);
+    if ((buf_.used() + len) > 16 * 1024) {
+        const StringView parts[] = {
+            StringView((const u8*)buf_.data(), buf_.used()),
+            StringView((const u8*)ptr, len),
+        };
 
-    if (buf_.used() > 16 * 1024) {
-        flush();
+        out_->writeV(parts, 2);
+        buf_.reset();
+    } else {
+        buf_.append(ptr, len);
     }
 }
 

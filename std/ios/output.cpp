@@ -2,8 +2,9 @@
 #include "unbound.h"
 #include "manip.h"
 
-#include <std/str/view.h>
 #include <std/sys/crt.h>
+#include <std/str/view.h>
+#include <std/alg/range.h>
 
 using namespace Std;
 using namespace Std::Manip;
@@ -15,6 +16,12 @@ void Output::flushImpl() {
 }
 
 void Output::finishImpl() {
+}
+
+void Output::writeVImpl(const StringView* parts, size_t count) {
+    for (const auto& it : range(parts, parts + count)) {
+        write(it.data(), it.length());
+    }
 }
 
 ZeroCopyOutput::~ZeroCopyOutput() {
