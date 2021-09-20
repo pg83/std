@@ -2,12 +2,24 @@
 
 #include "xchg.h"
 
+#include <std/rng/pcg.h>
 #include <std/typ/support.h>
 
 namespace Std::QSP {
     template <typename I, typename C>
     struct Context {
         C* f;
+        PCG32 r;
+
+        inline Context(C* _f) noexcept
+            : f(_f)
+            , r((size_t)this, (size_t)f) // use address as seed
+        {
+        }
+
+        inline auto choosePivot(I b, I e) noexcept {
+            return b + r.nextU32() % (e - b);
+        }
 
         inline auto partition(I b, I e, I p) {
             auto c = b;
@@ -29,6 +41,8 @@ namespace Std::QSP {
                 return;
             }
 
+            xchg(*choosePivot(b, e), *(e - 1));
+
             auto p = partition(b, e - 1, e - 1);
 
             sort(b, p);
@@ -40,7 +54,7 @@ namespace Std::QSP {
 namespace Std {
     template <typename I, typename C>
     inline void quickSort(I b, I e, C&& f) {
-        QSP::Context<I, C>{.f = &f}.sort(b, e);
+        QSP::Context<I, C>(&f).sort(b, e);
     }
 
     template <typename I>
