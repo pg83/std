@@ -5,8 +5,7 @@
 namespace Std {
     template <typename B, typename E>
     inline void reverse(B b, E e) {
-        while (b < e) {
-            xchg(*b++, *--e);
+        for (; b < e; xchg(*b++, *--e)) {
         }
     }
 
