@@ -75,7 +75,7 @@ namespace Std::QSP {
             if (len < 32) {
                 insertionSort(b, e);
             } else {
-                //xchg(*choosePivot(b, e), *(e - 1));
+                xchg(*choosePivot(b, e), *(e - 1));
 
                 auto p = partition(b, e - 1, e - 1);
 
