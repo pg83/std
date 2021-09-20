@@ -6,8 +6,6 @@
 #include <std/lib/vector.h>
 #include <std/typ/support.h>
 
-#include <initializer_list>
-
 namespace Std::QSP {
     template <typename I, typename C>
     struct Context {
@@ -69,15 +67,24 @@ namespace Std::QSP {
             return c;
         }
 
-        inline void qSortStep(I b, I e) {
-            auto len = e - b;
+        inline bool alreadySorted(I b, I e) {
+            if (b != e) {
+                for (++b; b != e; ++b) {
+                    if (f(*b, *(b - 1))) {
+                        return false;
+                    }
+                }
+            }
 
-            if (len < 2) {
-                // already sorted
+            return true;
+        }
+
+        inline void qSortStep(I b, I e) {
+            if (alreadySorted(b, e)) {
                 return;
             }
 
-            if (len < 64) {
+            if (e - b < 64) {
                 return insertionSort(b, e);
             }
 
@@ -93,8 +100,8 @@ namespace Std::QSP {
             xchg(*p, *l);
 
             // recurse
-            w.pushBack(Work{b, p});
-            w.pushBack(Work{p + 1, e});
+            w.pushBack(WorkItem{b, p});
+            w.pushBack(WorkItem{p + 1, e});
         }
 
         inline void qSortLoop() {
