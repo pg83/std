@@ -17,8 +17,8 @@ int main(int argc, char** argv) {
         Vector<u64> v;
 
         for (size_t i = 0; i < 10000; ++i) {
-            v.pushBack(p.nextU32());
-            //v.pushBack(i);
+            //v.pushBack(p.nextU32());
+            v.pushBack(i);
         }
 
         //std::sort(v.mutBegin(), v.mutEnd());

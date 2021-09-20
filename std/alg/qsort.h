@@ -60,37 +60,16 @@ namespace Std::QSP {
         }
 
         inline auto partitionLomuto(I b, I e) {
-            const auto& p = *e;
+            auto p = e;
             auto c = b;
 
             for (; b != e; ++b) {
-                if (f(*b, p)) {
+                if (f(*b, *p)) {
                     xchg(*b, *c++);
                 }
             }
 
             return c;
-        }
-
-        inline auto partitionHoare(I b, I e) {
-            auto p = e;
-
-            while (true) {
-                while (b != e && f(*b,  *p)) {
-                    ++b;
-                }
-
-                // TODO
-                while (b != e && *(e - 1) >= *p) {
-                    --e;
-                }
-
-                if (b == e) {
-                    return b;
-                }
-
-                xchg(*b, *(e - 1));
-            }
         }
 
         inline void qSort(I b, I e) {
@@ -101,7 +80,7 @@ namespace Std::QSP {
                 return;
             }
 
-            if (__builtin_expect(len < 64, 0)) {
+            if (len < 64) {
                 return insertionSort(b, e);
             }
 
