@@ -33,7 +33,7 @@ namespace {
                 tests.pushBack(&t);
             }
 
-            QuickSort(mutRange(tests), [](auto l, auto r) noexcept {
+            quickSort(mutRange(tests), [](auto l, auto r) noexcept {
                 return l->key() < r->key();
             });
 

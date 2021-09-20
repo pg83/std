@@ -4,49 +4,59 @@
 
 #include <std/typ/support.h>
 
+namespace Std::QuickSort {
+    template <typename I, typename C>
+    struct Context {
+        C* f;
+
+        inline auto partition(I b, I e, I p) {
+            auto c = b;
+
+            for (; b != e; ++b) {
+                if ((*f)(*b, *p)) {
+                    xchg(*b, *c++);
+                }
+            }
+
+            xchg(*c, *p);
+
+            return c;
+        }
+
+        inline void sort(I b, I e) {
+            // already sorted
+            if (e - b < 2) {
+                return;
+            }
+
+            auto p = partition(b, e - 1, e - 1);
+
+            sort(b, p);
+            sort(p + 1, e);
+        }
+    };
+}
+
 namespace Std {
     template <typename I, typename C>
-    inline auto Partition(I b, I e, I p, C&& f) {
-        auto c = b;
-
-        for (; b != e; ++b) {
-            if (f(*b, *p)) {
-                xchg(*b, *c++);
-            }
-        }
-
-        xchg(*c, *p);
-
-        return c;
-    }
-
-    template <typename I, typename C>
-    inline void QuickSort(I b, I e, C&& f) {
-        // already sorted
-        if (e - b < 2) {
-            return;
-        }
-
-        auto p = Partition(b, e - 1, e - 1, forward<C>(f));
-
-        QuickSort(b, p, forward<C>(f));
-        QuickSort(p + 1, e, forward<C>(f));
+    inline void quickSort(I b, I e, C&& f) {
+        QuickSort::Context<I, C>{.f = &f}.sort(b, e);
     }
 
     template <typename I>
-    inline void QuickSort(I b, I e) {
-        return QuickSort(b, e, [](const auto& x, const auto& y) {
+    inline void quickSort(I b, I e) {
+        return quickSort(b, e, [](const auto& x, const auto& y) {
             return x < y;
         });
     }
 
     template <typename R, typename C>
-    inline void QuickSort(R&& r, C&& f) {
-        return QuickSort(r.begin(), r.end(), forward<C>(f));
+    inline void quickSort(R&& r, C&& f) {
+        return quickSort(r.begin(), r.end(), forward<C>(f));
     }
 
     template <typename R>
-    inline void QuickSort(R&& r) {
-        return QuickSort(r.begin(), r.end());
+    inline void quickSort(R&& r) {
+        return quickSort(r.begin(), r.end());
     }
 }

@@ -10,7 +10,7 @@ STD_TEST_SUITE(QuickSort) {
     STD_TEST(test0) {
         Vector<u32> v;
 
-        QuickSort(mutRange(v));
+        quickSort(mutRange(v));
 
         STD_INSIST(v.empty());
     }
@@ -20,7 +20,7 @@ STD_TEST_SUITE(QuickSort) {
 
         v.pushBack(1);
 
-        QuickSort(mutRange(v));
+        quickSort(mutRange(v));
 
         STD_INSIST(v.length() == 1);
         STD_INSIST(v[0] == 1);
@@ -32,7 +32,7 @@ STD_TEST_SUITE(QuickSort) {
         v.pushBack(2);
         v.pushBack(1);
 
-        QuickSort(mutRange(v));
+        quickSort(mutRange(v));
 
         STD_INSIST(v.length() == 2);
         STD_INSIST(v[0] == 1);
@@ -46,7 +46,7 @@ STD_TEST_SUITE(QuickSort) {
             v.pushBack(9 - i);
         }
 
-        QuickSort(mutRange(v));
+        quickSort(mutRange(v));
 
         for (size_t i = 0; i < 10; ++i) {
             STD_INSIST(v[i] == i);
