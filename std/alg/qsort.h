@@ -59,18 +59,38 @@ namespace Std::QSP {
             return median(b, chooseRandom(b + 1, e - 1), e - 1);
         }
 
-        inline auto partition(I b, I e, I p) {
+        inline auto partitionLomuto(I b, I e) {
+            const auto& p = *e;
             auto c = b;
 
             for (; b != e; ++b) {
-                if (f(*b, *p)) {
+                if (f(*b, p)) {
                     xchg(*b, *c++);
                 }
             }
 
-            xchg(*c, *p);
-
             return c;
+        }
+
+        inline auto partitionHoare(I b, I e) {
+            auto p = e;
+
+            while (true) {
+                while (b != e && f(*b,  *p)) {
+                    ++b;
+                }
+
+                // TODO
+                while (b != e && *(e - 1) >= *p) {
+                    --e;
+                }
+
+                if (b == e) {
+                    return b;
+                }
+
+                xchg(*b, *(e - 1));
+            }
         }
 
         inline void qSort(I b, I e) {
@@ -81,22 +101,22 @@ namespace Std::QSP {
                 return;
             }
 
-            if (len < 64) {
+            if (__builtin_expect(len < 64, 0)) {
                 return insertionSort(b, e);
             }
 
-            if (0 && len < 64) {
-                if (0 && len < 16) {
-                    return insertionSort(b, e);
-                }
+            auto l = e - 1;
 
-                return shellSort(b, e);
-            }
+            // pivot to last
+            xchg(*choosePivot(b, e), *l);
 
-            xchg(*choosePivot(b, e), *(e - 1));
+            // place for pivot
+            auto p = partitionLomuto(b, l);
 
-            auto p = partition(b, e - 1, e - 1);
+            // move pivot form last to proper place
+            xchg(*p, *l);
 
+            // recurse
             qSort(b, p);
             qSort(p + 1, e);
         }
