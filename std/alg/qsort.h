@@ -67,12 +67,33 @@ namespace Std::QSP {
             return c;
         }
 
+        inline auto partitionHoare(I b, I e) {
+            auto p = e;
+
+            --b;
+
+            while (true) {
+                do {
+                    ++b;
+                } while(f(*b , *p));
+
+                do {
+                    --e;
+                } while (f(*p, *e));
+
+                if (b >= e) {
+                    return b;
+                }
+
+                xchg(*b, *e);
+            }
+        }
+
+        // assume b < e
         inline bool alreadySorted(I b, I e) {
-            if (b != e) {
-                for (++b; b != e; ++b) {
-                    if (f(*b, *(b - 1))) {
-                        return false;
-                    }
+            for (++b; b != e; ++b) {
+                if (f(*b, *(b - 1))) {
+                    return false;
                 }
             }
 
@@ -80,12 +101,8 @@ namespace Std::QSP {
         }
 
         inline void qSortStep(I b, I e) {
-            if (alreadySorted(b, e)) {
+            if (e - b < 64 || alreadySorted(b, e)) {
                 return;
-            }
-
-            if (e - b < 64) {
-                return insertionSort(b, e);
             }
 
             auto l = e - 1;
@@ -94,7 +111,7 @@ namespace Std::QSP {
             xchg(*choosePivot(b, e), *l);
 
             // place for pivot
-            auto p = partitionLomuto(b, l);
+            auto p = partitionHoare(b, l);
 
             // move pivot form last to proper place
             xchg(*p, *l);
@@ -113,8 +130,11 @@ namespace Std::QSP {
         }
 
         inline void qSort(I b, I e) {
-            qSortStep(b, e);
-            qSortLoop();
+            if (b != e) {
+                qSortStep(b, e);
+                qSortLoop();
+                insertionSort(b, e);
+            }
         }
     };
 }
