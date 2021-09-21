@@ -1,6 +1,5 @@
 #pragma once
 
-#include <std/sys/crt.h>
 #include <std/sys/types.h>
 
 namespace Std {
@@ -63,14 +62,12 @@ namespace Std {
         }
     };
 
+    int spaceship(const u8* l, size_t ll, const u8* r, size_t rl) noexcept;
+
     // compare ops
     template <typename L, typename R>
     inline int spaceship(const StringOps<L>& l, const StringOps<R>& r) noexcept {
-        const auto ll = l.length();
-        const auto rl = r.length();
-        const auto rr = memCmp(l.data(), r.data(), ll < rl ? ll : rl);
-
-        return rr ? rr : (ll < rl ? -1 : (ll == rl ? 0 : 1));
+        return spaceship(l.data(), l.length(), r.data(), r.length());
     }
 
     template <typename L, typename R>

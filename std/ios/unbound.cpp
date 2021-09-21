@@ -1,5 +1,6 @@
 #include "unbound.h"
 
+#include <std/sys/crt.h>
 #include <std/str/fmt.h>
 #include <std/str/view.h>
 
