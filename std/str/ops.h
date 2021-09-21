@@ -65,8 +65,17 @@ namespace Std {
 
     // compare ops
     template <typename L, typename R>
+    inline int spaceship(const StringOps<L>& l, const StringOps<R>& r) noexcept {
+        const auto ll = l.length();
+        const auto rl = r.length();
+        const auto rr = memCmp(l.data(), r.data(), ll < rl ? ll : rl);
+
+        return rr ? rr : (ll < rl ? -1 : (ll == rl ? 0 : 1));
+    }
+
+    template <typename L, typename R>
     inline bool operator==(const StringOps<L>& l, const StringOps<R>& r) noexcept {
-        return (l.length() == r.length()) && (memCmp(l.data(), r.data(), l.length()) == 0);
+        return spaceship(l, r) == 0;
     }
 
     template <typename L, typename R>
@@ -76,10 +85,6 @@ namespace Std {
 
     template <typename L, typename R>
     inline bool operator<(const StringOps<L>& l, const StringOps<R>& r) noexcept {
-        auto ll = l.length();
-        auto rl = r.length();
-        auto rr = memCmp(l.data(), r.data(), ll < rl ? ll : rl);
-
-        return (rr < 0) || ((rr == 0) && (ll < rl));
+        return spaceship(l, r) < 0;
     }
 }
