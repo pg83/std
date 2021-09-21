@@ -11,6 +11,8 @@ using namespace Std;
 int main(int argc, char** argv) {
     runTests(argc, argv);
 
+    return 0;
+
     PCG32 p(100);
 
     for (size_t n = 0; n < 10000; ++n) {

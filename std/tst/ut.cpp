@@ -23,6 +23,12 @@ namespace {
         TestFunc* func;
         StringView fullName;
 
+        inline Test(TestFunc* _func, StringView _fullName) noexcept
+            : func(_func)
+            , fullName(_fullName)
+        {
+        }
+
         auto key() const noexcept {
             return fullName.length();
         }
@@ -33,22 +39,16 @@ namespace {
         Vector<StringView> includes;
     };
 
-    struct Tests: public Vector<Test> {
+    struct Tests: public Vector<Test*> {
         DynString tmp;
         Pool::Ref pool = Pool::fromMemory();
 
         inline void run(int argc, char** argv) {
-            Vector<const Test*> tests;
-
-            for (auto& t : range(*this)) {
-                tests.pushBack(&t);
-            }
-
-            quickSort(mutRange(tests), [](auto l, auto r) noexcept {
+            quickSort(mutRange(*this), [](auto l, auto r) noexcept {
                 return l->key() < r->key();
             });
 
-            for (auto test : range(tests)) {
+            for (auto test : range(*this)) {
                 sysE << Color::bright(AnsiColor::Yellow)
                      << StringView(u8"- ") << test->fullName
                      << Color::reset() << finI;
@@ -66,7 +66,7 @@ namespace {
 
             StringOutput(tmp) << *func;
 
-            pushBack(Test{.func = func, .fullName = pool->intern(tmp)});
+            pushBack(pool->make<Test>(func, pool->intern(tmp)));
         }
 
         static inline auto& instance() noexcept {

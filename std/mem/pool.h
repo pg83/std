@@ -7,6 +7,8 @@
 #include <std/ptr/arc.h>
 #include <std/ptr/intrusive.h>
 
+#include <new>
+
 namespace Std {
     class StringView;
 
@@ -37,7 +39,10 @@ namespace Std {
 
         template <typename T, typename... A>
         inline auto make(A&&... a) {
-            auto res = new Wrapper<T>(forward<A>(a)...);
+            using Typ = Wrapper<T>;
+
+            auto mem = this->allocate(sizeof(Typ));
+            auto res = new (mem) Typ(forward<A>(a)...);
 
             submit(res);
 
