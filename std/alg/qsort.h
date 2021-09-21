@@ -6,8 +6,6 @@
 #include <std/lib/vector.h>
 #include <std/typ/support.h>
 
-#include <initializer_list>
-
 namespace Std::QSP {
     template <typename I, typename C>
     struct Context {
@@ -57,20 +55,15 @@ namespace Std::QSP {
         }
 
         inline auto partitionHoare(I b, I e) {
-            auto p = e;
-
-            --b;
-
-            while (true) {
-                do {
+            for (auto p = e; ; ++b) {
+                while (b != e && f(*b , *p)) {
                     ++b;
-                } while(f(*b , *p));
+                }
 
-                do {
-                    --e;
-                } while (f(*p, *e));
+                while (b != e && f(*p, *--e)) {
+                }
 
-                if (b >= e) {
+                if (b == e) {
                     return b;
                 }
 
