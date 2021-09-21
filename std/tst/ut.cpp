@@ -28,6 +28,18 @@ namespace {
             , fullName(_fullName)
         {
         }
+
+        inline void execute() {
+            sysE << Color::bright(AnsiColor::Yellow)
+                 << StringView(u8"- ") << fullName
+                 << Color::reset() << finI;
+
+            func->execute();
+
+            sysE << Color::bright(AnsiColor::Green)
+                 << StringView(u8"\r+ ") << fullName
+                 << Color::reset() << endL << finI;
+        }
     };
 
     struct GetOpt {
@@ -45,15 +57,7 @@ namespace {
             });
 
             for (auto test : range(*this)) {
-                sysE << Color::bright(AnsiColor::Yellow)
-                     << StringView(u8"- ") << test->fullName
-                     << Color::reset() << finI;
-
-                test->func->execute();
-
-                sysE << Color::bright(AnsiColor::Green)
-                     << StringView(u8"\r+ ") << test->fullName
-                     << Color::reset() << endL << finI;
+                test->execute();
             }
         }
 
