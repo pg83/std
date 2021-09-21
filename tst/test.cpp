@@ -12,23 +12,44 @@ using namespace Std;
 
 static u32 swaps = 0;
 static u32 compares = 0;
+static u32 copies = 0;
+
+#define noinline __attribute__((__noinline__))
 
 struct Int {
     u64 v;
 
-    inline Int(u64 _v)
+    noinline Int(u64 _v)
         : v(_v)
     {
     }
 
-    inline void xchg(Int& v) noexcept {
+    noinline Int(const Int& _v)
+        : v(_v.v)
+    {
+        ++copies;
+    }
+
+    noinline Int& operator=(const Int& _v) noexcept {
+        v = _v.v;
+
+        ++copies;
+
+        return *this;
+    }
+
+    noinline void xchg(Int& v) noexcept {
         Std::xchg(this->v, v.v);
         ++swaps;
     }
 
-    friend inline bool operator<(const Int& l, const Int& r) noexcept {
+    friend noinline bool operator<(const Int& l, const Int& r) noexcept {
         ++compares;
         return l.v < r.v;
+    }
+
+    friend noinline void swap(Int& l, Int& r) noexcept {
+        l.xchg(r);
     }
 };
 
@@ -45,8 +66,11 @@ int main(int argc, char** argv) {
         }
 
         quickSort(mutRange(v));
+        //std::sort(v.mutBegin(), v.mutEnd());
 
-        sysE << swaps << StringView(u8" ") << compares << endL << finI;
+        sysE << swaps << StringView(u8" ")
+             << compares << StringView(u8" ")
+             << copies << endL << finI;
     }
 
     if (1) {
