@@ -1,24 +1,46 @@
 #include "pool.h"
 
 #include <std/sys/crt.h>
+
 #include <std/str/view.h>
+
 #include <std/alg/range.h>
+#include <std/alg/reverse.h>
+
 #include <std/lib/vector.h>
 
 using namespace Std;
 
 namespace {
-    struct DebugPool: public Pool, public Vector<void*> {
+    template <typename T>
+    inline void destruct(T* t) noexcept {
+        t->~T();
+    }
+
+    struct DebugPool: public Pool {
+        Vector<void*> mem;
+        Vector<Dispose*> obj;
+
         ~DebugPool() {
-            for (auto ptr : mutRange(*this)) {
+            reverse(mutRange(obj));
+
+            for (auto ptr : mutRange(obj)) {
+                destruct(ptr);
+            }
+
+            for (auto ptr : mutRange(mem)) {
                 freeMemory(ptr);
             }
         }
 
         void* allocate(size_t len) override {
-            pushBack(allocateMemory(len));
+            mem.pushBack(allocateMemory(len));
 
-            return back();
+            return mem.back();
+        }
+
+        void submit(Dispose* d) noexcept override {
+            obj.pushBack(d);
         }
     };
 }
@@ -37,4 +59,7 @@ StringView Pool::intern(const StringView& s) {
     memCpy(res, s.data(), len);
 
     return StringView(res, len);
+}
+
+Pool::Dispose::~Dispose() {
 }
