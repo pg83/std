@@ -73,4 +73,13 @@ namespace Std {
     inline bool operator!=(const StringOps<L>& l, const StringOps<R>& r) noexcept {
         return !(l == r);
     }
+
+    template <typename L, typename R>
+    inline bool operator<(const StringOps<L>& l, const StringOps<R>& r) noexcept {
+        auto ll = l.length();
+        auto rl = r.length();
+        auto rr = memCmp(l.data(), r.data(), ll < rl ? ll : rl);
+
+        return (rr < 0) || ((rr == 0) && (ll < rl));
+    }
 }

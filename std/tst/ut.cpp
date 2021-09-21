@@ -28,10 +28,6 @@ namespace {
             , fullName(_fullName)
         {
         }
-
-        auto key() const noexcept {
-            return fullName.length();
-        }
     };
 
     struct GetOpt {
@@ -40,12 +36,12 @@ namespace {
     };
 
     struct Tests: public Vector<Test*> {
-        DynString tmp;
         Pool::Ref pool = Pool::fromMemory();
+        DynString tmp;
 
         inline void run(int argc, char** argv) {
             quickSort(mutRange(*this), [](auto l, auto r) noexcept {
-                return l->key() < r->key();
+                return l->fullName < r->fullName;
             });
 
             for (auto test : range(*this)) {
