@@ -3,6 +3,7 @@
 #include <std/alg/qsort.h>
 #include <std/alg/range.h>
 #include <std/lib/vector.h>
+#include <std/mem/pool.h>
 
 #include <algorithm>
 

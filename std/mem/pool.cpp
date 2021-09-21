@@ -21,7 +21,7 @@ namespace {
         Vector<void*> mem;
         Vector<Dispose*> obj;
 
-        ~DebugPool() {
+        ~DebugPool() override {
             reverse(mutRange(obj));
 
             for (auto ptr : mutRange(obj)) {

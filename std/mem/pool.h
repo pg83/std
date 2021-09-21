@@ -7,8 +7,6 @@
 #include <std/ptr/arc.h>
 #include <std/ptr/intrusive.h>
 
-#include <new>
-
 namespace Std {
     class StringView;
 
@@ -20,6 +18,10 @@ namespace Std {
         template <typename T>
         struct Wrapper: public Dispose {
             T t;
+
+            static void* operator new(size_t, void* ptr) {
+                return ptr;
+            }
 
             template <typename... A>
             inline Wrapper(A&&... a)
