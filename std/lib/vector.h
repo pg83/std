@@ -44,11 +44,11 @@ namespace Std {
             return const_cast<T*>(storageEnd());
         }
 
-        inline auto left() const noexcept {
+        inline size_t left() const noexcept {
             return storageEnd() - end();
         }
 
-        inline auto length() const noexcept {
+        inline size_t length() const noexcept {
             return end() - begin();
         }
 
