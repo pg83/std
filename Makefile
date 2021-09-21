@@ -10,7 +10,7 @@ TSTS = $(wildcard tst/*.cpp) $(subst _ut.u,_ut.cpp,$(filter %.u,$(TMPS)))
 TSTO = $(TSTS:%=%.o)
 TSTA = tst/test
 
-OPTF = -O3 -flto -fdata-sections -ffunction-sections -fcommon
+OPTF = -O0 -g -fdata-sections -ffunction-sections -fcommon
 CXXF = -I. -W -Wall -std=c++2a $(OPTF) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 
 all: $(LIBA) $(TSTA)

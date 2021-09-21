@@ -43,6 +43,6 @@ namespace Std::Traits {
     };
 
     template <typename T>
-    struct HasDestructor: public Meta::Bool<!__is_trivially_destructible(T)> {
+    struct HasDestructor: public Meta::Bool<!__has_trivial_destructor(T)> {
     };
 }
