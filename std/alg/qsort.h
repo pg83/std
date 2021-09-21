@@ -38,25 +38,6 @@ namespace Std::QSP {
             insertionSort(b, e);
         }
 
-        inline void bubbleSort(I b, I e) {
-            if (b == e) {
-                return;
-            }
-
-            bool swapped;
-
-            do {
-                swapped = false;
-
-                for (auto i = b + 1; i != e; ++i) {
-                    if (f(*i, *(i - 1))) {
-                        xchg(*i, *(i - 1));
-                        swapped = true;
-                    }
-                }
-            } while (swapped);
-        }
-
         inline void insertionSort(I b, I e) {
             for (auto i = b + 1; i != e; ++i) {
                 for (auto j = i; j != b && f(*j, *(j - 1)); --j) {
@@ -154,7 +135,11 @@ namespace Std::QSP {
         }
 
         inline void qSortStep(I b, I e) {
-            if (e - b < 8 || alreadySorted(b, e)) {
+            if (e - b < 8) {
+                return selectionSort(b, e);
+            }
+
+            if (alreadySorted(b, e)) {
                 return;
             }
 
@@ -190,7 +175,6 @@ namespace Std::QSP {
                 //insertionSort(b, e);
                 //shellSort(b, e);
                 //selectionSort(b, e);
-                bubbleSort(b, e);
             }
         }
     };
