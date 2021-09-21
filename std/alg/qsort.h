@@ -56,14 +56,14 @@ namespace Std::QSP {
 
         inline auto partitionHoare(I b, I e) {
             for (auto p = e; ; ++b) {
-                while (b != e && f(*b , *p)) {
+                while (f(*b , *p)) {
                     ++b;
                 }
 
-                while (b != e && f(*p, *--e)) {
+                while (f(*p, *--e)) {
                 }
 
-                if (b == e) {
+                if (b >= e) {
                     return b;
                 }
 
