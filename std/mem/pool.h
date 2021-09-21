@@ -2,6 +2,8 @@
 
 #include <std/sys/types.h>
 
+#include <std/typ/meta.h>
+#include <std/typ/traits.h>
 #include <std/typ/support.h>
 
 #include <std/ptr/arc.h>
@@ -41,7 +43,7 @@ namespace Std {
 
         // king of ownership
         template <typename T, typename... A>
-        inline auto make(A&&... a) {
+        inline Meta::EnableIf<Traits::HasDestructor<T>::R, T*> make(A&&... a) {
             using Typ = Wrapper<T>;
 
             auto mem = this->allocate(sizeof(Typ));
@@ -50,6 +52,13 @@ namespace Std {
             submit(res);
 
             return &res->t;
+        }
+
+        template <typename T, typename... A>
+        inline Meta::EnableIf<!Traits::HasDestructor<T>::R, T*> make(A&&... a) {
+            using Typ = Wrapper<T>;
+
+            return &(new (allocate(sizeof(Typ))) Typ(forward<A>(a)...))->t;
         }
 
         static Ref fromMemory();
