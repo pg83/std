@@ -8,7 +8,10 @@ using namespace Std;
 
 STD_TEST_SUITE(SharedPtr) {
     STD_TEST(testOps) {
-        auto v = AtomicSharedPtr<u32>::make();
+        auto v = AtomicSharedPtr<u32>::make(1);
+
+        STD_INSIST(*v == 1);
+        STD_INSIST(v.refCount() == 1);
 
         *v = 0;
 

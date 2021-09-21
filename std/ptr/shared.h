@@ -2,6 +2,8 @@
 
 #include "refcount.h"
 
+#include <std/typ/support.h>
+
 namespace Std::SPP {
     template <typename T>
     struct Ops: public RefCountOps<T> {
@@ -17,6 +19,12 @@ namespace Std::SPP {
     template <typename T, typename R>
     struct Base: public R {
         T t;
+
+        template <typename... A>
+        inline Base(A&&... a)
+            : t(forward<A>(a)...)
+        {
+        }
     };
 }
 

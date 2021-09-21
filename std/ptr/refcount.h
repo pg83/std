@@ -1,5 +1,7 @@
 #pragma once
 
+#include <std/typ/support.h>
+
 namespace Std {
     template <typename T, typename O>
     class RefCountPtr {
@@ -21,8 +23,9 @@ namespace Std {
             O::unref(t_);
         }
 
-        static inline auto make() {
-            return RefCountPtr(new T());
+        template <typename... A>
+        static inline auto make(A&&... a) {
+            return RefCountPtr(new T(forward<A>(a)...));
         }
 
         inline auto ptr() const noexcept {
