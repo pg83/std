@@ -32,26 +32,8 @@ namespace Std::QSP {
             }
         }
 
-        inline void sortIt(I& a, I& b) {
-            if (f(*a, *b)) {
-                xchg(a, b);
-            }
-        }
-
-        inline auto median(I a, I b, I c) {
-            sortIt(a, b);
-            sortIt(b, c);
-            sortIt(a, b);
-
-            return b;
-        }
-
         inline auto chooseRandom(I b, I e) noexcept {
             return b + r.nextU32() % (e - b);
-        }
-
-        inline auto choosePivot(I b, I e) {
-            return median(b, chooseRandom(b + 1, e - 1), e - 1);
         }
 
         inline auto partitionHoare(I b, I e) {
@@ -94,7 +76,7 @@ namespace Std::QSP {
             auto l = e - 1;
 
             // pivot to last
-            xchg(*choosePivot(b, e), *l);
+            xchg(*chooseRandom(b, e), *l);
 
             // place for pivot
             auto p = partitionHoare(b, l);

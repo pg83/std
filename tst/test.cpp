@@ -58,19 +58,21 @@ int main(int argc, char** argv) {
 
     PCG32 p(100);
 
-    if (1) {
+    while (1) {
         Vector<Int> v;
 
-        for (size_t i = 0; i < 10000; ++i) {
+        for (size_t i = 0; i < 1000; ++i) {
             v.pushBack(p.nextU32());
         }
 
         quickSort(mutRange(v));
         //std::sort(v.mutBegin(), v.mutEnd());
 
+        /*
         sysE << swaps << StringView(u8" ")
              << compares << StringView(u8" ")
              << copies << endL << finI;
+        */
     }
 
     if (1) {
