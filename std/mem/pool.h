@@ -39,6 +39,7 @@ namespace Std {
 
         StringView intern(const StringView& s);
 
+        // king of ownership
         template <typename T, typename... A>
         inline auto make(A&&... a) {
             using Typ = Wrapper<T>;

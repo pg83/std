@@ -14,6 +14,14 @@ namespace Std {
         {
         }
 
+        inline const auto& str() const noexcept {
+            return *str_;
+        }
+
+        inline auto& mutStr() noexcept {
+            return *str_;
+        }
+
     private:
         void writeImpl(const void* ptr, size_t len) override;
         void* imbueImpl(size_t len) override;

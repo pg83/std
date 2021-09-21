@@ -60,9 +60,7 @@ namespace {
         inline void reg(TestFunc* func) {
             tmp.clear();
 
-            StringOutput(tmp) << *func;
-
-            pushBack(pool->make<Test>(func, pool->intern(tmp)));
+            pushBack(pool->make<Test>(func, pool->intern((StringOutput(tmp) << *func).str())));
         }
 
         static inline auto& instance() noexcept {
