@@ -44,10 +44,6 @@ namespace Std {
         ~ZeroCopyOutput() override;
 
         // zero-copy interface
-        inline size_t imbue(void** ptr) noexcept {
-            return imbueImpl(ptr);
-        }
-
         inline UnboundBuffer imbue(size_t len) {
             return imbueImpl(len);
         }
@@ -63,7 +59,6 @@ namespace Std {
     private:
         void writeImpl(const void* data, size_t len) override;
 
-        virtual size_t imbueImpl(void** ptr) noexcept = 0;
         virtual void* imbueImpl(size_t len) = 0;
         virtual void bumpImpl(const void* ptr) noexcept = 0;
     };

@@ -16,7 +16,6 @@ namespace Std {
 
     private:
         void writeImpl(const void* ptr, size_t len) override;
-        size_t imbueImpl(void** ptr) noexcept override;
         void* imbueImpl(size_t len) override;
         void bumpImpl(const void* ptr) noexcept override;
     };

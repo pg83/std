@@ -26,16 +26,10 @@ OutBuf::OutBuf() noexcept
 {
 }
 
-size_t OutBuf::imbueImpl(void** ptr) noexcept {
-    *ptr = buf_.used() + (u8*)buf_.data();
-
-    return buf_.left();
-}
-
 void* OutBuf::imbueImpl(size_t len) {
-    buf_.grow(buf_.used() + len);
+    buf_.growDelta(len);
 
-    return buf_.used() + (u8*)buf_.data();
+    return (void*)buf_.mutCurrent();
 }
 
 void OutBuf::bumpImpl(const void* ptr) noexcept {

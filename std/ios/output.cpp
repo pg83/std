@@ -9,6 +9,16 @@
 using namespace Std;
 using namespace Std::Manip;
 
+namespace {
+    struct U64 {
+        u64 val;
+    };
+
+    struct I64 {
+        i64 val;
+    };
+}
+
 Output::~Output() {
 }
 
@@ -44,48 +54,31 @@ void Std::output<ZeroCopyOutput, Finish>(ZeroCopyOutput& out, Finish) {
 
 template <>
 void Std::output<ZeroCopyOutput, EndLine>(ZeroCopyOutput& out, EndLine) {
-    out << u8'\n';
+    out.write(u8"\n", 1);
 }
 
-// strings
-template <>
-void Std::output<ZeroCopyOutput, const u8*>(ZeroCopyOutput& out, const u8* str) {
-    out.write(str, strLen(str));
-}
+// std types
+#define DEF_OUT(typ) \
+    template <>                                                         \
+    void Std::output<ZeroCopyOutput, typ>(ZeroCopyOutput& out, typ v) { \
+        out << I64{v};                                                  \
+    }                                                                   \
+    template <>                                                         \
+    void Std::output<ZeroCopyOutput, unsigned typ>(ZeroCopyOutput& out, unsigned typ v) { \
+        out << U64{v};                                                  \
+    }
+
+DEF_OUT(int)
+DEF_OUT(long)
+DEF_OUT(short)
+DEF_OUT(long long)
 
 template <>
-void Std::output<ZeroCopyOutput, u8>(ZeroCopyOutput& out, u8 ch) {
-    out.write(&ch, 1);
-}
-
-// std types - unsigned
-template <>
-void Std::output<ZeroCopyOutput, u16>(ZeroCopyOutput& out, u16 v) {
-    out << (u64)v;
-}
-
-template <>
-void Std::output<ZeroCopyOutput, u32>(ZeroCopyOutput& out, u32 v) {
-    out << (u64)v;
-}
-
-template <>
-void Std::output<ZeroCopyOutput, u64>(ZeroCopyOutput& out, u64 v) {
-    out.bump(out.imbue(24) << v);
-}
-
-// std types - signed
-template <>
-void Std::output<ZeroCopyOutput, i16>(ZeroCopyOutput& out, i16 v) {
-    out << (i64)v;
+void Std::output<ZeroCopyOutput, U64>(ZeroCopyOutput& out, U64 v) {
+    out.bump(out.imbue(24) << v.val);
 }
 
 template <>
-void Std::output<ZeroCopyOutput, i32>(ZeroCopyOutput& out, i32 v) {
-    out << (i64)v;
-}
-
-template <>
-void Std::output<ZeroCopyOutput, i64>(ZeroCopyOutput& out, i64 v) {
-    out.bump(out.imbue(24) << v);
+void Std::output<ZeroCopyOutput, I64>(ZeroCopyOutput& out, I64 v) {
+    out.bump(out.imbue(24) << v.val);
 }
