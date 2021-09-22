@@ -7,11 +7,11 @@
 namespace Std {
     template <typename T>
     class Vector {
-        static_assert(stdHasTrivialDestructor(T));
-
         Buffer buf_;
 
     public:
+        static_assert(stdHasTrivialDestructor(T));
+
         inline Vector() = default;
         inline Vector(Vector&&) = default;
         inline Vector(const Vector&) = default;
