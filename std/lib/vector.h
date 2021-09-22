@@ -2,9 +2,13 @@
 
 #include "buffer.h"
 
+#include <std/typ/intrin.h>
+
 namespace Std {
     template <typename T>
     class Vector {
+        static_assert(stdHasTrivialDestructor(T));
+
         Buffer buf_;
 
     public:
