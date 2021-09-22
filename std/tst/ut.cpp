@@ -1,12 +1,12 @@
 #include "ut.h"
 
 #include <std/ios/sys.h>
-#include <std/ios/string.h>
+#include <std/ios/len.h>
+#include <std/ios/mem.h>
 
 #include <std/mem/pool.h>
 
 #include <std/str/view.h>
-#include <std/str/dynamic.h>
 
 #include <std/alg/qsort.h>
 #include <std/alg/range.h>
@@ -49,7 +49,6 @@ namespace {
 
     struct Tests: public Vector<Test*> {
         Pool::Ref pool = Pool::fromMemory();
-        DynString tmp;
 
         inline void run(int argc, char** argv) {
             quickSort(mutRange(*this), [](auto l, auto r) noexcept {
@@ -62,9 +61,10 @@ namespace {
         }
 
         inline void reg(TestFunc* func) {
-            tmp.clear();
+            auto b = (u8*)pool->allocate((CountingOutput() << *func).collectedLength());
+            auto e = (u8*)(MemoryOutput(b) << *func).ptr;
 
-            pushBack(pool->make<Test>(func, pool->intern((StringOutput(tmp) << *func).str())));
+            pushBack(pool->make<Test>(func, pool->intern(StringView(b, e - b))));
         }
 
         static inline auto& instance() noexcept {
