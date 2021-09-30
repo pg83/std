@@ -33,7 +33,7 @@ namespace Std::QSP {
         }
 
         inline auto chooseRandom(I b, I e) noexcept {
-            return b + r.nextU32() % (e - b);
+            return b + r.uniformBiased(e - b);
         }
 
         inline auto partitionHoare(I b, I e) {

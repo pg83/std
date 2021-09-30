@@ -21,7 +21,7 @@ $(LIBA): $(LIBO) Makefile
 	ranlib $(LIBA)
 
 $(TSTA): $(TSTO) $(LIBA) Makefile
-	$(CXX) $(OPTF) $(LDFLAGS) -o $@ $(TSTO) $(LIBA)
+	$(CXX) -fuse-ld=lld $(OPTF) $(LDFLAGS) -o $@ $(TSTO) $(LIBA)
 
 %.cpp.o: %.cpp $(HDRS) Makefile
 	$(CXX) $(CXXF) -o $@ -c $<
