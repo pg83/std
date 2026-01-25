@@ -1,12 +1,13 @@
 #include "ut.h"
 
 #include <std/ios/sys.h>
-#include <std/ios/len.h>
 #include <std/ios/mem.h>
+#include <std/ios/string.h>
 
 #include <std/mem/pool.h>
 
 #include <std/str/view.h>
+#include <std/str/dynamic.h>
 
 #include <std/alg/qsort.h>
 #include <std/alg/range.h>
@@ -61,10 +62,9 @@ namespace {
         }
 
         inline void reg(TestFunc* func) {
-            auto b = (u8*)pool->allocate((CountingOutput() << *func).collectedLength());
-            auto e = (u8*)(MemoryOutput(b) << *func).ptr;
-
-            pushBack(pool->make<Test>(func, StringView(b, e - b)));
+            DynString str;
+            pushBack(pool->make<Test>(func, pool->intern((StringOutput(str) << *func).str())));
+            str.clear();
         }
 
         static inline auto& instance() noexcept {
