@@ -3,8 +3,8 @@
 namespace Std {
     template <typename T>
     inline T& singleton() {
-        static T t;
+        static T* t = new T();
 
-        return t;
+        return *t;
     }
 }
