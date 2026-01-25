@@ -6,10 +6,13 @@
 using namespace Std;
 
 namespace {
-    static constexpr u64 emptyKey = 0;
-
     static inline size_t hash(u64 key, size_t capacity) noexcept {
         return key % capacity;
+    }
+
+    template <typename T>
+    static inline bool filled(const T& t) noexcept {
+        return t.value;
     }
 }
 
@@ -19,7 +22,7 @@ void HashTable::rehash() {
     for (size_t i = 0; i < capacity; ++i) {
         auto& item = table[i];
 
-        if (item.key != emptyKey) {
+        if (filled(item)) {
             next.set(item.key, item.value);
         }
     }
@@ -43,12 +46,14 @@ void* HashTable::find(u64 key) const noexcept {
    size_t startIndex = index;
 
     do {
-        if (table[index].key == emptyKey) {
+        const auto& el = table[index];
+
+        if (!filled(el)) {
             return nullptr;
         }
 
-        if (table[index].key == key) {
-            return table[index].value;
+        if (el.key == key) {
+            return el.value;
         }
 
         index = (index + 1) % capacity;
@@ -66,15 +71,17 @@ void HashTable::set(u64 key, void* value) {
     size_t startIndex = index;
 
     do {
-        if (table[index].key == emptyKey) {
-            table[index].key = key;
-            table[index].value = value;
+        auto& el = table[index];
+
+        if (!filled(el)) {
+            el.key = key;
+            el.value = value;
             ++size;
             return;
         }
 
-        if (table[index].key == key) {
-            table[index].value = value;
+        if (el.key == key) {
+            el.value = value;
             return;
         }
 
