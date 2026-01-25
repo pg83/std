@@ -5,13 +5,13 @@ namespace Std {
         IntrusiveNode* prev;
         IntrusiveNode* next;
 
-        IntrusiveNode() noexcept
+        inline IntrusiveNode() noexcept
             : prev(this)
             , next(this)
         {
         }
 
-        void remove() noexcept {
+        inline void remove() noexcept {
             prev->next = next;
             next->prev = prev;
             prev = this;

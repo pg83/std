@@ -44,7 +44,7 @@ namespace {
         }
 
         inline void allocateNewChunk(size_t minSize) {
-            size_t nextChunkSize = static_cast<size_t>(1024 * std::pow(2.0, chunks.length()));
+            size_t nextChunkSize = static_cast<size_t>(128 * std::pow(2.0, chunks.length()));
 
             if (nextChunkSize < minSize) {
                 nextChunkSize = minSize;
