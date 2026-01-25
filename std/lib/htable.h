@@ -14,6 +14,7 @@ namespace Std {
         size_t size;
 
         void rehash();
+
     public:
         HashTable(size_t initial);
 

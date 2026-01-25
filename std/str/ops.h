@@ -1,5 +1,7 @@
 #pragma once
 
+#include "hash.h"
+
 #include <std/sys/types.h>
 
 namespace Std {
@@ -59,6 +61,14 @@ namespace Std {
 
         inline const auto& back() const noexcept {
             return *(end() - 1);
+        }
+
+        inline u32 hash32() const noexcept {
+            return shash32(data(), length());
+        }
+
+        inline u64 hash64() const noexcept {
+            return shash64(data(), length());
         }
     };
 
