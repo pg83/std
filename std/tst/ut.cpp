@@ -49,6 +49,7 @@ namespace {
     };
 
     struct Tests: public Vector<Test*> {
+        DynString str;
         Pool::Ref pool = Pool::fromMemory();
 
         inline void run(int argc, char** argv) {
@@ -62,7 +63,6 @@ namespace {
         }
 
         inline void reg(TestFunc* func) {
-            DynString str;
             pushBack(pool->make<Test>(func, pool->intern((StringOutput(str) << *func).str())));
             str.clear();
         }
