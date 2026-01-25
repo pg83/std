@@ -64,7 +64,7 @@ namespace {
             auto b = (u8*)pool->allocate((CountingOutput() << *func).collectedLength());
             auto e = (u8*)(MemoryOutput(b) << *func).ptr;
 
-            pushBack(pool->make<Test>(func, pool->intern(StringView(b, e - b))));
+            pushBack(pool->make<Test>(func, StringView(b, e - b)));
         }
 
         static inline auto& instance() noexcept {
