@@ -1,8 +1,6 @@
 #include "htable.h"
 
-#include <cstddef>
-#include <cstdint>
-#include <cstdlib>
+#include <std/sys/crt.h>
 
 using namespace Std;
 
@@ -20,7 +18,7 @@ void HashTable::rehash() {
 
     capacity *= 2;
     // TODO(pg): safety
-    table = static_cast<Entry*>(calloc(capacity, sizeof(Entry)));
+    table = static_cast<Entry*>(allocateZeroedMemory(capacity, sizeof(Entry)));
     size = 0;
 
     for (size_t i = 0; i < oldCapacity; ++i) {
@@ -29,18 +27,18 @@ void HashTable::rehash() {
         }
     }
 
-    free(oldTable);
+    freeMemory(oldTable);
 }
 
 HashTable::HashTable(size_t initialCapacity)
     : capacity(initialCapacity)
     , size(0)
 {
-    table = static_cast<Entry*>(calloc(capacity, sizeof(Entry)));
+    table = static_cast<Entry*>(allocateZeroedMemory(capacity, sizeof(Entry)));
 }
 
 HashTable::~HashTable() noexcept {
-    free(table);
+    freeMemory(table);
 }
 
 void* HashTable::find(u64 key) const noexcept {
