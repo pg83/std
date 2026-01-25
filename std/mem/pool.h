@@ -20,7 +20,7 @@ namespace Std {
         };
 
         template <typename T>
-        struct Wrapper: public Dispose {
+        struct Wrapper1: public Dispose {
             T t;
 
             static void* operator new(size_t, void* ptr) {
@@ -28,7 +28,22 @@ namespace Std {
             }
 
             template <typename... A>
-            inline Wrapper(A&&... a)
+            inline Wrapper1(A&&... a)
+                : t(forward<A>(a)...)
+            {
+            }
+        };
+
+        template <typename T>
+        struct Wrapper2 {
+            T t;
+
+            static void* operator new(size_t, void* ptr) {
+                return ptr;
+            }
+
+            template <typename... A>
+            inline Wrapper2(A&&... a)
                 : t(forward<A>(a)...)
             {
             }
@@ -46,7 +61,7 @@ namespace Std {
         // king of ownership
         template <typename T, typename... A>
         inline Meta::EnableIf<Traits::HasDestructor<T>::R, T*> make(A&&... a) {
-            using Typ = Wrapper<T>;
+            using Typ = Wrapper1<T>;
 
             auto mem = this->allocate(sizeof(Typ));
             auto res = new (mem) Typ(forward<A>(a)...);
@@ -58,7 +73,7 @@ namespace Std {
 
         template <typename T, typename... A>
         inline Meta::EnableIf<!Traits::HasDestructor<T>::R, T*> make(A&&... a) {
-            using Typ = Wrapper<T>;
+            using Typ = Wrapper2<T>;
 
             return &(new (allocate(sizeof(Typ))) Typ(forward<A>(a)...))->t;
         }
