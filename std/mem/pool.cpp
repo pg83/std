@@ -4,9 +4,7 @@
 
 #include <std/str/view.h>
 
-#include <std/alg/range.h>
-#include <std/alg/reverse.h>
-
+#include <std/lib/list.h>
 #include <std/lib/vector.h>
 
 #include <cmath>
@@ -64,15 +62,12 @@ namespace {
         char* currentChunkEnd;
     };
 
-    struct ObjectPool: public Pool {
+    struct ObjectPool: public Pool, public IntrusiveList {
         MemoryPool mem;
-        Vector<Dispose*> obj;
 
         ~ObjectPool() override {
-            reverse(mutRange(obj));
-
-            for (auto ptr : mutRange(obj)) {
-                destruct(ptr);
+            while (!empty()) {
+                destruct((Dispose*)popBack());
             }
         }
 
@@ -81,7 +76,7 @@ namespace {
         }
 
         void submit(Dispose* d) noexcept override {
-            obj.pushBack(d);
+            pushBack(d);
         }
     };
 }

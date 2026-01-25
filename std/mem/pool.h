@@ -6,6 +6,8 @@
 #include <std/typ/traits.h>
 #include <std/typ/support.h>
 
+#include <std/lib/node.h>
+
 #include <std/ptr/arc.h>
 #include <std/ptr/intrusive.h>
 
@@ -13,8 +15,8 @@ namespace Std {
     class StringView;
 
     struct Pool: public ARC {
-        struct Dispose {
-            virtual ~Dispose();
+        struct Dispose: public IntrusiveNode {
+            virtual ~Dispose() noexcept;
         };
 
         template <typename T>

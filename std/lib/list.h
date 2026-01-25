@@ -1,24 +1,8 @@
 #pragma once
 
+#include "node.h"
+
 namespace Std {
-    struct IntrusiveNode {
-        IntrusiveNode* prev;
-        IntrusiveNode* next;
-
-        IntrusiveNode()
-            : prev(this)
-            , next(this)
-        {
-        }
-
-        void remove() noexcept {
-            prev->next = next;
-            next->prev = prev;
-            prev = this;
-            next = this;
-        }
-    };
-
     static void insertAfter(IntrusiveNode* pos, IntrusiveNode* node) noexcept {
         node->next = pos->next;
         node->prev = pos;
