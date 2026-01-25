@@ -35,5 +35,7 @@ namespace Std {
         inline size_t getCapacity() const noexcept {
             return capacity;
         }
+
+        void xchg(HashTable& t) noexcept;
     };
 }

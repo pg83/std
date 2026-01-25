@@ -1,6 +1,7 @@
 #include "htable.h"
 
 #include <std/sys/crt.h>
+#include <std/alg/xchg.h>
 
 using namespace Std;
 
@@ -13,21 +14,17 @@ namespace {
 }
 
 void HashTable::rehash() {
-    size_t oldCapacity = capacity;
-    Entry* oldTable = table;
+    HashTable next(capacity * 2);
 
-    capacity *= 2;
-    // TODO(pg): safety
-    table = static_cast<Entry*>(allocateZeroedMemory(capacity, sizeof(Entry)));
-    size = 0;
+    for (size_t i = 0; i < capacity; ++i) {
+        auto& item = table[i];
 
-    for (size_t i = 0; i < oldCapacity; ++i) {
-        if (oldTable[i].key != emptyKey) {
-            set(oldTable[i].key, oldTable[i].value);
+        if (item.key != emptyKey) {
+            next.set(item.key, item.value);
         }
     }
 
-    freeMemory(oldTable);
+    next.xchg(*this);
 }
 
 HashTable::HashTable(size_t initialCapacity)
@@ -87,4 +84,10 @@ void HashTable::set(u64 key, void* value) {
     rehash();
 
     set(key, value);
+}
+
+void HashTable::xchg(HashTable& t) noexcept {
+    Std::xchg(size, t.size);
+    Std::xchg(table, t.table);
+    Std::xchg(capacity, t.capacity);
 }
