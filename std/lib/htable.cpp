@@ -42,8 +42,8 @@ HashTable::~HashTable() noexcept {
 }
 
 void* HashTable::find(u64 key) const noexcept {
-   size_t index = hash(key, capacity);
-   size_t startIndex = index;
+    size_t index = hash(key, capacity);
+    size_t startIndex = index;
 
     do {
         const auto& el = table[index];
