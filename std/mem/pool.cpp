@@ -95,5 +95,5 @@ StringView Pool::intern(const StringView& s) {
     return StringView(res, len);
 }
 
-Pool::Dispose::~Dispose() {
+Pool::Dispose::~Dispose() noexcept {
 }

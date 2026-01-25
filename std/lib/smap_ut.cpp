@@ -1,6 +1,7 @@
 #include "smap.h"
 
 #include <std/tst/ut.h>
+#include <std/lib/vector.h>
 
 using namespace Std;
 
@@ -14,5 +15,19 @@ STD_TEST_SUITE(StringMap) {
         STD_INSIST(s[u8"qw1"] == 1);
         STD_INSIST(s[u8"qw2"] == 2);
         STD_INSIST(s[u8"qw3"] == 0);
+    }
+
+    STD_TEST(test2) {
+        StringMap<Vector<int>> s;
+
+        s[u8"qw1"].pushBack(1);
+        s[u8"qw1"].pushBack(2);
+        s[u8"qw2"].pushBack(3);
+        s[u8"qw2"].pushBack(4);
+
+        STD_INSIST(s[u8"qw1"][0] == 1);
+        STD_INSIST(s[u8"qw1"][1] == 2);
+        STD_INSIST(s[u8"qw2"][0] == 3);
+        STD_INSIST(s[u8"qw2"][1] == 4);
     }
 }
