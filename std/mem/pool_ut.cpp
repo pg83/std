@@ -40,4 +40,8 @@ STD_TEST_SUITE(MemoryPool) {
 
         STD_INSIST(v == 0);
     }
+
+    STD_TEST(testPrimitive) {
+        Pool::fromMemory()->make<double>();
+    }
 }
