@@ -62,9 +62,7 @@ namespace {
         char* currentChunkEnd;
     };
 
-    struct ObjectPool: public Pool, public IntrusiveList {
-        MemoryPool mem;
-
+    struct ObjectPool: public Pool, public IntrusiveList, public MemoryPool {
         ~ObjectPool() override {
             while (!empty()) {
                 destruct((Dispose*)popBack());
@@ -72,7 +70,7 @@ namespace {
         }
 
         void* allocate(size_t len) override {
-            return mem.allocate(len);
+            return MemoryPool::allocate(len);
         }
 
         void submit(Dispose* d) noexcept override {
