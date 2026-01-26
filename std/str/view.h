@@ -22,7 +22,7 @@ namespace Std {
         }
 
         template <size_t N>
-        inline StringView(const u8 (&str)[N])
+        inline StringView(const u8 (&str)[N]) noexcept
             : StringView(str, N - 1)
         {
         }
