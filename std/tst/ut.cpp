@@ -12,6 +12,7 @@
 #include <std/alg/range.h>
 
 #include <std/dbg/color.h>
+#include <std/dbg/panic.h>
 
 #include <std/lib/vector.h>
 #include <std/lib/singleton.h>
@@ -19,6 +20,13 @@
 using namespace Std;
 
 namespace {
+    struct Exc {
+    };
+
+    static void panicHandler() {
+        throw Exc();
+    }
+
     struct Test {
         TestFunc* func;
         StringView fullName;
@@ -30,15 +38,17 @@ namespace {
         }
 
         inline void execute() {
-            sysE << Color::bright(AnsiColor::Yellow)
-                 << StringView(u8"- ") << fullName
-                 << Color::reset() << finI;
+            try {
+                func->execute();
 
-            func->execute();
-
-            sysE << Color::bright(AnsiColor::Green)
-                 << StringView(u8"\r+ ") << fullName
-                 << Color::reset() << endL << finI;
+                sysE << Color::bright(AnsiColor::Green)
+                     << StringView(u8"\r+ ") << fullName
+                     << Color::reset() << endL << finI;
+            } catch (const Exc&) {
+                sysE << Color::bright(AnsiColor::Red)
+                     << StringView(u8"\r- ") << fullName
+                     << Color::reset() << endL << finI;
+            }
         }
     };
 
@@ -55,6 +65,8 @@ namespace {
             quickSort(mutRange(*this), [](auto l, auto r) noexcept {
                 return l->fullName < r->fullName;
             });
+
+            setPanicHandler(panicHandler);
 
             for (auto test : range(*this)) {
                 test->execute();

@@ -6,5 +6,6 @@ using namespace Std;
 
 STD_TEST_SUITE(UT) {
     STD_TEST(test1) {
+        // STD_INSIST(false);
     }
 }
