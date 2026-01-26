@@ -29,8 +29,14 @@ namespace Std {
             static void free(Header* ptr) noexcept;
         };
 
+        inline Header* header() const noexcept {
+            return (Header*)data_ - 1;
+        }
+
+        void appendUnsafe(const void* data, size_t len);
+
     public:
-        ~Buffer();
+        ~Buffer() noexcept;
 
         Buffer(size_t len);
         Buffer(const void* data, size_t len);
@@ -128,12 +134,5 @@ namespace Std {
         inline void growDelta(size_t len) {
             grow(used() + len);
         }
-
-    private:
-        inline Header* header() const noexcept {
-            return (Header*)data_ - 1;
-        }
-
-        void appendUnsafe(const void* data, size_t len);
     };
 }

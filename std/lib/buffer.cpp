@@ -32,7 +32,7 @@ void Buffer::Header::free(Header* ptr) noexcept {
     }
 }
 
-Buffer::~Buffer() {
+Buffer::~Buffer() noexcept {
     Header::free(header());
 }
 
