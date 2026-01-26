@@ -3,17 +3,6 @@
 #include "node.h"
 
 namespace Std {
-    static void insertAfter(IntrusiveNode* pos, IntrusiveNode* node) noexcept {
-        node->next = pos->next;
-        node->prev = pos;
-        pos->next->prev = node;
-        pos->next = node;
-    }
-
-    static void insertBefore(IntrusiveNode* pos, IntrusiveNode* node) noexcept {
-        insertAfter(pos->prev, node);
-    }
-
     class IntrusiveList {
         IntrusiveNode head;
 
@@ -62,6 +51,17 @@ namespace Std {
 
         inline IntrusiveNode* getHead() noexcept {
             return &head;
+        }
+
+        static inline void insertAfter(IntrusiveNode* pos, IntrusiveNode* node) noexcept {
+            node->next = pos->next;
+            node->prev = pos;
+            pos->next->prev = node;
+            pos->next = node;
+        }
+
+        static inline void insertBefore(IntrusiveNode* pos, IntrusiveNode* node) noexcept {
+            insertAfter(pos->prev, node);
         }
     };
 }

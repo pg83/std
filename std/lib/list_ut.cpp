@@ -188,7 +188,7 @@ STD_TEST_SUITE(IntrusiveList) {
         list.pushBack(&d2);
         list.pushBack(&d3);
 
-        insertAfter(&d1, &d4);
+        IntrusiveList::insertAfter(&d1, &d4);
 
         IntrusiveNode* head = list.getHead();
         IntrusiveNode* current = head->next;
@@ -213,7 +213,7 @@ STD_TEST_SUITE(IntrusiveList) {
         list.pushBack(&d2);
         list.pushBack(&d3);
 
-        insertBefore(&d3, &d4);
+        IntrusiveList::insertBefore(&d3, &d4);
 
         IntrusiveNode* head = list.getHead();
         IntrusiveNode* current = head->next;
