@@ -91,7 +91,7 @@ namespace Std {
             return used() == 0;
         }
 
-        inline bool left() const noexcept {
+        inline size_t left() const noexcept {
             return capacity() - used();
         }
 
