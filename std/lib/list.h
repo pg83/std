@@ -49,7 +49,7 @@ namespace Std {
             return head.prev;
         }
 
-        inline IntrusiveNode* getHead() noexcept {
+        inline IntrusiveNode* end() noexcept {
             return &head;
         }
 

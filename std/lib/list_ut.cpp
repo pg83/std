@@ -38,7 +38,7 @@ STD_TEST_SUITE(IntrusiveList) {
         STD_INSIST(list.front() == &d1);
         STD_INSIST(list.back() == &d3);
 
-        IntrusiveNode* head = list.getHead();
+        IntrusiveNode* head = list.end();
         IntrusiveNode* current = head->next;
         int values[] = {10, 20, 30};
         int idx = 0;
@@ -69,7 +69,7 @@ STD_TEST_SUITE(IntrusiveList) {
         STD_INSIST(list.front() == &d3);
         STD_INSIST(list.back() == &d1);
 
-        IntrusiveNode* head = list.getHead();
+        IntrusiveNode* head = list.end();
         IntrusiveNode* current = head->next;
         int values[] = {30, 20, 10};
         int idx = 0;
@@ -153,7 +153,7 @@ STD_TEST_SUITE(IntrusiveList) {
 
         d2.remove();
 
-        IntrusiveNode* head = list.getHead();
+        IntrusiveNode* head = list.end();
         IntrusiveNode* current = head->next;
         int values[] = {10, 30, 40};
         int idx = 0;
@@ -190,7 +190,7 @@ STD_TEST_SUITE(IntrusiveList) {
 
         IntrusiveList::insertAfter(&d1, &d4);
 
-        IntrusiveNode* head = list.getHead();
+        IntrusiveNode* head = list.end();
         IntrusiveNode* current = head->next;
         int values[] = {10, 15, 20, 30};
         int idx = 0;
@@ -215,7 +215,7 @@ STD_TEST_SUITE(IntrusiveList) {
 
         IntrusiveList::insertBefore(&d3, &d4);
 
-        IntrusiveNode* head = list.getHead();
+        IntrusiveNode* head = list.end();
         IntrusiveNode* current = head->next;
         int values[] = {10, 20, 25, 30};
         int idx = 0;
@@ -258,7 +258,7 @@ STD_TEST_SUITE(IntrusiveList) {
         list.pushFront(&d4);
         list.pushBack(&d5);
 
-        IntrusiveNode* head = list.getHead();
+        IntrusiveNode* head = list.end();
         IntrusiveNode* current = head->next;
         int values[] = {4, 2, 1, 3, 5};
         int idx = 0;
@@ -293,7 +293,7 @@ STD_TEST_SUITE(IntrusiveList) {
         list.pushBack(&d2);
         list.pushBack(&d3);
 
-        IntrusiveNode* head = list.getHead();
+        IntrusiveNode* head = list.end();
         IntrusiveNode* current = head->prev;
         int values[] = {30, 20, 10};
         int idx = 0;
@@ -334,7 +334,7 @@ STD_TEST_SUITE(IntrusiveList) {
         STD_INSIST(list.front() == &d1);
         STD_INSIST(list.back() == &d2);
 
-        IntrusiveNode* head = list.getHead();
+        IntrusiveNode* head = list.end();
         IntrusiveNode* current = head->next;
         int values[] = {10, 20};
         int idx = 0;
