@@ -16,9 +16,8 @@ CXXF = -I. -W -Wall -std=c++2a $(OPTF) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 all: $(LIBA) $(TSTA)
 
 $(LIBA): $(LIBO) Makefile
-	@-rm $(LIBA) 2>/dev/null
+	rm -rf $(LIBA)
 	llvm-ar q $(LIBA) $(LIBO)
-	llvm-ranlib $(LIBA)
 
 $(TSTA): $(TSTO) $(LIBA) Makefile
 	$(CXX) -fuse-ld=lld $(OPTF) $(LDFLAGS) -o $@ $(TSTO) $(LIBA)
