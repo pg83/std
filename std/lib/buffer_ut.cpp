@@ -1,8 +1,7 @@
 #include "buffer.h"
 
 #include <std/tst/ut.h>
-
-#include <string.h>
+#include <std/sys/crt.h>
 
 using namespace Std;
 
@@ -42,7 +41,7 @@ STD_TEST_SUITE(Buffer) {
         STD_INSIST(b.used() == len);
         STD_INSIST(b.capacity() >= len);
         STD_INSIST(!b.empty());
-        STD_INSIST(memcmp(b.data(), testData, len) == 0);
+        STD_INSIST(memCmp(b.data(), testData, len) == 0);
     }
 
     STD_TEST(copy_constructor) {
@@ -53,7 +52,7 @@ STD_TEST_SUITE(Buffer) {
 
         STD_INSIST(b2.used() == b1.used());
         STD_INSIST(b2.capacity() >= b1.capacity());
-        STD_INSIST(memcmp(b1.data(), b2.data(), len) == 0);
+        STD_INSIST(memCmp(b1.data(), b2.data(), len) == 0);
         STD_INSIST(b1.data() != b2.data()); // deep copy
     }
 
@@ -78,7 +77,7 @@ STD_TEST_SUITE(Buffer) {
         b2 = b1;
 
         STD_INSIST(b2.used() == b1.used());
-        STD_INSIST(memcmp(b1.data(), b2.data(), b1.used()) == 0);
+        STD_INSIST(memCmp(b1.data(), b2.data(), b1.used()) == 0);
     }
 
     STD_TEST(move_assignment) {
@@ -193,23 +192,23 @@ STD_TEST_SUITE(Buffer) {
 
         b.append(data1, 5);
         STD_INSIST(b.used() == 5);
-        STD_INSIST(memcmp(b.data(), "Hello", 5) == 0);
+        STD_INSIST(memCmp(b.data(), "Hello", 5) == 0);
 
         b.append(data2, 6);
         STD_INSIST(b.used() == 11);
-        STD_INSIST(memcmp(b.data(), "Hello World", 11) == 0);
+        STD_INSIST(memCmp(b.data(), "Hello World", 11) == 0);
     }
 
     STD_TEST(append_with_grow) {
         Buffer b(5);
-        const char* data = "This is a long string that exceeds initial capacity";
-        size_t len = strlen(data);
+        auto data = u8"This is a long string that exceeds initial capacity";
+        size_t len = strLen(data);
 
         b.append(data, len);
 
         STD_INSIST(b.used() == len);
         STD_INSIST(b.capacity() >= len);
-        STD_INSIST(memcmp(b.data(), data, len) == 0);
+        STD_INSIST(memCmp(b.data(), data, len) == 0);
     }
 
     STD_TEST(grow) {
@@ -239,7 +238,7 @@ STD_TEST_SUITE(Buffer) {
 
         STD_INSIST(b.capacity() >= b.used());
         STD_INSIST(b.used() == 5);
-        STD_INSIST(memcmp(b.data(), "small", 5) == 0);
+        STD_INSIST(memCmp(b.data(), "small", 5) == 0);
     }
 
     STD_TEST(xchg) {
@@ -289,7 +288,7 @@ STD_TEST_SUITE(Buffer) {
 
         b.append("New", 3);
         STD_INSIST(b.used() == 3);
-        STD_INSIST(memcmp(b.data(), "New", 3) == 0);
+        STD_INSIST(memCmp(b.data(), "New", 3) == 0);
     }
 
     STD_TEST(advancePtr_helper) {

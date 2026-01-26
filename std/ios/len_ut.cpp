@@ -5,7 +5,7 @@
 using namespace Std;
 
 STD_TEST_SUITE(CountingOutput) {
-    STD_TEST(testSimpl) {
+    STD_TEST(testSimple) {
         STD_INSIST((CountingOutput() << StringView(u8"12345") << 12345).collectedLength() == 10);
     }
 

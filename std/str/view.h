@@ -33,6 +33,8 @@ namespace Std {
         {
         }
 
+        StringView(const char* s) noexcept;
+
         inline auto mutData() noexcept {
             return ptr_;
         }
