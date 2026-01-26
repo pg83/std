@@ -65,12 +65,7 @@ namespace Std {
             return &head;
         }
 
-        static inline void insertAfter(IntrusiveNode* pos, IntrusiveNode* node) noexcept {
-            node->next = pos->next;
-            node->prev = pos;
-            pos->next->prev = node;
-            pos->next = node;
-        }
+        static void insertAfter(IntrusiveNode* pos, IntrusiveNode* node) noexcept;
 
         static inline void insertBefore(IntrusiveNode* pos, IntrusiveNode* node) noexcept {
             insertAfter(pos->prev, node);
