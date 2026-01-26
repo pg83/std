@@ -10,11 +10,21 @@
 
 #include <stdlib.h>
 
+using namespace Std;
+
+namespace {
+    static PanicHandler panicHandler = (PanicHandler)abort;
+}
+
+void Std::setPanicHandler(PanicHandler hndl) noexcept {
+    panicHandler = hndl;
+}
+
 void Std::panic(const u8* what, u32 line, const u8* file) {
     sysE << endL << Color::bright(AnsiColor::Red)
          << StringView(what, strLen(what)) << StringView(u8" failed, at ")
          << StringView(file, strLen(file)) << StringView(u8":")
          << line << Color::reset() << endL << finI;
 
-    abort();
+    panicHandler();
 }
