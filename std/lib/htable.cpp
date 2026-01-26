@@ -9,11 +9,6 @@ namespace {
     static inline size_t hash(u64 key, size_t capacity) noexcept {
         return key % capacity;
     }
-
-    template <typename T>
-    static inline bool filled(const T& t) noexcept {
-        return t.value;
-    }
 }
 
 void HashTable::rehash() {
@@ -22,7 +17,7 @@ void HashTable::rehash() {
     for (size_t i = 0; i < capacity; ++i) {
         auto& item = table[i];
 
-        if (filled(item)) {
+        if (item.filled()) {
             next.set(item.key, item.value);
         }
     }
@@ -48,7 +43,7 @@ void* HashTable::find(u64 key) const noexcept {
     do {
         const auto& el = table[index];
 
-        if (!filled(el)) {
+        if (!el.filled()) {
             return nullptr;
         }
 
@@ -68,12 +63,11 @@ void HashTable::set(u64 key, void* value) {
     }
 
     size_t index = hash(key, capacity);
-    size_t startIndex = index;
 
-    do {
+    while (true) {
         auto& el = table[index];
 
-        if (!filled(el)) {
+        if (!el.filled()) {
             el.key = key;
             el.value = value;
             ++size;
@@ -86,11 +80,7 @@ void HashTable::set(u64 key, void* value) {
         }
 
         index = (index + 1) % capacity;
-    } while (index != startIndex);
-
-    rehash();
-
-    set(key, value);
+    }
 }
 
 void HashTable::xchg(HashTable& t) noexcept {

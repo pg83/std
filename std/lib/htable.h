@@ -7,6 +7,10 @@ namespace Std {
         struct Entry {
             u64 key;
             void* value;
+
+            inline bool filled() const noexcept {
+                return value;
+            }
         };
 
         Entry* table;
