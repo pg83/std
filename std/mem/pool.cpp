@@ -50,8 +50,9 @@ namespace {
                 nextChunkSize = minSize;
             }
 
+            chunks.growDelta(1);
             void* newChunk = allocateMemory(nextChunkSize);
-
+            // will not throw
             chunks.pushBack(newChunk);
             currentChunk = static_cast<char*>(newChunk);
             currentChunkEnd = currentChunk + nextChunkSize;
