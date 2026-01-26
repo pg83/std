@@ -20,18 +20,12 @@ namespace Std {
         };
 
         template <typename T>
-        struct Wrapper1: public Dispose {
-            T t;
-
+        struct Wrapper1: public Dispose, public T {
             static void* operator new(size_t, void* ptr) {
                 return ptr;
             }
 
-            template <typename... A>
-            inline Wrapper1(A&&... a)
-                : t(forward<A>(a)...)
-            {
-            }
+            using T::T;
         };
 
         template <typename T>
@@ -68,7 +62,7 @@ namespace Std {
 
             submit(res);
 
-            return &res->t;
+            return res;
         }
 
         template <typename T, typename... A>
