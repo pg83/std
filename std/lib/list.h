@@ -41,15 +41,27 @@ namespace Std {
             }
         }
 
-        inline IntrusiveNode* front() noexcept {
+        inline IntrusiveNode* mutFront() noexcept {
             return head.next;
         }
 
-        inline IntrusiveNode* back() noexcept {
+        inline const IntrusiveNode* front() const noexcept {
+            return head.next;
+        }
+
+        inline IntrusiveNode* mutBack() noexcept {
             return head.prev;
         }
 
-        inline IntrusiveNode* end() noexcept {
+        inline const IntrusiveNode* back() const noexcept {
+            return head.prev;
+        }
+
+        inline IntrusiveNode* mutEnd() noexcept {
+            return &head;
+        }
+
+        inline const IntrusiveNode* end() const noexcept {
             return &head;
         }
 
