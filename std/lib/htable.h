@@ -13,9 +13,9 @@ namespace Std {
             }
         };
 
-        Entry* table;
         size_t capacity;
         size_t size;
+        Entry* table;
 
         void rehash();
 

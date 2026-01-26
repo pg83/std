@@ -28,8 +28,8 @@ void HashTable::rehash() {
 HashTable::HashTable(size_t initialCapacity)
     : capacity(initialCapacity)
     , size(0)
+    , table((Entry*)allocateZeroedMemory(capacity, sizeof(Entry)))
 {
-    table = static_cast<Entry*>(allocateZeroedMemory(capacity, sizeof(Entry)));
 }
 
 HashTable::~HashTable() noexcept {
