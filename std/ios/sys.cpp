@@ -1,40 +1,22 @@
+#include "fd.h"
 #include "sys.h"
 #include "output.h"
 
 #include <std/lib/singleton.h>
 
-#include <stdio.h>
-
 using namespace Std;
 
 namespace {
-    struct StdOutput: public Output {
-        inline StdOutput(FILE* s) noexcept
-            : stream(s)
-        {
-        }
-
-        void writeImpl(const void* data, size_t len) override {
-            fwrite(data, 1, len, stream);
-        }
-
-        void flushImpl() override {
-            fflush(stream);
-        }
-
-        FILE* stream;
-    };
-
-    struct StdErr: public StdOutput {
+    struct StdErr: public FDOutput {
         inline StdErr() noexcept
-            : StdOutput(stderr)
+            : FDOutput(2)
         {
         }
     };
 
-    struct StdOut: public StdOutput {
+    struct StdOut: public FDOutput {
         inline StdOut() noexcept
-            : StdOutput(stdout)
+            : FDOutput(1)
         {
         }
     };
