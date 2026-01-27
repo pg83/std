@@ -41,22 +41,6 @@ void ZeroCopyOutput::writeImpl(const void* data, size_t len) {
     bump(imbue(len) << StringView((const u8*)data, len));
 }
 
-// modifiers
-template <>
-void Std::output<ZeroCopyOutput, Flush>(ZeroCopyOutput& out, Flush) {
-    out.flush();
-}
-
-template <>
-void Std::output<ZeroCopyOutput, Finish>(ZeroCopyOutput& out, Finish) {
-    out.finish();
-}
-
-template <>
-void Std::output<ZeroCopyOutput, EndLine>(ZeroCopyOutput& out, EndLine) {
-    out.write(u8"\n", 1);
-}
-
 // std types
 #define DEF_OUT(typ) \
     template <>                                                         \
