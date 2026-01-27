@@ -82,3 +82,8 @@ template <>
 void Std::output<ZeroCopyOutput, I64>(ZeroCopyOutput& out, I64 v) {
     out.bump(out.imbue(24) << v.val);
 }
+
+template <>
+void Std::output<ZeroCopyOutput, const char*>(ZeroCopyOutput& out, const char* v) {
+    out << StringView(v);
+}
