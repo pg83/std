@@ -6,6 +6,7 @@
 using namespace Std;
 
 static_assert(!Traits::HasDestructor<StringView>::R);
+static_assert(sizeof(StringView) == 2 * sizeof(void*));
 
 StringView::StringView(const char* s) noexcept
     : StringView((const u8*)s, strLen((const u8*)s))
