@@ -1,7 +1,5 @@
 #include "stable.h"
 
-#include <xxhash.h>
-
 #include <std/str/view.h>
 
 using namespace Std;
