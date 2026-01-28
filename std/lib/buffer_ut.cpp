@@ -302,4 +302,11 @@ STD_TEST_SUITE(Buffer) {
         const int* advancedConst = advancePtr(constPtr, sizeof(int) * 3);
         STD_INSIST(advancedConst == &data[3]);
     }
+
+    STD_TEST(Test1) {
+        Buffer l;
+        Buffer r;
+        l.append(r.data(), l.length());
+        STD_INSIST(l.empty());
+    }
 }

@@ -84,7 +84,9 @@ void Buffer::append(const void* ptr, size_t len) {
 void Buffer::appendUnsafe(const void* ptr, size_t len) {
     auto cur = (u8*)mutCurrent();
 
-    if (len == 1) {
+    if (len == 0) {
+        // should not touch header at all
+    } else if (len == 1) {
         *cur = *(const u8*)ptr;
         header()->used += 1;
     } else {
