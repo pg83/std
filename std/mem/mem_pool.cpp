@@ -52,8 +52,8 @@ void* MemoryPool::allocate(size_t len) {
 void MemoryPool::allocateNewChunk(size_t minSize) {
     size_t nextChunkSize = static_cast<size_t>(128 * std::pow(2.0, ds->length()));
 
-    if (nextChunkSize < minSize) {
-        nextChunkSize = minSize;
+    while (nextChunkSize < minSize) {
+        nextChunkSize *= 2;
     }
 
     auto newChunk = new (allocateMemory(nextChunkSize)) Chunk();
