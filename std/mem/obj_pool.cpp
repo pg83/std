@@ -6,7 +6,6 @@
 #include <std/str/view.h>
 
 #include <std/lib/list.h>
-#include <std/lib/vector.h>
 
 using namespace Std;
 

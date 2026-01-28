@@ -41,13 +41,14 @@ namespace Std {
             using Wrapper1<T>::Wrapper1;
         };
 
+        virtual void submit(Dispose* d) noexcept = 0;
+
     public:
         using Ref = IntrusivePtr<ObjPool>;
 
         virtual ~ObjPool() noexcept;
 
         virtual void* allocate(size_t len) = 0;
-        virtual void submit(Dispose* d) noexcept = 0;
 
         StringView intern(const StringView& s);
 
