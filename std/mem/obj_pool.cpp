@@ -1,4 +1,4 @@
-#include "pool.h"
+#include "obj_pool.h"
 #include "mem_pool.h"
 
 #include <std/sys/crt.h>
@@ -8,9 +8,6 @@
 #include <std/lib/list.h>
 #include <std/lib/vector.h>
 
-#include <cmath>
-#include <cstddef>
-
 using namespace Std;
 
 namespace {
@@ -19,8 +16,8 @@ namespace {
         t->~T();
     }
 
-    struct ObjectPool: public Pool, public IntrusiveList, public MemoryPool {
-        ~ObjectPool() override {
+    struct Pool: public ObjPool, public IntrusiveList, public MemoryPool {
+        ~Pool() noexcept override {
             while (!empty()) {
                 destruct((Dispose*)popBack());
             }
@@ -36,14 +33,14 @@ namespace {
     };
 }
 
-Pool::~Pool() {
+ObjPool::~ObjPool() noexcept {
 }
 
-Pool::Ref Pool::fromMemory() {
-    return new ObjectPool();
+ObjPool::Ref ObjPool::fromMemory() {
+    return new Pool();
 }
 
-StringView Pool::intern(const StringView& s) {
+StringView ObjPool::intern(const StringView& s) {
     auto len = s.length();
     auto res = (u8*)allocate(len);
 
@@ -52,5 +49,5 @@ StringView Pool::intern(const StringView& s) {
     return StringView(res, len);
 }
 
-Pool::Dispose::~Dispose() noexcept {
+ObjPool::Dispose::~Dispose() noexcept {
 }

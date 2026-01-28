@@ -14,11 +14,13 @@
 namespace Std {
     class StringView;
 
-    struct Pool: public ARC {
+    class ObjPool: public ARC {
+    public:
         struct Dispose: public IntrusiveNode {
             virtual ~Dispose() noexcept;
         };
 
+    private:
         template <typename T>
         struct Wrapper1 {
             T t;
@@ -39,9 +41,10 @@ namespace Std {
             using Wrapper1<T>::Wrapper1;
         };
 
-        using Ref = IntrusivePtr<Pool>;
+    public:
+        using Ref = IntrusivePtr<ObjPool>;
 
-        virtual ~Pool();
+        virtual ~ObjPool() noexcept;
 
         virtual void* allocate(size_t len) = 0;
         virtual void submit(Dispose* d) noexcept = 0;

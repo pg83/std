@@ -2,12 +2,12 @@
 
 #include "stable.h"
 
-#include <std/mem/pool.h>
+#include <std/mem/obj_pool.h>
 
 namespace Std {
     template <typename T>
     class StringMap {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
         StringTable st;
 
     public:

@@ -3,7 +3,7 @@
 #include <std/ios/sys.h>
 #include <std/ios/string.h>
 
-#include <std/mem/pool.h>
+#include <std/mem/obj_pool.h>
 
 #include <std/str/view.h>
 #include <std/str/dynamic.h>
@@ -59,7 +59,7 @@ namespace {
 
     struct Tests: public Vector<Test*> {
         DynString str;
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         inline void run(int argc, char** argv) {
             quickSort(mutRange(*this), [](auto l, auto r) noexcept {

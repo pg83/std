@@ -1,4 +1,4 @@
-#include "pool.h"
+#include "obj_pool.h"
 
 #include <std/tst/ut.h>
 #include <std/str/view.h>
@@ -85,9 +85,9 @@ namespace {
     };
 }
 
-STD_TEST_SUITE(MemoryPool) {
+STD_TEST_SUITE(ObjPool) {
     STD_TEST(allocate_returns_non_null) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         void* ptr = pool->allocate(64);
 
@@ -95,7 +95,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(allocate_different_addresses) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         void* ptr1 = pool->allocate(32);
         void* ptr2 = pool->allocate(32);
@@ -104,7 +104,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(allocate_aligned) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         void* ptr = pool->allocate(1);
 
@@ -112,7 +112,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(allocate_multiple_aligned) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         for (int i = 0; i < 100; ++i) {
             void* ptr = pool->allocate(i + 1);
@@ -121,7 +121,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(allocate_large_block) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         void* ptr = pool->allocate(4096);
 
@@ -129,7 +129,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(allocate_very_large_block) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         void* ptr = pool->allocate(1024 * 1024);
 
@@ -137,7 +137,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(allocate_zero_size) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         void* ptr = pool->allocate(0);
 
@@ -145,7 +145,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(make_pod_type) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         PODType* obj = pool->make<PODType>();
 
@@ -153,7 +153,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(make_simple_struct) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         SimpleStruct* obj = pool->make<SimpleStruct>(10, 20);
 
@@ -164,7 +164,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(make_default_constructible) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         DefaultConstructible* obj = pool->make<DefaultConstructible>();
 
@@ -173,7 +173,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(make_multiple_args) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         MultipleArgs* obj = pool->make<MultipleArgs>(1, 2, 3, 4);
 
@@ -188,7 +188,7 @@ STD_TEST_SUITE(MemoryPool) {
         int counter = 0;
 
         {
-            Pool::Ref pool = Pool::fromMemory();
+            ObjPool::Ref pool = ObjPool::fromMemory();
             WithDestructor* obj = pool->make<WithDestructor>(&counter);
 
             STD_INSIST(obj != nullptr);
@@ -202,7 +202,7 @@ STD_TEST_SUITE(MemoryPool) {
         int counter = 0;
 
         {
-            Pool::Ref pool = Pool::fromMemory();
+            ObjPool::Ref pool = ObjPool::fromMemory();
 
             pool->make<WithDestructor>(&counter);
             pool->make<WithDestructor>(&counter);
@@ -218,7 +218,7 @@ STD_TEST_SUITE(MemoryPool) {
         int counter = 0;
 
         {
-            Pool::Ref pool = Pool::fromMemory();
+            ObjPool::Ref pool = ObjPool::fromMemory();
             StringView name = pool->intern(StringView("test"));
 
             ComplexObject* obj = pool->make<ComplexObject>(42, name, &counter);
@@ -233,7 +233,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(make_large_object_no_destructor) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         LargeObject* obj = pool->make<LargeObject>(123);
 
@@ -245,7 +245,7 @@ STD_TEST_SUITE(MemoryPool) {
         int counter = 0;
 
         {
-            Pool::Ref pool = Pool::fromMemory();
+            ObjPool::Ref pool = ObjPool::fromMemory();
             LargeWithDestructor* obj = pool->make<LargeWithDestructor>(&counter);
 
             STD_INSIST(obj != nullptr);
@@ -256,7 +256,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(intern_empty_string) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         StringView result = pool->intern(StringView(""));
 
@@ -264,7 +264,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(intern_simple_string) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         StringView result = pool->intern(StringView("hello"));
 
@@ -273,7 +273,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(intern_preserves_content) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         char original[] = "test string";
         StringView result = pool->intern(StringView((const char*)original));
@@ -282,7 +282,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(intern_different_addresses) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         StringView s1 = pool->intern(StringView("first"));
         StringView s2 = pool->intern(StringView("second"));
@@ -291,7 +291,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(intern_long_string) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         const char* longStr = "this is a very long string that should still work correctly with the pool allocator";
         StringView result = pool->intern(StringView(longStr));
@@ -300,7 +300,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(intern_multiple_strings) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         StringView s1 = pool->intern(StringView("one"));
         StringView s2 = pool->intern(StringView("two"));
@@ -315,7 +315,7 @@ STD_TEST_SUITE(MemoryPool) {
         int counter = 0;
 
         {
-            Pool::Ref pool = Pool::fromMemory();
+            ObjPool::Ref pool = ObjPool::fromMemory();
 
             StringView s = pool->intern(StringView("test"));
             SimpleStruct* simple = pool->make<SimpleStruct>(1, 2);
@@ -332,7 +332,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(many_small_allocations) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         for (int i = 0; i < 1000; ++i) {
             SimpleStruct* obj = pool->make<SimpleStruct>(i, i * 2);
@@ -345,7 +345,7 @@ STD_TEST_SUITE(MemoryPool) {
         int counter = 0;
 
         {
-            Pool::Ref pool = Pool::fromMemory();
+            ObjPool::Ref pool = ObjPool::fromMemory();
 
             for (int i = 0; i < 100; ++i) {
                 pool->make<WithDestructor>(&counter);
@@ -358,7 +358,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(trigger_new_chunk_allocation) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         for (int i = 0; i < 100; ++i) {
             void* ptr = pool->allocate(256);
@@ -367,7 +367,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(large_allocation_triggers_chunk) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         void* small = pool->allocate(10);
         void* large = pool->allocate(1024);
@@ -377,10 +377,10 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(ref_counting) {
-        Pool::Ref pool1 = Pool::fromMemory();
+        ObjPool::Ref pool1 = ObjPool::fromMemory();
 
         {
-            Pool::Ref pool2 = pool1;
+            ObjPool::Ref pool2 = pool1;
             void* ptr = pool2->allocate(32);
             STD_INSIST(ptr != nullptr);
         }
@@ -404,7 +404,7 @@ STD_TEST_SUITE(MemoryPool) {
         };
 
         {
-            Pool::Ref pool = Pool::fromMemory();
+            ObjPool::Ref pool = ObjPool::fromMemory();
 
             pool->make<OrderChecker>(1, &lastDestroyed);
             pool->make<OrderChecker>(2, &lastDestroyed);
@@ -415,7 +415,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(make_primitive_int) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         int* p = pool->make<int>(42);
 
@@ -424,7 +424,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(make_primitive_double) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         double* p = pool->make<double>(3.14);
 
@@ -433,7 +433,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(object_alignment) {
-        Pool::Ref pool = Pool::fromMemory();
+        ObjPool::Ref pool = ObjPool::fromMemory();
 
         struct Aligned {
             double d;
@@ -446,7 +446,7 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(stress) {
-        auto pool = Pool::fromMemory();
+        auto pool = ObjPool::fromMemory();
 
         for (size_t i = 0; i < 1000; ++i) {
             pool->allocate(i);
@@ -470,7 +470,7 @@ STD_TEST_SUITE(MemoryPool) {
         u64 v = 1;
 
         {
-            auto pool = Pool::fromMemory();
+            auto pool = ObjPool::fromMemory();
             auto obj = pool->make<T>(&v);
 
             STD_INSIST(v == 1);
@@ -482,6 +482,6 @@ STD_TEST_SUITE(MemoryPool) {
     }
 
     STD_TEST(testPrimitive) {
-        Pool::fromMemory()->make<double>();
+        ObjPool::fromMemory()->make<double>();
     }
 }
