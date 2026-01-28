@@ -9,7 +9,7 @@ namespace {
     }
 }
 
-Disposer::~Disposer() noexcept {
+void Disposer::dispose() noexcept {
     while (!lst.empty()) {
         destruct((Disposable*)lst.popBack());
     }

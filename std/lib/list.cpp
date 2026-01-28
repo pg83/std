@@ -9,3 +9,13 @@ void IntrusiveList::insertAfter(IntrusiveNode* pos, IntrusiveNode* node) noexcep
     pos->next->prev = node;
     pos->next = node;
 }
+
+unsigned IntrusiveList::length() const noexcept {
+    unsigned res = 0;
+
+    for (auto c = front(), e = end(); c != e; c = c->next) {
+        ++res;
+    }
+
+    return res;
+}

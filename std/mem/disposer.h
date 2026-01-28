@@ -9,10 +9,18 @@ namespace Std {
         IntrusiveList lst;
 
     public:
-        ~Disposer() noexcept;
+        inline ~Disposer() noexcept {
+            dispose();
+        }
+
+        void dispose() noexcept;
 
         inline void submit(Disposable* d) noexcept {
             lst.pushBack(d);
+        }
+
+        inline unsigned length() const noexcept {
+            return lst.length();
         }
     };
 }

@@ -65,6 +65,8 @@ namespace Std {
             return &head;
         }
 
+        unsigned length() const noexcept;
+
         static void insertAfter(IntrusiveNode* pos, IntrusiveNode* node) noexcept;
 
         static inline void insertBefore(IntrusiveNode* pos, IntrusiveNode* node) noexcept {

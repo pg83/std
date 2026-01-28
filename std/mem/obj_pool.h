@@ -17,12 +17,11 @@ namespace Std {
     class StringView;
 
     class ObjPool: public ARC {
-    private:
         template <typename T>
         struct Wrapper1 {
             T t;
 
-            static void* operator new(size_t, void* ptr) {
+            static void* operator new(size_t, void* ptr) noexcept {
                 return ptr;
             }
 

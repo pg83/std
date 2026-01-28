@@ -1,15 +1,14 @@
 #pragma once
 
 #include <std/sys/types.h>
-#include <std/lib/vector.h>
-
-using namespace Std;
 
 namespace Std {
+    class Disposer;
+
     class MemoryPool {
-        Vector<void*> chunks;
         u8* currentChunk;
         u8* currentChunkEnd;
+        Disposer* ds;
 
         void allocateNewChunk(size_t minSize);
 
