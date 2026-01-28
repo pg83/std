@@ -1,33 +1,24 @@
 #include "obj_pool.h"
 #include "mem_pool.h"
+#include "disposer.h"
 
 #include <std/sys/crt.h>
 
 #include <std/str/view.h>
 
-#include <std/lib/list.h>
-
 using namespace Std;
 
 namespace {
-    template <typename T>
-    inline void destruct(T* t) noexcept {
-        t->~T();
-    }
-
-    struct Pool: public ObjPool, public IntrusiveList, public MemoryPool {
-        ~Pool() noexcept override {
-            while (!empty()) {
-                destruct((Disposable*)popBack());
-            }
-        }
+    struct Pool: public ObjPool {
+        MemoryPool mp;
+        Disposer ds;
 
         void* allocate(size_t len) override {
-            return MemoryPool::allocate(len);
+            return mp.allocate(len);
         }
 
         void submit(Disposable* d) noexcept override {
-            pushBack(d);
+            ds.submit(d);
         }
     };
 }
