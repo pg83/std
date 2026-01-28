@@ -1,4 +1,5 @@
 #include "pool.h"
+#include "mem_pool.h"
 
 #include <std/sys/crt.h>
 
@@ -17,51 +18,6 @@ namespace {
     inline void destruct(T* t) noexcept {
         t->~T();
     }
-
-    struct MemoryPool {
-        inline MemoryPool() {
-            allocateNewChunk(0);
-        }
-
-        inline ~MemoryPool() noexcept {
-            for (void* chunk : chunks) {
-                freeMemory(chunk);
-            }
-        }
-
-        inline void* allocate(size_t len) {
-            constexpr size_t alignment = alignof(std::max_align_t);
-            const size_t alignedLen = (len + alignment - 1) & ~(alignment - 1);
-
-            if (currentChunk + alignedLen > currentChunkEnd) {
-                allocateNewChunk(alignedLen);
-            }
-
-            void* ptr = currentChunk;
-            currentChunk += alignedLen;
-
-            return ptr;
-        }
-
-        inline void allocateNewChunk(size_t minSize) {
-            size_t nextChunkSize = static_cast<size_t>(128 * std::pow(2.0, chunks.length()));
-
-            if (nextChunkSize < minSize) {
-                nextChunkSize = minSize;
-            }
-
-            chunks.growDelta(1);
-            void* newChunk = allocateMemory(nextChunkSize);
-            // will not throw
-            chunks.pushBack(newChunk);
-            currentChunk = static_cast<char*>(newChunk);
-            currentChunkEnd = currentChunk + nextChunkSize;
-        }
-
-        Vector<void*> chunks;
-        char* currentChunk;
-        char* currentChunkEnd;
-    };
 
     struct ObjectPool: public Pool, public IntrusiveList, public MemoryPool {
         ~ObjectPool() override {
