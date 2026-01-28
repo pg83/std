@@ -100,8 +100,6 @@ STD_TEST_SUITE(FormatU64Base10) {
     }
 }
 
-#define SUITE_NAME SUITE_NAME_2
-
 STD_TEST_SUITE(FormatI64Base10) {
     STD_TEST(Zero) {
         char buf[32];
