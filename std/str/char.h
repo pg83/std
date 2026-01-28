@@ -1,11 +1,9 @@
 #pragma once
 
-#include "ops.h"
-
 #include <std/sys/types.h>
 
 namespace Std {
-    class OneCharString: public StringOps<OneCharString> {
+    class OneCharString {
         u8 char_;
 
     public:
