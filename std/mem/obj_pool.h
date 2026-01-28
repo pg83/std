@@ -1,14 +1,12 @@
 #pragma once
 
+#include "embed.h"
 #include "disposable.h"
 
 #include <std/sys/types.h>
 
 #include <std/typ/meta.h>
 #include <std/typ/traits.h>
-#include <std/typ/support.h>
-
-#include <std/lib/node.h>
 
 #include <std/ptr/arc.h>
 #include <std/ptr/intrusive.h>
@@ -18,17 +16,11 @@ namespace Std {
 
     class ObjPool: public ARC {
         template <typename T>
-        struct Wrapper1 {
-            T t;
+        struct Wrapper1: public Embed<T> {
+            using Embed<T>::Embed;
 
             static void* operator new(size_t, void* ptr) noexcept {
                 return ptr;
-            }
-
-            template <typename... A>
-            inline Wrapper1(A&&... a)
-                : t(forward<A>(a)...)
-            {
             }
         };
 

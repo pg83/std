@@ -2,6 +2,7 @@
 
 #include "refcount.h"
 
+#include <std/mem/embed.h>
 #include <std/typ/support.h>
 
 namespace Std::SPP {
@@ -17,14 +18,8 @@ namespace Std::SPP {
     };
 
     template <typename T, typename R>
-    struct Base: public R {
-        T t;
-
-        template <typename... A>
-        inline Base(A&&... a)
-            : t(forward<A>(a)...)
-        {
-        }
+    struct Base: public Embed<T>, public R {
+        using Embed<T>::Embed;
     };
 }
 

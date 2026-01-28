@@ -2,7 +2,6 @@
 
 static_assert(sizeof(i8) == 1);
 static_assert(sizeof(u8) == 1);
-static_assert(sizeof(u8) == 1);
 
 static_assert(sizeof(i16) == 2);
 static_assert(sizeof(u16) == 2);
