@@ -1,5 +1,7 @@
 #pragma once
 
+#include "disposable.h"
+
 #include <std/sys/types.h>
 
 #include <std/typ/meta.h>
@@ -15,11 +17,6 @@ namespace Std {
     class StringView;
 
     class ObjPool: public ARC {
-    public:
-        struct Dispose: public IntrusiveNode {
-            virtual ~Dispose() noexcept;
-        };
-
     private:
         template <typename T>
         struct Wrapper1 {
@@ -37,11 +34,11 @@ namespace Std {
         };
 
         template <typename T>
-        struct Wrapper2: public Dispose, public Wrapper1<T> {
+        struct Wrapper2: public Disposable, public Wrapper1<T> {
             using Wrapper1<T>::Wrapper1;
         };
 
-        virtual void submit(Dispose* d) noexcept = 0;
+        virtual void submit(Disposable* d) noexcept = 0;
 
     public:
         using Ref = IntrusivePtr<ObjPool>;

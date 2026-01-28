@@ -18,7 +18,7 @@ namespace {
     struct Pool: public ObjPool, public IntrusiveList, public MemoryPool {
         ~Pool() noexcept override {
             while (!empty()) {
-                destruct((Dispose*)popBack());
+                destruct((Disposable*)popBack());
             }
         }
 
@@ -26,7 +26,7 @@ namespace {
             return MemoryPool::allocate(len);
         }
 
-        void submit(Dispose* d) noexcept override {
+        void submit(Disposable* d) noexcept override {
             pushBack(d);
         }
     };
@@ -46,7 +46,4 @@ StringView ObjPool::intern(const StringView& s) {
     memCpy(res, s.data(), len);
 
     return StringView(res, len);
-}
-
-ObjPool::Dispose::~Dispose() noexcept {
 }
