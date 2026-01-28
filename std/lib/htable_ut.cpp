@@ -21,7 +21,7 @@ STD_TEST_SUITE(HashTable) {
         STD_INSIST(ht.find(1) == &value1);
         STD_INSIST(ht.find(2) == &value2);
         STD_INSIST(ht.find(3) == &value3);
-        STD_INSIST(ht.getSize() == 3);
+        STD_INSIST(ht.size() == 3);
     }
 
     STD_TEST(findNonExistent) {
@@ -43,11 +43,11 @@ STD_TEST_SUITE(HashTable) {
 
         ht.set(1, &value1);
         STD_INSIST(ht.find(1) == &value1);
-        STD_INSIST(ht.getSize() == 1);
+        STD_INSIST(ht.size() == 1);
 
         ht.set(1, &value2);
         STD_INSIST(ht.find(1) == &value2);
-        STD_INSIST(ht.getSize() == 1);
+        STD_INSIST(ht.size() == 1);
     }
 
     STD_TEST(largeNumberOfElements) {
@@ -64,7 +64,7 @@ STD_TEST_SUITE(HashTable) {
             ht.set(i + 1, &values[i]);
         }
 
-        STD_INSIST(ht.getSize() == count);
+        STD_INSIST(ht.size() == count);
 
         for (size_t i = 0; i < count; ++i) {
             int* found = static_cast<int*>(ht.find(i + 1));
@@ -83,14 +83,14 @@ STD_TEST_SUITE(HashTable) {
             values[i] = i * 10;
         }
 
-        size_t initialCapacity = ht.getCapacity();
+        size_t initialCapacity = ht.capacity();
 
         for (int i = 0; i < 20; ++i) {
             ht.set(i + 1, &values[i]);
         }
 
-        STD_INSIST(ht.getCapacity() > initialCapacity);
-        STD_INSIST(ht.getSize() == 20);
+        STD_INSIST(ht.capacity() > initialCapacity);
+        STD_INSIST(ht.size() == 20);
 
         for (int i = 0; i < 20; ++i) {
             int* found = static_cast<int*>(ht.find(i + 1));
@@ -113,7 +113,7 @@ STD_TEST_SUITE(HashTable) {
         ht.set(65, &values[3]);
         ht.set(81, &values[4]);
 
-        STD_INSIST(ht.getSize() == 5);
+        STD_INSIST(ht.size() == 5);
 
         STD_INSIST(ht.find(17) == &values[0]);
         STD_INSIST(ht.find(33) == &values[1]);
@@ -130,12 +130,12 @@ STD_TEST_SUITE(HashTable) {
 
         STD_INSIST(ht.find(1) == nullptr);
         STD_INSIST(ht.find(2) == nullptr);
-        STD_INSIST(ht.getSize() == 2);
+        STD_INSIST(ht.size() == 2);
 
-        size_t sizeBefore = ht.getSize();
+        size_t sizeBefore = ht.size();
         void* result = ht.find(999);
         STD_INSIST(result == nullptr);
-        STD_INSIST(ht.getSize() == sizeBefore);
+        STD_INSIST(ht.size() == sizeBefore);
     }
 
     STD_TEST(sequentialKeys) {
@@ -177,7 +177,7 @@ STD_TEST_SUITE(HashTable) {
             ht.set(keys[i], &values[i]);
         }
 
-        STD_INSIST(ht.getSize() == 8);
+        STD_INSIST(ht.size() == 8);
 
         for (int i = 0; i < 8; ++i) {
             int* found = static_cast<int*>(ht.find(keys[i]));
@@ -198,19 +198,19 @@ STD_TEST_SUITE(HashTable) {
             ht.set(i + 1, &values[i]);
         }
 
-        STD_INSIST(ht.getSize() == 50);
+        STD_INSIST(ht.size() == 50);
 
         for (int i = 1; i < 100; i += 2) {
             ht.set(i + 1, &values[i]);
         }
 
-        STD_INSIST(ht.getSize() == 100);
+        STD_INSIST(ht.size() == 100);
 
         for (int i = 0; i < 100; i += 5) {
             ht.set(i + 1, nullptr);
         }
 
-        STD_INSIST(ht.getSize() == 100);
+        STD_INSIST(ht.size() == 100);
 
         for (int i = 0; i < 100; ++i) {
             void* found = ht.find(i + 1);
@@ -225,8 +225,8 @@ STD_TEST_SUITE(HashTable) {
     STD_TEST(emptyTable) {
         HashTable ht;
 
-        STD_INSIST(ht.getSize() == 0);
-        STD_INSIST(ht.getCapacity() == 16);
+        STD_INSIST(ht.size() == 0);
+        STD_INSIST(ht.capacity() >= 8);
         STD_INSIST(ht.find(1) == nullptr);
         STD_INSIST(ht.find(999) == nullptr);
     }
@@ -237,7 +237,7 @@ STD_TEST_SUITE(HashTable) {
         int value = 42;
         ht.set(123, &value);
 
-        STD_INSIST(ht.getSize() == 1);
+        STD_INSIST(ht.size() == 1);
         STD_INSIST(ht.find(123) == &value);
         STD_INSIST(ht.find(124) == nullptr);
     }

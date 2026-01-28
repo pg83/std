@@ -47,3 +47,11 @@ void* Std::memCpy(void* to, const void* from, size_t len) noexcept {
 size_t Std::strLen(const u8* s) noexcept {
     return s ? strlen((const char*)s) : 0;
 }
+
+void Std::memZero(void* from, void* to) noexcept {
+    const size_t len = (u8*)to - (u8*)from;
+
+    if (len) {
+        memset(from, 0, len);
+    }
+}

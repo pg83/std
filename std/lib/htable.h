@@ -1,21 +1,12 @@
 #pragma once
 
+#include "buffer.h"
+
 #include <std/sys/types.h>
 
 namespace Std {
     class HashTable {
-        struct Entry {
-            u64 key;
-            void* value;
-
-            inline bool filled() const noexcept {
-                return value;
-            }
-        };
-
-        size_t capacity;
-        size_t size;
-        Entry* table;
+        Buffer buf;
 
         void rehash();
 
@@ -23,7 +14,7 @@ namespace Std {
         HashTable(size_t initial);
 
         HashTable()
-            : HashTable(16)
+            : HashTable(8)
         {
         }
 
@@ -32,14 +23,14 @@ namespace Std {
         void* find(u64 key) const noexcept;
         void set(u64 key, void* value);
 
-        inline size_t getSize() const noexcept {
-            return size;
+        inline size_t size() const noexcept {
+            return buf.used();
         }
 
-        inline size_t getCapacity() const noexcept {
-            return capacity;
-        }
+        size_t capacity() const noexcept;
 
-        void xchg(HashTable& t) noexcept;
+        inline void xchg(HashTable& t) noexcept {
+            buf.xchg(t.buf);
+        }
     };
 }

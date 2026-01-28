@@ -13,6 +13,10 @@ namespace Std {
         inline auto end() const noexcept {
             return e;
         }
+
+        inline unsigned long length() const noexcept {
+            return e - b;
+        }
     };
 
     template <typename B, typename E>
