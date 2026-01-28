@@ -17,6 +17,10 @@
 #include <std/lib/vector.h>
 #include <std/lib/singleton.h>
 
+#if defined(HAVE_CPPTRACE)
+#include <cpptrace/cpptrace.hpp>
+#endif
+
 using namespace Std;
 
 namespace {
@@ -24,6 +28,9 @@ namespace {
     };
 
     static void panicHandler() {
+#if defined(HAVE_CPPTRACE)
+        cpptrace::generate_trace().print();
+#endif
         throw Exc();
     }
 
