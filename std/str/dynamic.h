@@ -25,6 +25,12 @@ namespace Std {
             str.xchg(*this);
         }
 
+        inline DynString& operator=(DynString&& str) noexcept {
+            DynString(move(str)).xchg(*this);
+
+            return *this;
+        }
+
         char* cStr();
 
         inline DynString& append(const u8* ptr, size_t len) {
