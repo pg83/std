@@ -21,6 +21,9 @@ namespace {
 
     struct ChunkDisposer: public Chunk, public Disposer {
     };
+
+    static_assert(sizeof(Chunk) % alignment == 0);
+    static_assert(sizeof(ChunkDisposer) % alignment == 0);
 }
 
 MemoryPool::MemoryPool()
