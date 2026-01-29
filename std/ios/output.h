@@ -49,7 +49,7 @@ namespace Std {
             bumpImpl(ptr);
         }
 
-        inline void bump(const UnboundBuffer& buf) noexcept {
+        inline void bump(UnboundBuffer buf) noexcept {
             bump(buf.ptr);
         }
 
