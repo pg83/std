@@ -2,8 +2,6 @@
 
 #include "outable.h"
 
-#include <std/typ/support.h>
-
 namespace Std {
     struct UnboundBuffer {
         void* ptr;
@@ -18,6 +16,6 @@ namespace Std {
     inline UnboundBuffer&& operator<<(UnboundBuffer&& out, const T& t) {
         output<UnboundBuffer, T>(out, t);
 
-        return forward<UnboundBuffer>(out);
+        return static_cast<UnboundBuffer&&>(out);
     }
 }
