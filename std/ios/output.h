@@ -42,7 +42,7 @@ namespace Std {
 
         // zero-copy interface
         inline UnboundBuffer imbue(size_t len) {
-            return imbueImpl(len);
+            return {imbueImpl(len)};
         }
 
         inline void bump(const void* ptr) noexcept {
