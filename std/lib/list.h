@@ -36,9 +36,7 @@ namespace Std {
         }
 
         inline void clear() noexcept {
-            while (!empty()) {
-                popFront();
-            }
+            head.remove();
         }
 
         inline IntrusiveNode* mutFront() noexcept {
