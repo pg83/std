@@ -345,4 +345,320 @@ STD_TEST_SUITE(IntrusiveList) {
         }
         STD_INSIST(idx == 2);
     }
+
+    STD_TEST(xchgBothEmpty) {
+        IntrusiveList list1;
+        IntrusiveList list2;
+
+        STD_INSIST(list1.empty());
+        STD_INSIST(list2.empty());
+
+        list1.xchg(list2);
+
+        STD_INSIST(list1.empty());
+        STD_INSIST(list2.empty());
+    }
+
+    STD_TEST(xchgFirstEmptySecondNonEmpty) {
+        IntrusiveList list1;
+        IntrusiveList list2;
+        TestData d1(10);
+        TestData d2(20);
+        TestData d3(30);
+
+        list2.pushBack(&d1);
+        list2.pushBack(&d2);
+        list2.pushBack(&d3);
+
+        STD_INSIST(list1.empty());
+        STD_INSIST(!list2.empty());
+
+        list1.xchg(list2);
+
+        STD_INSIST(!list1.empty());
+        STD_INSIST(list2.empty());
+
+        IntrusiveNode* head = list1.mutEnd();
+        IntrusiveNode* current = head->next;
+        int values[] = {10, 20, 30};
+        int idx = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values[idx++]);
+            current = current->next;
+        }
+        STD_INSIST(idx == 3);
+    }
+
+    STD_TEST(xchgFirstNonEmptySecondEmpty) {
+        IntrusiveList list1;
+        IntrusiveList list2;
+        TestData d1(10);
+        TestData d2(20);
+        TestData d3(30);
+
+        list1.pushBack(&d1);
+        list1.pushBack(&d2);
+        list1.pushBack(&d3);
+
+        STD_INSIST(!list1.empty());
+        STD_INSIST(list2.empty());
+
+        list1.xchg(list2);
+
+        STD_INSIST(list1.empty());
+        STD_INSIST(!list2.empty());
+
+        IntrusiveNode* head = list2.mutEnd();
+        IntrusiveNode* current = head->next;
+        int values[] = {10, 20, 30};
+        int idx = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values[idx++]);
+            current = current->next;
+        }
+        STD_INSIST(idx == 3);
+    }
+
+    STD_TEST(xchgBothNonEmpty) {
+        IntrusiveList list1;
+        IntrusiveList list2;
+        TestData d1(10);
+        TestData d2(20);
+        TestData d3(30);
+        TestData d4(40);
+        TestData d5(50);
+
+        list1.pushBack(&d1);
+        list1.pushBack(&d2);
+        list1.pushBack(&d3);
+
+        list2.pushBack(&d4);
+        list2.pushBack(&d5);
+
+        list1.xchg(list2);
+
+        IntrusiveNode* head1 = list1.mutEnd();
+        IntrusiveNode* current1 = head1->next;
+        int values1[] = {40, 50};
+        int idx1 = 0;
+        while (current1 != head1) {
+            TestData* data = static_cast<TestData*>(current1);
+            STD_INSIST(data->value == values1[idx1++]);
+            current1 = current1->next;
+        }
+        STD_INSIST(idx1 == 2);
+
+        IntrusiveNode* head2 = list2.mutEnd();
+        IntrusiveNode* current2 = head2->next;
+        int values2[] = {10, 20, 30};
+        int idx2 = 0;
+        while (current2 != head2) {
+            TestData* data = static_cast<TestData*>(current2);
+            STD_INSIST(data->value == values2[idx2++]);
+            current2 = current2->next;
+        }
+        STD_INSIST(idx2 == 3);
+    }
+
+    STD_TEST(xchgSingleElementLists) {
+        IntrusiveList list1;
+        IntrusiveList list2;
+        TestData d1(100);
+        TestData d2(200);
+
+        list1.pushBack(&d1);
+        list2.pushBack(&d2);
+
+        list1.xchg(list2);
+
+        STD_INSIST(list1.mutFront() == &d2);
+        STD_INSIST(list1.mutBack() == &d2);
+        STD_INSIST(list2.mutFront() == &d1);
+        STD_INSIST(list2.mutBack() == &d1);
+
+        TestData* data1 = static_cast<TestData*>(list1.mutFront());
+        STD_INSIST(data1->value == 200);
+
+        TestData* data2 = static_cast<TestData*>(list2.mutFront());
+        STD_INSIST(data2->value == 100);
+    }
+
+    STD_TEST(xchgMultipleTimes) {
+        IntrusiveList list1;
+        IntrusiveList list2;
+        TestData d1(1);
+        TestData d2(2);
+        TestData d3(3);
+
+        list1.pushBack(&d1);
+        list2.pushBack(&d2);
+        list2.pushBack(&d3);
+
+        list1.xchg(list2);
+
+        STD_INSIST(list1.mutFront() == &d2);
+        STD_INSIST(list2.mutFront() == &d1);
+
+        list1.xchg(list2);
+
+        STD_INSIST(list1.mutFront() == &d1);
+        STD_INSIST(list2.mutFront() == &d2);
+
+        list1.xchg(list2);
+
+        STD_INSIST(list1.mutFront() == &d2);
+        STD_INSIST(list2.mutFront() == &d1);
+    }
+
+    STD_TEST(xchgThenModify) {
+        IntrusiveList list1;
+        IntrusiveList list2;
+        TestData d1(1);
+        TestData d2(2);
+        TestData d3(3);
+        TestData d4(4);
+
+        list1.pushBack(&d1);
+        list1.pushBack(&d2);
+        list2.pushBack(&d3);
+
+        list1.xchg(list2);
+
+        list1.pushBack(&d4);
+
+        IntrusiveNode* head1 = list1.mutEnd();
+        IntrusiveNode* current1 = head1->next;
+        int values1[] = {3, 4};
+        int idx1 = 0;
+        while (current1 != head1) {
+            TestData* data = static_cast<TestData*>(current1);
+            STD_INSIST(data->value == values1[idx1++]);
+            current1 = current1->next;
+        }
+        STD_INSIST(idx1 == 2);
+
+        IntrusiveNode* head2 = list2.mutEnd();
+        IntrusiveNode* current2 = head2->next;
+        int values2[] = {1, 2};
+        int idx2 = 0;
+        while (current2 != head2) {
+            TestData* data = static_cast<TestData*>(current2);
+            STD_INSIST(data->value == values2[idx2++]);
+            current2 = current2->next;
+        }
+        STD_INSIST(idx2 == 2);
+    }
+
+    STD_TEST(xchgBackwardTraversal) {
+        IntrusiveList list1;
+        IntrusiveList list2;
+        TestData d1(10);
+        TestData d2(20);
+        TestData d3(30);
+        TestData d4(40);
+        TestData d5(50);
+
+        list1.pushBack(&d1);
+        list1.pushBack(&d2);
+
+        list2.pushBack(&d3);
+        list2.pushBack(&d4);
+        list2.pushBack(&d5);
+
+        list1.xchg(list2);
+
+        IntrusiveNode* head1 = list1.mutEnd();
+        IntrusiveNode* current1 = head1->prev;
+        int values1[] = {50, 40, 30};
+        int idx1 = 0;
+        while (current1 != head1) {
+            TestData* data = static_cast<TestData*>(current1);
+            STD_INSIST(data->value == values1[idx1++]);
+            current1 = current1->prev;
+        }
+        STD_INSIST(idx1 == 3);
+
+        IntrusiveNode* head2 = list2.mutEnd();
+        IntrusiveNode* current2 = head2->prev;
+        int values2[] = {20, 10};
+        int idx2 = 0;
+        while (current2 != head2) {
+            TestData* data = static_cast<TestData*>(current2);
+            STD_INSIST(data->value == values2[idx2++]);
+            current2 = current2->prev;
+        }
+        STD_INSIST(idx2 == 2);
+    }
+
+    STD_TEST(xchgWithEmptyListMethod) {
+        IntrusiveList list1;
+        IntrusiveList list2;
+        TestData d1(10);
+        TestData d2(20);
+
+        list1.pushBack(&d1);
+        list1.pushBack(&d2);
+
+        STD_INSIST(!list1.empty());
+        STD_INSIST(list2.empty());
+
+        list1.xchgWithEmptyList(list2);
+
+        STD_INSIST(list1.empty());
+        STD_INSIST(!list2.empty());
+
+        IntrusiveNode* head = list2.mutEnd();
+        IntrusiveNode* current = head->next;
+        int values[] = {10, 20};
+        int idx = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values[idx++]);
+            current = current->next;
+        }
+        STD_INSIST(idx == 2);
+    }
+
+    STD_TEST(xchgFrontBackPointers) {
+        IntrusiveList list1;
+        IntrusiveList list2;
+        TestData d1(1);
+        TestData d2(2);
+        TestData d3(3);
+        TestData d4(4);
+
+        list1.pushBack(&d1);
+        list1.pushBack(&d2);
+        list2.pushBack(&d3);
+        list2.pushBack(&d4);
+
+        list1.xchg(list2);
+
+        STD_INSIST(list1.mutFront() == &d3);
+        STD_INSIST(list1.mutBack() == &d4);
+        STD_INSIST(list2.mutFront() == &d1);
+        STD_INSIST(list2.mutBack() == &d2);
+    }
+
+    STD_TEST(xchgLength) {
+        IntrusiveList list1;
+        IntrusiveList list2;
+        TestData d1(1);
+        TestData d2(2);
+        TestData d3(3);
+
+        list1.pushBack(&d1);
+        list2.pushBack(&d2);
+        list2.pushBack(&d3);
+
+        STD_INSIST(list1.length() == 1);
+        STD_INSIST(list2.length() == 2);
+
+        list1.xchg(list2);
+
+        STD_INSIST(list1.length() == 2);
+        STD_INSIST(list2.length() == 1);
+    }
 }
