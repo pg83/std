@@ -1,8 +1,7 @@
 #pragma once
 
-#include "buffer.h"
-
 #include <std/sys/types.h>
+#include <std/lib/buffer.h>
 
 namespace Std {
     class HashTable {
