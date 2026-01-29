@@ -1,5 +1,7 @@
 #include "disposer.h"
 
+#include <std/alg/exchange.h>
+
 using namespace Std;
 
 namespace {
@@ -10,7 +12,11 @@ namespace {
 }
 
 void Disposer::dispose() noexcept {
-    while (!lst.empty()) {
-        destruct((Disposable*)lst.popBack());
+    IntrusiveList tmp;
+
+    lst.xchgWithEmptyList(tmp);
+
+    for (auto end = tmp.end(), cur = (const IntrusiveNode*)end->prev; cur != end;) {
+        destruct((Disposable*)exchange(cur, cur->prev));
     }
 }

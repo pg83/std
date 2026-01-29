@@ -72,5 +72,8 @@ namespace Std {
         static inline void insertBefore(IntrusiveNode* pos, IntrusiveNode* node) noexcept {
             insertAfter(pos->prev, node);
         }
+
+        void xchg(IntrusiveList& r) noexcept;
+        void xchgWithEmptyList(IntrusiveList& r) noexcept;
     };
 }

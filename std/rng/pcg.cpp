@@ -1,5 +1,7 @@
 #include "pcg.h"
 
+#include <std/alg/exchange.h>
+
 using namespace Std;
 
 namespace {
@@ -8,15 +10,6 @@ namespace {
         const u32 rot = v >> 59u;
 
         return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
-    }
-
-    template <typename T, typename N>
-    inline T exchange(T& o, N n) noexcept {
-        auto r = o;
-
-        o = n;
-
-        return r;
     }
 }
 
