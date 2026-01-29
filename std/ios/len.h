@@ -9,15 +9,16 @@ namespace Std {
         u64 len_;
         Buffer buf_;
 
+        void writeImpl(const void* ptr, size_t len) override;
+        void* imbueImpl(size_t len) override;
+        void bumpImpl(const void* ptr) noexcept override;
+        size_t hintImpl() const noexcept override;
+
     public:
         CountingOutput() noexcept;
 
         inline auto collectedLength() const noexcept {
             return len_;
         }
-
-        void writeImpl(const void* ptr, size_t len) override;
-        void* imbueImpl(size_t len) override;
-        void bumpImpl(const void* ptr) noexcept override;
     };
 }

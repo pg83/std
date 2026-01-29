@@ -10,6 +10,7 @@ namespace Std {
         void writeImpl(const void* data, size_t len) override;
         void flushImpl() override;
         void finishImpl() override;
+        size_t hintImpl() const noexcept override;
 
     public:
         inline FDOutput(int _fd) noexcept

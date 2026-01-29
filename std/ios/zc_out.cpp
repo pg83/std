@@ -9,8 +9,6 @@ using namespace Std;
 using namespace Std::Manip;
 
 namespace {
-    static constexpr size_t PART = 64 * 1024;
-
     struct U64 {
         u64 val;
     };
@@ -31,9 +29,11 @@ void ZeroCopyOutput::writeImpl(const void* data, size_t len) {
     const u8* b = (u8*)data;
     const u8* e = b + len;
 
+    const auto part = hint();
+
     while (true) {
-        if (const auto left = e - b; left > PART) {
-            writePart(StringView(exchange(b, b + PART), PART));
+        if (const auto left = e - b; left > part) {
+            writePart(StringView(exchange(b, b + part), part));
         } else {
             return writePart(StringView(b, left));
         }

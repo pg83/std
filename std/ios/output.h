@@ -9,7 +9,9 @@ namespace Std {
         virtual ~Output() noexcept;
 
         inline void write(const void* data, size_t len) {
-            writeImpl(data, len);
+            if (len) {
+                writeImpl(data, len);
+            }
         }
 
         inline void writeV(const StringView* parts, size_t count) {
@@ -24,8 +26,13 @@ namespace Std {
             finishImpl();
         }
 
+        inline size_t hint() const noexcept {
+            return hintImpl();
+        }
+
     private:
         virtual void writeImpl(const void* data, size_t len) = 0;
+        virtual size_t hintImpl() const noexcept = 0;
 
         // have sensible defaults
         virtual void writeVImpl(const StringView* parts, size_t count);

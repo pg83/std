@@ -19,3 +19,7 @@ void FDOutput::flushImpl() {
 void FDOutput::finishImpl() {
     fd = -1;
 }
+
+size_t FDOutput::hintImpl() const noexcept {
+    return 64 * 1024;
+}

@@ -8,6 +8,11 @@ namespace Std {
     class StringOutput: public ZeroCopyOutput {
         DynString* str_;
 
+        void writeImpl(const void* ptr, size_t len) override;
+        void* imbueImpl(size_t len) override;
+        void bumpImpl(const void* ptr) noexcept override;
+        size_t hintImpl() const noexcept override;
+
     public:
         ~StringOutput() override;
 
@@ -23,10 +28,5 @@ namespace Std {
         inline auto& mutStr() noexcept {
             return *str_;
         }
-
-    private:
-        void writeImpl(const void* ptr, size_t len) override;
-        void* imbueImpl(size_t len) override;
-        void bumpImpl(const void* ptr) noexcept override;
     };
 }

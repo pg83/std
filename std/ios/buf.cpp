@@ -37,7 +37,9 @@ void OutBuf::bumpImpl(const void* ptr) noexcept {
 }
 
 void OutBuf::writeImpl(const void* ptr, size_t len) {
-    if ((buf_.used() + len) > 16 * 1024) {
+    if ((buf_.used() + len) < hint()) {
+        buf_.append(ptr, len);
+    } else {
         const StringView parts[] = {
             StringView((const u8*)buf_.data(), buf_.used()),
             StringView((const u8*)ptr, len),
@@ -45,9 +47,11 @@ void OutBuf::writeImpl(const void* ptr, size_t len) {
 
         out_->writeV(parts, 2);
         buf_.reset();
-    } else {
-        buf_.append(ptr, len);
     }
+}
+
+size_t OutBuf::hintImpl() const noexcept {
+    return out_->hint();
 }
 
 void OutBuf::flushImpl() {

@@ -20,3 +20,7 @@ void* StringOutput::imbueImpl(size_t len) {
 void StringOutput::bumpImpl(const void* ptr) noexcept {
     str_->markInitialized(ptr);
 }
+
+size_t StringOutput::hintImpl() const noexcept {
+    return size_t(-1);
+}
