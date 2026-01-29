@@ -4,15 +4,15 @@
 
 using namespace Std;
 
-STD_TEST_SUITE(StringHash) {
+STD_TEST_SUITE(SymbolTable) {
     STD_TEST(test1) {
         SymbolTable s;
 
-        s.set(u8"qw1", (void*)1);
-        s.set(u8"qw2", (void*)2);
+        s.set("qw1", (void*)1);
+        s.set("qw2", (void*)2);
 
-        STD_INSIST(s.find(u8"qw1") == (void*)1);
-        STD_INSIST(s.find(u8"qw2") == (void*)2);
-        STD_INSIST(s.find(u8"qw3") == nullptr);
+        STD_INSIST(s.find("qw1") == (void*)1);
+        STD_INSIST(s.find("qw2") == (void*)2);
+        STD_INSIST(s.find("qw3") == nullptr);
     }
 }

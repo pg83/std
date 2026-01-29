@@ -1,6 +1,5 @@
 #pragma once
 
-
 namespace Std {
     template <typename T>
     using rem_ref = __remove_reference_t(T);
