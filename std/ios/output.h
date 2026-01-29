@@ -4,9 +4,6 @@
 #include "outable.h"
 
 #include <std/sys/types.h>
-
-#include <std/typ/meta.h>
-#include <std/typ/traits.h>
 #include <std/typ/support.h>
 
 namespace Std {
