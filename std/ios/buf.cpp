@@ -5,6 +5,7 @@
 
 #include <std/sys/crt.h>
 #include <std/str/view.h>
+#include <std/alg/minmax.h>
 
 using namespace Std;
 using namespace Std::Manip;
@@ -51,7 +52,7 @@ void OutBuf::writeImpl(const void* ptr, size_t len) {
 }
 
 size_t OutBuf::hintImpl() const noexcept {
-    return out_->hint();
+    return min(out_->hint(), (size_t)(1 * 1024 * 1024));
 }
 
 void OutBuf::flushImpl() {
