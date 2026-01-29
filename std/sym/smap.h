@@ -6,7 +6,7 @@
 
 namespace Std {
     template <typename T>
-    class StringMap {
+    class SymbolMap {
         ObjPool::Ref pool = ObjPool::fromMemory();
         StringTable st;
 

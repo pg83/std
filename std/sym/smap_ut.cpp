@@ -7,9 +7,9 @@
 
 using namespace Std;
 
-STD_TEST_SUITE(StringMap) {
+STD_TEST_SUITE(SymbolMap) {
     STD_TEST(test1) {
-        StringMap<int> s;
+        SymbolMap<int> s;
 
         s["qw1"] = 1;
         s["qw2"] = 2;
@@ -20,7 +20,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(test2) {
-        StringMap<Vector<int>> s;
+        SymbolMap<Vector<int>> s;
 
         s["qw1"].pushBack(1);
         s["qw1"].pushBack(2);
@@ -34,13 +34,13 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(DefaultConstructor) {
-        StringMap<int> map;
+        SymbolMap<int> map;
 
         STD_INSIST(map.find("nonexistent") == nullptr);
     }
 
     STD_TEST(FindNonExistent) {
-        StringMap<int> map;
+        SymbolMap<int> map;
 
         int* result = map.find("key");
 
@@ -48,7 +48,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(FindExisting) {
-        StringMap<int> map;
+        SymbolMap<int> map;
         map.insert("key", 42);
 
         int* result = map.find("key");
@@ -58,7 +58,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(FindEmptyKey) {
-        StringMap<int> map;
+        SymbolMap<int> map;
         map.insert("", 100);
 
         int* result = map.find("");
@@ -68,7 +68,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(FindAfterMultipleInserts) {
-        StringMap<int> map;
+        SymbolMap<int> map;
 
         map.insert("a", 1);
         map.insert("b", 2);
@@ -80,10 +80,10 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(FindConstCorrectness) {
-        StringMap<int> map;
+        SymbolMap<int> map;
         map.insert("key", 42);
 
-        const StringMap<int>& constMap = map;
+        const SymbolMap<int>& constMap = map;
         int* result = constMap.find("key");
 
         STD_INSIST(result != nullptr);
@@ -91,7 +91,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(InsertBasic) {
-        StringMap<int> map;
+        SymbolMap<int> map;
 
         int* result = map.insert("key", 42);
 
@@ -100,7 +100,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(InsertReturnsPointerToValue) {
-        StringMap<int> map;
+        SymbolMap<int> map;
 
         int* inserted = map.insert("key", 42);
         int* found = map.find("key");
@@ -109,7 +109,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(InsertDefaultConstructed) {
-        StringMap<int> map;
+        SymbolMap<int> map;
 
         int* result = map.insert("key");
 
@@ -127,7 +127,7 @@ STD_TEST_SUITE(StringMap) {
             }
         };
 
-        StringMap<Point> map;
+        SymbolMap<Point> map;
 
         Point* result = map.insert("origin", 10, 20);
 
@@ -137,7 +137,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(InsertOverwritesExisting) {
-        StringMap<int> map;
+        SymbolMap<int> map;
         map.insert("key", 1);
 
         map.insert("key", 2);
@@ -148,7 +148,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(InsertEmptyKey) {
-        StringMap<int> map;
+        SymbolMap<int> map;
 
         int* result = map.insert("", 42);
 
@@ -157,7 +157,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(InsertLongKey) {
-        StringMap<int> map;
+        SymbolMap<int> map;
         StringView longKey = "this_is_a_very_long_key_that_should_still_work_correctly";
 
         int* result = map.insert(longKey, 42);
@@ -168,7 +168,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(InsertManyKeys) {
-        StringMap<int> map;
+        SymbolMap<int> map;
 
         for (int i = 0; i < 100; ++i) {
             char key[16];
@@ -186,7 +186,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(OperatorBracketCreatesNew) {
-        StringMap<int> map;
+        SymbolMap<int> map;
 
         int& value = map["newkey"];
 
@@ -194,7 +194,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(OperatorBracketReturnsExisting) {
-        StringMap<int> map;
+        SymbolMap<int> map;
         map.insert("key", 42);
 
         int& value = map["key"];
@@ -203,7 +203,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(OperatorBracketModifiable) {
-        StringMap<int> map;
+        SymbolMap<int> map;
         map.insert("key", 10);
 
         map["key"] = 20;
@@ -212,7 +212,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(OperatorBracketSamePointer) {
-        StringMap<int> map;
+        SymbolMap<int> map;
         map.insert("key", 42);
 
         int* found = map.find("key");
@@ -222,7 +222,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(OperatorBracketNewValueModifiable) {
-        StringMap<int> map;
+        SymbolMap<int> map;
 
         map["key"] = 100;
 
@@ -230,7 +230,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(OperatorBracketChained) {
-        StringMap<int> map;
+        SymbolMap<int> map;
 
         map["a"] = 1;
         map["b"] = 2;
@@ -240,7 +240,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(StringValue) {
-        StringMap<StringView> map;
+        SymbolMap<StringView> map;
 
         map.insert("greeting", "hello");
 
@@ -266,7 +266,7 @@ STD_TEST_SUITE(StringMap) {
             }
         };
 
-        StringMap<Data> map;
+        SymbolMap<Data> map;
         map.insert("item", 42, 3.14f);
 
         Data* result = map.find("item");
@@ -277,7 +277,7 @@ STD_TEST_SUITE(StringMap) {
 
     STD_TEST(PointerValue) {
         int x = 42;
-        StringMap<int*> map;
+        SymbolMap<int*> map;
 
         map.insert("ptr", &x);
 
@@ -288,7 +288,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(SimilarKeys) {
-        StringMap<int> map;
+        SymbolMap<int> map;
         map.insert("key", 1);
         map.insert("key1", 2);
         map.insert("key12", 3);
@@ -301,7 +301,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(KeysWithSpecialChars) {
-        StringMap<int> map;
+        SymbolMap<int> map;
 
         map.insert("key with spaces", 1);
         map.insert("key\twith\ttabs", 2);
@@ -315,7 +315,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(NumericStringKeys) {
-        StringMap<int> map;
+        SymbolMap<int> map;
 
         map.insert("0", 0);
         map.insert("1", 1);
@@ -329,7 +329,7 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(ModifyThroughFind) {
-        StringMap<int> map;
+        SymbolMap<int> map;
         map.insert("key", 10);
 
         int* ptr = map.find("key");
@@ -339,8 +339,8 @@ STD_TEST_SUITE(StringMap) {
     }
 
     STD_TEST(MultipleMapInstances) {
-        StringMap<int> map1;
-        StringMap<int> map2;
+        SymbolMap<int> map1;
+        SymbolMap<int> map2;
 
         map1.insert("key", 1);
         map2.insert("key", 2);
@@ -368,7 +368,7 @@ STD_TEST_SUITE(StringMap) {
             MoveOnly(const MoveOnly&) = delete;
         };
 
-        StringMap<MoveOnly> map;
+        SymbolMap<MoveOnly> map;
 
         MoveOnly* result = map.insert("key", 42);
 
