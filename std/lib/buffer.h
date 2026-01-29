@@ -1,5 +1,6 @@
 #pragma once
 
+#include <std/mem/new.h>
 #include <std/alg/xchg.h>
 #include <std/sys/types.h>
 #include <std/typ/support.h>
@@ -13,26 +14,13 @@ namespace Std {
     class Buffer {
         void* data_;
 
-    private:
-        struct Header {
+    public:
+        struct Header: public Newable {
             size_t used;
             size_t size;
-
-            inline Header(size_t len) noexcept
-                : used(0)
-                , size(len)
-            {
-            }
-
-            static void* operator new(size_t, void* ptr) noexcept {
-                return ptr;
-            }
-
-            static Header* null() noexcept;
-            static Header* alloc(size_t len);
-            static void free(Header* ptr) noexcept;
         };
 
+    private:
         inline Header* header() const noexcept {
             return (Header*)data_ - 1;
         }

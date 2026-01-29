@@ -11,27 +11,32 @@ using namespace Std;
 
 static_assert(sizeof(Buffer) == sizeof(void*));
 
-Buffer::Header* Buffer::Header::null() noexcept {
-    return (Header*)bss();
-}
-
-Buffer::Header* Buffer::Header::alloc(size_t len) {
-    if (len) {
-        return new (allocateMemory(sizeof(Header) + len)) Header(len);
+namespace {
+    static inline auto nullHeader() noexcept {
+        return (Buffer::Header*)bss();
     }
 
-    return null();
-}
+    static inline auto allocHeader(size_t len) {
+        if (len) {
+            return new (allocateMemory(sizeof(Buffer::Header) + len)) Buffer::Header({
+                .used = 0,
+                .size = len,
+            });
+        }
 
-void Buffer::Header::free(Header* ptr) noexcept {
-    if (ptr == null()) {
-    } else {
-        freeMemory(ptr);
+        return nullHeader();
+    }
+
+    static inline void freeHeader(Buffer::Header* ptr) noexcept {
+        if (ptr == nullHeader()) {
+        } else {
+            freeMemory(ptr);
+        }
     }
 }
 
 Buffer::~Buffer() noexcept {
-    Header::free(header());
+    freeHeader(header());
 }
 
 Buffer::Buffer() noexcept
@@ -40,7 +45,7 @@ Buffer::Buffer() noexcept
 }
 
 Buffer::Buffer(size_t len)
-    : data_(Header::alloc(len) + 1)
+    : data_(allocHeader(len) + 1)
 {
 }
 
