@@ -14,7 +14,7 @@ namespace Std {
         virtual void flushImpl();
         virtual void finishImpl();
 
-    private:
+    public:
         virtual ~Output() noexcept;
 
         void write(const void* data, size_t len);
