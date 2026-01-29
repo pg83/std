@@ -63,11 +63,11 @@ namespace Std {
         virtual void bumpImpl(const void* ptr) noexcept = 0;
     };
 
-    template <typename B, typename D>
-    using EnableDerived = Meta::EnableIf<Traits::IsBaseOf<B, Traits::RemoveReference<D>>::R, D&&>;
-
     template <typename O, typename T>
-    inline EnableDerived<ZeroCopyOutput, O> operator<<(O&& out, const T& t) {
+    requires requires (O o) {
+        static_cast<ZeroCopyOutput*>(&o);
+    }
+    inline O&& operator<<(O&& out, const T& t)  {
         output<ZeroCopyOutput, T>(out, t);
 
         return forward<O>(out);
