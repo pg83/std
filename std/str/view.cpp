@@ -5,7 +5,7 @@
 
 using namespace Std;
 
-static_assert(!Traits::HasDestructor<StringView>::R);
+static_assert(stdHasTrivialDestructor(StringView));
 static_assert(sizeof(StringView) == 2 * sizeof(void*));
 
 StringView::StringView(const char* s) noexcept

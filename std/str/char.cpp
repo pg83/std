@@ -4,7 +4,7 @@
 
 using namespace Std;
 
-static_assert(!Traits::HasDestructor<OneCharString>::R);
+static_assert(stdHasTrivialDestructor(OneCharString));
 static_assert(sizeof(OneCharString) == 1);
 
 template <>

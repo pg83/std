@@ -34,8 +34,4 @@ namespace Std::Traits {
     template <typename C>
     struct IsClass: public Meta::Bool<stdIsClass(C)> {
     };
-
-    template <typename T>
-    struct HasDestructor: public Meta::Bool<!stdHasTrivialDestructor(T)> {
-    };
 }
