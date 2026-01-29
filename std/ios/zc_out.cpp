@@ -32,11 +32,11 @@ void ZeroCopyOutput::writeImpl(const void* data, size_t len) {
     const u8* e = b + len;
 
     while (true) {
-        if (const auto left = e - b; left <= PART) {
+        if (const auto left = e - b; left > PART) {
+            writePart(StringView(exchange(b, b + PART), PART));
+        } else {
             return writePart(StringView(b, left));
         }
-
-        writePart(StringView(exchange(b, b + PART), PART));
     }
 }
 
