@@ -5,8 +5,7 @@
 
 #include <std/sys/types.h>
 
-#include <std/typ/meta.h>
-#include <std/typ/traits.h>
+#include <std/typ/intrin.h>
 
 #include <std/ptr/arc.h>
 #include <std/ptr/intrusive.h>
@@ -31,6 +30,11 @@ namespace Std {
 
         virtual void submit(Disposable* d) noexcept = 0;
 
+        template <typename T, typename... A>
+        inline T* makeImpl(A&&... a) {
+            return new (allocate(sizeof(T))) T(forward<A>(a)...);
+        }
+
     public:
         using Ref = IntrusivePtr<ObjPool>;
 
@@ -42,22 +46,16 @@ namespace Std {
 
         // king of ownership
         template <typename T, typename... A>
-        inline Meta::EnableIf<Traits::HasDestructor<T>::R, T*> make(A&&... a) {
-            using Typ = Wrapper2<T>;
+        inline T* make(A&&... a) {
+            if constexpr (stdHasTrivialDestructor(T)) {
+                return &makeImpl<Wrapper1<T>>(forward<A>(a)...)->t;
+            } else {
+                auto res = makeImpl<Wrapper2<T>>(forward<A>(a)...);
 
-            auto mem = this->allocate(sizeof(Typ));
-            auto res = new (mem) Typ(forward<A>(a)...);
+                submit(res);
 
-            submit(res);
-
-            return &res->t;
-        }
-
-        template <typename T, typename... A>
-        inline Meta::EnableIf<!Traits::HasDestructor<T>::R, T*> make(A&&... a) {
-            using Typ = Wrapper1<T>;
-
-            return &(new (allocate(sizeof(Typ))) Typ(forward<A>(a)...))->t;
+                return &res->t;
+            }
         }
 
         static Ref fromMemory();
