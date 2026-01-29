@@ -8,7 +8,7 @@ namespace Std {
     template <typename T>
     class SymbolMap {
         ObjPool::Ref pool = ObjPool::fromMemory();
-        StringTable st;
+        SymbolTable st;
 
     public:
         inline T* find(const StringView& key) const noexcept {

@@ -5,12 +5,12 @@
 namespace Std {
     class StringView;
 
-    class StringTable {
+    class SymbolTable {
         HashTable htable;
 
     public:
-        StringTable();
-        ~StringTable() noexcept;
+        SymbolTable();
+        ~SymbolTable() noexcept;
 
         void set(const StringView& key, void* v);
         void* find(const StringView& key) const noexcept;

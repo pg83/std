@@ -6,7 +6,7 @@ using namespace Std;
 
 STD_TEST_SUITE(StringHash) {
     STD_TEST(test1) {
-        StringTable s;
+        SymbolTable s;
 
         s.set(u8"qw1", (void*)1);
         s.set(u8"qw2", (void*)2);
