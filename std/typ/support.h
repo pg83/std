@@ -1,8 +1,6 @@
 #pragma once
 
-#include "intrin.h"
-
-namespace Std::Traits::Private {
+namespace Std::Traits {
     // remove reference
     template <typename T>
     struct RemoveReferenceHelper {
@@ -18,11 +16,9 @@ namespace Std::Traits::Private {
     struct RemoveReferenceHelper<T&&> {
         using R = T;
     };
-}
 
-namespace Std::Traits {
     template <typename T>
-    using RemoveReference = typename Private::RemoveReferenceHelper<T>::R;
+    using RemoveReference = typename RemoveReferenceHelper<T>::R;
 }
 
 namespace Std {
