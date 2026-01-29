@@ -33,9 +33,7 @@ void ZeroCopyOutput::writeImpl(const void* data, size_t len) {
 
     while (true) {
         if (const auto left = e - b; left <= PART) {
-            writePart(StringView(b, left));
-
-            return;
+            return writePart(StringView(b, left));
         }
 
         writePart(StringView(exchange(b, b + PART), PART));
