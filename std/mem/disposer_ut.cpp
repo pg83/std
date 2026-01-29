@@ -8,7 +8,9 @@ namespace {
     struct TestDisposable: public Disposable {
         int* counter;
 
-        TestDisposable(int* c) : counter(c) {
+        TestDisposable(int* c)
+            : counter(c)
+        {
             ++(*counter);
         }
 
@@ -21,7 +23,11 @@ namespace {
         int id;
         int* lastDestroyed;
 
-        OrderTracker(int i, int* ld) : id(i), lastDestroyed(ld) {}
+        OrderTracker(int i, int* ld)
+            : id(i)
+            , lastDestroyed(ld)
+        {
+        }
 
         ~OrderTracker() noexcept override {
             *lastDestroyed = id;
@@ -31,7 +37,10 @@ namespace {
     struct SimpleDisposable: public Disposable {
         int value;
 
-        SimpleDisposable(int v) : value(v) {}
+        SimpleDisposable(int v)
+            : value(v)
+        {
+        }
 
         ~SimpleDisposable() noexcept override = default;
     };
@@ -193,7 +202,9 @@ STD_TEST_SUITE(Disposer) {
         struct OtherDisposable: public Disposable {
             int* counter;
 
-            OtherDisposable(int* c) : counter(c) {
+            OtherDisposable(int* c)
+                : counter(c)
+            {
                 ++(*counter);
             }
 

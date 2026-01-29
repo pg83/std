@@ -28,8 +28,8 @@ namespace Std {
         }
 
         inline StringView(const u8* ptr, size_t len) noexcept
-             : ptr_(ptr)
-             , len_(len)
+            : ptr_(ptr)
+            , len_(len)
         {
         }
 

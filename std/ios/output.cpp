@@ -42,14 +42,14 @@ void ZeroCopyOutput::writeImpl(const void* data, size_t len) {
 }
 
 // std types
-#define DEF_OUT(typ) \
-    template <>                                                         \
-    void Std::output<ZeroCopyOutput, typ>(ZeroCopyOutput& out, typ v) { \
-        out << I64{v};                                                  \
-    }                                                                   \
-    template <>                                                         \
-    void Std::output<ZeroCopyOutput, unsigned typ>(ZeroCopyOutput& out, unsigned typ v) { \
-        out << U64{v};                                                  \
+#define DEF_OUT(typ)                                                                       \
+    template <>                                                                            \
+    void Std::output<ZeroCopyOutput, typ>(ZeroCopyOutput & out, typ v) {                   \
+        out << I64{v};                                                                     \
+    }                                                                                      \
+    template <>                                                                            \
+    void Std::output<ZeroCopyOutput, unsigned typ>(ZeroCopyOutput & out, unsigned typ v) { \
+        out << U64{v};                                                                     \
     }
 
 DEF_OUT(int)

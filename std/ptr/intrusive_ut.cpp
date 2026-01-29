@@ -15,7 +15,8 @@ STD_TEST_SUITE(IntrusivePtr) {
         u32 y;
 
         IntWithCtor(u32 a, u32 b)
-            : x(a), y(b)
+            : x(a)
+            , y(b)
         {
         }
     };

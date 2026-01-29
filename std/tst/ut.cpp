@@ -18,7 +18,7 @@
 #include <std/lib/singleton.h>
 
 #if defined(HAVE_CPPTRACE)
-#include <cpptrace/cpptrace.hpp>
+    #include <cpptrace/cpptrace.hpp>
 #endif
 
 using namespace Std;

@@ -12,13 +12,19 @@ namespace {
         int x;
         int y;
 
-        SimpleStruct(int a, int b) : x(a), y(b) {}
+        SimpleStruct(int a, int b)
+            : x(a)
+            , y(b)
+        {
+        }
     };
 
     struct WithDestructor {
         int* counter;
 
-        WithDestructor(int* c) : counter(c) {
+        WithDestructor(int* c)
+            : counter(c)
+        {
             ++(*counter);
         }
 
@@ -33,7 +39,9 @@ namespace {
         int* destructorCounter;
 
         ComplexObject(int v, StringView n, int* c)
-            : value(v), name(n), destructorCounter(c)
+            : value(v)
+            , name(n)
+            , destructorCounter(c)
         {
             ++(*destructorCounter);
         }
@@ -51,14 +59,21 @@ namespace {
         int a, b, c, d;
 
         MultipleArgs(int a_, int b_, int c_, int d_)
-            : a(a_), b(b_), c(c_), d(d_) {}
+            : a(a_)
+            , b(b_)
+            , c(c_)
+            , d(d_)
+        {
+        }
     };
 
     struct LargeObject {
         char data[1024];
         int id;
 
-        LargeObject(int i) : id(i) {
+        LargeObject(int i)
+            : id(i)
+        {
             for (int j = 0; j < 1024; ++j) {
                 data[j] = static_cast<char>(j & 0xFF);
             }
@@ -69,7 +84,9 @@ namespace {
         char data[2048];
         int* counter;
 
-        LargeWithDestructor(int* c) : counter(c) {
+        LargeWithDestructor(int* c)
+            : counter(c)
+        {
             ++(*counter);
         }
 
@@ -156,7 +173,6 @@ STD_TEST_SUITE(ObjPool) {
         ObjPool::Ref pool = ObjPool::fromMemory();
 
         SimpleStruct* obj = pool->make<SimpleStruct>(10, 20);
-
 
         STD_INSIST(obj != nullptr);
         STD_INSIST(obj->x == 10);
@@ -396,7 +412,11 @@ STD_TEST_SUITE(ObjPool) {
             int id;
             int* lastDestroyed;
 
-            OrderChecker(int i, int* ld) : id(i), lastDestroyed(ld) {}
+            OrderChecker(int i, int* ld)
+                : id(i)
+                , lastDestroyed(ld)
+            {
+            }
 
             ~OrderChecker() {
                 *lastDestroyed = id;

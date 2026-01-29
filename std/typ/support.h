@@ -3,7 +3,7 @@
 #include "traits.h"
 
 namespace Std {
-    //move semantics
+    // move semantics
     template <typename T>
     constexpr Traits::RemoveReference<T>&& move(T&& t) noexcept {
         return static_cast<Traits::RemoveReference<T>&&>(t);

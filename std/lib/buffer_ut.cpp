@@ -176,7 +176,6 @@ STD_TEST_SUITE(Buffer) {
         STD_INSIST(end == expectedEnd);
     }
 
-
     STD_TEST(offsetOf) {
         Buffer b(100);
         void* ptr = advancePtr(b.mutData(), 42);

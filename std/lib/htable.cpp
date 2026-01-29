@@ -56,7 +56,7 @@ void* HashTable::find(u64 key) const noexcept {
     auto r = erange(buf);
     auto c = r.length();
 
-    for (auto i = hash(key, c); ; i = (i + 1) % c) {
+    for (auto i = hash(key, c);; i = (i + 1) % c) {
         const auto& el = r.b[i];
 
         if (!el.filled()) {
@@ -79,7 +79,7 @@ void HashTable::set(u64 key, void* value) {
     auto r = erange(buf);
     auto c = r.length();
 
-    for (auto i = hash(key, c); ; i = (i + 1) % c) {
+    for (auto i = hash(key, c);; i = (i + 1) % c) {
         auto& el = r.b[i];
 
         if (!el.filled()) {

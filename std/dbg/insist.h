@@ -11,11 +11,10 @@
 #define STD_STRINGIZE(X) STD_STRINGIZ_(X)
 #define STD_STRINGIZ_(X) #X
 
-#define STD_INSIST(X) \
+#define STD_INSIST(X)                      \
     if (!(X)) {                            \
         ::Std::panic(                      \
             STD_CAT(u8, STD_STRINGIZE(X)), \
             __LINE__,                      \
-            STD_CAT(u8, __FILE__)          \
-        );                                 \
+            STD_CAT(u8, __FILE__));        \
     }

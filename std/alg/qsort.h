@@ -37,8 +37,8 @@ namespace Std::QSP {
         }
 
         inline auto partitionHoare(I b, I e) {
-            for (auto p = e; ; ++b) {
-                while (b != e && f(*b , *p)) {
+            for (auto p = e;; ++b) {
+                while (b != e && f(*b, *p)) {
                     ++b;
                 }
 

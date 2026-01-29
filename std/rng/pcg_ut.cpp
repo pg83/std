@@ -48,7 +48,7 @@ STD_TEST_SUITE(RNG) {
 
         // Test with n=0 (should not crash, though result is undefined)
         // We just verify it doesn't crash
-        r.uniformBiased(1);  // This should be 0
+        r.uniformBiased(1); // This should be 0
 
         // Test with n=1 (should always return 0)
         STD_INSIST(r.uniformBiased(1) == 0);

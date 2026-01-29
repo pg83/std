@@ -120,7 +120,11 @@ STD_TEST_SUITE(StringMap) {
     STD_TEST(InsertWithMultipleArgs) {
         struct Point {
             int x, y;
-            Point(int x_, int y_) : x(x_), y(y_) {}
+            Point(int x_, int y_)
+                : x(x_)
+                , y(y_)
+            {
+            }
         };
 
         StringMap<Point> map;
@@ -250,8 +254,16 @@ STD_TEST_SUITE(StringMap) {
             int id;
             float value;
 
-            Data() : id(0), value(0.0f) {}
-            Data(int i, float v) : id(i), value(v) {}
+            Data()
+                : id(0)
+                , value(0.0f)
+            {
+            }
+            Data(int i, float v)
+                : id(i)
+                , value(v)
+            {
+            }
         };
 
         StringMap<Data> map;
