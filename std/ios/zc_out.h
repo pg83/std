@@ -27,6 +27,7 @@ namespace Std {
         }
 
     private:
+        void writePart(StringView part);
         void writeImpl(const void* data, size_t len) override;
 
         virtual void* imbueImpl(size_t len) = 0;

@@ -3,11 +3,14 @@
 
 #include <std/sys/crt.h>
 #include <std/str/view.h>
+#include <std/alg/exchange.h>
 
 using namespace Std;
 using namespace Std::Manip;
 
 namespace {
+    static constexpr size_t PART = 64 * 1024;
+
     struct U64 {
         u64 val;
     };
@@ -20,8 +23,23 @@ namespace {
 ZeroCopyOutput::~ZeroCopyOutput() {
 }
 
+void ZeroCopyOutput::writePart(StringView part) {
+    bump(imbue(part.length()) << part);
+}
+
 void ZeroCopyOutput::writeImpl(const void* data, size_t len) {
-    bump(imbue(len) << StringView((const u8*)data, len));
+    const u8* b = (u8*)data;
+    const u8* e = b + len;
+
+    while (true) {
+        if (const auto left = e - b; left <= PART) {
+            writePart(StringView(b, left));
+
+            return;
+        }
+
+        writePart(StringView(exchange(b, b + PART), PART));
+    }
 }
 
 // std types
