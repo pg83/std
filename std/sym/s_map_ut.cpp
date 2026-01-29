@@ -1,4 +1,4 @@
-#include "smap.h"
+#include "s_map.h"
 
 #include <std/tst/ut.h>
 #include <std/lib/vector.h>
