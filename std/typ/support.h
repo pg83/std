@@ -1,41 +1,22 @@
 #pragma once
 
-namespace Std::Traits {
-    // remove reference
-    template <typename T>
-    struct RemoveReferenceHelper {
-        using R = T;
-    };
-
-    template <typename T>
-    struct RemoveReferenceHelper<T&> {
-        using R = T;
-    };
-
-    template <typename T>
-    struct RemoveReferenceHelper<T&&> {
-        using R = T;
-    };
-
-    template <typename T>
-    using RemoveReference = typename RemoveReferenceHelper<T>::R;
-}
+#define rem_ref(T) __remove_reference_t(T)
 
 namespace Std {
     // move semantics
     template <typename T>
-    constexpr Traits::RemoveReference<T>&& move(T&& t) noexcept {
-        return static_cast<Traits::RemoveReference<T>&&>(t);
+    constexpr rem_ref(T)&& move(T&& t) noexcept {
+        return static_cast<rem_ref(T)&&>(t);
     }
 
     // perfect forwarding
     template <typename T>
-    constexpr T&& forward(Traits::RemoveReference<T>& t) noexcept {
+    constexpr T&& forward(rem_ref(T)& t) noexcept {
         return static_cast<T&&>(t);
     }
 
     template <typename T>
-    constexpr T&& forward(Traits::RemoveReference<T>&& t) noexcept {
+    constexpr T&& forward(rem_ref(T)&& t) noexcept {
         return static_cast<T&&>(t);
     }
 }
