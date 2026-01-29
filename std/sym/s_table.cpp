@@ -1,4 +1,4 @@
-#include "stable.h"
+#include "s_table.h"
 
 #include <std/str/view.h>
 

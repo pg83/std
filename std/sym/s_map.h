@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stable.h"
+#include "s_table.h"
 
 #include <std/mem/obj_pool.h>
 
