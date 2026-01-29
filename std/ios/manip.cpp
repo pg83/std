@@ -1,5 +1,5 @@
 #include "manip.h"
-#include "output.h"
+#include "zc_out.h"
 
 using namespace Std;
 using namespace Std::Manip;

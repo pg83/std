@@ -1,6 +1,6 @@
 #pragma once
 
-#include "output.h"
+#include "zc_out.h"
 
 #include <std/sys/types.h>
 #include <std/lib/buffer.h>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "output.h"
+#include "zc_out.h"
 
 namespace Std {
     struct DynString;
