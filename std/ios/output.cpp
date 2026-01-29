@@ -22,6 +22,10 @@ void Output::writeVImpl(const StringView* parts, size_t count) {
 }
 
 void Output::write(const void* data, size_t len) {
+    if (!len) {
+        return;
+    }
+
     const u8* b = (u8*)data;
     const u8* e = b + len;
 

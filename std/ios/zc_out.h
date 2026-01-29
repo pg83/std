@@ -10,7 +10,13 @@
 namespace Std {
     class StringView;
 
-    struct ZeroCopyOutput: public Output {
+    class ZeroCopyOutput: public Output {
+        void writeImpl(const void* data, size_t len) override;
+
+        virtual void* imbueImpl(size_t len) = 0;
+        virtual void bumpImpl(const void* ptr) noexcept = 0;
+
+    private:
         ~ZeroCopyOutput() noexcept override;
 
         // zero-copy interface
@@ -25,12 +31,6 @@ namespace Std {
         inline void bump(UnboundBuffer buf) noexcept {
             bump(buf.ptr);
         }
-
-    private:
-        void writeImpl(const void* data, size_t len) override;
-
-        virtual void* imbueImpl(size_t len) = 0;
-        virtual void bumpImpl(const void* ptr) noexcept = 0;
     };
 
     template <typename O, typename T>
