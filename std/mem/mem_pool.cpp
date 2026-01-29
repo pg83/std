@@ -1,9 +1,8 @@
+#include "new.h"
 #include "mem_pool.h"
 #include "disposer.h"
 
 #include <std/sys/crt.h>
-
-#include <new>
 
 #include <cmath>
 #include <cstddef>
@@ -13,7 +12,7 @@ using namespace Std;
 namespace {
     constexpr size_t alignment = alignof(std::max_align_t);
 
-    struct alignas(alignment) Chunk: public Disposable {
+    struct alignas(alignment) Chunk: public Disposable, public Newable {
         ~Chunk() noexcept override {
             freeMemory(this);
         }

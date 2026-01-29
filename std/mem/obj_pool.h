@@ -1,5 +1,6 @@
 #pragma once
 
+#include "new.h"
 #include "embed.h"
 #include "disposable.h"
 
@@ -15,12 +16,8 @@ namespace Std {
 
     class ObjPool: public ARC {
         template <typename T>
-        struct Wrapper1: public Embed<T> {
+        struct Wrapper1: public Embed<T>, public Newable {
             using Embed<T>::Embed;
-
-            static void* operator new(size_t, void* ptr) noexcept {
-                return ptr;
-            }
         };
 
         template <typename T>
@@ -48,6 +45,7 @@ namespace Std {
         template <typename T, typename... A>
         inline T* make(A&&... a) {
             if constexpr (stdHasTrivialDestructor(T)) {
+                static_assert(sizeof(Wrapper1<T>) == sizeof(T));
                 return &makeImpl<Wrapper1<T>>(forward<A>(a)...)->t;
             } else {
                 auto res = makeImpl<Wrapper2<T>>(forward<A>(a)...);

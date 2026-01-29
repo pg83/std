@@ -5,7 +5,6 @@
 namespace Std {
     // allocator
     void* allocateMemory(size_t len);
-    void* allocateZeroedMemory(size_t count, size_t el);
     void freeMemory(void* ptr) noexcept;
 
     // string ops

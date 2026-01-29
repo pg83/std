@@ -7,8 +7,6 @@
 
 #include <std/alg/bits.h>
 
-#include <new>
-
 using namespace Std;
 
 static_assert(sizeof(Buffer) == sizeof(void*));

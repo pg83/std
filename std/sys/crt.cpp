@@ -16,16 +16,6 @@ void* Std::allocateMemory(size_t len) {
     return 0;
 }
 
-void* Std::allocateZeroedMemory(size_t count, size_t el) {
-    if (auto ret = calloc(count, el); ret) {
-        return ret;
-    }
-
-    STD_INSIST(false);
-
-    return 0;
-}
-
 void Std::freeMemory(void* ptr) noexcept {
     free(ptr);
 }

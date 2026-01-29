@@ -24,6 +24,10 @@ namespace Std {
             {
             }
 
+            static void* operator new(size_t, void* ptr) noexcept {
+                return ptr;
+            }
+
             static Header* null() noexcept;
             static Header* alloc(size_t len);
             static void free(Header* ptr) noexcept;
