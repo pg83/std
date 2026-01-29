@@ -3,7 +3,6 @@
 
 #include <std/sys/crt.h>
 #include <std/str/view.h>
-#include <std/alg/exchange.h>
 
 using namespace Std;
 using namespace Std::Manip;
@@ -21,23 +20,8 @@ namespace {
 ZeroCopyOutput::~ZeroCopyOutput() {
 }
 
-void ZeroCopyOutput::writePart(StringView part) {
-    bump(imbue(part.length()) << part);
-}
-
 void ZeroCopyOutput::writeImpl(const void* data, size_t len) {
-    const u8* b = (u8*)data;
-    const u8* e = b + len;
-
-    const auto part = hint();
-
-    while (true) {
-        if (const auto left = e - b; left > part) {
-            writePart(StringView(exchange(b, b + part), part));
-        } else {
-            return writePart(StringView(b, left));
-        }
-    }
+    bump(imbue(len) << StringView((const u8*)data, len));
 }
 
 // std types

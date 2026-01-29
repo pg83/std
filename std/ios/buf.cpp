@@ -38,7 +38,7 @@ void OutBuf::bumpImpl(const void* ptr) noexcept {
 }
 
 void OutBuf::writeImpl(const void* ptr, size_t len) {
-    if ((buf_.used() + len) < hint()) {
+    if (auto maxb = min(hint(), (size_t)(16 * 1024)); (buf_.used() + len) < maxb) {
         buf_.append(ptr, len);
     } else {
         const StringView parts[] = {
@@ -52,7 +52,7 @@ void OutBuf::writeImpl(const void* ptr, size_t len) {
 }
 
 size_t OutBuf::hintImpl() const noexcept {
-    return min(out_->hint(), (size_t)(1 * 1024 * 1024));
+    return out_->hint();
 }
 
 void OutBuf::flushImpl() {

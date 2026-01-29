@@ -8,11 +8,7 @@ namespace Std {
     struct Output {
         virtual ~Output() noexcept;
 
-        inline void write(const void* data, size_t len) {
-            if (len) {
-                writeImpl(data, len);
-            }
-        }
+        void write(const void* data, size_t len);
 
         inline void writeV(const StringView* parts, size_t count) {
             writeVImpl(parts, count);
