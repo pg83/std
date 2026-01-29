@@ -11,8 +11,16 @@ namespace Std {
         virtual StringView name() const = 0;
     };
 
+    struct Ctx {
+        int argc;
+        char** argv;
+
+        virtual void printTB() const = 0;
+
+        void run();
+    };
+
     void registerTest(TestFunc* test);
-    void runTests(int argc, char** argv);
 }
 
 #define STD_TEST_SUITE(_name)                                          \

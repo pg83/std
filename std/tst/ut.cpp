@@ -17,22 +17,11 @@
 #include <std/lib/vector.h>
 #include <std/lib/singleton.h>
 
-#if defined(HAVE_CPPTRACE)
-    #include <cpptrace/cpptrace.hpp>
-#endif
-
 using namespace Std;
 
 namespace {
     struct Exc {
     };
-
-    static void panicHandler() {
-#if defined(HAVE_CPPTRACE)
-        cpptrace::generate_trace().print();
-#endif
-        throw Exc();
-    }
 
     struct Test {
         TestFunc* func;
@@ -67,8 +56,11 @@ namespace {
     struct Tests: public Vector<Test*> {
         DynString str;
         ObjPool::Ref pool = ObjPool::fromMemory();
+        Ctx* ctx = 0;
 
-        inline void run(int argc, char** argv) {
+        inline void run(Ctx& ctx_) {
+            ctx = &ctx_;
+
             quickSort(mutRange(*this), [](auto l, auto r) noexcept {
                 return l->fullName < r->fullName;
             });
@@ -80,6 +72,11 @@ namespace {
             }
         }
 
+        inline void handlePanic() {
+            ctx->printTB();
+            throw Exc();
+        }
+
         inline void reg(TestFunc* func) {
             pushBack(pool->make<Test>(func, pool->intern((StringOutput(str) << *func).str())));
             str.clear();
@@ -87,6 +84,10 @@ namespace {
 
         static inline auto& instance() noexcept {
             return singleton<Tests>();
+        }
+
+        static void panicHandler() {
+            instance().handlePanic();
         }
     };
 }
@@ -96,8 +97,8 @@ void Std::output<ZeroCopyOutput, TestFunc>(ZeroCopyOutput& buf, const TestFunc& 
     buf << test.suite() << StringView(u8"::") << test.name();
 }
 
-void Std::runTests(int argc, char** argv) {
-    Tests::instance().run(argc, argv);
+void Std::Ctx::run() {
+    Tests::instance().run(*this);
 }
 
 void Std::registerTest(TestFunc* test) {
