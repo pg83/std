@@ -35,6 +35,10 @@ void* OutBuf::imbueImpl(size_t len) {
 
 void OutBuf::bumpImpl(const void* ptr) noexcept {
     buf_.seekAbsolute(ptr);
+
+    if (buf_.used() > 16 * 1024) {
+        flush();
+    }
 }
 
 void OutBuf::writeImpl(const void* ptr, size_t len) {
