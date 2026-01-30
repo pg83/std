@@ -12,7 +12,7 @@ namespace Std {
         virtual size_t hintImpl() const noexcept = 0;
 
         // have sensible defaults
-        virtual void writeVImpl(const iovec* parts, size_t count);
+        virtual void writeVImpl(iovec* parts, size_t count);
         virtual void flushImpl();
         virtual void finishImpl();
 
@@ -21,7 +21,7 @@ namespace Std {
 
         void write(const void* data, size_t len);
 
-        inline void writeV(const iovec* parts, size_t count) {
+        inline void writeV(iovec* parts, size_t count) {
             writeVImpl(parts, count);
         }
 

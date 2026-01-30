@@ -19,7 +19,7 @@ void Output::flushImpl() {
 void Output::finishImpl() {
 }
 
-void Output::writeVImpl(const iovec* parts, size_t count) {
+void Output::writeVImpl(iovec* parts, size_t count) {
     for (const auto& it : range(parts, parts + count)) {
         write(it.iov_base, it.iov_len);
     }

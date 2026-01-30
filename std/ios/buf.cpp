@@ -61,7 +61,7 @@ void OutBuf::writeSlow(const void* ptr, size_t len) {
 
     const auto cnt = chunk - buf.used();
 
-    const iovec parts[] = {
+    iovec parts[] = {
         {
             .iov_base = (void*)buf.data(),
             .iov_len = buf.used(),

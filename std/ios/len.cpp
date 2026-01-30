@@ -42,7 +42,7 @@ void CountingOutput::bumpImpl(const void* ptr) noexcept {
     }
 }
 
-void CountingOutput::writeVImpl(const iovec* parts, size_t count) {
+void CountingOutput::writeVImpl(iovec* parts, size_t count) {
     for (size_t i = 0; i < count; ++i) {
         len_ += parts[i].iov_len;
     }

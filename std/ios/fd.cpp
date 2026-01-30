@@ -3,6 +3,7 @@
 #include <std/str/view.h>
 
 #include <fcntl.h>
+#include <errno.h>
 #include <unistd.h>
 #include <sys/uio.h>
 
@@ -28,6 +29,32 @@ size_t FDOutput::hintImpl() const noexcept {
     return 0x7ffff000;
 }
 
-void FDOutput::writeVImpl(const iovec* parts, size_t count) {
-    writev(fd, parts, count);
+static inline int writev_all(int fd, iovec* iov, int iovcnt) {
+    while (iovcnt > 0) {
+        ssize_t written = writev(fd, iov, iovcnt);
+
+        if (written < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            return -1;
+        }
+
+        while (written >= iov->iov_len) {
+            written -= iov->iov_len;
+            iov++;
+            iovcnt--;
+        }
+
+        if (written > 0) {
+            iov->iov_base = (char*)iov->iov_base + written;
+            iov->iov_len -= written;
+        }
+    }
+
+    return 0;
+}
+
+void FDOutput::writeVImpl(iovec* parts, size_t count) {
+    writev_all(fd, parts, count);
 }
