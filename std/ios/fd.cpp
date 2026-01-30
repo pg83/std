@@ -29,7 +29,7 @@ size_t FDOutput::hintImpl() const noexcept {
     return 0x7ffff000;
 }
 
-static inline int writev_all(int fd, iovec* iov, int iovcnt) {
+static inline int writev_all(int fd, iovec* iov, size_t iovcnt) {
     while (iovcnt > 0) {
         ssize_t written = writev(fd, iov, iovcnt);
 
@@ -37,6 +37,7 @@ static inline int writev_all(int fd, iovec* iov, int iovcnt) {
             if (errno == EINTR) {
                 continue;
             }
+
             return -1;
         }
 
