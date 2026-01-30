@@ -1,5 +1,6 @@
 #include "len.h"
 
+#include <std/str/view.h>
 #include <std/mem/scratch.h>
 
 using namespace Std;
@@ -36,5 +37,11 @@ void CountingOutput::bumpImpl(const void* ptr) noexcept {
         len_ += pm - sm;
     } else {
         len_ += buf_.offsetOf(ptr);
+    }
+}
+
+void CountingOutput::writeVImpl(const StringView* parts, size_t count) {
+    for (size_t i = 0; i < count; ++i) {
+        len_ += parts[i].length();
     }
 }

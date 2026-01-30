@@ -10,6 +10,7 @@ namespace Std {
         Buffer buf_;
 
         void writeImpl(const void* ptr, size_t len) override;
+        void writeVImpl(const StringView* parts, size_t count) override;
         void* imbueImpl(size_t len) override;
         void bumpImpl(const void* ptr) noexcept override;
         size_t hintImpl() const noexcept override;
