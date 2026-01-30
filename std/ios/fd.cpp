@@ -21,5 +21,6 @@ void FDOutput::finishImpl() {
 }
 
 size_t FDOutput::hintImpl() const noexcept {
-    return 4 * 1024;
+    // https://man7.org/linux/man-pages/man2/write.2.html
+    return 0x7ffff000;
 }

@@ -34,7 +34,7 @@ namespace Std {
         OutBuf(Output& out, size_t chunkSize) noexcept;
 
         inline OutBuf(Output& out) noexcept
-            : OutBuf(out, 16 * 1024)
+            : OutBuf(out, 8 * 1024)
         {
         }
 

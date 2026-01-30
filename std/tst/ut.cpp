@@ -38,11 +38,11 @@ namespace {
                 func->execute();
 
                 outb << Color::bright(AnsiColor::Green)
-                     << StringView(u8"\r+ ") << fullName
+                     << StringView(u8"+ ") << fullName
                      << Color::reset() << endL;
             } catch (const Exc&) {
                 outb << Color::bright(AnsiColor::Red)
-                     << StringView(u8"\r- ") << fullName
+                     << StringView(u8"- ") << fullName
                      << Color::reset() << endL;
             }
         }
@@ -66,7 +66,7 @@ namespace {
             });
 
             setPanicHandler(panicHandler);
-            execute(sysE);
+            execute(sysO);
         }
 
         inline void execute(OutBuf&& outb) {
