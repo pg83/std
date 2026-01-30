@@ -8,6 +8,7 @@ namespace Std {
         int fd;
 
         void writeImpl(const void* data, size_t len) override;
+        void writeVImpl(const StringView* parts, size_t count) override;
         void flushImpl() override;
         void finishImpl() override;
         size_t hintImpl() const noexcept override;
