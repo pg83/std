@@ -16,14 +16,16 @@ OutBuf::~OutBuf() {
     }
 }
 
-OutBuf::OutBuf(Output& out) noexcept
+OutBuf::OutBuf(Output& out, size_t chunkSize) noexcept
     : out_(&out)
+    , chunk(min(chunkSize, out_->hint()))
 {
     buf_.grow(256);
 }
 
 OutBuf::OutBuf() noexcept
     : out_(nullptr)
+    , chunk(0)
 {
 }
 
@@ -36,13 +38,13 @@ void* OutBuf::imbueImpl(size_t len) {
 void OutBuf::bumpImpl(const void* ptr) noexcept {
     buf_.seekAbsolute(ptr);
 
-    if (buf_.used() > 16 * 1024) {
+    if (buf_.used() >= chunk) {
         flush();
     }
 }
 
 void OutBuf::writeImpl(const void* ptr, size_t len) {
-    if (auto maxb = min<size_t>(hint(), 16 * 1024); (buf_.used() + len) < maxb) {
+    if (buf_.used() + len < chunk) {
         buf_.append(ptr, len);
     } else if (buf_.used()) {
         Buffer buf;
@@ -61,7 +63,7 @@ void OutBuf::writeImpl(const void* ptr, size_t len) {
 }
 
 size_t OutBuf::hintImpl() const noexcept {
-    return out_->hint();
+    return chunk;
 }
 
 void OutBuf::flushImpl() {
@@ -77,6 +79,7 @@ void OutBuf::finishImpl() {
 }
 
 void OutBuf::xchg(OutBuf& buf) noexcept {
+    ::Std::xchg(buf_, buf.buf_);
     ::Std::xchg(out_, buf.out_);
-    buf_.xchg(buf.buf_);
+    ::Std::xchg(chunk, buf.chunk);
 }

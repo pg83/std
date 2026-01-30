@@ -9,6 +9,7 @@ namespace Std {
     class OutBuf: public ZeroCopyOutput {
         Output* out_;
         Buffer buf_;
+        size_t chunk;
 
         OutBuf() noexcept;
 
@@ -27,7 +28,12 @@ namespace Std {
     public:
         ~OutBuf() override;
 
-        OutBuf(Output& out) noexcept;
+        OutBuf(Output& out, size_t chunkSize) noexcept;
+
+        inline OutBuf(Output& out) noexcept
+            : OutBuf(out, 16 * 1024)
+        {
+        }
 
         inline OutBuf(OutBuf&& buf) noexcept
             : OutBuf()
