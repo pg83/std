@@ -14,7 +14,7 @@ namespace Std {
         size_t hintImpl() const noexcept override;
 
     public:
-        ~StringOutput() override;
+        ~StringOutput() noexcept override;
 
         inline StringOutput(DynString& str) noexcept
             : str_(&str)

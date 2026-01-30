@@ -4,7 +4,7 @@
 
 using namespace Std;
 
-StringOutput::~StringOutput() {
+StringOutput::~StringOutput() noexcept {
 }
 
 void StringOutput::writeImpl(const void* ptr, size_t len) {

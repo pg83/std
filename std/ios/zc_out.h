@@ -16,7 +16,7 @@ namespace Std {
         virtual void* imbueImpl(size_t len) = 0;
         virtual void bumpImpl(const void* ptr) noexcept = 0;
 
-    private:
+    public:
         ~ZeroCopyOutput() noexcept override;
 
         // zero-copy interface
