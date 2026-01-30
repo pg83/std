@@ -39,26 +39,43 @@ void OutBuf::bumpImpl(const void* ptr) noexcept {
     buf_.seekAbsolute(ptr);
 
     if (buf_.used() >= chunk) {
-        flush();
+        Buffer buf;
+        buf.xchg(buf_);
+        writeDirect(buf.data(), buf.length());
     }
+}
+
+void OutBuf::writeDirect(const void* ptr, size_t len) {
+    const auto cnt = len - len % chunk;
+
+    out_->write(ptr, cnt);
+    buf_.append(advancePtr(ptr, cnt), len - cnt);
+}
+
+void OutBuf::writeSlow(const void* ptr, size_t len) {
+    Buffer buf;
+
+    buf.xchg(buf_);
+
+    const auto cnt = chunk - buf.used();
+
+    const StringView parts[] = {
+        StringView((const u8*)buf.data(), buf.used()),
+        StringView((const u8*)ptr, cnt),
+    };
+
+    out_->writeV(parts, 2);
+
+    writeDirect(advancePtr(ptr, cnt), len - cnt);
 }
 
 void OutBuf::writeImpl(const void* ptr, size_t len) {
     if (buf_.used() + len < chunk) {
         buf_.append(ptr, len);
     } else if (buf_.used()) {
-        Buffer buf;
-
-        buf.xchg(buf_);
-
-        const StringView parts[] = {
-            StringView((const u8*)buf.data(), buf.used()),
-            StringView((const u8*)ptr, len),
-        };
-
-        out_->writeV(parts, 2);
+        writeSlow(ptr, len);
     } else {
-        out_->write(ptr, len);
+        writeDirect(ptr, len);
     }
 }
 

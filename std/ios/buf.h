@@ -13,6 +13,9 @@ namespace Std {
 
         OutBuf() noexcept;
 
+        void writeSlow(const void* ptr, size_t len);
+        void writeDirect(const void* ptr, size_t len);
+
         // state
         void flushImpl() override;
         void finishImpl() override;
