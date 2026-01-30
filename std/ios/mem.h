@@ -9,7 +9,7 @@ namespace Std {
         void bumpImpl(const void* ptr) noexcept override;
         size_t hintImpl() const noexcept override;
 
-    private:
+    public:
         void* ptr;
 
         inline MemoryOutput(void* _ptr) noexcept
