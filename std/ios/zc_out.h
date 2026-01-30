@@ -34,10 +34,10 @@ namespace Std {
     };
 
     template <typename O, typename T>
-    requires requires (O o) {
-        static_cast<ZeroCopyOutput*>(&o);
-    }
-    inline O&& operator<<(O&& out, const T& t)  {
+        requires requires(O o) {
+            static_cast<ZeroCopyOutput*>(&o);
+        }
+    inline O&& operator<<(O&& out, const T& t) {
         output<ZeroCopyOutput, T>(out, t);
 
         return forward<O>(out);

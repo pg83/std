@@ -25,7 +25,7 @@ STD_TEST_SUITE(CountingOutput) {
             StringView(u8"Hello"),
             StringView(u8" "),
             StringView(u8"World"),
-            StringView(u8"!")
+            StringView(u8"!"),
         };
 
         out.writeV(parts, 4);
@@ -38,7 +38,7 @@ STD_TEST_SUITE(CountingOutput) {
         StringView parts[] = {
             StringView(u8""),
             StringView(u8"test"),
-            StringView(u8"")
+            StringView(u8""),
         };
 
         out.writeV(parts, 3);
@@ -51,12 +51,12 @@ STD_TEST_SUITE(CountingOutput) {
         StringView parts1[] = {
             StringView(u8"First"),
             StringView(u8" "),
-            StringView(u8"call")
+            StringView(u8"call"),
         };
         StringView parts2[] = {
             StringView(u8"Second"),
             StringView(u8" "),
-            StringView(u8"call")
+            StringView(u8"call"),
         };
 
         out.writeV(parts1, 3);

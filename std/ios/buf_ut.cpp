@@ -1,6 +1,7 @@
 #include "buf.h"
 #include "string.h"
 #include "mem.h"
+#include "len.h"
 
 #include <std/tst/ut.h>
 #include <std/str/dynamic.h>
@@ -209,5 +210,185 @@ STD_TEST_SUITE(OutBuf) {
         buf.finish();
 
         STD_INSIST(str.length() == 30000);
+    }
+
+    STD_TEST(chunkSizeExactMultiple) {
+        CountingOutput counter;
+        OutBuf buf(counter, 1024);
+
+        u8 data[1024];
+        buf.write(data, 1024);
+
+        STD_INSIST(counter.collectedLength() == 1024);
+    }
+
+    STD_TEST(chunkSizeTwoExactMultiples) {
+        CountingOutput counter;
+        OutBuf buf(counter, 1024);
+
+        u8 data[2048];
+        buf.write(data, 2048);
+
+        STD_INSIST(counter.collectedLength() == 2048);
+    }
+
+    STD_TEST(chunkSizeNotMultiple) {
+        CountingOutput counter;
+        OutBuf buf(counter, 1024);
+
+        u8 data[1500];
+        buf.write(data, 1500);
+
+        STD_INSIST(counter.collectedLength() == 1024);
+
+        buf.flush();
+        STD_INSIST(counter.collectedLength() == 1500);
+    }
+
+    STD_TEST(chunkSizeSmallWrites) {
+        CountingOutput counter;
+        OutBuf buf(counter, 1024);
+
+        u8 data[100];
+        for (int i = 0; i < 10; ++i) {
+            buf.write(data, 100);
+        }
+
+        STD_INSIST(counter.collectedLength() == 0);
+
+        buf.write(data, 100);
+
+        STD_INSIST(counter.collectedLength() == 1024);
+    }
+
+    STD_TEST(chunkSizeMixedWrites) {
+        CountingOutput counter;
+        OutBuf buf(counter, 512);
+
+        u8 data[200];
+        buf.write(data, 200);
+        STD_INSIST(counter.collectedLength() == 0);
+
+        buf.write(data, 200);
+        STD_INSIST(counter.collectedLength() == 0);
+
+        buf.write(data, 200);
+        STD_INSIST(counter.collectedLength() == 512);
+
+        buf.write(data, 200);
+        STD_INSIST(counter.collectedLength() == 512);
+
+        buf.flush();
+        STD_INSIST(counter.collectedLength() == 800);
+    }
+
+    STD_TEST(chunkSizeLargeWrite) {
+        CountingOutput counter;
+        OutBuf buf(counter, 256);
+
+        u8 data[1000];
+        buf.write(data, 1000);
+
+        STD_INSIST(counter.collectedLength() == 768);
+
+        buf.flush();
+        STD_INSIST(counter.collectedLength() == 1000);
+    }
+
+    STD_TEST(chunkSizeBufferPlusLarge) {
+        CountingOutput counter;
+        OutBuf buf(counter, 512);
+
+        u8 data1[100];
+        u8 data2[1000];
+
+        buf.write(data1, 100);
+        STD_INSIST(counter.collectedLength() == 0);
+
+        buf.write(data2, 1000);
+        STD_INSIST(counter.collectedLength() == 1024);
+
+        buf.flush();
+        STD_INSIST(counter.collectedLength() == 1100);
+    }
+
+    STD_TEST(chunkSizeZeroCopy) {
+        CountingOutput counter;
+        OutBuf buf(counter, 512);
+
+        auto ubuf = buf.imbue(1024);
+        u8* ptr = (u8*)ubuf.ptr;
+        for (size_t i = 0; i < 1024; ++i) {
+            ptr[i] = (u8)i;
+        }
+
+        STD_INSIST(counter.collectedLength() == 0);
+
+        buf.bump(ptr + 1024);
+
+        STD_INSIST(counter.collectedLength() == 1024);
+    }
+
+    STD_TEST(chunkSizeZeroCopyPartial) {
+        CountingOutput counter;
+        OutBuf buf(counter, 512);
+
+        auto ubuf = buf.imbue(300);
+        u8* ptr = (u8*)ubuf.ptr;
+        buf.bump(ptr + 300);
+
+        STD_INSIST(counter.collectedLength() == 0);
+
+        ubuf = buf.imbue(300);
+        ptr = (u8*)ubuf.ptr;
+        buf.bump(ptr + 300);
+
+        STD_INSIST(counter.collectedLength() == 512);
+    }
+
+    STD_TEST(chunkSizeEdgeCaseOne) {
+        CountingOutput counter;
+        OutBuf buf(counter, 1024);
+
+        u8 data[1023];
+        buf.write(data, 1023);
+        STD_INSIST(counter.collectedLength() == 0);
+
+        u8 one[1];
+        buf.write(one, 1);
+        STD_INSIST(counter.collectedLength() == 1024);
+    }
+
+    STD_TEST(chunkSizeEdgeCasePlusOne) {
+        CountingOutput counter;
+        OutBuf buf(counter, 1024);
+
+        u8 data[1025];
+        buf.write(data, 1025);
+
+        STD_INSIST(counter.collectedLength() == 1024);
+
+        buf.flush();
+        STD_INSIST(counter.collectedLength() == 1025);
+    }
+
+    STD_TEST(chunkSizeMultipleFlushes) {
+        CountingOutput counter;
+        OutBuf buf(counter, 256);
+
+        u8 data[100];
+
+        buf.write(data, 100);
+        buf.flush();
+        STD_INSIST(counter.collectedLength() == 100);
+
+        buf.write(data, 100);
+        buf.flush();
+        STD_INSIST(counter.collectedLength() == 200);
+
+        buf.write(data, 100);
+        STD_INSIST(counter.collectedLength() == 200);
+        buf.flush();
+        STD_INSIST(counter.collectedLength() == 300);
     }
 }
