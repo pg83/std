@@ -21,5 +21,5 @@ void FDOutput::finishImpl() {
 }
 
 size_t FDOutput::hintImpl() const noexcept {
-    return 64 * 1024;
+    return 4 * 1024;
 }

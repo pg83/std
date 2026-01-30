@@ -33,17 +33,17 @@ namespace {
         {
         }
 
-        inline void execute() {
+        inline void execute(OutBuf& outb) {
             try {
                 func->execute();
 
-                sysE << Color::bright(AnsiColor::Green)
+                outb << Color::bright(AnsiColor::Green)
                      << StringView(u8"\r+ ") << fullName
-                     << Color::reset() << endL << finI;
+                     << Color::reset() << endL;
             } catch (const Exc&) {
-                sysE << Color::bright(AnsiColor::Red)
+                outb << Color::bright(AnsiColor::Red)
                      << StringView(u8"\r- ") << fullName
-                     << Color::reset() << endL << finI;
+                     << Color::reset() << endL;
             }
         }
     };
@@ -66,10 +66,15 @@ namespace {
             });
 
             setPanicHandler(panicHandler);
+            execute(sysE);
+        }
 
+        inline void execute(OutBuf&& outb) {
             for (auto test : range(*this)) {
-                test->execute();
+                test->execute(outb);
             }
+
+            outb.finish();
         }
 
         inline void handlePanic() {

@@ -4,8 +4,8 @@
 #include "manip.h"
 #include "output.h"
 
-#define sysO (::Std::OutBuf(::Std::stdoutStream()))
-#define sysE (::Std::OutBuf(::Std::stderrStream()))
+#define sysO ::Std::OutBuf(::Std::stdoutStream())
+#define sysE ::Std::OutBuf(::Std::stderrStream())
 
 namespace Std {
     Output& stdoutStream() noexcept;
