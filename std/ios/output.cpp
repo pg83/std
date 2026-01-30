@@ -1,8 +1,12 @@
 #include "output.h"
 
+#include <std/sys/crt.h>
 #include <std/str/view.h>
 #include <std/alg/range.h>
 #include <std/alg/exchange.h>
+
+#include <alloca.h>
+#include <sys/uio.h>
 
 using namespace Std;
 
@@ -15,10 +19,23 @@ void Output::flushImpl() {
 void Output::finishImpl() {
 }
 
-void Output::writeVImpl(const StringView* parts, size_t count) {
+void Output::writeVImpl(const iovec* parts, size_t count) {
     for (const auto& it : range(parts, parts + count)) {
-        write(it.data(), it.length());
+        write(it.iov_base, it.iov_len);
     }
+}
+
+void Output::writeV(const StringView* parts, size_t count) {
+    iovec* io = (iovec*)alloca(count * sizeof(iovec));
+
+    memZero(io, io + count);
+
+    for (size_t i = 0; i < count; ++i) {
+        io[i].iov_len = parts[i].length();
+        io[i].iov_base = (void*)parts[i].data();
+    }
+
+    writeV(io, count);
 }
 
 void Output::write(const void* data, size_t len) {

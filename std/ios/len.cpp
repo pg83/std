@@ -3,6 +3,8 @@
 #include <std/str/view.h>
 #include <std/mem/scratch.h>
 
+#include <sys/uio.h>
+
 using namespace Std;
 
 CountingOutput::CountingOutput() noexcept
@@ -40,8 +42,8 @@ void CountingOutput::bumpImpl(const void* ptr) noexcept {
     }
 }
 
-void CountingOutput::writeVImpl(const StringView* parts, size_t count) {
+void CountingOutput::writeVImpl(const iovec* parts, size_t count) {
     for (size_t i = 0; i < count; ++i) {
-        len_ += parts[i].length();
+        len_ += parts[i].iov_len;
     }
 }
