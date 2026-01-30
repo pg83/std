@@ -26,7 +26,7 @@ void Output::writeVImpl(iovec* parts, size_t count) {
 }
 
 void Output::writeV(const StringView* parts, size_t count) {
-    iovec* io = (iovec*)alloca(count * sizeof(iovec));
+    auto io = (iovec*)alloca(count * sizeof(iovec));
 
     memZero(io, io + count);
 
