@@ -17,7 +17,7 @@ namespace {
     };
 }
 
-ZeroCopyOutput::~ZeroCopyOutput() {
+ZeroCopyOutput::~ZeroCopyOutput() noexcept {
 }
 
 void ZeroCopyOutput::writeImpl(const void* data, size_t len) {
