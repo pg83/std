@@ -7,6 +7,8 @@
 #include <std/str/view.h>
 #include <std/alg/minmax.h>
 
+#include <sys/uio.h>
+
 using namespace Std;
 using namespace Std::Manip;
 
@@ -59,9 +61,15 @@ void OutBuf::writeSlow(const void* ptr, size_t len) {
 
     const auto cnt = chunk - buf.used();
 
-    const StringView parts[] = {
-        StringView((const u8*)buf.data(), buf.used()),
-        StringView((const u8*)ptr, cnt),
+    const iovec parts[] = {
+        {
+            .iov_base = (void*)buf.data(),
+            .iov_len = buf.used(),
+        },
+        {
+            .iov_base = (void*)ptr,
+            .iov_len = cnt,
+        },
     };
 
     out_->writeV(parts, 2);
