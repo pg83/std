@@ -1,4 +1,5 @@
 #include "view.h"
+#include "hash.h"
 
 #include <std/ios/buf.h>
 #include <std/sys/crt.h>
@@ -17,6 +18,14 @@ StringView::StringView(const char* s) noexcept
 StringView::StringView(const Buffer& b) noexcept
     : StringView((const u8*)b.data(), b.length())
 {
+}
+
+u32 StringView::hash32() const noexcept {
+    return shash32(data(), length());
+}
+
+u64 StringView::hash64() const noexcept {
+    return shash64(data(), length());
 }
 
 int Std::spaceship(const u8* l, size_t ll, const u8* r, size_t rl) noexcept {

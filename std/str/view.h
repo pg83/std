@@ -61,13 +61,8 @@ namespace Std {
             return *(end() - 1);
         }
 
-        inline u32 hash32() const noexcept {
-            return shash32(data(), length());
-        }
-
-        inline u64 hash64() const noexcept {
-            return shash64(data(), length());
-        }
+        u32 hash32() const noexcept;
+        u64 hash64() const noexcept;
     };
 
     int spaceship(const u8* l, size_t ll, const u8* r, size_t rl) noexcept;
