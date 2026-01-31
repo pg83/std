@@ -1,7 +1,7 @@
 #include "view.h"
-#include "dynamic.h"
 
 #include <std/tst/ut.h>
+#include <std/lib/buffer.h>
 
 using namespace Std;
 
@@ -266,15 +266,15 @@ STD_TEST_SUITE(StringView) {
         STD_INSIST(h64 == 0 || h64 != 0);
     }
 
-    STD_TEST(ConstructFromDynString) {
-        DynString ds("dynamic");
+    STD_TEST(ConstructFromBuffer) {
+        Buffer ds("dynamic");
         StringView sv(ds);
         STD_INSIST(sv.length() == 7);
         STD_INSIST(sv[0] == 'd');
     }
 
-    STD_TEST(EqualityWithDynString) {
-        DynString ds("test");
+    STD_TEST(EqualityWithBuffer) {
+        Buffer ds("test");
         StringView sv("test");
         STD_INSIST(sv == StringView(ds));
     }

@@ -1,7 +1,6 @@
 #include "ut.h"
 
 #include <std/ios/sys.h>
-#include <std/ios/string.h>
 
 #include <std/mem/obj_pool.h>
 

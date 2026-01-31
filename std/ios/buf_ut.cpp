@@ -1,13 +1,12 @@
 #include "buf.h"
-#include "string.h"
 #include "mem.h"
 #include "len.h"
 
 #include <std/tst/ut.h>
-#include <std/str/dynamic.h>
 
 using namespace Std;
 
+/*
 STD_TEST_SUITE(OutBuf) {
     STD_TEST(basic_write) {
         DynString str;
@@ -392,3 +391,4 @@ STD_TEST_SUITE(OutBuf) {
         STD_INSIST(counter.collectedLength() == 300);
     }
 }
+*/

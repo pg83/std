@@ -6,7 +6,6 @@
 
 namespace Std {
     class Buffer;
-    struct DynString;
 
     class StringView: public StringOps<StringView> {
         const u8* ptr_;
@@ -32,7 +31,6 @@ namespace Std {
 
         StringView(const char* s) noexcept;
         StringView(const Buffer& b) noexcept;
-        StringView(const DynString& str) noexcept;
 
         inline auto mutData() noexcept {
             return ptr_;

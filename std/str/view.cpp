@@ -1,5 +1,4 @@
 #include "view.h"
-#include "dynamic.h"
 
 #include <std/ios/buf.h>
 #include <std/sys/crt.h>
@@ -17,11 +16,6 @@ StringView::StringView(const char* s) noexcept
 
 StringView::StringView(const Buffer& b) noexcept
     : StringView((const u8*)b.data(), b.length())
-{
-}
-
-StringView::StringView(const DynString& str) noexcept
-    : StringView(str.data(), str.length())
 {
 }
 

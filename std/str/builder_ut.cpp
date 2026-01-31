@@ -3,7 +3,6 @@
 
 #include <std/tst/ut.h>
 #include <std/ios/sys.h>
-#include <std/str/dynamic.h>
 
 using namespace Std;
 
