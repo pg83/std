@@ -1,7 +1,10 @@
 #include "fd.h"
 
 #include <std/str/view.h>
+#include <std/sys/throw.h>
+#include <std/str/builder.h>
 
+#include <errno.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
@@ -13,11 +16,19 @@ FDOutput::~FDOutput() noexcept {
 }
 
 void FDOutput::writeImpl(const void* data, size_t len) {
-    ::write(fd, data, len);
+    if (::write(fd, data, len) < 0) {
+        auto err = errno;
+
+        throwErrno(err, StringBuilder() << StringView(u8"write failed"));
+    }
 }
 
 void FDOutput::flushImpl() {
-    fsync(fd);
+    if (fsync(fd) < 0) {
+        auto err = errno;
+
+        throwErrno(err, StringBuilder() << StringView(u8"fsync failed"));
+    }
 }
 
 void FDOutput::finishImpl() {
@@ -57,5 +68,9 @@ static inline int writev_all(int fd, iovec* iov, size_t iovcnt) {
 }
 
 void FDOutput::writeVImpl(iovec* parts, size_t count) {
-    writev_all(fd, parts, count);
+    if (writev_all(fd, parts, count) < 0) {
+        auto err = errno;
+
+        throwErrno(err, StringBuilder() << StringView(u8"writev failed"));
+    }
 }
