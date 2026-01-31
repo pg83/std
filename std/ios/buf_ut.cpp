@@ -6,10 +6,28 @@
 
 using namespace Std;
 
-/*
+namespace {
+    struct StringOutput: public Output {
+        Buffer* buf;
+
+        inline StringOutput(Buffer& b)
+            : buf(&b)
+        {
+        }
+
+        void writeImpl(const void* data, size_t len) override {
+            buf->append(data, len);
+        }
+
+        size_t hintImpl() const noexcept override {
+            return (size_t)(-1);
+        }
+    };
+}
+
 STD_TEST_SUITE(OutBuf) {
     STD_TEST(basic_write) {
-        DynString str;
+        Buffer str;
         {
             StringOutput strOut(str);
             OutBuf buf(strOut);
@@ -19,7 +37,7 @@ STD_TEST_SUITE(OutBuf) {
     }
 
     STD_TEST(multiple_writes) {
-        DynString str;
+        Buffer str;
         {
             StringOutput strOut(str);
             OutBuf buf(strOut);
@@ -31,7 +49,7 @@ STD_TEST_SUITE(OutBuf) {
     }
 
     STD_TEST(flush) {
-        DynString str;
+        Buffer str;
         StringOutput strOut(str);
         OutBuf buf(strOut);
 
@@ -43,7 +61,7 @@ STD_TEST_SUITE(OutBuf) {
     }
 
     STD_TEST(auto_flush_on_destroy) {
-        DynString str;
+        Buffer str;
         StringOutput strOut(str);
         {
             OutBuf buf(strOut);
@@ -54,7 +72,7 @@ STD_TEST_SUITE(OutBuf) {
     }
 
     STD_TEST(large_write_over_threshold) {
-        DynString str;
+        Buffer str;
         StringOutput strOut(str);
         OutBuf buf(strOut);
 
@@ -70,7 +88,7 @@ STD_TEST_SUITE(OutBuf) {
     }
 
     STD_TEST(write_mixed_sizes) {
-        DynString str;
+        Buffer str;
         StringOutput strOut(str);
         OutBuf buf(strOut);
 
@@ -84,7 +102,7 @@ STD_TEST_SUITE(OutBuf) {
     }
 
     STD_TEST(zero_copy_imbue_bump) {
-        DynString str;
+        Buffer str;
         StringOutput strOut(str);
         OutBuf buf(strOut);
 
@@ -100,7 +118,7 @@ STD_TEST_SUITE(OutBuf) {
     }
 
     STD_TEST(move_constructor) {
-        DynString str;
+        Buffer str;
         StringOutput strOut(str);
         OutBuf buf1(strOut);
 
@@ -114,7 +132,7 @@ STD_TEST_SUITE(OutBuf) {
     }
 
     STD_TEST(xchg) {
-        DynString str1, str2;
+        Buffer str1, str2;
         StringOutput strOut1(str1);
         StringOutput strOut2(str2);
 
@@ -134,7 +152,7 @@ STD_TEST_SUITE(OutBuf) {
     }
 
     STD_TEST(stream_access) {
-        DynString str;
+        Buffer str;
         StringOutput strOut(str);
         OutBuf buf(strOut);
 
@@ -142,7 +160,7 @@ STD_TEST_SUITE(OutBuf) {
     }
 
     STD_TEST(finish_then_destroy) {
-        DynString str;
+        Buffer str;
         StringOutput strOut(str);
         {
             OutBuf buf(strOut);
@@ -153,7 +171,7 @@ STD_TEST_SUITE(OutBuf) {
     }
 
     STD_TEST(multiple_flushes) {
-        DynString str;
+        Buffer str;
         StringOutput strOut(str);
         OutBuf buf(strOut);
 
@@ -171,7 +189,7 @@ STD_TEST_SUITE(OutBuf) {
     }
 
     STD_TEST(operator_output) {
-        DynString str;
+        Buffer str;
         StringOutput strOut(str);
         OutBuf buf(strOut);
 
@@ -182,7 +200,7 @@ STD_TEST_SUITE(OutBuf) {
     }
 
     STD_TEST(accumulate_then_flush) {
-        DynString str;
+        Buffer str;
         StringOutput strOut(str);
         OutBuf buf(strOut);
 
@@ -195,7 +213,7 @@ STD_TEST_SUITE(OutBuf) {
     }
 
     STD_TEST(batch_write_near_threshold) {
-        DynString str;
+        Buffer str;
         StringOutput strOut(str);
         OutBuf buf(strOut);
 
@@ -391,4 +409,3 @@ STD_TEST_SUITE(OutBuf) {
         STD_INSIST(counter.collectedLength() == 300);
     }
 }
-*/
