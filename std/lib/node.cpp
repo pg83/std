@@ -8,4 +8,3 @@ void IntrusiveNode::xchg(IntrusiveNode& r) {
     ::Std::xchg(next, r.next);
     ::Std::xchg(prev, r.prev);
 }
-
