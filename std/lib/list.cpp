@@ -1,5 +1,5 @@
 #include "list.h"
-#include <algorithm>
+
 using namespace Std;
 
 namespace {
