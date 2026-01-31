@@ -17,5 +17,7 @@ namespace Std {
             prev = this;
             next = this;
         }
+
+        void xchg(IntrusiveNode& r);
     };
 }
