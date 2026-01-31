@@ -32,9 +32,9 @@ ObjPool::Ref ObjPool::fromMemory() {
 
 StringView ObjPool::intern(const StringView& s) {
     auto len = s.length();
-    auto res = (u8*)allocate(len);
+    auto res = (u8*)allocate(len + 1);
 
-    memCpy(res, s.data(), len);
+    *(u8*)memCpy(res, s.data(), len) = 0;
 
     return StringView(res, len);
 }
