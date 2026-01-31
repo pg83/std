@@ -5,7 +5,6 @@
 #include "outable.h"
 
 #include <std/sys/types.h>
-#include <std/typ/support.h>
 
 namespace Std {
     class StringView;
@@ -40,6 +39,6 @@ namespace Std {
     inline O&& operator<<(O&& out, const T& t) {
         output<ZeroCopyOutput, T>(out, t);
 
-        return forward<O>(out);
+        return static_cast<O&&>(out);
     }
 }
