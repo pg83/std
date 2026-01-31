@@ -7,7 +7,7 @@ void StringBuilder::writeImpl(const void* ptr, size_t len) {
 }
 
 void* StringBuilder::imbueImpl(size_t len) {
-    grow(len);
+    growDelta(len);
 
     return mutCurrent();
 }
