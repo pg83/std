@@ -1,5 +1,5 @@
 #include "list.h"
-
+#include <algorithm>
 using namespace Std;
 
 namespace {
@@ -28,19 +28,6 @@ unsigned IntrusiveList::length() const noexcept {
 }
 
 void IntrusiveList::xchg(IntrusiveList& r) noexcept {
-/*
-    if (empty()) {
-        other.xchgWithEmptyList(*this);
-    } else if (other.empty()) {
-        xchgWithEmptyList(other);
-    } else {
-        head.xchg(other.head);
-        head.next->prev = &head;
-        head.prev->next = &head;
-        other.head.next->prev = &other.head;
-        other.head.prev->next = &other.head;
-    }
-*/
     IntrusiveNode n;
 
     xchgWithEmpty(r.head, n);
