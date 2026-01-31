@@ -23,8 +23,9 @@ size_t StringBuilder::hintImpl() const noexcept {
 StringBuilder::StringBuilder() {
 }
 
-StringBuilder::StringBuilder(size_t reserve) {
-    grow(reserve);
+StringBuilder::StringBuilder(size_t reserve)
+    : Buffer(reserve)
+{
 }
 
 StringBuilder::~StringBuilder() noexcept {
