@@ -6,7 +6,7 @@
 #include <std/mem/obj_pool.h>
 
 #include <std/str/view.h>
-#include <std/str/dynamic.h>
+#include <std/str/builder.h>
 
 #include <std/alg/qsort.h>
 #include <std/alg/range.h>
@@ -54,7 +54,7 @@ namespace {
     };
 
     struct Tests: public Vector<Test*> {
-        DynString str;
+        Buffer str;
         ObjPool::Ref pool = ObjPool::fromMemory();
         Ctx* ctx = 0;
 
@@ -83,8 +83,12 @@ namespace {
         }
 
         inline void reg(TestFunc* func) {
-            pushBack(pool->make<Test>(func, pool->intern((StringOutput(str) << *func).str())));
-            str.clear();
+            StringBuilder sb;
+            sb.xchg(str);
+            sb << *func;
+            sb.xchg(str);
+            pushBack(pool->make<Test>(func, pool->intern(str)));
+            str.reset();
         }
 
         static inline auto& instance() noexcept {

@@ -6,7 +6,7 @@
 
 namespace Std {
     class Buffer;
-    class DynString;
+    struct DynString;
 
     class StringView: public StringOps<StringView> {
         const u8* ptr_;
