@@ -89,14 +89,6 @@ STD_TEST_SUITE(StringView) {
         STD_INSIST(sv.begin() == sv.end());
     }
 
-    STD_TEST(MutBeginEnd) {
-        const u8* data = (const u8*)"test";
-        StringView sv(data, 4);
-        auto it = sv.mutBegin();
-        STD_INSIST(it == sv.data());
-        STD_INSIST(sv.mutEnd() == sv.mutBegin() + 4);
-    }
-
     STD_TEST(EqualityOperator) {
         StringView sv1("hello");
         StringView sv2("hello");

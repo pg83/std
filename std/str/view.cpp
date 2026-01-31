@@ -19,6 +19,12 @@ StringView::StringView(const Buffer& b) noexcept
 {
 }
 
+int Std::spaceship(const u8* l, size_t ll, const u8* r, size_t rl) noexcept {
+    const auto rr = memCmp(l, r, ll < rl ? ll : rl);
+
+    return rr ? rr : (ll < rl ? -1 : (ll == rl ? 0 : 1));
+}
+
 template <>
 void Std::output<ZeroCopyOutput, StringView>(ZeroCopyOutput& out, const StringView& str) {
     out.write(str.data(), str.length());
