@@ -40,6 +40,16 @@ DEF_OUT(long)
 DEF_OUT(short)
 DEF_OUT(long long)
 
+#define DEF_OUT_FLOAT(typ)                                               \
+    template <>                                                          \
+    void Std::output<ZeroCopyOutput, typ>(ZeroCopyOutput & out, typ v) { \
+        out.bump(out.imbue(128) << (long double)v);                      \
+    }                                                                    \
+
+DEF_OUT_FLOAT(float)
+DEF_OUT_FLOAT(double)
+DEF_OUT_FLOAT(long double)
+
 template <>
 void Std::output<ZeroCopyOutput, U64>(ZeroCopyOutput& out, U64 v) {
     out.bump(out.imbue(24) << v.val);

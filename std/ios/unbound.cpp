@@ -17,6 +17,11 @@ void Std::output<UnboundBuffer, i64>(UnboundBuffer& buf, i64 v) {
 }
 
 template <>
-void Std::output<UnboundBuffer, StringView>(UnboundBuffer& buf, const StringView& v) {
+void Std::output<UnboundBuffer, long double>(UnboundBuffer& buf, long double v) {
+    buf.ptr = formatLongDouble(v, buf.ptr);
+}
+
+template <>
+void Std::output<UnboundBuffer, StringView>(UnboundBuffer& buf, StringView v) {
     buf.ptr = memCpy(buf.ptr, v.data(), v.length());
 }

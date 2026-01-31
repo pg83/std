@@ -4,7 +4,7 @@
 
 namespace Std {
     template <typename T>
-    concept PassByVal = sizeof(T) <= sizeof(void*) && stdIsTriviallyCopyable(T);
+    concept PassByVal = sizeof(T) <= 2 * sizeof(long double) && stdIsTriviallyCopyable(T);
 
     template <typename T>
     concept PassByRef = !PassByVal<T>;

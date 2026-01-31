@@ -35,6 +35,6 @@ int Std::spaceship(const u8* l, size_t ll, const u8* r, size_t rl) noexcept {
 }
 
 template <>
-void Std::output<ZeroCopyOutput, StringView>(ZeroCopyOutput& out, const StringView& str) {
+void Std::output<ZeroCopyOutput, StringView>(ZeroCopyOutput& out, StringView str) {
     out.write(str.data(), str.length());
 }
