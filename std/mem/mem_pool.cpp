@@ -4,12 +4,14 @@
 
 #include <std/sys/crt.h>
 
-#include <cmath>
 #include <cstddef>
+
+#include <math.h>
 
 using namespace Std;
 
 namespace {
+    constexpr size_t initial = 128;
     constexpr size_t alignment = alignof(std::max_align_t);
 
     struct alignas(alignment) Chunk: public Disposable, public Newable {
@@ -26,8 +28,8 @@ namespace {
 }
 
 MemoryPool::MemoryPool()
-    : currentChunk((u8*)allocateMemory(128))
-    , currentChunkEnd(currentChunk + 128)
+    : currentChunk((u8*)allocateMemory(initial))
+    , currentChunkEnd(currentChunk + initial)
     , ds(new (allocate(sizeof(ChunkDisposer))) ChunkDisposer())
 {
     ds->submit((ChunkDisposer*)ds);
@@ -52,7 +54,7 @@ void* MemoryPool::allocate(size_t len) {
 }
 
 void MemoryPool::allocateNewChunk(size_t minSize) {
-    size_t nextChunkSize = static_cast<size_t>(128 * std::pow(2.0, ds->length()));
+    size_t nextChunkSize = static_cast<size_t>(initial * pow(2.0, ds->length()));
 
     while (nextChunkSize < minSize) {
         nextChunkSize *= 2;
