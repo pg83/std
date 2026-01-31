@@ -6,6 +6,8 @@
 #include <std/typ/support.h>
 
 namespace Std {
+    class StringView;
+
     template <typename T>
     inline constexpr T* advancePtr(T* ptr, size_t len) noexcept {
         return (T*)(len + (const u8*)ptr);
@@ -31,6 +33,7 @@ namespace Std {
         ~Buffer() noexcept;
 
         Buffer(size_t len);
+        Buffer(const StringView& v);
         Buffer(const void* data, size_t len);
 
         Buffer() noexcept;

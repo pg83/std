@@ -1,10 +1,9 @@
 #include "buffer.h"
 
 #include <std/ios/buf.h>
-
 #include <std/mem/bss.h>
 #include <std/sys/crt.h>
-
+#include <std/str/view.h>
 #include <std/alg/bits.h>
 
 using namespace Std;
@@ -58,6 +57,11 @@ Buffer::Buffer(const void* ptr, size_t len)
     : Buffer()
 {
     append(ptr, len);
+}
+
+Buffer::Buffer(const StringView& v)
+    : Buffer(v.data(), v.length())
+{
 }
 
 Buffer::Buffer(Buffer&& buf) noexcept

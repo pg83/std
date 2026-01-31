@@ -5,6 +5,9 @@
 #include <std/sys/types.h>
 
 namespace Std {
+    class Buffer;
+    class DynString;
+
     class StringView: public StringOps<StringView> {
         const u8* ptr_;
         size_t len_;
@@ -12,12 +15,6 @@ namespace Std {
     public:
         inline StringView() noexcept
             : StringView(nullptr, 0)
-        {
-        }
-
-        template <typename Other>
-        inline StringView(const Other& str) noexcept
-            : StringView(str.data(), str.length())
         {
         }
 
@@ -34,6 +31,8 @@ namespace Std {
         }
 
         StringView(const char* s) noexcept;
+        StringView(const Buffer& b) noexcept;
+        StringView(const DynString& str) noexcept;
 
         inline auto mutData() noexcept {
             return ptr_;
