@@ -76,13 +76,6 @@ namespace Std {
             return *(mutEnd() - 1);
         }
 
-        template <typename P>
-        inline void markInitialized(P position) noexcept {
-            static_assert(sizeof(T) == 1);
-
-            buf_.seekAbsolute(position);
-        }
-
         inline void clear() noexcept {
             buf_.reset();
         }
