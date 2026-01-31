@@ -2,6 +2,7 @@
 
 namespace Std {
     class Buffer;
+    class StringView;
 
     enum class ExceptionKind {
         Errno,
@@ -11,6 +12,7 @@ namespace Std {
         virtual ~Exception() noexcept;
 
         virtual ExceptionKind kind() const noexcept = 0;
+        virtual StringView description() = 0;
     };
 
     void throwErrno(int err, Buffer&& text);

@@ -44,8 +44,9 @@ void HashTable::rehash() {
     next.xchg(*this);
 }
 
-HashTable::HashTable(size_t initialCapacity) {
-    buf.grow(initialCapacity * sizeof(Entry));
+HashTable::HashTable(size_t initialCapacity)
+    : buf(initialCapacity * sizeof(Entry))
+{
     memZero(buf.mutData(), buf.mutStorageEnd());
 }
 
