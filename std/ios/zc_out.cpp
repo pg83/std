@@ -44,7 +44,7 @@ DEF_OUT(long long)
     template <>                                                          \
     void Std::output<ZeroCopyOutput, typ>(ZeroCopyOutput & out, typ v) { \
         out.bump(out.imbue(128) << (long double)v);                      \
-    }                                                                    \
+    }
 
 DEF_OUT_FLOAT(float)
 DEF_OUT_FLOAT(double)
