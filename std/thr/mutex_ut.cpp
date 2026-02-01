@@ -18,7 +18,7 @@ STD_TEST_SUITE(Mutex) {
     STD_TEST(TryLockSuccess) {
         Mutex mutex;
 
-        bool locked = mutex.try_lock();
+        bool locked = mutex.tryLock();
         STD_INSIST(locked == true);
 
         mutex.unlock();
@@ -28,7 +28,7 @@ STD_TEST_SUITE(Mutex) {
         Mutex mutex;
 
         mutex.lock();
-        bool locked = mutex.try_lock();
+        bool locked = mutex.tryLock();
         STD_INSIST(locked == false);
 
         mutex.unlock();
@@ -47,7 +47,7 @@ STD_TEST_SUITE(Mutex) {
         Mutex mutex;
 
         for (int i = 0; i < 100; ++i) {
-            bool locked = mutex.try_lock();
+            bool locked = mutex.tryLock();
             STD_INSIST(locked == true);
             mutex.unlock();
         }
@@ -60,7 +60,7 @@ STD_TEST_SUITE(Mutex) {
             LockGuard guard(mutex);
         }
 
-        bool locked = mutex.try_lock();
+        bool locked = mutex.tryLock();
         STD_INSIST(locked == true);
         mutex.unlock();
     }
@@ -76,8 +76,8 @@ STD_TEST_SUITE(Mutex) {
             }
         }
 
-        bool locked1 = mutex1.try_lock();
-        bool locked2 = mutex2.try_lock();
+        bool locked1 = mutex1.tryLock();
+        bool locked2 = mutex2.tryLock();
 
         STD_INSIST(locked1 == true);
         STD_INSIST(locked2 == true);
@@ -95,7 +95,7 @@ STD_TEST_SUITE(Mutex) {
         } catch (int) {
         }
 
-        bool locked = mutex.try_lock();
+        bool locked = mutex.tryLock();
         STD_INSIST(locked == true);
         mutex.unlock();
     }
@@ -120,7 +120,7 @@ STD_TEST_SUITE(Mutex) {
         mutex.lock();
         mutex.unlock();
 
-        bool locked = mutex.try_lock();
+        bool locked = mutex.tryLock();
         STD_INSIST(locked == true);
         mutex.unlock();
 

@@ -37,6 +37,6 @@ void Mutex::unlock() noexcept {
     pthread_mutex_unlock(mutex(storage_));
 }
 
-bool Mutex::try_lock() noexcept {
+bool Mutex::tryLock() noexcept {
     return pthread_mutex_trylock(mutex(storage_)) == 0;
 }

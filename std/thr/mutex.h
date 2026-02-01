@@ -2,7 +2,7 @@
 
 namespace Std {
     class Mutex {
-        alignas(void*) char storage_[64];
+        alignas(void*) char storage_[128];
 
     public:
         Mutex();
@@ -10,20 +10,20 @@ namespace Std {
 
         void lock() noexcept;
         void unlock() noexcept;
-        bool try_lock() noexcept;
+        bool tryLock() noexcept;
     };
 
     class LockGuard {
         Mutex& mutex_;
 
     public:
-        explicit LockGuard(Mutex& mutex)
+        inline explicit LockGuard(Mutex& mutex)
             : mutex_(mutex)
         {
             mutex_.lock();
         }
 
-        ~LockGuard() noexcept {
+        inline ~LockGuard() noexcept {
             mutex_.unlock();
         }
     };
