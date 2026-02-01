@@ -12,6 +12,10 @@ namespace Std {
         SymbolTable();
         ~SymbolTable() noexcept;
 
+        inline HashTable& storage() noexcept {
+            return htable;
+        }
+
         void set(const StringView& key, void* v);
         void* find(const StringView& key) const noexcept;
     };

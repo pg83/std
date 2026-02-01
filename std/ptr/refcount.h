@@ -3,6 +3,8 @@
 #include <std/typ/support.h>
 
 namespace Std {
+    void xchgPtr(void** l, void** r);
+
     template <typename T, typename O>
     class RefCountPtr {
         T* t_;
@@ -55,6 +57,10 @@ namespace Std {
 
         inline auto& operator*() const noexcept {
             return *ptr();
+        }
+
+        inline void xchg(RefCountPtr& r) noexcept {
+            xchgPtr((void**)&t_, (void**)&r.t_);
         }
     };
 

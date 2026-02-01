@@ -10,6 +10,10 @@ namespace Std {
         void rehash();
 
     public:
+        struct Iterator {
+            virtual void process(void** el) = 0;
+        };
+
         HashTable(size_t initial);
 
         HashTable()
@@ -31,5 +35,7 @@ namespace Std {
         inline void xchg(HashTable& t) noexcept {
             buf.xchg(t.buf);
         }
+
+        void forEach(Iterator& it);
     };
 }

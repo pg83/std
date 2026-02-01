@@ -103,3 +103,11 @@ void HashTable::set(u64 key, void* value) {
 size_t HashTable::capacity() const noexcept {
     return erange(buf).length();
 }
+
+void HashTable::forEach(Iterator& it) {
+    for (auto& el : erange(buf)) {
+        if (el.filled()) {
+            it.process(&el.value);
+        }
+    }
+}

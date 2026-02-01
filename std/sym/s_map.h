@@ -29,5 +29,20 @@ namespace Std {
 
             return *insert(key);
         }
+
+        inline void compactify() {
+            struct Helper: public HashTable::Iterator {
+                ObjPool::Ref pool = ObjPool::fromMemory();
+
+                void process(void** el) override {
+                    *el = pool->make<T>(*(T*)*el);
+                }
+            };
+
+            Helper it;
+
+            st.storage().forEach(it);
+            pool.xchg(it.pool);
+        }
     };
 }
