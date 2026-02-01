@@ -1,7 +1,11 @@
 #pragma once
 
 namespace Std {
+    class CondVar;
+
     class Mutex {
+        friend class CondVar;
+
         alignas(void*) char storage_[128];
         struct Impl;
         Impl* impl() noexcept;
@@ -28,5 +32,19 @@ namespace Std {
         inline ~LockGuard() noexcept {
             mutex_.unlock();
         }
+    };
+
+    class CondVar {
+        alignas(void*) char storage_[128];
+        struct Impl;
+        Impl* impl() noexcept;
+
+    public:
+        CondVar();
+        ~CondVar() noexcept;
+
+        void wait(Mutex& mutex) noexcept;
+        void signal() noexcept;
+        void broadcast() noexcept;
     };
 }

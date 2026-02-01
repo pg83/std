@@ -62,5 +62,30 @@ void Thread::detach() {
 }
 
 void Std::detach(Runable& runable) {
-    Thread(runable).detach();
+    struct Helper: public Runable {
+        Runable* slave;
+        Thread* thr;
+
+        inline Helper(Runable* r) noexcept
+            : slave(r)
+            , thr(0)
+        {
+        }
+
+        ~Helper() noexcept {
+            delete thr;
+        }
+
+        void start() {
+            thr = new Thread(*this);
+            thr->detach();
+        }
+
+        void run() noexcept override {
+            slave->run();
+            delete this;
+        }
+    };
+
+    (new Helper(&runable))->start();
 }
