@@ -289,4 +289,229 @@ STD_TEST_SUITE(HashTable) {
         STD_INSIST(found3->x == 30 && found3->y == 3.5);
         STD_INSIST(strcmp(found1->name, "first") == 0);
     }
+
+    STD_TEST(forEachEmptyTable) {
+        HashTable ht;
+
+        struct CountIterator : HashTable::Iterator {
+            int count = 0;
+            void process(void** el) override {
+                count++;
+            }
+        };
+
+        CountIterator it;
+        ht.forEach(it);
+
+        STD_INSIST(it.count == 0);
+    }
+
+    STD_TEST(forEachSingleElement) {
+        HashTable ht;
+        int value = 42;
+        ht.set(1, &value);
+
+        struct CountIterator : HashTable::Iterator {
+            int count = 0;
+            void** lastEl = nullptr;
+            void process(void** el) override {
+                count++;
+                lastEl = el;
+            }
+        };
+
+        CountIterator it;
+        ht.forEach(it);
+
+        STD_INSIST(it.count == 1);
+        STD_INSIST(it.lastEl != nullptr);
+        STD_INSIST(*it.lastEl == &value);
+    }
+
+    STD_TEST(forEachMultipleElements) {
+        HashTable ht;
+
+        int values[5] = {10, 20, 30, 40, 50};
+        for (int i = 0; i < 5; ++i) {
+            ht.set(i + 1, &values[i]);
+        }
+
+        struct CountIterator : HashTable::Iterator {
+            int count = 0;
+            void process(void** el) override {
+                count++;
+            }
+        };
+
+        CountIterator it;
+        ht.forEach(it);
+
+        STD_INSIST(it.count == 5);
+        STD_INSIST(ht.size() == 5);
+    }
+
+    STD_TEST(forEachVisitsAllElements) {
+        HashTable ht;
+
+        int values[10];
+        for (int i = 0; i < 10; ++i) {
+            values[i] = i * 10;
+            ht.set(i + 1, &values[i]);
+        }
+
+        struct SumIterator : HashTable::Iterator {
+            int sum = 0;
+            void process(void** el) override {
+                int* ptr = static_cast<int*>(*el);
+                sum += *ptr;
+            }
+        };
+
+        SumIterator it;
+        ht.forEach(it);
+
+        STD_INSIST(it.sum == 0 + 10 + 20 + 30 + 40 + 50 + 60 + 70 + 80 + 90);
+    }
+
+    STD_TEST(forEachModifyValues) {
+        HashTable ht;
+
+        int values[5] = {1, 2, 3, 4, 5};
+        for (int i = 0; i < 5; ++i) {
+            ht.set(i + 1, &values[i]);
+        }
+
+        struct MultiplyIterator : HashTable::Iterator {
+            void process(void** el) override {
+                int* ptr = static_cast<int*>(*el);
+                *ptr *= 2;
+            }
+        };
+
+        MultiplyIterator it;
+        ht.forEach(it);
+
+        for (int i = 0; i < 5; ++i) {
+            int* found = static_cast<int*>(ht.find(i + 1));
+            STD_INSIST(found != nullptr);
+            STD_INSIST(*found == (i + 1) * 2);
+        }
+    }
+
+    STD_TEST(forEachLargeTable) {
+        HashTable ht;
+
+        const size_t count = 1000;
+        int* values = new int[count];
+
+        for (size_t i = 0; i < count; ++i) {
+            values[i] = i;
+            ht.set(i + 1, &values[i]);
+        }
+
+        struct CountIterator : HashTable::Iterator {
+            size_t count = 0;
+            void process(void** el) override {
+                count++;
+            }
+        };
+
+        CountIterator it;
+        ht.forEach(it);
+
+        STD_INSIST(it.count == count);
+        STD_INSIST(it.count == ht.size());
+
+        delete[] values;
+    }
+
+    STD_TEST(forEachCollectPointers) {
+        HashTable ht;
+
+        int values[5] = {10, 20, 30, 40, 50};
+        for (int i = 0; i < 5; ++i) {
+            ht.set(i + 1, &values[i]);
+        }
+
+        struct CollectIterator : HashTable::Iterator {
+            void* collected[5];
+            int index = 0;
+            void process(void** el) override {
+                if (index < 5) {
+                    collected[index++] = *el;
+                }
+            }
+        };
+
+        CollectIterator it;
+        ht.forEach(it);
+
+        STD_INSIST(it.index == 5);
+
+        bool found[5] = {false, false, false, false, false};
+        for (int i = 0; i < 5; ++i) {
+            for (int j = 0; j < 5; ++j) {
+                if (it.collected[i] == &values[j]) {
+                    found[j] = true;
+                }
+            }
+        }
+
+        for (int i = 0; i < 5; ++i) {
+            STD_INSIST(found[i]);
+        }
+    }
+
+    STD_TEST(forEachAfterRehash) {
+        HashTable ht(4);
+
+        int values[20];
+        for (int i = 0; i < 20; ++i) {
+            values[i] = i * 7;
+            ht.set(i + 1, &values[i]);
+        }
+
+        struct CountIterator : HashTable::Iterator {
+            int count = 0;
+            void process(void** el) override {
+                count++;
+            }
+        };
+
+        CountIterator it;
+        ht.forEach(it);
+
+        STD_INSIST(it.count == 20);
+        STD_INSIST(it.count == ht.size());
+    }
+
+    STD_TEST(forEachWithStructs) {
+        struct Data {
+            int x;
+            const char* name;
+        };
+
+        HashTable ht;
+
+        Data d1 = {10, "first"};
+        Data d2 = {20, "second"};
+        Data d3 = {30, "third"};
+
+        ht.set(1, &d1);
+        ht.set(2, &d2);
+        ht.set(3, &d3);
+
+        struct SumIterator : HashTable::Iterator {
+            int sum = 0;
+            void process(void** el) override {
+                Data* data = static_cast<Data*>(*el);
+                sum += data->x;
+            }
+        };
+
+        SumIterator it;
+        ht.forEach(it);
+
+        STD_INSIST(it.sum == 60);
+    }
 }
