@@ -39,8 +39,13 @@ void Output::writeV(const StringView* parts, size_t count) {
 }
 
 void Output::write(const void* data, size_t len) {
-    if (!len) {
-        return;
+    if (len < 1024) {
+        if (!len) {
+            return;
+        }
+
+        // do not call hint for really small data
+        return writeImpl(data, len);
     }
 
     const u8* b = (u8*)data;
