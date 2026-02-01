@@ -35,7 +35,7 @@ namespace Std {
                 ObjPool::Ref pool = ObjPool::fromMemory();
 
                 void process(void** el) override {
-                    *el = pool->make<T>(*(T*)*el);
+                    *el = pool->make<T>(*(const T*)*el);
                 }
             };
 

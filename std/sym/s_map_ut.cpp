@@ -387,4 +387,255 @@ STD_TEST_SUITE(SymbolMap) {
         STD_INSIST(s["a"] == 1);
         STD_INSIST(s["b"] == 2);
     }
+
+    STD_TEST(CompactifyEmpty) {
+        SymbolMap<int> s;
+
+        s.compactify();
+
+        STD_INSIST(s.find("key") == nullptr);
+    }
+
+    STD_TEST(CompactifyManyElements) {
+        SymbolMap<int> s;
+
+        for (int i = 0; i < 100; ++i) {
+            char key[16];
+            snprintf(key, sizeof(key), "key%d", i);
+            s[(const char*)key] = i * 10;
+        }
+
+        s.compactify();
+
+        for (int i = 0; i < 100; ++i) {
+            char key[16];
+            snprintf(key, sizeof(key), "key%d", i);
+            STD_INSIST(s[(const char*)key] == i * 10);
+        }
+    }
+
+    STD_TEST(CompactifyPreservesValues) {
+        SymbolMap<int> s;
+
+        s["first"] = 100;
+        s["second"] = 200;
+        s["third"] = 300;
+
+        s.compactify();
+
+        STD_INSIST(*s.find("first") == 100);
+        STD_INSIST(*s.find("second") == 200);
+        STD_INSIST(*s.find("third") == 300);
+    }
+
+    STD_TEST(CompactifyComplexType) {
+        struct Data {
+            int id;
+            float value;
+
+            Data()
+                : id(0)
+                , value(0.0f)
+            {
+            }
+            Data(int i, float v)
+                : id(i)
+                , value(v)
+            {
+            }
+        };
+
+        SymbolMap<Data> s;
+
+        s.insert("item1", 1, 1.5f);
+        s.insert("item2", 2, 2.5f);
+        s.insert("item3", 3, 3.5f);
+
+        s.compactify();
+
+        Data* d1 = s.find("item1");
+        Data* d2 = s.find("item2");
+        Data* d3 = s.find("item3");
+
+        STD_INSIST(d1 != nullptr);
+        STD_INSIST(d1->id == 1);
+        STD_INSIST(d1->value == 1.5f);
+
+        STD_INSIST(d2 != nullptr);
+        STD_INSIST(d2->id == 2);
+        STD_INSIST(d2->value == 2.5f);
+
+        STD_INSIST(d3 != nullptr);
+        STD_INSIST(d3->id == 3);
+        STD_INSIST(d3->value == 3.5f);
+    }
+
+    STD_TEST(CompactifyChangesPointers) {
+        SymbolMap<int> s;
+
+        s["key"] = 42;
+
+        int* oldPtr = s.find("key");
+
+        s.compactify();
+
+        int* newPtr = s.find("key");
+
+        STD_INSIST(oldPtr != newPtr);
+        STD_INSIST(*newPtr == 42);
+    }
+
+    STD_TEST(CompactifyMultipleTimes) {
+        SymbolMap<int> s;
+
+        s["a"] = 1;
+        s["b"] = 2;
+
+        s.compactify();
+
+        STD_INSIST(s["a"] == 1);
+        STD_INSIST(s["b"] == 2);
+
+        s.compactify();
+
+        STD_INSIST(s["a"] == 1);
+        STD_INSIST(s["b"] == 2);
+
+        s.compactify();
+
+        STD_INSIST(s["a"] == 1);
+        STD_INSIST(s["b"] == 2);
+    }
+
+    STD_TEST(CompactifyThenInsert) {
+        SymbolMap<int> s;
+
+        s["before"] = 10;
+
+        s.compactify();
+
+        s["after"] = 20;
+
+        STD_INSIST(s["before"] == 10);
+        STD_INSIST(s["after"] == 20);
+    }
+
+    STD_TEST(CompactifyThenModify) {
+        SymbolMap<int> s;
+
+        s["key"] = 100;
+
+        s.compactify();
+
+        s["key"] = 200;
+
+        STD_INSIST(*s.find("key") == 200);
+    }
+
+    STD_TEST(CompactifyWithVectorValues) {
+        SymbolMap<Vector<int>> s;
+
+        s["v1"].pushBack(1);
+        s["v1"].pushBack(2);
+
+        s["v2"].pushBack(3);
+        s["v2"].pushBack(4);
+        s["v2"].pushBack(5);
+
+        STD_INSIST(s["v1"].length() == 2);
+        STD_INSIST(s["v1"][0] == 1);
+        STD_INSIST(s["v1"][1] == 2);
+
+        STD_INSIST(s["v2"].length() == 3);
+        STD_INSIST(s["v2"][0] == 3);
+        STD_INSIST(s["v2"][1] == 4);
+        STD_INSIST(s["v2"][2] == 5);
+
+        s.compactify();
+
+        STD_INSIST(s["v1"].length() == 2);
+        STD_INSIST(s["v1"][0] == 1);
+        STD_INSIST(s["v1"][1] == 2);
+
+        STD_INSIST(s["v2"].length() == 3);
+        STD_INSIST(s["v2"][0] == 3);
+        STD_INSIST(s["v2"][1] == 4);
+        STD_INSIST(s["v2"][2] == 5);
+    }
+
+    STD_TEST(CompactifyWithEmptyStringKey) {
+        SymbolMap<int> s;
+
+        s[""] = 999;
+        s["normal"] = 111;
+
+        s.compactify();
+
+        STD_INSIST(*s.find("") == 999);
+        STD_INSIST(*s.find("normal") == 111);
+    }
+
+    STD_TEST(CompactifyPreservesAllKeys) {
+        SymbolMap<int> s;
+
+        s["alpha"] = 1;
+        s["beta"] = 2;
+        s["gamma"] = 3;
+        s["delta"] = 4;
+        s["epsilon"] = 5;
+
+        s.compactify();
+
+        STD_INSIST(s.find("alpha") != nullptr);
+        STD_INSIST(s.find("beta") != nullptr);
+        STD_INSIST(s.find("gamma") != nullptr);
+        STD_INSIST(s.find("delta") != nullptr);
+        STD_INSIST(s.find("epsilon") != nullptr);
+
+        STD_INSIST(*s.find("alpha") == 1);
+        STD_INSIST(*s.find("beta") == 2);
+        STD_INSIST(*s.find("gamma") == 3);
+        STD_INSIST(*s.find("delta") == 4);
+        STD_INSIST(*s.find("epsilon") == 5);
+    }
+
+    STD_TEST(CompactifySingleElement) {
+        SymbolMap<int> s;
+
+        s["only"] = 42;
+
+        s.compactify();
+
+        STD_INSIST(*s.find("only") == 42);
+    }
+
+    STD_TEST(CompactifyLargeValues) {
+        struct LargeStruct {
+            int data[100];
+
+            LargeStruct() {
+                for (int i = 0; i < 100; ++i) {
+                    data[i] = i;
+                }
+            }
+        };
+
+        SymbolMap<LargeStruct> s;
+
+        s.insert("large1");
+        s.insert("large2");
+
+        s.compactify();
+
+        LargeStruct* ls1 = s.find("large1");
+        LargeStruct* ls2 = s.find("large2");
+
+        STD_INSIST(ls1 != nullptr);
+        STD_INSIST(ls2 != nullptr);
+
+        for (int i = 0; i < 100; ++i) {
+            STD_INSIST(ls1->data[i] == i);
+            STD_INSIST(ls2->data[i] == i);
+        }
+    }
 }
