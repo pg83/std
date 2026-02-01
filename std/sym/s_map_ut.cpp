@@ -375,4 +375,16 @@ STD_TEST_SUITE(SymbolMap) {
         STD_INSIST(result != nullptr);
         STD_INSIST(result->value == 42);
     }
+
+    STD_TEST(Compactify) {
+        SymbolMap<int> s;
+
+        s["a"] = 1;
+        s["b"] = 2;
+
+        s.compactify();
+
+        STD_INSIST(s["a"] == 1);
+        STD_INSIST(s["b"] == 2);
+    }
 }
