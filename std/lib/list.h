@@ -11,6 +11,13 @@ namespace Std {
             clear();
         }
 
+        inline IntrusiveList() noexcept {
+        }
+
+        inline IntrusiveList(IntrusiveList&& r) noexcept {
+            r.xchgWithEmptyList(*this);
+        }
+
         inline bool empty() const noexcept {
             return head.next == &head;
         }
