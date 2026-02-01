@@ -29,12 +29,13 @@ namespace {
 
         StringView description() override {
             (StringBuilder()
-                << StringView(u8"(code ")
-                << error
-                << StringView(u8", descr ")
-                << (const char*)strerror(error)
-                << StringView(u8") ")
-                << text).xchg(full);
+             << StringView(u8"(code ")
+             << error
+             << StringView(u8", descr ")
+             << (const char*)strerror(error)
+             << StringView(u8") ")
+             << text)
+                .xchg(full);
 
             return full;
         }
