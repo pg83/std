@@ -3,6 +3,7 @@
 #include <std/mem/new.h>
 #include <std/str/view.h>
 #include <std/sys/throw.h>
+#include <std/ptr/scoped.h>
 #include <std/str/builder.h>
 #include <std/alg/destruct.h>
 
@@ -64,28 +65,26 @@ void Thread::detach() {
 void Std::detach(Runable& runable) {
     struct Helper: public Runable {
         Runable* slave;
-        Thread* thr;
+        ScopedPtr<Thread> thr;
 
         inline Helper(Runable* r) noexcept
             : slave(r)
-            , thr(0)
+            , thr(nullptr)
         {
         }
 
-        ~Helper() noexcept {
-            delete thr;
-        }
-
         void start() {
-            thr = new Thread(*this);
-            thr->detach();
+            (thr.ptr = new Thread(*this))->detach();
         }
 
         void run() noexcept override {
+            ScopedPtr<Helper> that(this);
             slave->run();
-            delete this;
         }
     };
 
-    (new Helper(&runable))->start();
+    ScopedPtr<Helper> guard(new Helper(&runable));
+
+    guard.ptr->start();
+    guard.drop();
 }
