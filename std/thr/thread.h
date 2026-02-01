@@ -29,7 +29,7 @@ namespace Std {
         {
         }
 
-        inline ~ScopedThread() {
+        inline ~ScopedThread() noexcept {
             thr.join();
         }
     };

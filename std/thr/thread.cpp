@@ -19,14 +19,14 @@ struct Thread::Impl: public Newable {
     explicit Impl(Runable& r)
         : runable(&r)
     {
-        if (pthread_create(&thread, nullptr, thread_func, this)) {
+        if (pthread_create(&thread, nullptr, threadFunc, this)) {
             auto err = errno;
 
             throwErrno(err, StringBuilder() << StringView(u8"pthread_create failed"));
         }
     }
 
-    static void* thread_func(void* arg) {
+    static void* threadFunc(void* arg) {
         ((Impl*)arg)->runable->run();
         return nullptr;
     }
