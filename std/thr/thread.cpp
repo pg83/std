@@ -12,10 +12,10 @@ using namespace Std;
 
 struct Thread::Impl: public Newable {
     pthread_t thread;
-    Runnable* runnable;
+    Runable* runable;
 
-    explicit Impl(Runnable& r)
-        : runnable(&r)
+    explicit Impl(Runable& r)
+        : runable(&r)
     {
         if (pthread_create(&thread, nullptr, thread_func, this)) {
             auto err = errno;
@@ -25,7 +25,7 @@ struct Thread::Impl: public Newable {
     }
 
     static void* thread_func(void* arg) {
-        ((Impl*)arg)->runnable->run();
+        ((Impl*)arg)->runable->run();
         return nullptr;
     }
 };
@@ -34,10 +34,10 @@ Thread::Impl* Thread::impl() const noexcept {
     return (Impl*)storage_;
 }
 
-Thread::Thread(Runnable& runnable) {
+Thread::Thread(Runable& runable) {
     static_assert(sizeof(storage_) >= sizeof(Impl));
 
-    new (storage_) Impl(runnable);
+    new (storage_) Impl(runable);
 }
 
 Thread::~Thread() noexcept {
@@ -57,4 +57,8 @@ void Thread::detach() {
 
         throwErrno(err, StringBuilder() << StringView(u8"pthread_detach failed"));
     }
+}
+
+void Std::detach(Runable& runable) {
+    Thread(runable).detach();
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 namespace Std {
-    struct Runnable {
+    struct Runable {
         virtual void run() = 0;
     };
 
@@ -12,10 +12,26 @@ namespace Std {
         Impl* impl() const noexcept;
 
     public:
-        explicit Thread(Runnable& runnable);
+        explicit Thread(Runable& runable);
         ~Thread() noexcept;
 
         void join();
         void detach();
     };
+
+    class ScopedThread {
+        Thread thr;
+
+    public:
+        inline ScopedThread(Runable& runable)
+            : thr(runable)
+        {
+        }
+
+        inline ~ScopedThread() {
+            thr.join();
+        }
+    };
+
+    void detach(Runable& runable);
 }

@@ -5,10 +5,10 @@
 using namespace Std;
 
 namespace {
-    struct CounterRunnable: public Runnable {
+    struct CounterRunable: public Runable {
         int* counter;
 
-        explicit CounterRunnable(int* c)
+        explicit CounterRunable(int* c)
             : counter(c)
         {
         }
@@ -18,11 +18,11 @@ namespace {
         }
     };
 
-    struct MultiIncrementRunnable: public Runnable {
+    struct MultiIncrementRunable: public Runable {
         int* counter;
         int iterations;
 
-        MultiIncrementRunnable(int* c, int iter)
+        MultiIncrementRunable(int* c, int iter)
             : counter(c)
             , iterations(iter)
         {
@@ -39,7 +39,7 @@ namespace {
 STD_TEST_SUITE(Thread) {
     STD_TEST(BasicThreadCreationAndJoin) {
         int counter = 0;
-        CounterRunnable runnable(&counter);
+        CounterRunable runnable(&counter);
 
         Thread thread(runnable);
         thread.join();
@@ -52,9 +52,9 @@ STD_TEST_SUITE(Thread) {
         int counter2 = 0;
         int counter3 = 0;
 
-        CounterRunnable runnable1(&counter1);
-        CounterRunnable runnable2(&counter2);
-        CounterRunnable runnable3(&counter3);
+        CounterRunable runnable1(&counter1);
+        CounterRunable runnable2(&counter2);
+        CounterRunable runnable3(&counter3);
 
         Thread thread1(runnable1);
         Thread thread2(runnable2);
@@ -71,7 +71,7 @@ STD_TEST_SUITE(Thread) {
 
     STD_TEST(ThreadWithMultipleIncrements) {
         int counter = 0;
-        MultiIncrementRunnable runnable(&counter, 1000);
+        MultiIncrementRunable runnable(&counter, 1000);
 
         Thread thread(runnable);
         thread.join();
@@ -82,7 +82,7 @@ STD_TEST_SUITE(Thread) {
     STD_TEST(SequentialThreadCreation) {
         for (int i = 0; i < 10; ++i) {
             int counter = 0;
-            CounterRunnable runnable(&counter);
+            CounterRunable runnable(&counter);
 
             Thread thread(runnable);
             thread.join();
@@ -96,9 +96,9 @@ STD_TEST_SUITE(Thread) {
         int counter2 = 0;
         int counter3 = 0;
 
-        MultiIncrementRunnable runnable1(&counter1, 100);
-        MultiIncrementRunnable runnable2(&counter2, 500);
-        MultiIncrementRunnable runnable3(&counter3, 1000);
+        MultiIncrementRunable runnable1(&counter1, 100);
+        MultiIncrementRunable runnable2(&counter2, 500);
+        MultiIncrementRunable runnable3(&counter3, 1000);
 
         Thread thread1(runnable1);
         Thread thread2(runnable2);
@@ -117,8 +117,8 @@ STD_TEST_SUITE(Thread) {
         int counter1 = 0;
         int counter2 = 0;
 
-        CounterRunnable runnable1(&counter1);
-        CounterRunnable runnable2(&counter2);
+        CounterRunable runnable1(&counter1);
+        CounterRunable runnable2(&counter2);
 
         Thread thread1(runnable1);
         Thread thread2(runnable2);
@@ -130,11 +130,11 @@ STD_TEST_SUITE(Thread) {
         STD_INSIST(counter2 == 1);
     }
 
-    STD_TEST(EmptyRunnableExecution) {
-        struct EmptyRunnable: public Runnable {
+    STD_TEST(EmptyRunableExecution) {
+        struct EmptyRunable: public Runable {
             bool* executed;
 
-            explicit EmptyRunnable(bool* e)
+            explicit EmptyRunable(bool* e)
                 : executed(e)
             {
             }
@@ -145,7 +145,7 @@ STD_TEST_SUITE(Thread) {
         };
 
         bool executed = false;
-        EmptyRunnable runnable(&executed);
+        EmptyRunable runnable(&executed);
 
         Thread thread(runnable);
         thread.join();
