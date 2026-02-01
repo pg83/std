@@ -6,7 +6,7 @@ namespace Std {
     };
 
     class Thread {
-        alignas(void*) char storage_[64];
+        alignas(void*) char storage_[16];
 
         struct Impl;
         Impl* impl() const noexcept;
