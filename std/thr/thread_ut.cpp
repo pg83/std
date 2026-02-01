@@ -1,5 +1,6 @@
 #include "thread.h"
 #include "mutex.h"
+#include "cond_var.h"
 
 #include <std/tst/ut.h>
 
