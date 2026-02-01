@@ -2,11 +2,9 @@
 
 #include "disposable.h"
 
-#include <std/lib/list.h>
-
 namespace Std {
     class Disposer {
-        IntrusiveList lst;
+        Disposable* end = 0;
 
     public:
         inline ~Disposer() noexcept {
@@ -16,11 +14,10 @@ namespace Std {
         void dispose() noexcept;
 
         inline void submit(Disposable* d) noexcept {
-            lst.pushBack(d);
+            d->prev = end;
+            end = d;
         }
 
-        inline unsigned length() const noexcept {
-            return lst.length();
-        }
+        unsigned length() const noexcept;
     };
 }

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <std/lib/node.h>
-
 namespace Std {
-    struct Disposable: public IntrusiveNode {
+    struct Disposable {
+        Disposable* prev = 0;
+
         virtual ~Disposable() noexcept;
     };
 }

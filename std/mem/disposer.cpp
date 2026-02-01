@@ -1,15 +1,22 @@
 #include "disposer.h"
 
-#include <std/typ/support.h>
-#include <std/alg/destruct.h>
 #include <std/alg/exchange.h>
+#include <std/alg/destruct.h>
 
 using namespace Std;
 
 void Disposer::dispose() noexcept {
-    IntrusiveList tmp(move(lst));
-
-    for (auto end = tmp.end(), cur = (const IntrusiveNode*)end->prev; cur != end;) {
-        destruct((Disposable*)exchange(cur, cur->prev));
+    while (end) {
+        destruct(exchange(end, end->prev));
     }
+}
+
+unsigned Disposer::length() const noexcept {
+    unsigned res = 0;
+
+    for (auto cur = end; cur; cur = cur->prev) {
+        ++res;
+    }
+
+    return res;
 }
