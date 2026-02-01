@@ -2,6 +2,7 @@
 
 #include <std/tst/ut.h>
 #include <std/str/view.h>
+#include <std/lib/vector.h>
 
 #include <cstddef>
 
@@ -503,5 +504,16 @@ STD_TEST_SUITE(ObjPool) {
 
     STD_TEST(testPrimitive) {
         ObjPool::fromMemory()->make<double>();
+    }
+
+    STD_TEST(Test1) {
+        auto pool = ObjPool::fromMemory();
+        auto v1 = pool->make<Vector<int>>();
+        v1->pushBack(1);
+        v1->pushBack(2);
+        auto v2 = pool->make<Vector<int>>(*v1);
+        STD_INSIST(v2->length() == 2);
+        STD_INSIST((*v2)[0] == 1);
+        STD_INSIST((*v2)[1] == 2);
     }
 }

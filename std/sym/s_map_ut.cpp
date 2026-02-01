@@ -553,6 +553,9 @@ STD_TEST_SUITE(SymbolMap) {
 
         s.compactify();
 
+        STD_INSIST(s.find("v1") != nullptr);
+        STD_INSIST(s.find("v2") != nullptr);
+
         STD_INSIST(s["v1"].length() == 2);
         STD_INSIST(s["v1"][0] == 1);
         STD_INSIST(s["v1"][1] == 2);
