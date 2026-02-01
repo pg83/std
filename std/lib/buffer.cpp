@@ -54,7 +54,7 @@ Buffer::Buffer(const Buffer& buf)
 }
 
 Buffer::Buffer(const void* ptr, size_t len)
-    : Buffer()
+    : Buffer(len)
 {
     append(ptr, len);
 }
