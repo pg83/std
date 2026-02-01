@@ -15,7 +15,7 @@ namespace {
         {
         }
 
-        void run() override {
+        void run() noexcept override {
             ++(*counter);
         }
     };
@@ -30,7 +30,7 @@ namespace {
         {
         }
 
-        void run() override {
+        void run() noexcept override {
             for (int i = 0; i < iterations; ++i) {
                 ++(*counter);
             }
@@ -141,7 +141,7 @@ STD_TEST_SUITE(Thread) {
             {
             }
 
-            void run() override {
+            void run() noexcept override {
                 *executed = true;
             }
         };
@@ -168,7 +168,7 @@ STD_TEST_SUITE(Thread) {
             {
             }
 
-            void run() override {
+            void run() noexcept override {
                 LockGuard lock(*mutex);
                 *executed = true;
                 cv->signal();
@@ -205,7 +205,7 @@ STD_TEST_SUITE(Thread) {
             {
             }
 
-            void run() override {
+            void run() noexcept override {
                 LockGuard lock(*mutex);
                 ++(*counter);
                 cv->signal();
@@ -244,7 +244,7 @@ STD_TEST_SUITE(Thread) {
             {
             }
 
-            void run() override {
+            void run() noexcept override {
                 LockGuard lock(*mutex);
                 ++(*counter);
                 ++(*completed);
@@ -298,7 +298,7 @@ STD_TEST_SUITE(Thread) {
             {
             }
 
-            void run() override {
+            void run() noexcept override {
                 for (int i = 0; i < iterations; ++i) {
                     LockGuard lock(*mutex);
                     ++(*counter);
@@ -347,7 +347,7 @@ STD_TEST_SUITE(Thread) {
             {
             }
 
-            void run() override {
+            void run() noexcept override {
                 LockGuard lock(*mutex);
                 while (*value != expected) {
                     cv->wait(*mutex);
@@ -396,7 +396,7 @@ STD_TEST_SUITE(Thread) {
             {
             }
 
-            void run() override {
+            void run() noexcept override {
                 {
                     LockGuard lock(*mutex);
                     *resource += myValue;

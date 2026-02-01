@@ -2,7 +2,7 @@
 
 namespace Std {
     struct Runable {
-        virtual void run() = 0;
+        virtual void run() noexcept = 0;
     };
 
     // should not be used directly, use ScopedThread or detach(Runable&)
