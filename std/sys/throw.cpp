@@ -5,6 +5,7 @@
 #include <std/typ/support.h>
 #include <std/str/builder.h>
 
+#include <errno.h>
 #include <string.h>
 
 using namespace Std;
@@ -19,6 +20,7 @@ namespace {
             : text(move(t))
             , error(e)
         {
+            errno = 0;
         }
 
         ExceptionKind kind() const noexcept override {
