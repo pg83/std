@@ -1,0 +1,60 @@
+#include "thread.h"
+
+#include <std/mem/new.h>
+#include <std/str/view.h>
+#include <std/sys/throw.h>
+#include <std/str/builder.h>
+
+#include <errno.h>
+#include <pthread.h>
+
+using namespace Std;
+
+struct Thread::Impl: public Newable {
+    pthread_t thread;
+    Runnable* runnable;
+
+    explicit Impl(Runnable& r)
+        : runnable(&r)
+    {
+        if (pthread_create(&thread, nullptr, thread_func, this)) {
+            auto err = errno;
+
+            throwErrno(err, StringBuilder() << StringView(u8"pthread_create failed"));
+        }
+    }
+
+    static void* thread_func(void* arg) {
+        static_cast<Impl*>(arg)->runnable->run();
+        return nullptr;
+    }
+};
+
+Thread::Impl* Thread::impl() const noexcept {
+    return (Impl*)storage_;
+}
+
+Thread::Thread(Runnable& runnable) {
+    static_assert(sizeof(storage_) >= sizeof(Impl));
+
+    new (storage_) Impl(runnable);
+}
+
+Thread::~Thread() {
+}
+
+void Thread::join() {
+    if (pthread_join(impl()->thread, nullptr)) {
+        auto err = errno;
+
+        throwErrno(err, StringBuilder() << StringView(u8"pthread_join failed"));
+    }
+}
+
+void Thread::detach() {
+    if (pthread_detach(impl()->thread)) {
+        auto err = errno;
+
+        throwErrno(err, StringBuilder() << StringView(u8"pthread_detach failed"));
+    }
+}
