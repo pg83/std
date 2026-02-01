@@ -11,8 +11,10 @@ namespace Std {
         size_t hintImpl() const noexcept override;
 
     public:
-        StringBuilder();
+        StringBuilder() noexcept;
         StringBuilder(size_t reserve);
+        StringBuilder(Buffer&& buf) noexcept;
+
         ~StringBuilder() noexcept override;
     };
 }

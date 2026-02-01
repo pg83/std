@@ -2,6 +2,8 @@
 
 #include <std/ios/sys.h>
 
+#include <std/typ/support.h>
+
 #include <std/mem/obj_pool.h>
 
 #include <std/str/view.h>
@@ -82,10 +84,7 @@ namespace {
         }
 
         inline void reg(TestFunc* func) {
-            StringBuilder sb;
-            sb.xchg(str);
-            sb << *func;
-            sb.xchg(str);
+            (StringBuilder(move(str)) << *func).xchg(str);
             pushBack(pool->make<Test>(func, pool->intern(str)));
             str.reset();
         }

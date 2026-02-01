@@ -20,7 +20,11 @@ size_t StringBuilder::hintImpl() const noexcept {
     return size_t(-1);
 }
 
-StringBuilder::StringBuilder() {
+StringBuilder::StringBuilder() noexcept {
+}
+
+StringBuilder::StringBuilder(Buffer&& buf) noexcept {
+    buf.xchg(*this);
 }
 
 StringBuilder::StringBuilder(size_t reserve)
