@@ -1,15 +1,9 @@
 #include "disposer.h"
 
+#include <std/alg/destruct.h>
 #include <std/alg/exchange.h>
 
 using namespace Std;
-
-namespace {
-    template <typename T>
-    inline void destruct(T* t) noexcept {
-        t->~T();
-    }
-}
 
 void Disposer::dispose() noexcept {
     IntrusiveList tmp;

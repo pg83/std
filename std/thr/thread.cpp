@@ -4,6 +4,7 @@
 #include <std/str/view.h>
 #include <std/sys/throw.h>
 #include <std/str/builder.h>
+#include <std/alg/destruct.h>
 
 #include <errno.h>
 #include <pthread.h>
@@ -41,6 +42,7 @@ Thread::Thread(Runable& runable) {
 }
 
 Thread::~Thread() noexcept {
+    destruct(impl());
 }
 
 void Thread::join() {
