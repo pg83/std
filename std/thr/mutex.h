@@ -3,6 +3,8 @@
 namespace Std {
     class Mutex {
         alignas(void*) char storage_[128];
+        struct Impl;
+        Impl* impl() noexcept;
 
     public:
         Mutex();
