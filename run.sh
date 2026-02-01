@@ -2,5 +2,5 @@
 
 set -xue
 
-~/ix/ix run set/dev/cc bld/make bld/sh bld/box lib/c++ lib/rapidhash lib/cpp/trace -- make
+~/ix/ix run set/dev/cc bld/make bld/sh bld/box lib/build/opt/O0 lib/c++ lib/rapidhash lib/cpp/trace lib/build/opt/O0 -- make
 time ./tst/test
