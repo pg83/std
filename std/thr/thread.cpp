@@ -25,7 +25,7 @@ struct Thread::Impl: public Newable {
     }
 
     static void* thread_func(void* arg) {
-        static_cast<Impl*>(arg)->runnable->run();
+        ((Impl*)arg)->runnable->run();
         return nullptr;
     }
 };
