@@ -336,4 +336,14 @@ STD_TEST_SUITE(Vector) {
         STD_INSIST(v[1] == 2);
         STD_INSIST(v[2] == 3);
     }
+
+    STD_TEST(Copy) {
+        Vector<int> v1;
+        v1.pushBack(1);
+        v1.pushBack(2);
+        Vector<int> v2(v1);
+        STD_INSIST(v1.length() == v2.length());
+        STD_INSIST(v1[0] == v2[0]);
+        STD_INSIST(v1[1] == v2[1]);
+    }
 }
