@@ -40,7 +40,7 @@ Thread::Thread(Runnable& runnable) {
     new (storage_) Impl(runnable);
 }
 
-Thread::~Thread() {
+Thread::~Thread() noexcept {
 }
 
 void Thread::join() {

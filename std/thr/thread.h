@@ -13,7 +13,7 @@ namespace Std {
 
     public:
         explicit Thread(Runnable& runnable);
-        ~Thread();
+        ~Thread() noexcept;
 
         void join();
         void detach();
