@@ -18,6 +18,8 @@
 #include <std/lib/vector.h>
 #include <std/lib/singleton.h>
 
+#include <stdio.h>
+
 using namespace Std;
 
 namespace {
@@ -58,6 +60,7 @@ namespace {
         Buffer str;
         ObjPool::Ref pool = ObjPool::fromMemory();
         Ctx* ctx = 0;
+        OutBuf* outbuf = 0;
 
         inline void run(Ctx& ctx_) {
             ctx = &ctx_;
@@ -66,19 +69,26 @@ namespace {
                 return l->fullName < r->fullName;
             });
 
-            setPanicHandler(panicHandler);
+            auto old = setPanicHandler(panicHandler);
             execute(sysO);
+            setPanicHandler(old);
         }
 
         inline void execute(OutBuf&& outb) {
+            outbuf = &outb;
+
             for (auto test : range(*this)) {
                 test->execute(outb);
             }
 
+            outbuf = nullptr;
             outb.finish();
         }
 
         inline void handlePanic() {
+            outbuf->flush();
+            fflush(stdout);
+            fflush(stderr);
             ctx->printTB();
             throw Exc();
         }

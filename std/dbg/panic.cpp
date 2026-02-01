@@ -2,11 +2,10 @@
 #include "color.h"
 
 #include <std/str/view.h>
-
 #include <std/ios/sys.h>
-#include <std/ios/output.h>
-
 #include <std/sys/crt.h>
+#include <std/ios/output.h>
+#include <std/alg/exchange.h>
 
 #include <stdlib.h>
 
@@ -16,8 +15,8 @@ namespace {
     static PanicHandler panicHandler = (PanicHandler)abort;
 }
 
-void Std::setPanicHandler(PanicHandler hndl) noexcept {
-    panicHandler = hndl;
+PanicHandler Std::setPanicHandler(PanicHandler hndl) noexcept {
+    return exchange(panicHandler, hndl);
 }
 
 void Std::panic(const u8* what, u32 line, const u8* file) {

@@ -96,6 +96,8 @@ void OutBuf::flushImpl() {
 
     buf.xchg(buf_);
     out_->write(buf.data(), buf.used());
+    buf.reset();
+    buf.xchg(buf_);
 }
 
 void OutBuf::finishImpl() {
