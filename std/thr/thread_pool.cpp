@@ -52,8 +52,7 @@ ThreadPoolImpl::ThreadPoolImpl(size_t numThreads)
     threads_.grow(numThreads);
 
     for (size_t i = 0; i < numThreads_; ++i) {
-        Worker* worker = pool_->make<Worker>(this);
-        threads_.mut(i) = pool_->make<Thread>(*worker);
+        threads_.pushBack(pool_->make<Thread>(*pool_->make<Worker>(this)));
     }
 }
 
