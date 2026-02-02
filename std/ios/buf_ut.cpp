@@ -11,7 +11,7 @@ namespace {
     struct StringOutput: public Output {
         Buffer* buf;
 
-        inline StringOutput(Buffer& b)
+        inline StringOutput(Buffer& b) noexcept
             : buf(&b)
         {
         }
