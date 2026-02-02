@@ -4,6 +4,7 @@
 
 #include <std/alg/xchg.h>
 #include <std/alg/range.h>
+#include <std/alg/minmax.h>
 
 using namespace Std;
 
@@ -45,7 +46,7 @@ void HashTable::rehash() {
 }
 
 HashTable::HashTable(size_t initialCapacity)
-    : buf(initialCapacity * sizeof(Entry))
+    : buf(max(initialCapacity, (size_t)1) * sizeof(Entry))
 {
     memZero(buf.mutData(), buf.mutStorageEnd());
 }
