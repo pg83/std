@@ -112,11 +112,7 @@ namespace Std {
             seekAbsolute(used() - len);
         }
 
-        inline void seekAbsolute(size_t pos) noexcept {
-            if (header()->used != pos) {
-                header()->used = pos;
-            }
-        }
+        void seekAbsolute(size_t pos) noexcept;
 
         inline void seekAbsolute(const void* ptr) noexcept {
             seekAbsolute(offsetOf(ptr));

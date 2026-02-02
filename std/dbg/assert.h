@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(NDEBUG)
+#if defined(NDEBUG) && !defined(ENABLE_ASSERT)
     #define STD_ASSERT(X)
 #else
     #include "insist.h"

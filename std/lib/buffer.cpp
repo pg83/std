@@ -5,6 +5,7 @@
 #include <std/sys/crt.h>
 #include <std/str/view.h>
 #include <std/alg/bits.h>
+#include <std/dbg/assert.h>
 
 using namespace Std;
 
@@ -72,6 +73,13 @@ Buffer::Buffer(Buffer&& buf) noexcept
 
 void Buffer::shrinkToFit() {
     Buffer(*this).xchg(*this);
+}
+
+void Buffer::seekAbsolute(size_t pos) noexcept {
+    if (header()->used != pos) {
+        STD_ASSERT(pos <= capacity());
+        header()->used = pos;
+    }
 }
 
 void Buffer::grow(size_t size) {
