@@ -5,6 +5,7 @@
 #include <std/sys/crt.h>
 #include <std/str/view.h>
 #include <std/alg/bits.h>
+#include <std/alg/minmax.h>
 #include <std/dbg/assert.h>
 
 using namespace Std;
@@ -18,7 +19,7 @@ namespace {
 
     static inline auto allocHeader(size_t len) {
         if (len) {
-            auto flen = clp2(len + sizeof(Buffer::Header));
+            auto flen = max<size_t>(clp2(len + sizeof(Buffer::Header)), 256);
             auto blen = flen - sizeof(Buffer::Header);
 
             return new (allocateMemory(flen)) Buffer::Header({

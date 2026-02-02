@@ -214,9 +214,9 @@ STD_TEST_SUITE(Buffer) {
         Buffer b(10);
         size_t oldCapacity = b.capacity();
 
-        b.grow(100);
+        b.grow(1000);
 
-        STD_INSIST(b.capacity() >= 100);
+        STD_INSIST(b.capacity() >= 1000);
         STD_INSIST(b.capacity() > oldCapacity);
     }
 

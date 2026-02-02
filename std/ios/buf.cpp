@@ -22,7 +22,6 @@ OutBuf::OutBuf(Output& out, size_t chunkSize) noexcept
     : out_(&out)
     , chunk(min(chunkSize, out_->hint()))
 {
-    buf_.grow(256);
 }
 
 OutBuf::OutBuf() noexcept
