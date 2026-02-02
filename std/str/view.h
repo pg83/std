@@ -1,7 +1,5 @@
 #pragma once
 
-#include "hash.h"
-
 #include <std/sys/types.h>
 
 namespace Std {
