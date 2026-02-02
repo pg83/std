@@ -69,9 +69,11 @@ namespace {
                 return l->fullName < r->fullName;
             });
 
-            auto old = setPanicHandler(panicHandler);
+            auto old1 = setPanicHandler1(panicHandler1);
+            auto old2 = setPanicHandler2(panicHandler2);
             execute(sysO);
-            setPanicHandler(old);
+            setPanicHandler1(old1);
+            setPanicHandler2(old2);
         }
 
         inline void execute(OutBuf&& outb) {
@@ -85,11 +87,16 @@ namespace {
             outb.finish();
         }
 
-        inline void handlePanic() {
-            outbuf->flush();
+        inline void handlePanic1() {
             fflush(stdout);
             fflush(stderr);
+            outbuf->flush();
+        }
+
+        inline void handlePanic2() {
             ctx->printTB();
+            fflush(stdout);
+            fflush(stderr);
             throw Exc();
         }
 
@@ -103,8 +110,12 @@ namespace {
             return singleton<Tests>();
         }
 
-        static void panicHandler() {
-            instance().handlePanic();
+        static void panicHandler1() {
+            instance().handlePanic1();
+        }
+
+        static void panicHandler2() {
+            instance().handlePanic2();
         }
     };
 }
