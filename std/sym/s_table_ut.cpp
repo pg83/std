@@ -309,7 +309,7 @@ STD_TEST_SUITE(SymbolTable) {
     STD_TEST(ForEachEmpty) {
         SymbolTable s;
 
-        struct CountIterator : HashTable::Iterator {
+        struct CountIterator: HashTable::Iterator {
             int count = 0;
             void process(void** el) override {
                 count++;
@@ -328,7 +328,7 @@ STD_TEST_SUITE(SymbolTable) {
         int value = 42;
         s.set("key", &value);
 
-        struct CountIterator : HashTable::Iterator {
+        struct CountIterator: HashTable::Iterator {
             int count = 0;
             void** lastEl = nullptr;
             void process(void** el) override {
@@ -356,7 +356,7 @@ STD_TEST_SUITE(SymbolTable) {
         s.set("k4", &v4);
         s.set("k5", &v5);
 
-        struct CountIterator : HashTable::Iterator {
+        struct CountIterator: HashTable::Iterator {
             int count = 0;
             void process(void** el) override {
                 count++;
@@ -380,7 +380,7 @@ STD_TEST_SUITE(SymbolTable) {
             s.set((const char*)key, &values[i]);
         }
 
-        struct SumIterator : HashTable::Iterator {
+        struct SumIterator: HashTable::Iterator {
             int sum = 0;
             void process(void** el) override {
                 int* ptr = static_cast<int*>(*el);
@@ -404,7 +404,7 @@ STD_TEST_SUITE(SymbolTable) {
             s.set((const char*)key, &values[i]);
         }
 
-        struct MultiplyIterator : HashTable::Iterator {
+        struct MultiplyIterator: HashTable::Iterator {
             void process(void** el) override {
                 int* ptr = static_cast<int*>(*el);
                 *ptr *= 2;
@@ -428,7 +428,7 @@ STD_TEST_SUITE(SymbolTable) {
         s.set("b", &v2);
         s.set("c", &v3);
 
-        struct CollectIterator : HashTable::Iterator {
+        struct CollectIterator: HashTable::Iterator {
             void* collected[3];
             int index = 0;
             void process(void** el) override {
@@ -445,12 +445,15 @@ STD_TEST_SUITE(SymbolTable) {
 
         bool found[3] = {false, false, false};
         for (int i = 0; i < 3; ++i) {
-            if (it.collected[i] == &v1)
+            if (it.collected[i] == &v1) {
                 found[0] = true;
-            if (it.collected[i] == &v2)
+            }
+            if (it.collected[i] == &v2) {
                 found[1] = true;
-            if (it.collected[i] == &v3)
+            }
+            if (it.collected[i] == &v3) {
                 found[2] = true;
+            }
         }
 
         STD_INSIST(found[0] && found[1] && found[2]);

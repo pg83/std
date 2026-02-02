@@ -71,7 +71,9 @@ namespace {
 
             auto old1 = setPanicHandler1(panicHandler1);
             auto old2 = setPanicHandler2(panicHandler2);
+
             execute(sysO);
+
             setPanicHandler1(old1);
             setPanicHandler2(old2);
         }

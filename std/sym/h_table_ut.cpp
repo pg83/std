@@ -293,7 +293,7 @@ STD_TEST_SUITE(HashTable) {
     STD_TEST(forEachEmptyTable) {
         HashTable ht;
 
-        struct CountIterator : HashTable::Iterator {
+        struct CountIterator: HashTable::Iterator {
             int count = 0;
             void process(void** el) override {
                 count++;
@@ -311,7 +311,7 @@ STD_TEST_SUITE(HashTable) {
         int value = 42;
         ht.set(1, &value);
 
-        struct CountIterator : HashTable::Iterator {
+        struct CountIterator: HashTable::Iterator {
             int count = 0;
             void** lastEl = nullptr;
             void process(void** el) override {
@@ -336,7 +336,7 @@ STD_TEST_SUITE(HashTable) {
             ht.set(i + 1, &values[i]);
         }
 
-        struct CountIterator : HashTable::Iterator {
+        struct CountIterator: HashTable::Iterator {
             int count = 0;
             void process(void** el) override {
                 count++;
@@ -359,7 +359,7 @@ STD_TEST_SUITE(HashTable) {
             ht.set(i + 1, &values[i]);
         }
 
-        struct SumIterator : HashTable::Iterator {
+        struct SumIterator: HashTable::Iterator {
             int sum = 0;
             void process(void** el) override {
                 int* ptr = static_cast<int*>(*el);
@@ -381,7 +381,7 @@ STD_TEST_SUITE(HashTable) {
             ht.set(i + 1, &values[i]);
         }
 
-        struct MultiplyIterator : HashTable::Iterator {
+        struct MultiplyIterator: HashTable::Iterator {
             void process(void** el) override {
                 int* ptr = static_cast<int*>(*el);
                 *ptr *= 2;
@@ -409,7 +409,7 @@ STD_TEST_SUITE(HashTable) {
             ht.set(i + 1, &values[i]);
         }
 
-        struct CountIterator : HashTable::Iterator {
+        struct CountIterator: HashTable::Iterator {
             size_t count = 0;
             void process(void** el) override {
                 count++;
@@ -433,7 +433,7 @@ STD_TEST_SUITE(HashTable) {
             ht.set(i + 1, &values[i]);
         }
 
-        struct CollectIterator : HashTable::Iterator {
+        struct CollectIterator: HashTable::Iterator {
             void* collected[5];
             int index = 0;
             void process(void** el) override {
@@ -471,7 +471,7 @@ STD_TEST_SUITE(HashTable) {
             ht.set(i + 1, &values[i]);
         }
 
-        struct CountIterator : HashTable::Iterator {
+        struct CountIterator: HashTable::Iterator {
             int count = 0;
             void process(void** el) override {
                 count++;
@@ -501,7 +501,7 @@ STD_TEST_SUITE(HashTable) {
         ht.set(2, &d2);
         ht.set(3, &d3);
 
-        struct SumIterator : HashTable::Iterator {
+        struct SumIterator: HashTable::Iterator {
             int sum = 0;
             void process(void** el) override {
                 Data* data = static_cast<Data*>(*el);
