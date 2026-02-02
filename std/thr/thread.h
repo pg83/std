@@ -16,8 +16,8 @@ namespace Std {
         explicit Thread(Runable& runable);
         ~Thread() noexcept;
 
-        void join();
-        void detach();
+        void join() noexcept;
+        void detach() noexcept;
     };
 
     class ScopedThread {

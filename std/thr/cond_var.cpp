@@ -3,6 +3,7 @@
 
 #include <std/str/view.h>
 #include <std/sys/throw.h>
+#include <std/dbg/insist.h>
 #include <std/str/builder.h>
 
 #include <errno.h>
@@ -28,17 +29,17 @@ CondVar::CondVar() {
 }
 
 CondVar::~CondVar() noexcept {
-    pthread_cond_destroy(impl());
+    STD_INSIST(pthread_cond_destroy(impl()) == 0);
 }
 
 void CondVar::wait(Mutex& mutex) noexcept {
-    pthread_cond_wait(impl(), (pthread_mutex_t*)mutex.impl());
+    STD_INSIST(pthread_cond_wait(impl(), (pthread_mutex_t*)mutex.impl()) == 0);
 }
 
 void CondVar::signal() noexcept {
-    pthread_cond_signal(impl());
+    STD_INSIST(pthread_cond_signal(impl()) == 0);
 }
 
 void CondVar::broadcast() noexcept {
-    pthread_cond_broadcast(impl());
+    STD_INSIST(pthread_cond_broadcast(impl()) == 0);
 }

@@ -4,6 +4,7 @@
 #include <std/str/view.h>
 #include <std/sys/throw.h>
 #include <std/ptr/scoped.h>
+#include <std/dbg/insist.h>
 #include <std/str/builder.h>
 #include <std/alg/destruct.h>
 
@@ -46,20 +47,12 @@ Thread::~Thread() noexcept {
     destruct(impl());
 }
 
-void Thread::join() {
-    if (pthread_join(impl()->thread, nullptr)) {
-        auto err = errno;
-
-        throwErrno(err, StringBuilder() << StringView(u8"pthread_join failed"));
-    }
+void Thread::join() noexcept {
+    STD_INSIST(pthread_join(impl()->thread, nullptr) == 0);
 }
 
-void Thread::detach() {
-    if (pthread_detach(impl()->thread)) {
-        auto err = errno;
-
-        throwErrno(err, StringBuilder() << StringView(u8"pthread_detach failed"));
-    }
+void Thread::detach() noexcept {
+    STD_INSIST(pthread_detach(impl()->thread) == 0);
 }
 
 void Std::detach(Runable& runable) {
