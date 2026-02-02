@@ -2,6 +2,7 @@
 
 #include <std/str/view.h>
 #include <std/sys/throw.h>
+#include <std/dbg/insist.h>
 #include <std/str/builder.h>
 
 #include <errno.h>
@@ -27,15 +28,15 @@ Mutex::Mutex() {
 }
 
 Mutex::~Mutex() noexcept {
-    pthread_mutex_destroy(impl());
+    STD_INSIST(pthread_mutex_destroy(impl()) == 0);
 }
 
 void Mutex::lock() noexcept {
-    pthread_mutex_lock(impl());
+    STD_INSIST(pthread_mutex_lock(impl()) == 0);
 }
 
 void Mutex::unlock() noexcept {
-    pthread_mutex_unlock(impl());
+    STD_INSIST(pthread_mutex_unlock(impl()) == 0);
 }
 
 bool Mutex::tryLock() noexcept {
