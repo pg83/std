@@ -18,6 +18,10 @@ namespace Std {
             htable.forEach(it);
         }
 
+        void compactify() {
+            htable.compactify();
+        }
+
         void set(const StringView& key, void* v);
         void* find(const StringView& key) const noexcept;
     };

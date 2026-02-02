@@ -38,6 +38,8 @@ namespace Std {
                 }
             };
 
+            st.compactify();
+
             Helper it;
 
             st.forEach(it);
