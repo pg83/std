@@ -11,16 +11,18 @@
 using namespace Std;
 
 namespace {
-    struct ThreadPoolImpl: public ThreadPool {
+    class ThreadPoolImpl: public ThreadPool {
         struct Worker: public Runable {
             ThreadPoolImpl* pool_;
 
-            explicit Worker(ThreadPoolImpl* p) noexcept
+            inline explicit Worker(ThreadPoolImpl* p) noexcept
                 : pool_(p)
             {
             }
 
-            void run() noexcept override;
+            void run() noexcept override {
+                pool_->workerLoop();
+            }
         };
 
         Mutex mutex_;
@@ -34,8 +36,8 @@ namespace {
 
         void workerLoop() noexcept;
 
-        explicit ThreadPoolImpl(size_t numThreads);
-        ~ThreadPoolImpl() noexcept;
+    public:
+        ThreadPoolImpl(size_t numThreads);
 
         void submit(Task& task) override;
         void join() noexcept override;
@@ -53,9 +55,6 @@ ThreadPoolImpl::ThreadPoolImpl(size_t numThreads)
         Worker* worker = pool_->make<Worker>(this);
         threads_.mut(i) = pool_->make<Thread>(*worker);
     }
-}
-
-ThreadPoolImpl::~ThreadPoolImpl() noexcept {
 }
 
 void ThreadPoolImpl::submit(Task& task) {
@@ -96,10 +95,6 @@ void ThreadPoolImpl::workerLoop() noexcept {
 
         task->run();
     }
-}
-
-void ThreadPoolImpl::Worker::run() noexcept {
-    pool_->workerLoop();
 }
 
 ThreadPool::~ThreadPool() noexcept {
