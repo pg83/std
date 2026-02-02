@@ -88,8 +88,6 @@ namespace {
         }
 
         inline void handlePanic1() {
-            fflush(stdout);
-            fflush(stderr);
             outbuf->flush();
         }
 
