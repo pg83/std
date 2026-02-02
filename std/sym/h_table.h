@@ -27,6 +27,7 @@ namespace Std {
 
         void* find(u64 key) const noexcept;
         void set(u64 key, void* value);
+        void erase(u64 key) noexcept;
 
         inline size_t size() const noexcept {
             return buf.used();

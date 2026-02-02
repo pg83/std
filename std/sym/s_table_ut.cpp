@@ -11,11 +11,11 @@ STD_TEST_SUITE(SymbolTable) {
     STD_TEST(BasicSetAndFind) {
         SymbolTable s;
 
-        s.set("qw1", (void*)1);
-        s.set("qw2", (void*)2);
+        s.set("qw1", (void*)2);
+        s.set("qw2", (void*)3);
 
-        STD_INSIST(s.find("qw1") == (void*)1);
-        STD_INSIST(s.find("qw2") == (void*)2);
+        STD_INSIST(s.find("qw1") == (void*)2);
+        STD_INSIST(s.find("qw2") == (void*)3);
         STD_INSIST(s.find("qw3") == nullptr);
     }
 

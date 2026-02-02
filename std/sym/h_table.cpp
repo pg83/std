@@ -16,6 +16,18 @@ namespace {
         inline bool filled() const noexcept {
             return value;
         }
+
+        inline void erase() noexcept {
+            value = (void*)1;
+        }
+
+        inline bool erased() const noexcept {
+            return value == (void*)1;
+        }
+
+        inline bool used() const noexcept {
+            return ((size_t)value) > 1;
+        }
     };
 
     static inline auto erange(Buffer& b) noexcept {
@@ -38,7 +50,7 @@ void HashTable::rehash() {
     HashTable next(r.length() * 1.5);
 
     for (const auto& c : r) {
-        if (c.filled()) {
+        if (c.used()) {
             next.setNoRehash(c.key, c.value);
         }
     }
@@ -67,11 +79,21 @@ void* HashTable::findEntryPtr(u64 key) const noexcept {
         }
 
         if (el.key == key) {
+            if (el.erased()) {
+                return nullptr;
+            }
+
             return (void*)&el;
         }
     }
 
     return nullptr;
+}
+
+void HashTable::erase(u64 key) noexcept {
+    if (auto el = findEntryPtr(key); el) {
+        ((Entry*)el)->erase();
+    }
 }
 
 void* HashTable::find(u64 key) const noexcept {
