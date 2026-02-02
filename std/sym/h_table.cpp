@@ -38,7 +38,7 @@ void HashTable::rehash() {
 
     for (const auto& c : r) {
         if (c.filled()) {
-            next.set(c.key, c.value);
+            next.setNoRehash(c.key, c.value);
         }
     }
 
@@ -78,6 +78,10 @@ void HashTable::set(u64 key, void* value) {
         rehash();
     }
 
+    setNoRehash(key, value);
+}
+
+void HashTable::setNoRehash(u64 key, void* value) {
     auto r = erange(buf);
     auto c = r.length();
 

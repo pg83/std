@@ -8,6 +8,7 @@ namespace Std {
         Buffer buf;
 
         void rehash();
+        void setNoRehash(u64 key, void* value);
 
     public:
         struct Iterator {
