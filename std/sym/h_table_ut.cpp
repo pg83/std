@@ -1,6 +1,7 @@
 #include "h_table.h"
 
 #include <std/tst/ut.h>
+#include <std/rng/pcg.h>
 
 #include <string.h>
 
@@ -828,5 +829,80 @@ STD_TEST_SUITE(HashTable) {
                 STD_INSIST(ht.find(j + 1) == &values[j]);
             }
         }
+    }
+
+    STD_TEST(EraseStressTest) {
+        HashTable ht;
+
+        const size_t totalCount = 1000;
+        const size_t eraseCount = 500;
+
+        int* values = new int[totalCount];
+        for (size_t i = 0; i < totalCount; ++i) {
+            values[i] = i * 13;
+            ht.set(i + 1, &values[i]);
+        }
+
+        STD_INSIST(ht.size() == totalCount);
+
+        u64 keys[totalCount];
+        for (size_t i = 0; i < totalCount; ++i) {
+            keys[i] = i + 1;
+        }
+
+        PCG32 rng(42);
+        for (size_t i = totalCount - 1; i > 0; --i) {
+            size_t j = rng.uniformBiased(i + 1);
+            u64 temp = keys[i];
+            keys[i] = keys[j];
+            keys[j] = temp;
+        }
+
+        bool erased[totalCount];
+        for (size_t i = 0; i < totalCount; ++i) {
+            erased[i] = false;
+        }
+
+        for (size_t i = 0; i < eraseCount; ++i) {
+            u64 key = keys[i];
+            size_t idx = key - 1;
+
+            size_t expectedSize = totalCount - i;
+            STD_INSIST(ht.size() == expectedSize);
+
+            void* found = ht.find(key);
+            STD_INSIST(found == &values[idx]);
+
+            ht.erase(key);
+            erased[idx] = true;
+
+            expectedSize = totalCount - i - 1;
+            STD_INSIST(ht.size() == expectedSize);
+
+            STD_INSIST(ht.find(key) == nullptr);
+
+            for (size_t j = 0; j < totalCount; ++j) {
+                u64 checkKey = j + 1;
+                void* result = ht.find(checkKey);
+                if (erased[j]) {
+                    STD_INSIST(result == nullptr);
+                } else {
+                    STD_INSIST(result == &values[j]);
+                }
+            }
+        }
+
+        STD_INSIST(ht.size() == totalCount - eraseCount);
+
+        for (size_t i = 0; i < totalCount; ++i) {
+            void* result = ht.find(i + 1);
+            if (erased[i]) {
+                STD_INSIST(result == nullptr);
+            } else {
+                STD_INSIST(result == &values[i]);
+            }
+        }
+
+        delete[] values;
     }
 }
