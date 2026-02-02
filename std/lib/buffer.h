@@ -108,6 +108,10 @@ namespace Std {
             seekAbsolute(used() + len);
         }
 
+        inline void seekNegative(size_t len) noexcept {
+            seekAbsolute(used() - len);
+        }
+
         inline void seekAbsolute(size_t pos) noexcept {
             if (header()->used != pos) {
                 header()->used = pos;

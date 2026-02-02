@@ -533,7 +533,8 @@ STD_TEST_SUITE(HashTable) {
         STD_INSIST(ht.find(1) == &value1);
         STD_INSIST(ht.find(2) == nullptr);
         STD_INSIST(ht.find(3) == &value3);
-        STD_INSIST(ht.size() == 3);
+
+        STD_INSIST(ht.size() == 2);
     }
 
     STD_TEST(eraseNonExistent) {
@@ -572,6 +573,7 @@ STD_TEST_SUITE(HashTable) {
         HashTable ht;
 
         int values[5] = {10, 20, 30, 40, 50};
+
         for (int i = 0; i < 5; ++i) {
             ht.set(i + 1, &values[i]);
         }
@@ -586,7 +588,7 @@ STD_TEST_SUITE(HashTable) {
             STD_INSIST(ht.find(i + 1) == nullptr);
         }
 
-        STD_INSIST(ht.size() == 5);
+        STD_INSIST(ht.size() == 0);
     }
 
     STD_TEST(eraseFromEmpty) {

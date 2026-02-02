@@ -93,6 +93,7 @@ void* HashTable::findEntryPtr(u64 key) const noexcept {
 void HashTable::erase(u64 key) noexcept {
     if (auto el = findEntryPtr(key); el) {
         ((Entry*)el)->erase();
+        buf.seekNegative(1);
     }
 }
 
@@ -119,7 +120,7 @@ void HashTable::setNoRehash(u64 key, void* value) {
     for (auto i = hash(key, c);; i = (i + 1) % c) {
         auto& el = r.b[i];
 
-        if (!el.filled()) {
+        if (!el.used()) {
             el.key = key;
             el.value = value;
 
