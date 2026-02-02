@@ -34,6 +34,7 @@ namespace {
 void HashTable::rehash() {
     auto r = erange(buf);
 
+    // 1.5 * 0.7 == 1.05 > 1
     HashTable next(r.length() * 1.5);
 
     for (const auto& c : r) {
@@ -54,7 +55,7 @@ HashTable::HashTable(size_t initialCapacity)
 HashTable::~HashTable() noexcept {
 }
 
-void* HashTable::find(u64 key) const noexcept {
+void* HashTable::findEntryPtr(u64 key) const noexcept {
     auto r = erange(buf);
     auto c = r.length();
 
@@ -66,8 +67,16 @@ void* HashTable::find(u64 key) const noexcept {
         }
 
         if (el.key == key) {
-            return el.value;
+            return (void*)&el;
         }
+    }
+
+    return nullptr;
+}
+
+void* HashTable::find(u64 key) const noexcept {
+    if (auto el = findEntryPtr(key); el) {
+        return ((const Entry*)el)->value;
     }
 
     return nullptr;

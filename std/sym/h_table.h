@@ -9,6 +9,7 @@ namespace Std {
 
         void rehash();
         void setNoRehash(u64 key, void* value);
+        void* findEntryPtr(u64 key) const noexcept;
 
     public:
         struct Iterator {
