@@ -99,7 +99,8 @@ STD_TEST_SUITE(ThreadPool) {
             CounterTask(&counter), CounterTask(&counter), CounterTask(&counter), CounterTask(&counter), CounterTask(&counter),
             CounterTask(&counter), CounterTask(&counter), CounterTask(&counter), CounterTask(&counter), CounterTask(&counter),
             CounterTask(&counter), CounterTask(&counter), CounterTask(&counter), CounterTask(&counter), CounterTask(&counter),
-            CounterTask(&counter), CounterTask(&counter), CounterTask(&counter), CounterTask(&counter), CounterTask(&counter)};
+            CounterTask(&counter), CounterTask(&counter), CounterTask(&counter), CounterTask(&counter), CounterTask(&counter),
+        };
 
         for (int i = 0; i < numTasks; ++i) {
             pool->submit(tasks[i]);
@@ -133,7 +134,8 @@ STD_TEST_SUITE(ThreadPool) {
             SleepTask(), SleepTask(), SleepTask(), SleepTask(), SleepTask(),
             SleepTask(), SleepTask(), SleepTask(), SleepTask(), SleepTask(),
             SleepTask(), SleepTask(), SleepTask(), SleepTask(), SleepTask(),
-            SleepTask(), SleepTask(), SleepTask(), SleepTask(), SleepTask()};
+            SleepTask(), SleepTask(), SleepTask(), SleepTask(), SleepTask(),
+        };
 
         for (int i = 0; i < 20; ++i) {
             pool->submit(tasks[i]);
