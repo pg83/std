@@ -2,6 +2,7 @@
 
 #include <std/tst/ut.h>
 #include <std/sys/crt.h>
+#include <std/typ/support.h>
 
 using namespace Std;
 

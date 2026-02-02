@@ -5,6 +5,7 @@
 
 #include <std/sys/crt.h>
 #include <std/str/view.h>
+#include <std/alg/xchg.h>
 #include <std/alg/minmax.h>
 
 #include <sys/uio.h>

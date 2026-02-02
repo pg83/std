@@ -3,6 +3,7 @@
 #include "len.h"
 
 #include <std/tst/ut.h>
+#include <std/typ/support.h>
 
 using namespace Std;
 

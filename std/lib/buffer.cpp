@@ -5,6 +5,7 @@
 #include <std/sys/crt.h>
 #include <std/str/view.h>
 #include <std/alg/bits.h>
+#include <std/alg/xchg.h>
 #include <std/alg/minmax.h>
 #include <std/dbg/assert.h>
 
@@ -110,6 +111,10 @@ void Buffer::appendUnsafe(const void* ptr, size_t len) {
         memCpy(cur, ptr, len);
         header()->used += len;
     }
+}
+
+void Buffer::xchg(Buffer& buf) noexcept {
+    ::Std::xchg(data_, buf.data_);
 }
 
 template <>

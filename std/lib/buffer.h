@@ -1,9 +1,7 @@
 #pragma once
 
 #include <std/mem/new.h>
-#include <std/alg/xchg.h>
 #include <std/sys/types.h>
-#include <std/typ/support.h>
 
 namespace Std {
     class StringView;
@@ -47,7 +45,10 @@ namespace Std {
         }
 
         inline Buffer& operator=(Buffer&& buf) noexcept {
-            Buffer(move(buf)).xchg(*this);
+            Buffer tmp;
+
+            tmp.xchg(buf);
+            tmp.xchg(*this);
 
             return *this;
         }
@@ -96,9 +97,7 @@ namespace Std {
             return capacity() - used();
         }
 
-        inline void xchg(Buffer& buf) {
-            ::Std::xchg(data_, buf.data_);
-        }
+        void xchg(Buffer& buf) noexcept;
 
         inline void reset() noexcept {
             seekAbsolute((size_t)0);
