@@ -44,12 +44,14 @@ namespace {
 }
 
 void HashTable::rehash() {
-    auto r = erange(buf);
-
     // 1.5 * 0.7 == 1.05 > 1
-    HashTable next(r.length() * 1.5);
+    rehashImpl(erange(buf).length() * 1.5);
+}
 
-    for (const auto& c : r) {
+void HashTable::rehashImpl(size_t initial) {
+    HashTable next(initial);
+
+    for (const auto& c : erange(buf)) {
         if (c.used()) {
             next.setNoRehash(c.key, c.value);
         }
@@ -147,4 +149,8 @@ void HashTable::forEach(Iterator& it) {
             it.process(&el.value);
         }
     }
+}
+
+void HashTable::compactify() {
+    rehashImpl(capacity());
 }

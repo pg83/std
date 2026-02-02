@@ -8,6 +8,7 @@ namespace Std {
         Buffer buf;
 
         void rehash();
+        void rehashImpl(size_t initial);
         void setNoRehash(u64 key, void* value);
         void* findEntryPtr(u64 key) const noexcept;
 
@@ -40,5 +41,6 @@ namespace Std {
         }
 
         void forEach(Iterator& it);
+        void compactify();
     };
 }
