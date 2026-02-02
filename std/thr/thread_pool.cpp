@@ -106,5 +106,5 @@ ThreadPool::~ThreadPool() noexcept {
 }
 
 ThreadPool::Ref ThreadPool::simple(size_t threads) {
-    return ThreadPoolImpl(threads);
+    return new ThreadPoolImpl(threads);
 }

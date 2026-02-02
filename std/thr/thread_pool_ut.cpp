@@ -43,39 +43,39 @@ namespace {
 
 STD_TEST_SUITE(ThreadPool) {
     STD_TEST(BasicConstruction) {
-        ThreadPool pool(4);
-        pool.join();
+        auto pool = ThreadPool::simple(4);
+        pool->join();
     }
 
     STD_TEST(SingleTask) {
-        ThreadPool pool(1);
+        auto pool = ThreadPool::simple(1);
         int counter = 0;
 
         CounterTask task(&counter);
-        pool.submit(&task);
-        pool.join();
+        pool->submit(task);
+        pool->join();
 
         STD_INSIST(counter == 1);
     }
 
     STD_TEST(MultipleTasks) {
-        ThreadPool pool(2);
+        auto pool = ThreadPool::simple(2);
         int counter = 0;
 
         CounterTask task1(&counter);
         CounterTask task2(&counter);
         CounterTask task3(&counter);
 
-        pool.submit(&task1);
-        pool.submit(&task2);
-        pool.submit(&task3);
-        pool.join();
+        pool->submit(task1);
+        pool->submit(task2);
+        pool->submit(task3);
+        pool->join();
 
         STD_INSIST(counter == 3);
     }
 
     STD_TEST(ManyTasksSingleThread) {
-        ThreadPool pool(1);
+        auto pool = ThreadPool::simple(1);
         int counter = 0;
         const int numTasks = 100;
 
@@ -102,32 +102,32 @@ STD_TEST_SUITE(ThreadPool) {
             CounterTask(&counter), CounterTask(&counter), CounterTask(&counter), CounterTask(&counter), CounterTask(&counter)};
 
         for (int i = 0; i < numTasks; ++i) {
-            pool.submit(&tasks[i]);
+            pool->submit(tasks[i]);
         }
-        pool.join();
+        pool->join();
 
         STD_INSIST(counter == numTasks);
     }
 
     STD_TEST(ManyTasksMultipleThreads) {
-        ThreadPool pool(4);
+        auto pool = ThreadPool::simple(4);
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool.submit(new AtomicCounterTask(&counter));
+            pool->submit(*new AtomicCounterTask(&counter));
         }
-        pool.join();
+        pool->join();
 
         STD_INSIST(counter == 100);
     }
 
     STD_TEST(EmptyPool) {
-        ThreadPool pool(2);
-        pool.join();
+        auto pool = ThreadPool::simple(2);
+        pool->join();
     }
 
     STD_TEST(TasksWithWork) {
-        ThreadPool pool(4);
+        auto pool = ThreadPool::simple(4);
 
         SleepTask tasks[20] = {
             SleepTask(), SleepTask(), SleepTask(), SleepTask(), SleepTask(),
@@ -136,31 +136,31 @@ STD_TEST_SUITE(ThreadPool) {
             SleepTask(), SleepTask(), SleepTask(), SleepTask(), SleepTask()};
 
         for (int i = 0; i < 20; ++i) {
-            pool.submit(&tasks[i]);
+            pool->submit(tasks[i]);
         }
-        pool.join();
+        pool->join();
     }
 
     STD_TEST(SingleThreadPool) {
-        ThreadPool pool(1);
+        auto pool = ThreadPool::simple(1);
         int counter = 0;
 
         for (int i = 0; i < 10; ++i) {
-            pool.submit(new AtomicCounterTask(&counter));
+            pool->submit(*new AtomicCounterTask(&counter));
         }
-        pool.join();
+        pool->join();
 
         STD_INSIST(counter == 10);
     }
 
     STD_TEST(ManyThreadsPool) {
-        ThreadPool pool(8);
+        auto pool = ThreadPool::simple(8);
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool.submit(new AtomicCounterTask(&counter));
+            pool->submit(*new AtomicCounterTask(&counter));
         }
-        pool.join();
+        pool->join();
 
         STD_INSIST(counter == 100);
     }

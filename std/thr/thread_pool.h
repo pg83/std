@@ -18,6 +18,6 @@ namespace Std {
 
         using Ref = IntrusivePtr<ThreadPool>;
 
-        Ref simple(size_t threads);
+        static Ref simple(size_t threads);
     };
 }
