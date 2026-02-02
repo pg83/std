@@ -102,6 +102,8 @@ void Buffer::append(const void* ptr, size_t len) {
 }
 
 void Buffer::appendUnsafe(const void* ptr, size_t len) {
+    STD_ASSERT(len <= left());
+
     auto cur = (u8*)mutCurrent();
 
     if (len == 1) {

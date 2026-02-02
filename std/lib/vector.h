@@ -92,7 +92,7 @@ namespace Std {
             buf_.append(&t, sizeof(t));
         }
 
-        inline auto popBack() {
+        inline auto popBack() noexcept {
             auto res = back();
 
             buf_.seekAbsolute(end() - 1);

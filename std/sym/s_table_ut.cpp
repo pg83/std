@@ -49,15 +49,6 @@ STD_TEST_SUITE(SymbolTable) {
         STD_INSIST(s.find("key") == &value2);
     }
 
-    STD_TEST(NullptrValue) {
-        SymbolTable s;
-
-        s.set("nullkey", nullptr);
-
-        STD_INSIST(s.find("nullkey") == nullptr);
-        STD_INSIST(s.find("other") == nullptr);
-    }
-
     STD_TEST(EmptyStringKey) {
         SymbolTable s;
 

@@ -123,22 +123,6 @@ STD_TEST_SUITE(HashTable) {
         STD_INSIST(ht.find(81) == &values[4]);
     }
 
-    STD_TEST(nullptrValues) {
-        HashTable ht;
-
-        ht.set(1, nullptr);
-        ht.set(2, nullptr);
-
-        STD_INSIST(ht.find(1) == nullptr);
-        STD_INSIST(ht.find(2) == nullptr);
-        STD_INSIST(ht.size() == 2);
-
-        size_t sizeBefore = ht.size();
-        void* result = ht.find(999);
-        STD_INSIST(result == nullptr);
-        STD_INSIST(ht.size() == sizeBefore);
-    }
-
     STD_TEST(sequentialKeys) {
         HashTable ht;
 
@@ -208,10 +192,10 @@ STD_TEST_SUITE(HashTable) {
         STD_INSIST(ht.size() == 100);
 
         for (int i = 0; i < 100; i += 5) {
-            ht.set(i + 1, nullptr);
+            ht.erase(i + 1);
         }
 
-        STD_INSIST(ht.size() == 100);
+        STD_INSIST(ht.size() == 80);
 
         for (int i = 0; i < 100; ++i) {
             void* found = ht.find(i + 1);

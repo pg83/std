@@ -1,10 +1,10 @@
 #include "h_table.h"
 
 #include <std/sys/crt.h>
-
 #include <std/alg/xchg.h>
 #include <std/alg/range.h>
 #include <std/alg/minmax.h>
+#include <std/dbg/assert.h>
 
 using namespace Std;
 
@@ -108,6 +108,8 @@ void* HashTable::find(u64 key) const noexcept {
 }
 
 void HashTable::set(u64 key, void* value) {
+    STD_ASSERT((size_t)value > 1);
+
     if (size() >= capacity() * 0.7) {
         rehash();
     }
