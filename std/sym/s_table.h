@@ -9,11 +9,13 @@ namespace Std {
         HashTable htable;
 
     public:
+        using Iterator = HashTable::Iterator;
+
         SymbolTable();
         ~SymbolTable() noexcept;
 
-        inline HashTable& storage() noexcept {
-            return htable;
+        inline void forEach(Iterator& it) {
+            htable.forEach(it);
         }
 
         void set(const StringView& key, void* v);
