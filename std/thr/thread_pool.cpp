@@ -12,11 +12,13 @@ using namespace Std;
 
 namespace {
     class ThreadPoolImpl: public ThreadPool {
-        struct Worker: public Runable {
+        struct Worker: public Runable, public IntrusiveNode {
             ThreadPoolImpl* pool_;
+            Thread thread_;
 
             inline explicit Worker(ThreadPoolImpl* p) noexcept
                 : pool_(p)
+                , thread_(*this)
             {
             }
 
@@ -31,8 +33,7 @@ namespace {
         bool shutdown_;
 
         ObjPool::Ref pool_;
-        Vector<Thread*> threads_;
-        size_t numThreads_;
+        IntrusiveList workers_;
 
         void workerLoop() noexcept;
 
@@ -47,12 +48,9 @@ namespace {
 ThreadPoolImpl::ThreadPoolImpl(size_t numThreads)
     : shutdown_(false)
     , pool_(ObjPool::fromMemory())
-    , numThreads_(numThreads)
 {
-    threads_.grow(numThreads);
-
-    for (size_t i = 0; i < numThreads_; ++i) {
-        threads_.pushBack(pool_->make<Thread>(*pool_->make<Worker>(this)));
+    for (size_t i = 0; i < numThreads; ++i) {
+        workers_.pushBack(pool_->make<Worker>(this));
     }
 }
 
@@ -69,8 +67,8 @@ void ThreadPoolImpl::join() noexcept {
         condVar_.broadcast();
     }
 
-    for (size_t i = 0; i < numThreads_; ++i) {
-        threads_[i]->join();
+    for (auto node = workers_.mutFront(), end = workers_.mutEnd(); node != end; node = node->next) {
+        static_cast<Worker*>(node)->thread_.join();
     }
 }
 
