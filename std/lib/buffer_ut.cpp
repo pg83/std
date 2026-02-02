@@ -309,4 +309,40 @@ STD_TEST_SUITE(Buffer) {
         l.append(r.data(), l.length());
         STD_INSIST(l.empty());
     }
+
+    STD_TEST(CapacityGrowsExponentially) {
+        Buffer b;
+
+        size_t prevCapacity = b.capacity();
+        size_t capacities[10];
+        size_t capacityCount = 0;
+
+        capacities[capacityCount++] = prevCapacity;
+
+        for (size_t i = 0; i < 1000; ++i) {
+            b.append("x", 1);
+
+            size_t currentCapacity = b.capacity();
+
+            if (currentCapacity != prevCapacity) {
+                STD_INSIST(capacityCount < 10);
+                capacities[capacityCount++] = currentCapacity;
+
+                if (capacityCount >= 3) {
+                    size_t growth1 = capacities[capacityCount - 2] - capacities[capacityCount - 3];
+                    size_t growth2 = capacities[capacityCount - 1] - capacities[capacityCount - 2];
+
+                    if (growth1 > 256) {
+                        STD_INSIST(growth2 >= growth1 * 1.5);
+                    } else {
+                        STD_INSIST(growth2 > growth1);
+                    }
+                }
+
+                prevCapacity = currentCapacity;
+            }
+        }
+
+        STD_INSIST(capacityCount > 1);
+    }
 }
