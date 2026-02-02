@@ -39,9 +39,7 @@ namespace Std {
             };
 
             st.compactify();
-
             Helper it;
-
             st.forEach(it);
             pool.xchg(it.pool);
         }

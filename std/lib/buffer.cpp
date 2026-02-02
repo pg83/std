@@ -18,9 +18,12 @@ namespace {
 
     static inline auto allocHeader(size_t len) {
         if (len) {
-            return new (allocateMemory(sizeof(Buffer::Header) + len)) Buffer::Header({
+            auto flen = clp2(len + sizeof(Buffer::Header));
+            auto blen = flen - sizeof(Buffer::Header);
+
+            return new (allocateMemory(flen)) Buffer::Header({
                 .used = 0,
-                .size = len,
+                .size = blen,
             });
         }
 
@@ -84,7 +87,7 @@ void Buffer::seekAbsolute(size_t pos) noexcept {
 
 void Buffer::grow(size_t size) {
     if (size > capacity()) {
-        Buffer buf(clp2(size + sizeof(Header)) - sizeof(Header));
+        Buffer buf(size);
 
         buf.appendUnsafe(data(), used());
         buf.xchg(*this);
