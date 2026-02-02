@@ -18,7 +18,7 @@ namespace Std {
             htable.forEach(it);
         }
 
-        void compactify() {
+        inline void compactify() {
             htable.compactify();
         }
 
