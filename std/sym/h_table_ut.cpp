@@ -514,4 +514,317 @@ STD_TEST_SUITE(HashTable) {
 
         STD_INSIST(it.sum == 60);
     }
+
+    STD_TEST(eraseBasic) {
+        HashTable ht;
+
+        int value1 = 100;
+        int value2 = 200;
+        int value3 = 300;
+
+        ht.set(1, &value1);
+        ht.set(2, &value2);
+        ht.set(3, &value3);
+
+        STD_INSIST(ht.size() == 3);
+
+        ht.erase(2);
+
+        STD_INSIST(ht.find(1) == &value1);
+        STD_INSIST(ht.find(2) == nullptr);
+        STD_INSIST(ht.find(3) == &value3);
+        STD_INSIST(ht.size() == 3);
+    }
+
+    STD_TEST(eraseNonExistent) {
+        HashTable ht;
+
+        int value = 42;
+        ht.set(1, &value);
+
+        STD_INSIST(ht.size() == 1);
+
+        ht.erase(999);
+        ht.erase(0);
+        ht.erase(2);
+
+        STD_INSIST(ht.size() == 1);
+        STD_INSIST(ht.find(1) == &value);
+    }
+
+    STD_TEST(eraseAndReinsert) {
+        HashTable ht;
+
+        int value1 = 100;
+        int value2 = 200;
+
+        ht.set(1, &value1);
+        STD_INSIST(ht.find(1) == &value1);
+
+        ht.erase(1);
+        STD_INSIST(ht.find(1) == nullptr);
+
+        ht.set(1, &value2);
+        STD_INSIST(ht.find(1) == &value2);
+    }
+
+    STD_TEST(eraseAllElements) {
+        HashTable ht;
+
+        int values[5] = {10, 20, 30, 40, 50};
+        for (int i = 0; i < 5; ++i) {
+            ht.set(i + 1, &values[i]);
+        }
+
+        STD_INSIST(ht.size() == 5);
+
+        for (int i = 0; i < 5; ++i) {
+            ht.erase(i + 1);
+        }
+
+        for (int i = 0; i < 5; ++i) {
+            STD_INSIST(ht.find(i + 1) == nullptr);
+        }
+
+        STD_INSIST(ht.size() == 5);
+    }
+
+    STD_TEST(eraseFromEmpty) {
+        HashTable ht;
+
+        STD_INSIST(ht.size() == 0);
+
+        ht.erase(1);
+        ht.erase(999);
+
+        STD_INSIST(ht.size() == 0);
+    }
+
+    STD_TEST(eraseAndFind) {
+        HashTable ht;
+
+        int values[10];
+        for (int i = 0; i < 10; ++i) {
+            values[i] = i * 10;
+            ht.set(i + 1, &values[i]);
+        }
+
+        ht.erase(3);
+        ht.erase(7);
+        ht.erase(9);
+
+        for (int i = 0; i < 10; ++i) {
+            int key = i + 1;
+            void* found = ht.find(key);
+
+            if (key == 3 || key == 7 || key == 9) {
+                STD_INSIST(found == nullptr);
+            } else {
+                STD_INSIST(found == &values[i]);
+            }
+        }
+    }
+
+    STD_TEST(eraseWithCollisions) {
+        HashTable ht(16);
+
+        int values[5];
+        for (int i = 0; i < 5; ++i) {
+            values[i] = i;
+        }
+
+        ht.set(17, &values[0]);
+        ht.set(33, &values[1]);
+        ht.set(49, &values[2]);
+        ht.set(65, &values[3]);
+        ht.set(81, &values[4]);
+
+        ht.erase(49);
+
+        STD_INSIST(ht.find(17) == &values[0]);
+        STD_INSIST(ht.find(33) == &values[1]);
+        STD_INSIST(ht.find(49) == nullptr);
+        STD_INSIST(ht.find(65) == &values[3]);
+        STD_INSIST(ht.find(81) == &values[4]);
+    }
+
+    STD_TEST(eraseTwice) {
+        HashTable ht;
+
+        int value = 42;
+        ht.set(1, &value);
+
+        ht.erase(1);
+        STD_INSIST(ht.find(1) == nullptr);
+
+        ht.erase(1);
+        STD_INSIST(ht.find(1) == nullptr);
+    }
+
+    STD_TEST(eraseAfterUpdate) {
+        HashTable ht;
+
+        int value1 = 100;
+        int value2 = 200;
+
+        ht.set(1, &value1);
+        ht.set(1, &value2);
+
+        STD_INSIST(ht.find(1) == &value2);
+
+        ht.erase(1);
+
+        STD_INSIST(ht.find(1) == nullptr);
+    }
+
+    STD_TEST(eraseMultipleTimes) {
+        HashTable ht;
+
+        int values[20];
+        for (int i = 0; i < 20; ++i) {
+            values[i] = i;
+            ht.set(i + 1, &values[i]);
+        }
+
+        for (int i = 0; i < 20; i += 2) {
+            ht.erase(i + 1);
+        }
+
+        for (int i = 0; i < 20; ++i) {
+            void* found = ht.find(i + 1);
+            if (i % 2 == 0) {
+                STD_INSIST(found == nullptr);
+            } else {
+                STD_INSIST(found == &values[i]);
+            }
+        }
+    }
+
+    STD_TEST(eraseAfterRehash) {
+        HashTable ht(4);
+
+        int values[20];
+        for (int i = 0; i < 20; ++i) {
+            values[i] = i * 10;
+            ht.set(i + 1, &values[i]);
+        }
+
+        size_t sizeBefore = ht.size();
+        STD_INSIST(sizeBefore == 20);
+
+        ht.erase(5);
+        ht.erase(10);
+        ht.erase(15);
+
+        STD_INSIST(ht.find(5) == nullptr);
+        STD_INSIST(ht.find(10) == nullptr);
+        STD_INSIST(ht.find(15) == nullptr);
+
+        for (int i = 0; i < 20; ++i) {
+            int key = i + 1;
+            if (key != 5 && key != 10 && key != 15) {
+                STD_INSIST(ht.find(key) == &values[i]);
+            }
+        }
+    }
+
+    STD_TEST(eraseAndForEach) {
+        HashTable ht;
+
+        int values[10];
+        for (int i = 0; i < 10; ++i) {
+            values[i] = i;
+            ht.set(i + 1, &values[i]);
+        }
+
+        ht.erase(3);
+        ht.erase(5);
+        ht.erase(7);
+
+        struct CountIterator: HashTable::Iterator {
+            int count = 0;
+            void process(void** el) override {
+                count++;
+            }
+        };
+
+        CountIterator it;
+        ht.forEach(it);
+
+        STD_INSIST(it.count == 7);
+    }
+
+    STD_TEST(eraseWithLargeKeys) {
+        HashTable ht;
+
+        uint64_t keys[] = {
+            12345678901234567ULL,
+            98765432109876543ULL,
+            11111111111111111ULL,
+            99999999999999999ULL,
+            55555555555555555ULL,
+        };
+
+        int values[5];
+        for (int i = 0; i < 5; ++i) {
+            values[i] = i * 100;
+            ht.set(keys[i], &values[i]);
+        }
+
+        ht.erase(keys[2]);
+
+        STD_INSIST(ht.find(keys[0]) == &values[0]);
+        STD_INSIST(ht.find(keys[1]) == &values[1]);
+        STD_INSIST(ht.find(keys[2]) == nullptr);
+        STD_INSIST(ht.find(keys[3]) == &values[3]);
+        STD_INSIST(ht.find(keys[4]) == &values[4]);
+    }
+
+    STD_TEST(eraseMixedWithInserts) {
+        HashTable ht;
+
+        int values[100];
+        for (int i = 0; i < 100; ++i) {
+            values[i] = i;
+        }
+
+        for (int i = 0; i < 50; ++i) {
+            ht.set(i + 1, &values[i]);
+        }
+
+        for (int i = 0; i < 25; ++i) {
+            ht.erase(i + 1);
+        }
+
+        for (int i = 50; i < 100; ++i) {
+            ht.set(i + 1, &values[i]);
+        }
+
+        for (int i = 0; i < 25; ++i) {
+            STD_INSIST(ht.find(i + 1) == nullptr);
+        }
+
+        for (int i = 25; i < 100; ++i) {
+            STD_INSIST(ht.find(i + 1) == &values[i]);
+        }
+    }
+
+    STD_TEST(eraseSequential) {
+        HashTable ht;
+
+        int values[10];
+        for (int i = 0; i < 10; ++i) {
+            values[i] = i;
+            ht.set(i + 1, &values[i]);
+        }
+
+        for (int i = 0; i < 10; ++i) {
+            ht.erase(i + 1);
+            STD_INSIST(ht.find(i + 1) == nullptr);
+
+            for (int j = i + 1; j < 10; ++j) {
+                STD_INSIST(ht.find(j + 1) == &values[j]);
+            }
+        }
+    }
 }

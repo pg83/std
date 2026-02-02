@@ -142,7 +142,7 @@ size_t HashTable::capacity() const noexcept {
 
 void HashTable::forEach(Iterator& it) {
     for (auto& el : erange(buf)) {
-        if (el.filled()) {
+        if (el.used()) {
             it.process(&el.value);
         }
     }
