@@ -1,45 +1,23 @@
 #pragma once
 
 #include "thread.h"
-#include "mutex.h"
-#include "cond_var.h"
 
-#include <std/lib/list.h>
-#include <std/lib/vector.h>
-#include <std/mem/obj_pool.h>
+#include <std/ptr/arc.h>
+#include <std/lib/node.h>
+#include <std/ptr/intrusive.h>
 
 namespace Std {
     struct Task: public Runable, public IntrusiveNode {
     };
 
-    class ThreadPool {
-        struct Worker: public Runable {
-            ThreadPool* pool_;
+    struct ThreadPool: public ARC {
+        virtual ~ThreadPool() noexcept;
 
-            explicit Worker(ThreadPool* p) noexcept
-                : pool_(p)
-            {
-            }
+        virtual void submit(Task& task) = 0;
+        virtual void join() noexcept = 0;
 
-            void run() noexcept override;
-        };
+        using Ref = IntrusivePtr<ThreadPool>;
 
-        Mutex mutex_;
-        CondVar condVar_;
-        IntrusiveList queue_;
-        bool shutdown_;
-
-        ObjPool::Ref pool_;
-        Vector<Thread*> threads_;
-        size_t numThreads_;
-
-        void workerLoop() noexcept;
-
-    public:
-        explicit ThreadPool(size_t numThreads);
-        ~ThreadPool() noexcept;
-
-        void submit(Task* task);
-        void join() noexcept;
+        Ref simple(size_t threads);
     };
 }

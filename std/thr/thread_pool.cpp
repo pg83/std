@@ -1,8 +1,48 @@
 #include "thread_pool.h"
 
+#include "mutex.h"
+#include "thread.h"
+#include "cond_var.h"
+
+#include <std/lib/list.h>
+#include <std/lib/vector.h>
+#include <std/mem/obj_pool.h>
+
 using namespace Std;
 
-ThreadPool::ThreadPool(size_t numThreads)
+namespace {
+    struct ThreadPoolImpl: public ThreadPool {
+        struct Worker: public Runable {
+            ThreadPoolImpl* pool_;
+
+            explicit Worker(ThreadPoolImpl* p) noexcept
+                : pool_(p)
+            {
+            }
+
+            void run() noexcept override;
+        };
+
+        Mutex mutex_;
+        CondVar condVar_;
+        IntrusiveList queue_;
+        bool shutdown_;
+
+        ObjPool::Ref pool_;
+        Vector<Thread*> threads_;
+        size_t numThreads_;
+
+        void workerLoop() noexcept;
+
+        explicit ThreadPoolImpl(size_t numThreads);
+        ~ThreadPoolImpl() noexcept;
+
+        void submit(Task& task) override;
+        void join() noexcept override;
+    };
+}
+
+ThreadPoolImpl::ThreadPoolImpl(size_t numThreads)
     : shutdown_(false)
     , pool_(ObjPool::fromMemory())
     , numThreads_(numThreads)
@@ -15,16 +55,16 @@ ThreadPool::ThreadPool(size_t numThreads)
     }
 }
 
-ThreadPool::~ThreadPool() noexcept {
+ThreadPoolImpl::~ThreadPoolImpl() noexcept {
 }
 
-void ThreadPool::submit(Task* task) {
+void ThreadPoolImpl::submit(Task& task) {
     LockGuard lock(mutex_);
-    queue_.pushBack(task);
+    queue_.pushBack(&task);
     condVar_.signal();
 }
 
-void ThreadPool::join() noexcept {
+void ThreadPoolImpl::join() noexcept {
     {
         LockGuard lock(mutex_);
         shutdown_ = true;
@@ -36,7 +76,7 @@ void ThreadPool::join() noexcept {
     }
 }
 
-void ThreadPool::workerLoop() noexcept {
+void ThreadPoolImpl::workerLoop() noexcept {
     while (true) {
         Task* task = nullptr;
 
@@ -58,6 +98,13 @@ void ThreadPool::workerLoop() noexcept {
     }
 }
 
-void ThreadPool::Worker::run() noexcept {
+void ThreadPoolImpl::Worker::run() noexcept {
     pool_->workerLoop();
+}
+
+ThreadPool::~ThreadPool() noexcept {
+}
+
+ThreadPool::Ref ThreadPool::simple(size_t threads) {
+    return ThreadPoolImpl(threads);
 }
