@@ -26,20 +26,18 @@ namespace Std {
 
         ~HashTable() noexcept;
 
-        void* find(u64 key) const noexcept;
-        void set(u64 key, void* value);
-        void erase(u64 key) noexcept;
+        inline void xchg(HashTable& t) noexcept {
+            buf.xchg(t.buf);
+        }
 
         inline size_t size() const noexcept {
             return buf.used();
         }
 
+        void* find(u64 key) const noexcept;
         size_t capacity() const noexcept;
-
-        inline void xchg(HashTable& t) noexcept {
-            buf.xchg(t.buf);
-        }
-
+        void set(u64 key, void* value);
+        void erase(u64 key) noexcept;
         void forEach(Iterator& it);
         void compactify();
     };
