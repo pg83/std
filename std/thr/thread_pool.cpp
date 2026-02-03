@@ -42,7 +42,7 @@ namespace {
     public:
         ThreadPoolImpl(size_t numThreads);
 
-        void submit(Task& task) override;
+        void submit(Task& task) noexcept override;
         void join() noexcept override;
     };
 }
@@ -56,7 +56,7 @@ ThreadPoolImpl::ThreadPoolImpl(size_t numThreads)
     }
 }
 
-void ThreadPoolImpl::submit(Task& task) {
+void ThreadPoolImpl::submit(Task& task) noexcept {
     LockGuard lock(mutex_);
     queue_.pushBack(&task);
     condVar_.signal();
@@ -171,14 +171,14 @@ namespace {
     public:
         WorkStealingThreadPool(size_t numThreads);
 
-        void submit(Task& task) override;
+        void submit(Task& task) noexcept override;
         void join() noexcept override;
     };
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
-    : shutdown_(0)
-    , pool_(ObjPool::fromMemory())
+    : pool_(ObjPool::fromMemory())
+    , shutdown_(0)
     , nextWorker_(0)
 {
     for (size_t i = 0; i < numThreads; ++i) {
@@ -186,7 +186,7 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     }
 }
 
-void WorkStealingThreadPool::submit(Task& task) {
+void WorkStealingThreadPool::submit(Task& task) noexcept {
     size_t idx = stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed);
     workers_[idx % workers_.length()]->push(task);
 }

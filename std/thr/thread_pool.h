@@ -13,7 +13,7 @@ namespace Std {
     struct ThreadPool: public ARC {
         virtual ~ThreadPool() noexcept;
 
-        virtual void submit(Task& task) = 0;
+        virtual void submit(Task& task) noexcept = 0;
         virtual void join() noexcept = 0;
 
         using Ref = IntrusivePtr<ThreadPool>;
