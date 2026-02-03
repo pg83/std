@@ -173,6 +173,10 @@ namespace {
     public:
         WorkStealingThreadPool(size_t numThreads);
 
+        inline bool shutdown() const noexcept {
+            return stdAtomicFetch(&shutdown_, MemoryOrder::Acquire);
+        }
+
         void submit(Task& task) noexcept override;
         void join() noexcept override;
     };
@@ -222,13 +226,13 @@ void WorkStealingThreadPool::Worker::run() noexcept {
         if (auto task = next(); task) {
             task->run();
         } else {
-            if (stdAtomicFetch(&pool_->shutdown_, MemoryOrder::Acquire)) {
+            if (pool_->shutdown()) {
                 return;
             }
 
             LockGuard lock(mutex_);
 
-            if (stdAtomicFetch(&pool_->shutdown_, MemoryOrder::Acquire)) {
+            if (pool_->shutdown()) {
                 return;
             }
 
