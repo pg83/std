@@ -130,14 +130,18 @@ namespace {
             {
             }
 
-            inline Task* pop() noexcept {
-                LockGuard lock(mutex_);
-
+            inline Task* popNoLock() noexcept {
                 if (tasks_.empty()) {
                     return nullptr;
                 }
 
                 return static_cast<Task*>(tasks_.popBack());
+            }
+
+            inline Task* pop() noexcept {
+                LockGuard lock(mutex_);
+
+                return popNoLock();
             }
 
             inline void push(Task& task) noexcept {
@@ -157,7 +161,7 @@ namespace {
             inline void processPending() noexcept {
                 Task* task;
 
-                while ((task = pop()) != nullptr) {
+                while ((task = popNoLock()) != nullptr) {
                     task->run();
                 }
             }
@@ -237,7 +241,7 @@ void WorkStealingThreadPool::Worker::run() noexcept {
             LockGuard lock(mutex_);
 
             if (pool_->shutdown()) {
-                return;
+                return processPending();
             }
 
             condVar_.wait(mutex_);
