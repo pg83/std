@@ -15,6 +15,15 @@
 using namespace Std;
 
 namespace {
+    struct SyncThreadPool: public ThreadPool {
+        void submitTask(Task& task) noexcept override {
+            task.run();
+        }
+
+        void join() noexcept override {
+        }
+    };
+
     class ThreadPoolImpl: public ThreadPool {
         struct Worker: public Runable, public IntrusiveNode {
             ThreadPoolImpl* pool_;
@@ -110,6 +119,10 @@ ThreadPool::~ThreadPool() noexcept {
 }
 
 ThreadPool::Ref ThreadPool::simple(size_t threads) {
+    if (threads == 0) {
+        return new SyncThreadPool();
+    }
+
     return new ThreadPoolImpl(threads);
 }
 
