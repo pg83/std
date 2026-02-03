@@ -129,8 +129,8 @@ namespace {
         struct Worker: public Runable {
             WorkStealingThreadPool* pool_;
             size_t workerId_;
-            Thread thread_;
             WorkerQueue queue_;
+            Thread thread_;
 
             inline Worker(WorkStealingThreadPool* pool, size_t id) noexcept
                 : pool_(pool)
@@ -228,13 +228,8 @@ Task* WorkStealingThreadPool::tryStealTask(size_t myId) noexcept {
         return nullptr;
     }
 
-    size_t startIdx = myId;
-
     for (size_t i = 1; i < numWorkers; ++i) {
-        size_t idx = (startIdx + i) % numWorkers;
-
-        Task* task = workers_[idx]->queue_.steal();
-        if (task) {
+        if (auto task = workers_[(myId + i) % numWorkers]->queue_.steal(); task) {
             return task;
         }
     }
