@@ -119,25 +119,23 @@ namespace {
             {
             }
 
-            Task* pop() {
+            inline Task* pop() noexcept {
                 LockGuard lock(mutex_);
                 return static_cast<Task*>(tasks_.popBack());
             }
 
-            Task* steal() {
+            inline Task* steal() noexcept {
                 LockGuard lock(mutex_);
                 return static_cast<Task*>(tasks_.popBack());
             }
 
-            void push(Task& task) {
+            inline void push(Task& task) noexcept {
                 LockGuard lock(mutex_);
                 tasks_.pushBack(&task);
                 condVar_.signal();
             }
 
-            void run() noexcept override {
-                pool_->workerLoop(workerId_);
-            }
+            void run() noexcept override;
         };
 
         int shutdown_;
@@ -145,7 +143,6 @@ namespace {
         Vector<Worker*> workers_;
         int nextWorker_;
 
-        void workerLoop(size_t myId) noexcept;
         Task* tryStealTask(size_t myId) noexcept;
 
     public:
@@ -191,28 +188,26 @@ void WorkStealingThreadPool::join() noexcept {
     }
 }
 
-void WorkStealingThreadPool::workerLoop(size_t myId) noexcept {
-    Worker* worker = workers_[myId];
-
+void WorkStealingThreadPool::Worker::run() noexcept {
     while (true) {
-        Task* task = worker->pop();
+        Task* task = pop();
 
         if (!task) {
-            task = tryStealTask(myId);
+            task = pool_->tryStealTask(workerId_);
         }
 
         if (task) {
             task->run();
         } else {
-            if (stdAtomicFetch(&shutdown_, MemoryOrder::Acquire)) {
+            if (stdAtomicFetch(&pool_->shutdown_, MemoryOrder::Acquire)) {
                 return;
             }
 
-            LockGuard lock(worker->mutex_);
-            if (stdAtomicFetch(&shutdown_, MemoryOrder::Acquire)) {
+            LockGuard lock(mutex_);
+            if (stdAtomicFetch(&pool_->shutdown_, MemoryOrder::Acquire)) {
                 return;
             }
-            worker->condVar_.wait(worker->mutex_);
+            condVar_.wait(mutex_);
         }
     }
 }
