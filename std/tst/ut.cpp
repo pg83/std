@@ -19,6 +19,7 @@
 #include <std/lib/singleton.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
 using namespace Std;
 
@@ -36,7 +37,7 @@ namespace {
         {
         }
 
-        inline void execute(OutBuf& outb) {
+        inline bool execute(OutBuf& outb) {
             try {
                 func->execute();
 
@@ -47,7 +48,11 @@ namespace {
                 outb << Color::bright(AnsiColor::Red)
                      << StringView(u8"- ") << fullName
                      << Color::reset() << endL;
+
+                return false;
             }
+
+            return true;
         }
     };
 
@@ -61,6 +66,8 @@ namespace {
         ObjPool::Ref pool = ObjPool::fromMemory();
         Ctx* ctx = 0;
         OutBuf* outbuf = 0;
+        size_t ok = 0;
+        size_t err = 0;
 
         inline void run(Ctx& ctx_) {
             ctx = &ctx_;
@@ -76,14 +83,33 @@ namespace {
 
             setPanicHandler1(old1);
             setPanicHandler2(old2);
+
+            exit(err);
         }
 
         inline void execute(OutBuf&& outb) {
             outbuf = &outb;
 
             for (auto test : range(*this)) {
-                test->execute(outb);
+                if (test->execute(outb)) {
+                    ++ok;
+                } else {
+                    ++err;
+                }
             }
+
+            outb << Color::bright(AnsiColor::Green)
+                 << StringView(u8"OK: ") << ok
+                 << Color::reset();
+
+            if (err) {
+                outb << StringView(u8", ")
+                     << Color::bright(AnsiColor::Red)
+                     << StringView(u8"ERR: ") << err
+                     << Color::reset();
+            }
+
+            outb << endL << flsH;
 
             outbuf = nullptr;
             outb.finish();
