@@ -287,5 +287,5 @@ void ThreadPool::submit(Runable& runable) {
     ScopedPtr<Helper> task(new Helper(&runable));
 
     submitTask(*task.ptr);
-    task.ptr = 0;
+    task.drop();
 }
