@@ -1,6 +1,7 @@
 #pragma once
 
 #include <std/ptr/arc.h>
+#include <std/sys/types.h>
 #include <std/ptr/intrusive.h>
 
 namespace Std {
