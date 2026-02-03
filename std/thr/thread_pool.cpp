@@ -234,10 +234,6 @@ void WorkStealingThreadPool::Worker::run() noexcept {
         if (auto task = next(); task) {
             task->run();
         } else {
-            if (pool_->shutdown()) {
-                return;
-            }
-
             LockGuard lock(mutex_);
 
             if (pool_->shutdown()) {
@@ -245,6 +241,10 @@ void WorkStealingThreadPool::Worker::run() noexcept {
             }
 
             condVar_.wait(mutex_);
+
+            if (pool_->shutdown()) {
+                return processPending();
+            }
         }
     }
 }
