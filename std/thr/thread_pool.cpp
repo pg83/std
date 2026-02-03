@@ -142,8 +142,8 @@ namespace {
             void run() noexcept override;
         };
 
-        int shutdown_;
         ObjPool::Ref pool_;
+        int shutdown_;
         Vector<Worker*> workers_;
         int nextWorker_;
 
@@ -168,9 +168,8 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
 }
 
 void WorkStealingThreadPool::submit(Task& task) {
-    int idx = stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed);
-    size_t workerIdx = static_cast<size_t>(idx) % workers_.length();
-    workers_[workerIdx]->push(task);
+    size_t idx = stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed);
+    workers_[idx % workers_.length()]->push(task);
 }
 
 void WorkStealingThreadPool::join() noexcept {
@@ -224,10 +223,6 @@ void WorkStealingThreadPool::Worker::run() noexcept {
 Task* WorkStealingThreadPool::tryStealTask(size_t myId) noexcept {
     size_t numWorkers = workers_.length();
 
-    if (numWorkers <= 1) {
-        return nullptr;
-    }
-
     for (size_t i = 1; i < numWorkers; ++i) {
         if (auto task = workers_[(myId + i) % numWorkers]->pop(); task) {
             return task;
@@ -238,5 +233,9 @@ Task* WorkStealingThreadPool::tryStealTask(size_t myId) noexcept {
 }
 
 ThreadPool::Ref ThreadPool::workStealing(size_t threads) {
-    return static_cast<ThreadPool*>(new WorkStealingThreadPool(threads));
+    if (threads <= 1) {
+        return simple(threads);
+    }
+
+    return new WorkStealingThreadPool(threads);
 }
