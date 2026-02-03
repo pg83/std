@@ -10,6 +10,7 @@
 #include <std/alg/range.h>
 #include <std/lib/vector.h>
 #include <std/sys/atomic.h>
+#include <std/ptr/scoped.h>
 #include <std/mem/obj_pool.h>
 
 using namespace Std;
@@ -44,7 +45,7 @@ namespace {
     public:
         ThreadPoolImpl(size_t numThreads);
 
-        void submit(Task& task) noexcept override;
+        void submitTask(Task& task) noexcept override;
         void join() noexcept override;
     };
 }
@@ -58,7 +59,7 @@ ThreadPoolImpl::ThreadPoolImpl(size_t numThreads)
     }
 }
 
-void ThreadPoolImpl::submit(Task& task) noexcept {
+void ThreadPoolImpl::submitTask(Task& task) noexcept {
     LockGuard lock(mutex_);
     queue_.pushBack(&task);
     condVar_.signal();
@@ -185,7 +186,7 @@ namespace {
             return stdAtomicFetch(&shutdown_, MemoryOrder::Acquire);
         }
 
-        void submit(Task& task) noexcept override;
+        void submitTask(Task& task) noexcept override;
         void join() noexcept override;
     };
 }
@@ -200,7 +201,7 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     }
 }
 
-void WorkStealingThreadPool::submit(Task& task) noexcept {
+void WorkStealingThreadPool::submitTask(Task& task) noexcept {
     size_t idx = stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed);
     workers_[idx % workers_.length()]->push(task);
 }
@@ -267,4 +268,25 @@ ThreadPool::Ref ThreadPool::workStealing(size_t threads) {
     }
 
     return new WorkStealingThreadPool(threads);
+}
+
+void ThreadPool::submit(Runable& runable) {
+    struct Helper: public Task {
+        Runable* runable;
+
+        inline Helper(Runable* r) noexcept
+            : runable(r)
+        {
+        }
+
+        void run() noexcept override {
+            ScopedPtr<Helper> self(this);
+            runable->run();
+        }
+    };
+
+    ScopedPtr<Helper> task(new Helper(&runable));
+
+    submitTask(*task.ptr);
+    task.ptr = 0;
 }
