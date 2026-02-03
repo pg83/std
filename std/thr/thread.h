@@ -1,9 +1,7 @@
 #pragma once
 
 namespace Std {
-    struct Runable {
-        virtual void run() noexcept = 0;
-    };
+    struct Runable;
 
     // should not be used directly, use ScopedThread or detach(Runable&)
     class Thread {

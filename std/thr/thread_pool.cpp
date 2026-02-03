@@ -1,7 +1,9 @@
 #include "thread_pool.h"
 
+#include "task.h"
 #include "mutex.h"
 #include "thread.h"
+#include "runable.h"
 #include "cond_var.h"
 
 #include <std/lib/list.h>

@@ -1,14 +1,10 @@
 #pragma once
 
-#include "thread.h"
-
 #include <std/ptr/arc.h>
-#include <std/lib/node.h>
 #include <std/ptr/intrusive.h>
 
 namespace Std {
-    struct Task: public Runable, public IntrusiveNode {
-    };
+    struct Task;
 
     struct ThreadPool: public ARC {
         virtual ~ThreadPool() noexcept;
