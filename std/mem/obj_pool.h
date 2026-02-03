@@ -15,16 +15,6 @@ namespace Std {
     class StringView;
 
     class ObjPool: public ARC {
-        template <typename T>
-        struct Wrapper1: public Embed<T>, public Newable {
-            using Embed<T>::Embed;
-        };
-
-        template <typename T>
-        struct Wrapper2: public Disposable, public Wrapper1<T> {
-            using Wrapper1<T>::Wrapper1;
-        };
-
         virtual void submit(Disposable* d) noexcept = 0;
 
         template <typename T, typename... A>
@@ -44,11 +34,20 @@ namespace Std {
         // king of ownership
         template <typename T, typename... A>
         inline T* make(A&&... a) {
+            struct Wrapper1: public Embed<T>, public Newable {
+                using Embed<T>::Embed;
+            };
+
+            struct Wrapper2: public Disposable, public Wrapper1 {
+                using Wrapper1::Wrapper1;
+            };
+
             if constexpr (stdHasTrivialDestructor(T)) {
-                static_assert(sizeof(Wrapper1<T>) == sizeof(T));
-                return &makeImpl<Wrapper1<T>>(forward<A>(a)...)->t;
+                static_assert(sizeof(Wrapper1) == sizeof(T));
+
+                return &makeImpl<Wrapper1>(forward<A>(a)...)->t;
             } else {
-                auto res = makeImpl<Wrapper2<T>>(forward<A>(a)...);
+                auto res = makeImpl<Wrapper2>(forward<A>(a)...);
 
                 submit(res);
 
