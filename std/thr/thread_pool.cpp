@@ -88,10 +88,14 @@ void ThreadPoolImpl::workerLoop() noexcept {
                 return;
             }
 
-            task = static_cast<Task*>(queue_.popFront());
+            if (!queue_.empty()) {
+                task = static_cast<Task*>(queue_.popFront());
+            }
         }
 
-        task->run();
+        if (task) {
+            task->run();
+        }
     }
 }
 
@@ -121,11 +125,9 @@ namespace {
 
             inline Task* pop() noexcept {
                 LockGuard lock(mutex_);
-                return static_cast<Task*>(tasks_.popBack());
-            }
-
-            inline Task* steal() noexcept {
-                LockGuard lock(mutex_);
+                if (tasks_.empty()) {
+                    return nullptr;
+                }
                 return static_cast<Task*>(tasks_.popBack());
             }
 
@@ -134,6 +136,8 @@ namespace {
                 tasks_.pushBack(&task);
                 condVar_.signal();
             }
+
+            Task* next() noexcept;
 
             void run() noexcept override;
         };
@@ -182,21 +186,24 @@ void WorkStealingThreadPool::join() noexcept {
 
     for (size_t i = 0; i < workers_.length(); ++i) {
         Task* task;
+
         while ((task = workers_[i]->pop()) != nullptr) {
             task->run();
         }
     }
 }
 
+Task* WorkStealingThreadPool::Worker::next() noexcept {
+    if (auto task = pop(); task) {
+        return task;
+    }
+
+    return pool_->tryStealTask(workerId_);
+}
+
 void WorkStealingThreadPool::Worker::run() noexcept {
     while (true) {
-        Task* task = pop();
-
-        if (!task) {
-            task = pool_->tryStealTask(workerId_);
-        }
-
-        if (task) {
+        if (auto task = next(); task) {
             task->run();
         } else {
             if (stdAtomicFetch(&pool_->shutdown_, MemoryOrder::Acquire)) {
@@ -204,9 +211,11 @@ void WorkStealingThreadPool::Worker::run() noexcept {
             }
 
             LockGuard lock(mutex_);
+
             if (stdAtomicFetch(&pool_->shutdown_, MemoryOrder::Acquire)) {
                 return;
             }
+
             condVar_.wait(mutex_);
         }
     }
@@ -220,7 +229,7 @@ Task* WorkStealingThreadPool::tryStealTask(size_t myId) noexcept {
     }
 
     for (size_t i = 1; i < numWorkers; ++i) {
-        if (auto task = workers_[(myId + i) % numWorkers]->steal(); task) {
+        if (auto task = workers_[(myId + i) % numWorkers]->pop(); task) {
             return task;
         }
     }

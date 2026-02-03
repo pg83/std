@@ -167,3 +167,134 @@ STD_TEST_SUITE(ThreadPool) {
         STD_INSIST(counter == 100);
     }
 }
+
+STD_TEST_SUITE(WorkStealingThreadPool) {
+    STD_TEST(BasicConstruction) {
+        auto pool = ThreadPool::workStealing(4);
+        pool->join();
+    }
+
+    STD_TEST(SingleTask) {
+        auto pool = ThreadPool::workStealing(1);
+        int counter = 0;
+
+        CounterTask task(&counter);
+        pool->submit(task);
+        pool->join();
+
+        STD_INSIST(counter == 1);
+    }
+
+    STD_TEST(MultipleTasks) {
+        auto pool = ThreadPool::workStealing(2);
+        int counter = 0;
+
+        for (int i = 0; i < 10; ++i) {
+            pool->submit(*new AtomicCounterTask(&counter));
+        }
+        pool->join();
+
+        STD_INSIST(counter == 10);
+    }
+
+    STD_TEST(ManyTasksSingleThread) {
+        auto pool = ThreadPool::workStealing(1);
+        int counter = 0;
+
+        for (int i = 0; i < 100; ++i) {
+            pool->submit(*new AtomicCounterTask(&counter));
+        }
+        pool->join();
+
+        STD_INSIST(counter == 100);
+    }
+
+    STD_TEST(ManyTasksMultipleThreads) {
+        auto pool = ThreadPool::workStealing(4);
+        int counter = 0;
+
+        for (int i = 0; i < 100; ++i) {
+            pool->submit(*new AtomicCounterTask(&counter));
+        }
+        pool->join();
+
+        STD_INSIST(counter == 100);
+    }
+
+    STD_TEST(EmptyPool) {
+        auto pool = ThreadPool::workStealing(2);
+        pool->join();
+    }
+
+    STD_TEST(TasksWithWork) {
+        auto pool = ThreadPool::workStealing(4);
+        int counter = 0;
+
+        for (int i = 0; i < 20; ++i) {
+            pool->submit(*new AtomicCounterTask(&counter));
+        }
+
+        for (volatile int i = 0; i < 10000; ++i) {
+        }
+
+        pool->join();
+
+        STD_INSIST(counter == 20);
+    }
+
+    STD_TEST(SingleThreadPool) {
+        auto pool = ThreadPool::workStealing(1);
+        int counter = 0;
+
+        for (int i = 0; i < 50; ++i) {
+            pool->submit(*new AtomicCounterTask(&counter));
+        }
+        pool->join();
+
+        STD_INSIST(counter == 50);
+    }
+
+    STD_TEST(ManyThreadsPool) {
+        auto pool = ThreadPool::workStealing(8);
+        int counter = 0;
+
+        for (int i = 0; i < 200; ++i) {
+            pool->submit(*new AtomicCounterTask(&counter));
+        }
+        pool->join();
+
+        STD_INSIST(counter == 200);
+    }
+
+    STD_TEST(WorkStealing) {
+        auto pool = ThreadPool::workStealing(4);
+        int counter = 0;
+
+        for (int i = 0; i < 100; ++i) {
+            pool->submit(*new AtomicCounterTask(&counter));
+        }
+        pool->join();
+
+        STD_INSIST(counter == 100);
+    }
+
+    STD_TEST(MixedWorkload) {
+        auto pool = ThreadPool::workStealing(4);
+        int counter = 0;
+
+        for (int i = 0; i < 50; ++i) {
+            pool->submit(*new AtomicCounterTask(&counter));
+        }
+
+        for (volatile int i = 0; i < 5000; ++i) {
+        }
+
+        for (int i = 0; i < 50; ++i) {
+            pool->submit(*new AtomicCounterTask(&counter));
+        }
+
+        pool->join();
+
+        STD_INSIST(counter == 100);
+    }
+}
