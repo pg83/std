@@ -18,6 +18,7 @@ namespace Std {
 
         using Ref = IntrusivePtr<ThreadPool>;
 
+        static Ref sync();
         static Ref simple(size_t threads);
         static Ref workStealing(size_t threads);
     };

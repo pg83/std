@@ -118,9 +118,13 @@ void ThreadPoolImpl::workerLoop() noexcept {
 ThreadPool::~ThreadPool() noexcept {
 }
 
+ThreadPool::Ref ThreadPool::sync() {
+    return new SyncThreadPool();
+}
+
 ThreadPool::Ref ThreadPool::simple(size_t threads) {
     if (threads == 0) {
-        return new SyncThreadPool();
+        return sync();
     }
 
     return new ThreadPoolImpl(threads);
