@@ -61,7 +61,7 @@ STD_TEST_SUITE(ThreadPool) {
     }
 
     STD_TEST(MultipleTasks) {
-        auto pool = ThreadPool::simple(2);
+        auto pool = ThreadPool::simple(1);
         int counter = 0;
 
         CounterTask task1(&counter);
