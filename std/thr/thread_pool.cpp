@@ -104,10 +104,20 @@ ThreadPool::Ref ThreadPool::simple(size_t threads) {
 
 namespace {
     class WorkStealingThreadPool: public ThreadPool {
-        struct WorkerQueue {
+        struct Worker: public Runable {
+            WorkStealingThreadPool* pool_;
+            size_t workerId_;
             Mutex mutex_;
             CondVar condVar_;
             IntrusiveList tasks_;
+            Thread thread_;
+
+            inline Worker(WorkStealingThreadPool* pool, size_t id) noexcept
+                : pool_(pool)
+                , workerId_(id)
+                , thread_(*this)
+            {
+            }
 
             Task* pop() {
                 LockGuard lock(mutex_);
@@ -123,20 +133,6 @@ namespace {
                 LockGuard lock(mutex_);
                 tasks_.pushBack(&task);
                 condVar_.signal();
-            }
-        };
-
-        struct Worker: public Runable {
-            WorkStealingThreadPool* pool_;
-            size_t workerId_;
-            WorkerQueue queue_;
-            Thread thread_;
-
-            inline Worker(WorkStealingThreadPool* pool, size_t id) noexcept
-                : pool_(pool)
-                , workerId_(id)
-                , thread_(*this)
-            {
             }
 
             void run() noexcept override {
@@ -173,14 +169,14 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
 void WorkStealingThreadPool::submit(Task& task) {
     int idx = stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed);
     size_t workerIdx = static_cast<size_t>(idx) % workers_.length();
-    workers_[workerIdx]->queue_.push(task);
+    workers_[workerIdx]->push(task);
 }
 
 void WorkStealingThreadPool::join() noexcept {
     stdAtomicStore(&shutdown_, 1, MemoryOrder::Release);
 
     for (size_t i = 0; i < workers_.length(); ++i) {
-        workers_[i]->queue_.condVar_.signal();
+        workers_[i]->condVar_.signal();
     }
 
     for (size_t i = 0; i < workers_.length(); ++i) {
@@ -189,17 +185,17 @@ void WorkStealingThreadPool::join() noexcept {
 
     for (size_t i = 0; i < workers_.length(); ++i) {
         Task* task;
-        while ((task = workers_[i]->queue_.pop()) != nullptr) {
+        while ((task = workers_[i]->pop()) != nullptr) {
             task->run();
         }
     }
 }
 
 void WorkStealingThreadPool::workerLoop(size_t myId) noexcept {
-    WorkerQueue& myQueue = workers_[myId]->queue_;
+    Worker* worker = workers_[myId];
 
     while (true) {
-        Task* task = myQueue.pop();
+        Task* task = worker->pop();
 
         if (!task) {
             task = tryStealTask(myId);
@@ -212,11 +208,11 @@ void WorkStealingThreadPool::workerLoop(size_t myId) noexcept {
                 return;
             }
 
-            LockGuard lock(myQueue.mutex_);
+            LockGuard lock(worker->mutex_);
             if (stdAtomicFetch(&shutdown_, MemoryOrder::Acquire)) {
                 return;
             }
-            myQueue.condVar_.wait(myQueue.mutex_);
+            worker->condVar_.wait(worker->mutex_);
         }
     }
 }
@@ -229,7 +225,7 @@ Task* WorkStealingThreadPool::tryStealTask(size_t myId) noexcept {
     }
 
     for (size_t i = 1; i < numWorkers; ++i) {
-        if (auto task = workers_[(myId + i) % numWorkers]->queue_.steal(); task) {
+        if (auto task = workers_[(myId + i) % numWorkers]->steal(); task) {
             return task;
         }
     }
