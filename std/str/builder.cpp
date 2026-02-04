@@ -2,8 +2,10 @@
 
 using namespace Std;
 
-void StringBuilder::writeImpl(const void* ptr, size_t len) {
+size_t StringBuilder::writeImpl(const void* ptr, size_t len) {
     append(ptr, len);
+
+    return len;
 }
 
 void* StringBuilder::imbueImpl(size_t len) {

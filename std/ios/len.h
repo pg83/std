@@ -9,7 +9,7 @@ namespace Std {
         u64 len_;
         Buffer buf_;
 
-        void writeImpl(const void* ptr, size_t len) override;
+        size_t writeImpl(const void* ptr, size_t len) override;
         void writeVImpl(iovec* parts, size_t count) override;
         void* imbueImpl(size_t len) override;
         void bumpImpl(const void* ptr) noexcept override;

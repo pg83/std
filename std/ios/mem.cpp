@@ -4,8 +4,10 @@
 
 using namespace Std;
 
-void MemoryOutput::writeImpl(const void* _ptr, size_t len) {
+size_t MemoryOutput::writeImpl(const void* _ptr, size_t len) {
     ptr = memCpy(ptr, _ptr, len);
+
+    return len;
 }
 
 void* MemoryOutput::imbueImpl(size_t) {

@@ -78,7 +78,7 @@ void OutBuf::writeSlow(const void* ptr, size_t len) {
     writeDirect(advancePtr(ptr, cnt), len - cnt);
 }
 
-void OutBuf::writeImpl(const void* ptr, size_t len) {
+size_t OutBuf::writeImpl(const void* ptr, size_t len) {
     if (buf_.used() + len < chunk) {
         buf_.append(ptr, len);
     } else if (buf_.used()) {
@@ -86,6 +86,8 @@ void OutBuf::writeImpl(const void* ptr, size_t len) {
     } else {
         writeDirect(ptr, len);
     }
+
+    return len;
 }
 
 size_t OutBuf::hintImpl() const noexcept {

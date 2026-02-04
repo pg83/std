@@ -12,8 +12,10 @@ CountingOutput::CountingOutput() noexcept
 {
 }
 
-void CountingOutput::writeImpl(const void*, size_t len) {
+size_t CountingOutput::writeImpl(const void*, size_t len) {
     len_ += len;
+
+    return len;
 }
 
 void* CountingOutput::imbueImpl(size_t len) {

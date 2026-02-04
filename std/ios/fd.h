@@ -7,7 +7,7 @@ namespace Std {
         // does not own fd
         int fd;
 
-        void writeImpl(const void* data, size_t len) override;
+        size_t writeImpl(const void* data, size_t len) override;
         void writeVImpl(iovec* parts, size_t count) override;
         void flushImpl() override;
         void finishImpl() override;

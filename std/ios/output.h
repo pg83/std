@@ -8,7 +8,7 @@ namespace Std {
     class StringView;
 
     class Output {
-        virtual void writeImpl(const void* data, size_t len) = 0;
+        virtual size_t writeImpl(const void* data, size_t len) = 0;
         virtual size_t hintImpl() const noexcept = 0;
 
         // have sensible defaults

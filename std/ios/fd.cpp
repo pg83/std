@@ -15,12 +15,16 @@ using namespace Std;
 FDOutput::~FDOutput() noexcept {
 }
 
-void FDOutput::writeImpl(const void* data, size_t len) {
-    if (::write(fd, data, len) < 0) {
+size_t FDOutput::writeImpl(const void* data, size_t len) {
+    auto res = ::write(fd, data, len);
+
+    if (res < 0) {
         auto err = errno;
 
         throwErrno(err, StringBuilder() << StringView(u8"write failed"));
     }
+
+    return res;
 }
 
 void FDOutput::flushImpl() {

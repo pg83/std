@@ -21,7 +21,7 @@ namespace Std {
         void finishImpl() override;
 
         // classic
-        void writeImpl(const void* ptr, size_t len) override;
+        size_t writeImpl(const void* ptr, size_t len) override;
         size_t hintImpl() const noexcept override;
 
         // zero-copy

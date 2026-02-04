@@ -16,8 +16,10 @@ namespace {
         {
         }
 
-        void writeImpl(const void* data, size_t len) override {
+        size_t writeImpl(const void* data, size_t len) override {
             buf->append(data, len);
+
+            return len;
         }
 
         size_t hintImpl() const noexcept override {
