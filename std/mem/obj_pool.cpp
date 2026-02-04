@@ -9,13 +9,21 @@
 using namespace Std;
 
 namespace {
-    struct Pool: public ObjPool {
+    struct alignas(max_align_t) Base: public ObjPool {
         MemoryPool mp;
         Disposer ds;
-        alignas(max_align_t) u8 buf[256 - 6 * sizeof(void*)];
+
+        inline Base(void* buf, size_t len)
+            : mp(buf, len)
+        {
+        }
+    };
+
+    struct Pool: public Base {
+        u8 buf[256 - sizeof(Base)];
 
         inline Pool() noexcept
-            : mp(buf, sizeof(buf))
+            : Base(buf, sizeof(buf))
         {
         }
 
