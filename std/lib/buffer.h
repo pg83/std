@@ -2,14 +2,10 @@
 
 #include <std/mem/new.h>
 #include <std/sys/types.h>
+#include <std/alg/advance.h>
 
 namespace Std {
     class StringView;
-
-    template <typename T>
-    inline constexpr T* advancePtr(T* ptr, size_t len) noexcept {
-        return (T*)(len + (const u8*)ptr);
-    }
 
     class Buffer {
         void* data_;

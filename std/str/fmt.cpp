@@ -1,6 +1,6 @@
 #include "fmt.h"
 
-#include <std/lib/buffer.h>
+#include <std/alg/advance.h>
 #include <std/alg/reverse.h>
 
 #include <stdio.h>

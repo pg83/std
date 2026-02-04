@@ -7,6 +7,7 @@
 #include <std/str/view.h>
 #include <std/alg/xchg.h>
 #include <std/alg/minmax.h>
+#include <std/alg/advance.h>
 
 #include <sys/uio.h>
 
