@@ -3,8 +3,6 @@
 #include <std/tst/ut.h>
 #include <std/sys/types.h>
 
-#include <cstddef>
-
 using namespace Std;
 
 namespace {
@@ -43,7 +41,7 @@ STD_TEST_SUITE(MemoryPool) {
         void* ptr2 = pool.allocate(16);
         void* ptr3 = pool.allocate(32);
 
-        constexpr size_t alignment = alignof(std::max_align_t);
+        constexpr size_t alignment = alignof(max_align_t);
         STD_INSIST(isAligned(ptr1, alignment));
         STD_INSIST(isAligned(ptr2, alignment));
         STD_INSIST(isAligned(ptr3, alignment));

@@ -12,6 +12,12 @@ namespace {
     struct Pool: public ObjPool {
         MemoryPool mp;
         Disposer ds;
+        alignas(max_align_t) u8 buf[256 - 6 * sizeof(void*)];
+
+        inline Pool() noexcept
+            : mp(buf, sizeof(buf))
+        {
+        }
 
         void* allocate(size_t len) override {
             return mp.allocate(len);
@@ -21,6 +27,8 @@ namespace {
             ds.submit(d);
         }
     };
+
+    static_assert(sizeof(Pool) == 256);
 }
 
 ObjPool::~ObjPool() noexcept {

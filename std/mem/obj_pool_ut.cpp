@@ -2,9 +2,8 @@
 
 #include <std/tst/ut.h>
 #include <std/str/view.h>
+#include <std/sys/types.h>
 #include <std/lib/vector.h>
-
-#include <cstddef>
 
 using namespace Std;
 
@@ -126,7 +125,7 @@ STD_TEST_SUITE(ObjPool) {
 
         void* ptr = pool->allocate(1);
 
-        STD_INSIST(reinterpret_cast<uintptr_t>(ptr) % alignof(std::max_align_t) == 0);
+        STD_INSIST(reinterpret_cast<uintptr_t>(ptr) % alignof(max_align_t) == 0);
     }
 
     STD_TEST(allocate_multiple_aligned) {
@@ -134,7 +133,7 @@ STD_TEST_SUITE(ObjPool) {
 
         for (int i = 0; i < 100; ++i) {
             void* ptr = pool->allocate(i + 1);
-            STD_INSIST(reinterpret_cast<uintptr_t>(ptr) % alignof(std::max_align_t) == 0);
+            STD_INSIST(reinterpret_cast<uintptr_t>(ptr) % alignof(max_align_t) == 0);
         }
     }
 

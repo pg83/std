@@ -3,9 +3,8 @@
 #include "disposer.h"
 
 #include <std/sys/crt.h>
+#include <std/sys/types.h>
 #include <std/dbg/assert.h>
-
-#include <cstddef>
 
 #include <math.h>
 
@@ -13,7 +12,10 @@ using namespace Std;
 
 namespace {
     constexpr size_t initial = 128;
-    constexpr size_t alignment = alignof(std::max_align_t);
+    constexpr size_t alignment = alignof(max_align_t);
+
+    struct alignas(alignment) ChunkDestructor: public Disposable, public Disposer, public Newable {
+    };
 
     struct alignas(alignment) Chunk: public Disposable, public Newable {
         ~Chunk() noexcept override {
@@ -26,6 +28,7 @@ namespace {
 
     static_assert(sizeof(Chunk) % alignment == 0);
     static_assert(sizeof(ChunkDisposer) % alignment == 0);
+    static_assert(sizeof(ChunkDestructor) % alignment == 0);
 }
 
 MemoryPool::MemoryPool()
@@ -34,6 +37,15 @@ MemoryPool::MemoryPool()
     , ds(new (allocate(sizeof(ChunkDisposer))) ChunkDisposer())
 {
     ds->submit((ChunkDisposer*)ds);
+}
+
+MemoryPool::MemoryPool(void* buf, size_t len) noexcept
+    : currentChunk((u8*)buf)
+    , currentChunkEnd(currentChunk + len)
+    , ds(new (allocate(sizeof(ChunkDestructor))) ChunkDestructor())
+{
+    STD_ASSERT(len >= initial);
+    ds->submit((ChunkDestructor*)ds);
 }
 
 MemoryPool::~MemoryPool() noexcept {
