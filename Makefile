@@ -11,7 +11,7 @@ TSTO = $(TSTS:%=%.o)
 TSTA = tst/test
 
 OPTF = -O2 -g
-CXXF = -I. -W -Wall -std=c++2a $(OPTF) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $(EXTRA)
+CXXF = -I. -W -Wall -std=c++23 $(OPTF) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $(EXTRA)
 
 all: $(LIBA) $(TSTA)
 
