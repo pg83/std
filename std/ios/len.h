@@ -10,10 +10,9 @@ namespace Std {
         Buffer buf_;
 
         size_t writeImpl(const void* ptr, size_t len) override;
-        void writeVImpl(iovec* parts, size_t count) override;
+        size_t hintImpl() const noexcept override;
         void* imbueImpl(size_t len) override;
         void bumpImpl(const void* ptr) noexcept override;
-        size_t hintImpl() const noexcept override;
 
     public:
         CountingOutput() noexcept;

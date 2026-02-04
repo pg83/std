@@ -43,9 +43,3 @@ void CountingOutput::bumpImpl(const void* ptr) noexcept {
         len_ += buf_.offsetOf(ptr);
     }
 }
-
-void CountingOutput::writeVImpl(iovec* parts, size_t count) {
-    for (size_t i = 0; i < count; ++i) {
-        len_ += parts[i].iov_len;
-    }
-}

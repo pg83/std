@@ -19,10 +19,32 @@ void Output::flushImpl() {
 void Output::finishImpl() {
 }
 
-void Output::writeVImpl(iovec* parts, size_t count) {
+void Output::writeV(iovec* iov, size_t iovcnt) {
+    while (iovcnt > 0) {
+        auto written = writeVImpl(iov, iovcnt);
+
+        while (written >= iov->iov_len) {
+            written -= iov->iov_len;
+            iov++;
+            iovcnt--;
+        }
+
+        if (written > 0) {
+            iov->iov_base = (char*)iov->iov_base + written;
+            iov->iov_len -= written;
+        }
+    }
+}
+
+size_t Output::writeVImpl(iovec* parts, size_t count) {
+    size_t res = 0;
+
     for (const auto& it : range(parts, parts + count)) {
         write(it.iov_base, it.iov_len);
+        res += it.iov_len;
     }
+
+    return res;
 }
 
 void Output::writeV(const StringView* parts, size_t count) {
