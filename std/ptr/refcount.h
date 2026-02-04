@@ -25,6 +25,12 @@ namespace Std {
             O::unref(t_);
         }
 
+        inline RefCountPtr& operator= (const RefCountPtr& r) noexcept {
+            RefCountPtr(r).xchg(*this);
+
+            return *this;
+        }
+
         template <typename... A>
         static inline auto make(A&&... a) {
             return RefCountPtr(new T(forward<A>(a)...));
