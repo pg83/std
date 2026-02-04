@@ -3,8 +3,8 @@
 #include "disposer.h"
 
 #include <std/sys/crt.h>
-
 #include <std/str/view.h>
+#include <std/dbg/assert.h>
 
 using namespace Std;
 
@@ -25,6 +25,7 @@ namespace {
         inline Pool() noexcept
             : Base(buf, sizeof(buf))
         {
+            STD_ASSERT((size_t)buf % alignof(max_align_t) == 0);
         }
 
         void* allocate(size_t len) override {
