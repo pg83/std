@@ -79,6 +79,7 @@ namespace {
                 includes.pushBack(StringView(ctx.argv[i]));
             }
         }
+
         inline bool matchesFilter(StringView testName) const noexcept {
             if (includes.empty()) {
                 return true;
@@ -102,6 +103,7 @@ namespace {
         GetOpt* opt = 0;
         size_t ok = 0;
         size_t err = 0;
+        size_t skip = 0;
 
         inline void run(Ctx& ctx_) {
             ctx = &ctx_;
@@ -127,10 +129,8 @@ namespace {
 
             for (auto test : range(*this)) {
                 if (!opt->matchesFilter(test->fullName)) {
-                    continue;
-                }
-
-                if (test->execute(outb)) {
+                    ++skip;
+                } else if (test->execute(outb)) {
                     ++ok;
                 } else {
                     ++err;
@@ -145,6 +145,13 @@ namespace {
                 outb << StringView(u8", ")
                      << Color::bright(AnsiColor::Red)
                      << StringView(u8"ERR: ") << err
+                     << Color::reset();
+            }
+
+            if (skip) {
+                outb << StringView(u8", ")
+                     << Color::bright(AnsiColor::Yellow)
+                     << StringView(u8"SKIPPED: ") << skip
                      << Color::reset();
             }
 
