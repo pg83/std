@@ -28,6 +28,10 @@ namespace {
         }
 
         StringView description() override {
+            if (!full.empty()) {
+                return full;
+            }
+
             (StringBuilder()
              << StringView(u8"(code ")
              << error
