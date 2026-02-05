@@ -65,11 +65,9 @@ void Output::write(const void* data, size_t len) {
     auto e = b + len;
 
     while (b < e) {
-        size_t part;
-
         if (const auto left = e - b; left < 1024) {
             b += writeImpl(b, left);
-        } else if (hint(&part) && left > part) {
+        } else if (size_t part; hint(&part) && left > part) {
             b += writeImpl(b, part);
         } else {
             b += writeImpl(b, left);

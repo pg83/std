@@ -40,7 +40,7 @@ void FDOutput::finishImpl() {
 }
 
 size_t FDOutput::hintImpl() const noexcept {
-    return 1 << 20;
+    return 1 << 16;
 }
 
 size_t FDOutput::writeVImpl(iovec* parts, size_t count) {
