@@ -12,26 +12,8 @@
 using namespace Std;
 
 namespace {
-    bool contains(StringView haystack, StringView needle) {
-        if (needle.empty()) {
-            return true;
-        }
-        if (haystack.length() < needle.length()) {
-            return false;
-        }
-        for (size_t i = 0; i <= haystack.length() - needle.length(); ++i) {
-            bool found = true;
-            for (size_t j = 0; j < needle.length(); ++j) {
-                if (haystack[i + j] != needle[j]) {
-                    found = false;
-                    break;
-                }
-            }
-            if (found) {
-                return true;
-            }
-        }
-        return false;
+    static inline bool contains(StringView haystack, StringView needle) {
+        return haystack.search(needle) != (size_t)-1;
     }
 }
 
