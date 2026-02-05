@@ -36,7 +36,7 @@ namespace {
     class RabinKarp {
         Hash<1000000007> h1;
         Hash<1000000009> h2;
-        Hash<998244353>  h3;
+        Hash<998244353> h3;
         Hash<1000000021> h4;
 
         size_t len;
@@ -45,18 +45,21 @@ namespace {
         RabinKarp(const u8* s, size_t n)
             : len(n)
         {
-            for (size_t i = 0; i < n; i++) {
+            h1.add(s[0]);
+            h2.add(s[0]);
+            h3.add(s[0]);
+            h4.add(s[0]);
+
+            for (size_t i = 1; i < n; i++) {
+                h1.mulp();
+                h2.mulp();
+                h3.mulp();
+                h4.mulp();
+
                 h1.add(s[i]);
                 h2.add(s[i]);
                 h3.add(s[i]);
                 h4.add(s[i]);
-
-                if (i + 1 < n) {
-                    h1.mulp();
-                    h2.mulp();
-                    h3.mulp();
-                    h4.mulp();
-                }
             }
         }
 
