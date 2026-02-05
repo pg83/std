@@ -62,18 +62,10 @@ StringView StringView::suffix(size_t len) const noexcept {
 }
 
 bool StringView::startsWith(StringView prefix) const noexcept {
-    if (prefix.length() > len_) {
-        return false;
-    }
-
     return this->prefix(prefix.length()) == prefix;
 }
 
 bool StringView::endsWith(StringView suffix) const noexcept {
-    if (suffix.length() > len_) {
-        return false;
-    }
-
     return this->suffix(suffix.length()) == suffix;
 }
 
