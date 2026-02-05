@@ -3,9 +3,7 @@
 using namespace Std;
 
 size_t StringBuilder::writeImpl(const void* ptr, size_t len) {
-    append(ptr, len);
-
-    return len;
+    return (append(ptr, len), len);
 }
 
 void* StringBuilder::imbueImpl(size_t len) {

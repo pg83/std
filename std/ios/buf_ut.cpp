@@ -16,9 +16,7 @@ namespace {
         }
 
         size_t writeImpl(const void* data, size_t len) override {
-            buf->append(data, len);
-
-            return len;
+            return (buf->append(data, len), len);
         }
     };
 
@@ -26,8 +24,7 @@ namespace {
         u64 len_;
 
         size_t writeImpl(const void* ptr, size_t len) override {
-            len_ += len;
-            return len;
+            return (len_ += len, len);
         }
 
         inline CountingOutput() noexcept

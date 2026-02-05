@@ -29,9 +29,7 @@ namespace Std {
         bool hint(size_t* res) const noexcept;
 
         inline size_t write(const void* data, size_t len) {
-            writeC(data, len);
-
-            return len;
+            return (writeC(data, len), len);
         }
 
         inline void flush() {

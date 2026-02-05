@@ -65,8 +65,6 @@ size_t OutBuf::writeMultipart(const void* ptr, size_t len) {
 
     buf.xchg(buf_);
 
-    const auto left = (buf.used() + len) % chunk;
-
     iovec parts[] = {
         {
             .iov_base = (void*)buf.data(),
@@ -74,7 +72,7 @@ size_t OutBuf::writeMultipart(const void* ptr, size_t len) {
         },
         {
             .iov_base = (void*)ptr,
-            .iov_len = len - left,
+            .iov_len = len - (buf.used() + len) % chunk,
         },
     };
 
