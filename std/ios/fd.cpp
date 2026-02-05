@@ -9,7 +9,6 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/uio.h>
-#include <sys/stat.h>
 
 using namespace Std;
 
@@ -28,32 +27,8 @@ size_t FDOutput::writeImpl(const void* data, size_t len) {
     return res;
 }
 
-void FDOutput::flushImpl() {
-    if (fsync(fd) < 0) {
-        auto err = errno;
-
-        throwErrno(err, StringBuilder() << StringView(u8"fsync failed"));
-    }
-}
-
 void FDOutput::finishImpl() {
     fd = -1;
-}
-
-size_t FDOutput::hintImpl() const noexcept {
-    struct stat st;
-
-    if (fstat(fd, &st) == 0) {
-        if (S_ISREG(st.st_mode) || S_ISBLK(st.st_mode)) {
-            return 1 << 16;
-        }
-
-        if (S_ISCHR(st.st_mode)) {
-            return 1 << 10;
-        }
-    }
-
-    return 1 << 12;
 }
 
 size_t FDOutput::writeVImpl(iovec* parts, size_t count) {
@@ -66,4 +41,39 @@ size_t FDOutput::writeVImpl(iovec* parts, size_t count) {
     }
 
     return res;
+}
+
+void FDRegular::flushImpl() {
+    if (fsync(fd) < 0) {
+        auto err = errno;
+
+        throwErrno(err, StringBuilder() << StringView(u8"fsync failed"));
+    }
+}
+
+size_t FDRegular::hintImpl() const noexcept {
+    return 1 << 16;
+}
+
+FDRegular::FDRegular(int fd) noexcept
+    : FDOutput(fd)
+{
+}
+
+size_t FDCharacter::hintImpl() const noexcept {
+    return 1 << 10;
+}
+
+FDCharacter::FDCharacter(int fd) noexcept
+    : FDOutput(fd)
+{
+}
+
+size_t FDPipe::hintImpl() const noexcept {
+    return 1 << 12;
+}
+
+FDPipe::FDPipe(int fd) noexcept
+    : FDOutput(fd)
+{
 }
