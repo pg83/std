@@ -73,7 +73,7 @@ namespace {
             }
 
             if (h1.eq() && h2.eq() && h3.eq() && h4.eq()) {
-                return 0;
+                return (*res = 0, true);
             }
 
             for (size_t i = len; i < tn; i++) {
