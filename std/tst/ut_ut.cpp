@@ -5,7 +5,7 @@
 using namespace Std;
 
 STD_TEST_SUITE(UT) {
-    STD_TEST(Test1) {
+    STD_TEST(_Test1) {
     }
 
     STD_TEST(Test2) {

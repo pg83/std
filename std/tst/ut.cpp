@@ -90,6 +90,7 @@ namespace {
         size_t ok = 0;
         size_t err = 0;
         size_t skip = 0;
+        size_t mute = 0;
 
         inline void run(Ctx& ctx_) {
             ctx = &ctx_;
@@ -114,7 +115,9 @@ namespace {
             outbuf = &outb;
 
             for (auto test : range(*this)) {
-                if (!opt->matchesFilter(test->fullName)) {
+                if (test->fullName.search(u8"::_") != (size_t)-1) {
+                    ++mute;
+                } else if (!opt->matchesFilter(test->fullName)) {
                     ++skip;
                 } else if (test->execute(outb)) {
                     ++ok;
@@ -137,7 +140,14 @@ namespace {
             if (skip) {
                 outb << StringView(u8", ")
                      << Color::bright(AnsiColor::Yellow)
-                     << StringView(u8"SKIPPED: ") << skip
+                     << StringView(u8"SKIP: ") << skip
+                     << Color::reset();
+            }
+
+            if (mute) {
+                outb << StringView(u8", ")
+                     << Color::bright(AnsiColor::Blue)
+                     << StringView(u8"MUTE: ") << mute
                      << Color::reset();
             }
 
