@@ -25,7 +25,7 @@ namespace Std {
             O::unref(t_);
         }
 
-        inline RefCountPtr& operator= (const RefCountPtr& r) noexcept {
+        inline RefCountPtr& operator=(const RefCountPtr& r) noexcept {
             RefCountPtr(r).xchg(*this);
 
             return *this;

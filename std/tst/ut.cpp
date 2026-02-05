@@ -27,6 +27,20 @@ namespace {
     struct Exc {
     };
 
+    inline bool startsWith(StringView str, StringView prefix) noexcept {
+        if (prefix.length() > str.length()) {
+            return false;
+        }
+
+        for (size_t i = 0; i < prefix.length(); ++i) {
+            if (str[i] != prefix[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     struct Test {
         TestFunc* func;
         StringView fullName;
@@ -59,6 +73,25 @@ namespace {
     struct GetOpt {
         bool listTests = false;
         Vector<StringView> includes;
+
+        inline GetOpt(Ctx& ctx) noexcept {
+            for (int i = 1; i < ctx.argc; ++i) {
+                includes.pushBack(StringView(ctx.argv[i]));
+            }
+        }
+        inline bool matchesFilter(StringView testName) const noexcept {
+            if (includes.empty()) {
+                return true;
+            }
+
+            for (auto prefix : range(includes)) {
+                if (startsWith(testName, prefix)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     };
 
     struct Tests: public Vector<Test*> {
@@ -66,11 +99,13 @@ namespace {
         ObjPool::Ref pool = ObjPool::fromMemory();
         Ctx* ctx = 0;
         OutBuf* outbuf = 0;
+        GetOpt* opt = 0;
         size_t ok = 0;
         size_t err = 0;
 
         inline void run(Ctx& ctx_) {
             ctx = &ctx_;
+            opt = pool->make<GetOpt>(ctx_);
 
             quickSort(mutRange(*this), [](auto l, auto r) noexcept {
                 return l->fullName < r->fullName;
@@ -91,6 +126,10 @@ namespace {
             outbuf = &outb;
 
             for (auto test : range(*this)) {
+                if (!opt->matchesFilter(test->fullName)) {
+                    continue;
+                }
+
                 if (test->execute(outb)) {
                     ++ok;
                 } else {
