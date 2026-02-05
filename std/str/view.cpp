@@ -76,6 +76,10 @@ const u8* StringView::search(StringView substr) const noexcept {
     return (const u8*)memmem(data(), length(), substr.data(), substr.length());
 }
 
+const u8* StringView::memchr(u8 ch) const noexcept {
+    return (const u8*)::memchr(data(), ch, length());
+}
+
 template <>
 void Std::output<ZeroCopyOutput, StringView>(ZeroCopyOutput& out, StringView str) {
     out.write(str.data(), str.length());

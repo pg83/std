@@ -71,6 +71,7 @@ namespace Std {
         bool startsWith(StringView prefix) const noexcept;
         bool endsWith(StringView suffix) const noexcept;
 
+        const u8* memchr(u8 ch) const noexcept;
         const u8* search(StringView substr) const noexcept;
 
         // hash ops
