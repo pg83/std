@@ -15,5 +15,6 @@ namespace Std {
         virtual StringView description() = 0;
     };
 
+    [[noreturn]]
     void throwErrno(int err, Buffer&& text);
 }
