@@ -4,6 +4,7 @@
 #include <std/ios/buf.h>
 #include <std/sys/crt.h>
 #include <std/lib/buffer.h>
+#include <std/alg/minmax.h>
 
 using namespace Std;
 
@@ -53,11 +54,7 @@ u64 StringView::hash64() const noexcept {
 }
 
 StringView StringView::prefix(size_t len) const noexcept {
-    if (len > len_) {
-        return *this;
-    }
-
-    return StringView(ptr_, len);
+    return StringView(ptr_, min(len, len_));
 }
 
 bool StringView::startsWith(StringView prefix) const noexcept {
