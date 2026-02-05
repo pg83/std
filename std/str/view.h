@@ -71,6 +71,8 @@ namespace Std {
         bool startsWith(StringView prefix) const noexcept;
         bool endsWith(StringView suffix) const noexcept;
 
+        size_t search(StringView substr) const noexcept;
+
         // hash ops
         u32 hash32() const noexcept;
         u64 hash64() const noexcept;

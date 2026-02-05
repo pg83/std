@@ -1,5 +1,6 @@
 #include "view.h"
 #include "hash.h"
+#include "rabin_karp.h"
 
 #include <std/ios/buf.h>
 #include <std/sys/crt.h>
@@ -67,6 +68,16 @@ bool StringView::startsWith(StringView prefix) const noexcept {
 
 bool StringView::endsWith(StringView suffix) const noexcept {
     return this->suffix(suffix.length()) == suffix;
+}
+
+size_t StringView::search(StringView substr) const noexcept {
+    size_t ret;
+
+    if (findRK(data(), length(), substr.data(), substr.length(), &ret)) {
+        return ret;
+    }
+
+    return (size_t)-1;
 }
 
 template <>
