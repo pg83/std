@@ -22,13 +22,16 @@ namespace Std {
 
         void writeH(const void* data, size_t len);
         void writeC(const void* data, size_t len);
-        void writeV(iovec* parts, size_t count);
-        void writeV(const StringView* parts, size_t count);
+
+        size_t writeV(iovec* parts, size_t count);
+        size_t writeV(const StringView* parts, size_t count);
 
         bool hint(size_t* res) const noexcept;
 
-        inline void write(const void* data, size_t len) {
-            writeH(data, len);
+        inline size_t write(const void* data, size_t len) {
+            writeC(data, len);
+
+            return len;
         }
 
         inline void flush() {

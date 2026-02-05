@@ -19,9 +19,13 @@ void Output::flushImpl() {
 void Output::finishImpl() {
 }
 
-void Output::writeV(iovec* iov, size_t iovcnt) {
+size_t Output::writeV(iovec* iov, size_t iovcnt) {
+    size_t res = 0;
+
     while (iovcnt > 0) {
         auto written = writeVImpl(iov, iovcnt);
+
+        res += written;
 
         while (written >= iov->iov_len) {
             written -= iov->iov_len;
@@ -34,20 +38,21 @@ void Output::writeV(iovec* iov, size_t iovcnt) {
             iov->iov_len -= written;
         }
     }
+
+    return res;
 }
 
 size_t Output::writeVImpl(iovec* parts, size_t count) {
     size_t res = 0;
 
     for (const auto& it : range(parts, parts + count)) {
-        write(it.iov_base, it.iov_len);
-        res += it.iov_len;
+        res += write(it.iov_base, it.iov_len);
     }
 
     return res;
 }
 
-void Output::writeV(const StringView* parts, size_t count) {
+size_t Output::writeV(const StringView* parts, size_t count) {
     auto io = (iovec*)alloca(count * sizeof(iovec));
 
     memZero(io, io + count);
@@ -57,7 +62,7 @@ void Output::writeV(const StringView* parts, size_t count) {
         io[i].iov_base = (void*)parts[i].data();
     }
 
-    writeV(io, count);
+    return writeV(io, count);
 }
 
 void Output::writeC(const void* data, size_t len) {
@@ -65,7 +70,7 @@ void Output::writeC(const void* data, size_t len) {
     auto e = b + len;
 
     while (b < e) {
-        b += writeImpl(data, e - b);
+        b += writeImpl(b, e - b);
     }
 }
 

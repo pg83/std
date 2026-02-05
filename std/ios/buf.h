@@ -13,8 +13,8 @@ namespace Std {
 
         OutBuf() noexcept;
 
-        void writeMultipart(const void* ptr, size_t len);
-        void writeDirect(const void* ptr, size_t len);
+        size_t writeMultipart(const void* ptr);
+        size_t writeDirect(const void* ptr, size_t len);
 
         // state
         void flushImpl() override;
