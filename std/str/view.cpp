@@ -24,6 +24,10 @@ namespace {
     inline int spaceship(const StringView& l, const StringView& r) noexcept {
         return spaceship(l.data(), l.length(), r.data(), r.length());
     }
+
+    static inline const u8* fix(const u8* ptr) noexcept {
+        return ptr ? ptr : u8"";
+    }
 }
 
 bool Std::operator==(const StringView& l, const StringView& r) noexcept {
@@ -73,11 +77,11 @@ bool StringView::endsWith(StringView suffix) const noexcept {
 }
 
 const u8* StringView::search(StringView substr) const noexcept {
-    return (const u8*)memmem(data(), length(), substr.data(), substr.length());
+    return (const u8*)memmem(fix(data()), length(), fix(substr.data()), substr.length());
 }
 
-const u8* StringView::memchr(u8 ch) const noexcept {
-    return (const u8*)::memchr(data(), ch, length());
+const u8* StringView::memChr(u8 ch) const noexcept {
+    return (const u8*)memchr(fix(data()), ch, length());
 }
 
 template <>
