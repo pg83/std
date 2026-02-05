@@ -24,7 +24,7 @@ OutBuf::OutBuf(Output& out) noexcept
     : out_(&out)
 {
     if (!out.hint(&chunk)) {
-        chunk = 1 << 20;
+        chunk = 1 << 16;
     }
 }
 
@@ -60,10 +60,12 @@ size_t OutBuf::writeDirect(const void* ptr, size_t len) {
     return out_->write(ptr, len - len % chunk);
 }
 
-size_t OutBuf::writeMultipart(const void* ptr) {
+size_t OutBuf::writeMultipart(const void* ptr, size_t len) {
     Buffer buf;
 
     buf.xchg(buf_);
+
+    const auto left = (buf.used() + len) % chunk;
 
     iovec parts[] = {
         {
@@ -72,7 +74,7 @@ size_t OutBuf::writeMultipart(const void* ptr) {
         },
         {
             .iov_base = (void*)ptr,
-            .iov_len = chunk - buf.used(),
+            .iov_len = len - left,
         },
     };
 
@@ -83,7 +85,7 @@ size_t OutBuf::writeImpl(const void* ptr, size_t len) {
     if (buf_.used() + len < chunk) {
         return (buf_.append(ptr, len), len);
     } else if (const auto used = buf_.used(); used) {
-        return writeMultipart(ptr) - used;
+        return writeMultipart(ptr, len) - used;
     } else {
         return writeDirect(ptr, len);
     }
