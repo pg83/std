@@ -1,6 +1,5 @@
 #include "buf.h"
 #include "mem.h"
-#include "len.h"
 
 #include <std/tst/ut.h>
 #include <std/typ/support.h>
@@ -26,6 +25,30 @@ namespace {
             return (size_t)(-1);
         }
     };
+
+    class CountingOutput: public Output {
+        u64 len_;
+
+        size_t writeImpl(const void* ptr, size_t len) override {
+            len_ += len;
+            return len;
+        }
+
+        size_t hintImpl() const noexcept override {
+            return (size_t)-1;
+        }
+
+    public:
+        inline CountingOutput() noexcept
+            : len_(0)
+        {
+        }
+
+        inline auto collectedLength() const noexcept {
+            return len_;
+        }
+    };
+
 }
 
 STD_TEST_SUITE(OutBuf) {
