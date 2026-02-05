@@ -1,11 +1,13 @@
 #include "view.h"
 #include "hash.h"
-#include "rabin_karp.h"
 
 #include <std/ios/buf.h>
 #include <std/sys/crt.h>
 #include <std/lib/buffer.h>
 #include <std/alg/minmax.h>
+
+#define _GNU_SOURCE
+#include <string.h>
 
 using namespace Std;
 
@@ -71,10 +73,8 @@ bool StringView::endsWith(StringView suffix) const noexcept {
 }
 
 size_t StringView::search(StringView substr) const noexcept {
-    size_t ret;
-
-    if (findRK(data(), length(), substr.data(), substr.length(), &ret)) {
-        return ret;
+    if (auto res = memmem(data(), length(), substr.data(), substr.length()); res) {
+        return (const u8*)res - data();
     }
 
     return (size_t)-1;
