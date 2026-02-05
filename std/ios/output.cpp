@@ -65,12 +65,28 @@ void Output::write(const void* data, size_t len) {
     auto e = b + len;
 
     while (b < e) {
+        size_t part;
+
         if (const auto left = e - b; left < 1024) {
             b += writeImpl(b, left);
-        } else if (const auto part = hint(); left > part) {
+        } else if (hint(&part) && left > part) {
             b += writeImpl(b, part);
         } else {
             b += writeImpl(b, left);
         }
     }
+}
+
+size_t Output::hintImpl() const noexcept {
+    return 0;
+}
+
+bool Output::hint(size_t* res) const noexcept {
+    if (const auto h = hintImpl(); h) {
+        *res = h;
+
+        return true;
+    }
+
+    return false;
 }

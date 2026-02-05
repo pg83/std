@@ -18,10 +18,6 @@ void StringBuilder::bumpImpl(const void* ptr) noexcept {
     seekAbsolute(ptr);
 }
 
-size_t StringBuilder::hintImpl() const noexcept {
-    return size_t(-1);
-}
-
 StringBuilder::StringBuilder() noexcept {
 }
 

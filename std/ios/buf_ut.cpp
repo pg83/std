@@ -20,13 +20,9 @@ namespace {
 
             return len;
         }
-
-        size_t hintImpl() const noexcept override {
-            return (size_t)(-1);
-        }
     };
 
-    class CountingOutput: public Output {
+    struct CountingOutput: public Output {
         u64 len_;
 
         size_t writeImpl(const void* ptr, size_t len) override {
@@ -34,11 +30,6 @@ namespace {
             return len;
         }
 
-        size_t hintImpl() const noexcept override {
-            return (size_t)-1;
-        }
-
-    public:
         inline CountingOutput() noexcept
             : len_(0)
         {

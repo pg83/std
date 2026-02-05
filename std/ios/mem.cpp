@@ -17,7 +17,3 @@ void* MemoryOutput::imbueImpl(size_t) {
 void MemoryOutput::bumpImpl(const void* _ptr) noexcept {
     ptr = (void*)_ptr;
 }
-
-size_t MemoryOutput::hintImpl() const noexcept {
-    return size_t(-1);
-}

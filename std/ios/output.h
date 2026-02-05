@@ -9,7 +9,7 @@ namespace Std {
 
     class Output {
         virtual size_t writeImpl(const void* data, size_t len) = 0;
-        virtual size_t hintImpl() const noexcept = 0;
+        virtual size_t hintImpl() const noexcept;
 
         // have sensible defaults
         virtual size_t writeVImpl(iovec* parts, size_t count);
@@ -24,16 +24,14 @@ namespace Std {
         void writeV(iovec* parts, size_t count);
         void writeV(const StringView* parts, size_t count);
 
+        bool hint(size_t* res) const noexcept;
+
         inline void flush() {
             flushImpl();
         }
 
         inline void finish() {
             finishImpl();
-        }
-
-        inline size_t hint() const noexcept {
-            return hintImpl();
         }
     };
 }

@@ -31,12 +31,8 @@ namespace Std {
     public:
         ~OutBuf() override;
 
+        OutBuf(Output& out) noexcept;
         OutBuf(Output& out, size_t chunkSize) noexcept;
-
-        inline OutBuf(Output& out) noexcept
-            : OutBuf(out, 8 * 1024)
-        {
-        }
 
         inline OutBuf(OutBuf&& buf) noexcept
             : OutBuf()

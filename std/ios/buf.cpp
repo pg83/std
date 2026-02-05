@@ -20,9 +20,17 @@ OutBuf::~OutBuf() {
     }
 }
 
+OutBuf::OutBuf(Output& out) noexcept
+    : out_(&out)
+{
+    if (!out.hint(&chunk)) {
+        chunk = 1 << 20;
+    }
+}
+
 OutBuf::OutBuf(Output& out, size_t chunkSize) noexcept
     : out_(&out)
-    , chunk(min(chunkSize, out_->hint()))
+    , chunk(chunkSize)
 {
 }
 

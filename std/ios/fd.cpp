@@ -40,8 +40,7 @@ void FDOutput::finishImpl() {
 }
 
 size_t FDOutput::hintImpl() const noexcept {
-    // https://man7.org/linux/man-pages/man2/write.2.html
-    return 0x7ffff000;
+    return 1 << 20;
 }
 
 size_t FDOutput::writeVImpl(iovec* parts, size_t count) {
