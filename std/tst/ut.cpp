@@ -115,7 +115,7 @@ namespace {
             outbuf = &outb;
 
             for (auto test : range(*this)) {
-                if (test->fullName.search(u8"::_") != (size_t)-1) {
+                if (test->fullName.search(u8"::_")) {
                     ++mute;
                 } else if (!opt->matchesFilter(test->fullName)) {
                     ++skip;

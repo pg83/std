@@ -13,7 +13,7 @@ using namespace Std;
 
 namespace {
     static inline bool contains(StringView haystack, StringView needle) {
-        return haystack.search(needle) != (size_t)-1;
+        return haystack.search(needle);
     }
 }
 

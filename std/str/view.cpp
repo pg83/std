@@ -72,12 +72,8 @@ bool StringView::endsWith(StringView suffix) const noexcept {
     return this->suffix(suffix.length()) == suffix;
 }
 
-size_t StringView::search(StringView substr) const noexcept {
-    if (auto res = memmem(data(), length(), substr.data(), substr.length()); res) {
-        return (const u8*)res - data();
-    }
-
-    return (size_t)-1;
+const u8* StringView::search(StringView substr) const noexcept {
+    return (const u8*)memmem(data(), length(), substr.data(), substr.length());
 }
 
 template <>
