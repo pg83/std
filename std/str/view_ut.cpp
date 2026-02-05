@@ -143,30 +143,6 @@ STD_TEST_SUITE(StringView) {
         STD_INSIST(!(sv1 < sv2));
     }
 
-    STD_TEST(SpaceshipLess) {
-        StringView sv1("aaa");
-        StringView sv2("bbb");
-        STD_INSIST(spaceship(sv1, sv2) < 0);
-    }
-
-    STD_TEST(SpaceshipEqual) {
-        StringView sv1("test");
-        StringView sv2("test");
-        STD_INSIST(spaceship(sv1, sv2) == 0);
-    }
-
-    STD_TEST(SpaceshipGreater) {
-        StringView sv1("zzz");
-        StringView sv2("aaa");
-        STD_INSIST(spaceship(sv1, sv2) > 0);
-    }
-
-    STD_TEST(SpaceshipDifferentLengths) {
-        StringView sv1("test");
-        StringView sv2("te");
-        STD_INSIST(spaceship(sv1, sv2) > 0);
-    }
-
     STD_TEST(Hash32) {
         StringView sv("test");
         u32 h = sv.hash32();
@@ -306,7 +282,6 @@ STD_TEST_SUITE(StringView) {
         StringView sv1("");
         StringView sv2("a");
         STD_INSIST(sv1 < sv2);
-        STD_INSIST(spaceship(sv1, sv2) < 0);
     }
 
     STD_TEST(NumericCharacters) {

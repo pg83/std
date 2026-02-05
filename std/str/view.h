@@ -68,21 +68,7 @@ namespace Std {
         u64 hash64() const noexcept;
     };
 
-    int spaceship(const u8* l, size_t ll, const u8* r, size_t rl) noexcept;
-
-    inline int spaceship(const StringView& l, const StringView& r) noexcept {
-        return spaceship(l.data(), l.length(), r.data(), r.length());
-    }
-
-    inline bool operator==(const StringView& l, const StringView& r) noexcept {
-        return spaceship(l, r) == 0;
-    }
-
-    inline bool operator!=(const StringView& l, const StringView& r) noexcept {
-        return !(l == r);
-    }
-
-    inline bool operator<(const StringView& l, const StringView& r) noexcept {
-        return spaceship(l, r) < 0;
-    }
+    bool operator==(const StringView& l, const StringView& r) noexcept;
+    bool operator!=(const StringView& l, const StringView& r) noexcept;
+    bool operator<(const StringView& l, const StringView& r) noexcept;
 }
