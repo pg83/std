@@ -1,7 +1,6 @@
 #include "buffer.h"
 
 #include <std/ios/buf.h>
-#include <std/mem/bss.h>
 #include <std/sys/crt.h>
 #include <std/str/view.h>
 #include <std/alg/bits.h>
@@ -14,8 +13,10 @@ using namespace Std;
 static_assert(sizeof(Buffer) == sizeof(void*));
 
 namespace {
+    alignas(max_align_t) static const char EMPTY[sizeof(Buffer::Header)] = {};
+
     static inline auto nullHeader() noexcept {
-        return (Buffer::Header*)bss();
+        return (Buffer::Header*)EMPTY;
     }
 
     static inline auto allocHeader(size_t len) {
