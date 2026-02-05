@@ -622,7 +622,7 @@ STD_TEST_SUITE(StringView) {
     STD_TEST(SearchLongSubstring) {
         StringView sv("this is a very long string with some text in the middle and more text at the end");
         size_t pos = sv.search(StringView("text in the middle"));
-        STD_INSIST(pos == 39);
+        STD_INSIST(pos == 37);
     }
 
     STD_TEST(SearchAtVeryEnd) {
