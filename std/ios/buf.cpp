@@ -63,7 +63,7 @@ void OutBuf::writeDirect(const void* ptr, size_t len) {
     buf_.append(advancePtr(ptr, cnt), len - cnt);
 }
 
-void OutBuf::writeSlow(const void* ptr, size_t len) {
+void OutBuf::writeMultipart(const void* ptr, size_t len) {
     Buffer buf;
 
     buf.xchg(buf_);
@@ -90,7 +90,7 @@ size_t OutBuf::writeImpl(const void* ptr, size_t len) {
     if (buf_.used() + len < chunk) {
         buf_.append(ptr, len);
     } else if (buf_.used()) {
-        writeSlow(ptr, len);
+        writeMultipart(ptr, len);
     } else {
         writeDirect(ptr, len);
     }
