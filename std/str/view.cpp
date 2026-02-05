@@ -57,12 +57,24 @@ StringView StringView::prefix(size_t len) const noexcept {
     return StringView(ptr_, min(len, len_));
 }
 
+StringView StringView::suffix(size_t len) const noexcept {
+    return StringView(end() - min(len, len_), end());
+}
+
 bool StringView::startsWith(StringView prefix) const noexcept {
     if (prefix.length() > len_) {
         return false;
     }
 
     return this->prefix(prefix.length()) == prefix;
+}
+
+bool StringView::endsWith(StringView suffix) const noexcept {
+    if (suffix.length() > len_) {
+        return false;
+    }
+
+    return this->suffix(suffix.length()) == suffix;
 }
 
 template <>

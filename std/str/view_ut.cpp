@@ -35,7 +35,7 @@ STD_TEST_SUITE(StringView) {
 
     STD_TEST(ConstructionFromZeroLength) {
         const u8* data = (const u8*)"test";
-        StringView sv(data, 0);
+        StringView sv(data, data);
         STD_INSIST(sv.empty());
         STD_INSIST(sv.length() == 0);
     }
@@ -392,5 +392,102 @@ STD_TEST_SUITE(StringView) {
         StringView sv("hello world");
         StringView prefix = sv.prefix(5);
         STD_INSIST(sv.startsWith(prefix));
+    }
+
+    STD_TEST(SuffixBasic) {
+        StringView sv("hello world");
+        StringView suffix = sv.suffix(5);
+        STD_INSIST(suffix.length() == 5);
+        STD_INSIST(suffix == StringView("world"));
+    }
+
+    STD_TEST(SuffixZero) {
+        StringView sv("test");
+        StringView suffix = sv.suffix(0);
+        STD_INSIST(suffix.length() == 0);
+        STD_INSIST(suffix.empty());
+    }
+
+    STD_TEST(SuffixFullLength) {
+        StringView sv("test");
+        StringView suffix = sv.suffix(4);
+        STD_INSIST(suffix == sv);
+    }
+
+    STD_TEST(SuffixExceedsLength) {
+        StringView sv("test");
+        StringView suffix = sv.suffix(100);
+        STD_INSIST(suffix == sv);
+        STD_INSIST(suffix.length() == 4);
+    }
+
+    STD_TEST(SuffixEmpty) {
+        StringView sv("");
+        StringView suffix = sv.suffix(5);
+        STD_INSIST(suffix.empty());
+    }
+
+    STD_TEST(SuffixSingleChar) {
+        StringView sv("hello");
+        StringView suffix = sv.suffix(1);
+        STD_INSIST(suffix.length() == 1);
+        STD_INSIST(suffix[0] == 'o');
+    }
+
+    STD_TEST(EndsWithTrue) {
+        StringView sv("hello world");
+        STD_INSIST(sv.endsWith(StringView("world")));
+    }
+
+    STD_TEST(EndsWithFalse) {
+        StringView sv("hello world");
+        STD_INSIST(!sv.endsWith(StringView("hello")));
+    }
+
+    STD_TEST(EndsWithEmpty) {
+        StringView sv("test");
+        STD_INSIST(sv.endsWith(StringView("")));
+    }
+
+    STD_TEST(EndsWithEmptyString) {
+        StringView sv("");
+        STD_INSIST(sv.endsWith(StringView("")));
+    }
+
+    STD_TEST(EndsWithFullMatch) {
+        StringView sv("test");
+        STD_INSIST(sv.endsWith(StringView("test")));
+    }
+
+    STD_TEST(EndsWithLongerSuffix) {
+        StringView sv("hi");
+        STD_INSIST(!sv.endsWith(StringView("hello")));
+    }
+
+    STD_TEST(EndsWithSingleChar) {
+        StringView sv("hello");
+        STD_INSIST(sv.endsWith(StringView("o")));
+    }
+
+    STD_TEST(EndsWithNonMatchingSingleChar) {
+        StringView sv("hello");
+        STD_INSIST(!sv.endsWith(StringView("w")));
+    }
+
+    STD_TEST(EndsWithPartialMatch) {
+        StringView sv("testing");
+        STD_INSIST(sv.endsWith(StringView("ing")));
+        STD_INSIST(!sv.endsWith(StringView("int")));
+    }
+
+    STD_TEST(EndsWithCaseSensitive) {
+        StringView sv("Hello");
+        STD_INSIST(!sv.endsWith(StringView("HELLO")));
+    }
+
+    STD_TEST(SuffixAndEndsWith) {
+        StringView sv("hello world");
+        StringView suffix = sv.suffix(5);
+        STD_INSIST(sv.endsWith(suffix));
     }
 }

@@ -11,7 +11,7 @@ namespace Std {
 
     public:
         inline StringView() noexcept
-            : StringView(nullptr, 0)
+            : StringView(nullptr, (size_t)0)
         {
         }
 
@@ -24,6 +24,11 @@ namespace Std {
         inline StringView(const u8* ptr, size_t len) noexcept
             : ptr_(ptr)
             , len_(len)
+        {
+        }
+
+        inline StringView(const u8* b, const u8* e) noexcept
+            : StringView(b, e - b)
         {
         }
 
@@ -61,8 +66,10 @@ namespace Std {
 
         // string ops
         StringView prefix(size_t len) const noexcept;
+        StringView suffix(size_t len) const noexcept;
 
         bool startsWith(StringView prefix) const noexcept;
+        bool endsWith(StringView suffix) const noexcept;
 
         u32 hash32() const noexcept;
         u64 hash64() const noexcept;
