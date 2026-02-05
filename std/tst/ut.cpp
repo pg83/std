@@ -27,20 +27,6 @@ namespace {
     struct Exc {
     };
 
-    inline bool startsWith(StringView str, StringView prefix) noexcept {
-        if (prefix.length() > str.length()) {
-            return false;
-        }
-
-        for (size_t i = 0; i < prefix.length(); ++i) {
-            if (str[i] != prefix[i]) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     struct Test {
         TestFunc* func;
         StringView fullName;
@@ -86,7 +72,7 @@ namespace {
             }
 
             for (auto prefix : range(includes)) {
-                if (startsWith(testName, prefix)) {
+                if (testName.startsWith(prefix)) {
                     return true;
                 }
             }

@@ -59,6 +59,11 @@ namespace Std {
             return *(end() - 1);
         }
 
+        // string ops
+        StringView prefix(size_t len) const noexcept;
+
+        bool startsWith(StringView prefix) const noexcept;
+
         u32 hash32() const noexcept;
         u64 hash64() const noexcept;
     };

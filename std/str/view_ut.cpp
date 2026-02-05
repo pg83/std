@@ -321,4 +321,101 @@ STD_TEST_SUITE(StringView) {
         StringView sv(utf8_data, 12);
         STD_INSIST(sv.length() == 12);
     }
+
+    STD_TEST(PrefixBasic) {
+        StringView sv("hello world");
+        StringView prefix = sv.prefix(5);
+        STD_INSIST(prefix.length() == 5);
+        STD_INSIST(prefix == StringView("hello"));
+    }
+
+    STD_TEST(PrefixZero) {
+        StringView sv("test");
+        StringView prefix = sv.prefix(0);
+        STD_INSIST(prefix.length() == 0);
+        STD_INSIST(prefix.empty());
+    }
+
+    STD_TEST(PrefixFullLength) {
+        StringView sv("test");
+        StringView prefix = sv.prefix(4);
+        STD_INSIST(prefix == sv);
+    }
+
+    STD_TEST(PrefixExceedsLength) {
+        StringView sv("test");
+        StringView prefix = sv.prefix(100);
+        STD_INSIST(prefix == sv);
+        STD_INSIST(prefix.length() == 4);
+    }
+
+    STD_TEST(PrefixEmpty) {
+        StringView sv("");
+        StringView prefix = sv.prefix(5);
+        STD_INSIST(prefix.empty());
+    }
+
+    STD_TEST(PrefixSingleChar) {
+        StringView sv("hello");
+        StringView prefix = sv.prefix(1);
+        STD_INSIST(prefix.length() == 1);
+        STD_INSIST(prefix[0] == 'h');
+    }
+
+    STD_TEST(StartsWithTrue) {
+        StringView sv("hello world");
+        STD_INSIST(sv.startsWith(StringView("hello")));
+    }
+
+    STD_TEST(StartsWithFalse) {
+        StringView sv("hello world");
+        STD_INSIST(!sv.startsWith(StringView("world")));
+    }
+
+    STD_TEST(StartsWithEmpty) {
+        StringView sv("test");
+        STD_INSIST(sv.startsWith(StringView("")));
+    }
+
+    STD_TEST(StartsWithEmptyString) {
+        StringView sv("");
+        STD_INSIST(sv.startsWith(StringView("")));
+    }
+
+    STD_TEST(StartsWithFullMatch) {
+        StringView sv("test");
+        STD_INSIST(sv.startsWith(StringView("test")));
+    }
+
+    STD_TEST(StartsWithLongerPrefix) {
+        StringView sv("hi");
+        STD_INSIST(!sv.startsWith(StringView("hello")));
+    }
+
+    STD_TEST(StartsWithSingleChar) {
+        StringView sv("hello");
+        STD_INSIST(sv.startsWith(StringView("h")));
+    }
+
+    STD_TEST(StartsWithNonMatchingSingleChar) {
+        StringView sv("hello");
+        STD_INSIST(!sv.startsWith(StringView("w")));
+    }
+
+    STD_TEST(StartsWithPartialMatch) {
+        StringView sv("testing");
+        STD_INSIST(sv.startsWith(StringView("test")));
+        STD_INSIST(!sv.startsWith(StringView("text")));
+    }
+
+    STD_TEST(StartsWithCaseSensitive) {
+        StringView sv("Hello");
+        STD_INSIST(!sv.startsWith(StringView("hello")));
+    }
+
+    STD_TEST(PrefixAndStartsWith) {
+        StringView sv("hello world");
+        StringView prefix = sv.prefix(5);
+        STD_INSIST(sv.startsWith(prefix));
+    }
 }

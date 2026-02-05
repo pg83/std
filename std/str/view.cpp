@@ -28,6 +28,22 @@ u64 StringView::hash64() const noexcept {
     return shash64(data(), length());
 }
 
+StringView StringView::prefix(size_t len) const noexcept {
+    if (len > len_) {
+        return *this;
+    }
+
+    return StringView(ptr_, len);
+}
+
+bool StringView::startsWith(StringView prefix) const noexcept {
+    if (prefix.length() > len_) {
+        return false;
+    }
+
+    return this->prefix(prefix.length()) == prefix;
+}
+
 int Std::spaceship(const u8* l, size_t ll, const u8* r, size_t rl) noexcept {
     const auto rr = memCmp(l, r, ll < rl ? ll : rl);
 
