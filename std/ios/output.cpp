@@ -60,7 +60,16 @@ void Output::writeV(const StringView* parts, size_t count) {
     writeV(io, count);
 }
 
-void Output::write(const void* data, size_t len) {
+void Output::writeC(const void* data, size_t len) {
+    auto b = (u8*)data;
+    auto e = b + len;
+
+    while (b < e) {
+        b += writeImpl(data, e - b);
+    }
+}
+
+void Output::writeH(const void* data, size_t len) {
     auto b = (u8*)data;
     auto e = b + len;
 

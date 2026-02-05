@@ -20,11 +20,16 @@ namespace Std {
     public:
         virtual ~Output() noexcept;
 
-        void write(const void* data, size_t len);
+        void writeH(const void* data, size_t len);
+        void writeC(const void* data, size_t len);
         void writeV(iovec* parts, size_t count);
         void writeV(const StringView* parts, size_t count);
 
         bool hint(size_t* res) const noexcept;
+
+        inline void write(const void* data, size_t len) {
+            writeH(data, len);
+        }
 
         inline void flush() {
             flushImpl();
