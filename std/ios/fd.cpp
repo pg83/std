@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/uio.h>
+#include <sys/stat.h>
 
 using namespace Std;
 
@@ -40,7 +41,19 @@ void FDOutput::finishImpl() {
 }
 
 size_t FDOutput::hintImpl() const noexcept {
-    return 1 << 16;
+    struct stat st;
+
+    if (fstat(fd, &st) == 0) {
+        if (S_ISREG(st.st_mode) || S_ISBLK(st.st_mode)) {
+            return 1 << 16;
+        }
+
+        if (S_ISCHR(st.st_mode)) {
+            return 1 << 10;
+        }
+    }
+
+    return 1 << 12;
 }
 
 size_t FDOutput::writeVImpl(iovec* parts, size_t count) {
