@@ -35,6 +35,7 @@ MemoryPool::MemoryPool()
     , currentChunkEnd(currentChunk + initial)
     , ds(new (allocate(sizeof(ChunkDisposer))) ChunkDisposer())
 {
+    STD_ASSERT((size_t)currentChunk % alignof(max_align_t) == 0);
     ds->submit((ChunkDisposer*)ds);
 }
 
@@ -45,6 +46,7 @@ MemoryPool::MemoryPool(void* buf, size_t len) noexcept
 {
     STD_ASSERT(len >= initial);
     STD_ASSERT((size_t)buf % alignof(max_align_t) == 0);
+    STD_ASSERT((size_t)currentChunk % alignof(max_align_t) == 0);
     ds->submit((ChunkDestructor*)ds);
 }
 
