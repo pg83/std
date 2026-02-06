@@ -5,6 +5,7 @@
 #include <std/sys/crt.h>
 #include <std/sys/types.h>
 #include <std/dbg/assert.h>
+#include <std/alg/exchange.h>
 
 using namespace Std;
 
@@ -58,11 +59,7 @@ void* MemoryPool::allocate(size_t len) {
         allocateNewChunk(alignedLen + sizeof(Chunk));
     }
 
-    void* ptr = currentChunk;
-
-    currentChunk += alignedLen;
-
-    return ptr;
+    return exchange(currentChunk, currentChunk + alignedLen);
 }
 
 void MemoryPool::allocateNewChunk(size_t minSize) {
