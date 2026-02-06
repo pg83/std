@@ -66,7 +66,7 @@ void* MemoryPool::allocate(size_t len) {
 }
 
 void MemoryPool::allocateNewChunk(size_t minSize) {
-    size_t nextChunkSize = static_cast<size_t>(initial * (((size_t)1) << ds->length()));
+    size_t nextChunkSize = initial * (((size_t)1) << ds->length());
 
     while (nextChunkSize < minSize) {
         nextChunkSize *= 2;
