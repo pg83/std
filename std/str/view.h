@@ -68,8 +68,8 @@ namespace Std {
         StringView prefix(size_t len) const noexcept;
         StringView suffix(size_t len) const noexcept;
 
-        bool startsWith(StringView prefix) const noexcept;
         bool endsWith(StringView suffix) const noexcept;
+        bool startsWith(StringView prefix) const noexcept;
 
         const u8* memChr(u8 ch) const noexcept;
         const u8* search(StringView substr) const noexcept;

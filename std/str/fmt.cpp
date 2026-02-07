@@ -25,7 +25,7 @@ void* Std::formatI64Base10(i64 v, void* ptr) noexcept {
     if (v < 0) {
         *b++ = u8'-';
 
-        return formatU64Base10((u64)(-(v + (i64)1)) + (u64)1, b);
+        return formatU64Base10(-(u64)v, b);
     }
 
     return formatU64Base10(v, b);
