@@ -23,6 +23,8 @@ namespace Std {
         void writeH(const void* data, size_t len);
         void writeC(const void* data, size_t len);
 
+        size_t writeP(const void* data, size_t len);
+
         size_t writeV(iovec* parts, size_t count);
         size_t writeV(const StringView* parts, size_t count);
 

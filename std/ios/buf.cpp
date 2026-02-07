@@ -57,7 +57,7 @@ void OutBuf::bumpImpl(const void* ptr) noexcept {
 }
 
 size_t OutBuf::writeDirect(const void* ptr, size_t len) {
-    return out_->write(ptr, len - len % chunk);
+    return out_->writeP(ptr, len - len % chunk);
 }
 
 size_t OutBuf::writeMultipart(const void* ptr, size_t len) {

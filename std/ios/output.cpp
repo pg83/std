@@ -102,3 +102,11 @@ bool Output::hint(size_t* res) const noexcept {
 
     return false;
 }
+
+size_t Output::writeP(const void* data, size_t len) {
+    if (len) {
+        return writeImpl(data, len);
+    }
+
+    return 0;
+}
