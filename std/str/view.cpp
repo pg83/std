@@ -15,13 +15,13 @@ static_assert(stdHasTrivialDestructor(StringView));
 static_assert(sizeof(StringView) == 2 * sizeof(void*));
 
 namespace {
-    inline int spaceship(const u8* l, size_t ll, const u8* r, size_t rl) noexcept {
+    static inline int spaceship(const u8* l, size_t ll, const u8* r, size_t rl) noexcept {
         const auto rr = memCmp(l, r, ll < rl ? ll : rl);
 
         return rr ? rr : (ll < rl ? -1 : (ll == rl ? 0 : 1));
     }
 
-    inline int spaceship(const StringView& l, const StringView& r) noexcept {
+    static inline int spaceship(StringView l, StringView r) noexcept {
         return spaceship(l.data(), l.length(), r.data(), r.length());
     }
 
@@ -30,15 +30,15 @@ namespace {
     }
 }
 
-bool Std::operator==(const StringView& l, const StringView& r) noexcept {
+bool Std::operator==(StringView l, StringView r) noexcept {
     return spaceship(l, r) == 0;
 }
 
-bool Std::operator!=(const StringView& l, const StringView& r) noexcept {
+bool Std::operator!=(StringView l, StringView r) noexcept {
     return !(l == r);
 }
 
-bool Std::operator<(const StringView& l, const StringView& r) noexcept {
+bool Std::operator<(StringView l, StringView r) noexcept {
     return spaceship(l, r) < 0;
 }
 

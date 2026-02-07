@@ -27,7 +27,7 @@ namespace Std {
         ~Buffer() noexcept;
 
         Buffer(size_t len);
-        Buffer(const StringView& v);
+        Buffer(StringView v);
         Buffer(const void* data, size_t len);
 
         Buffer() noexcept;

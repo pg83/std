@@ -66,7 +66,7 @@ Buffer::Buffer(const void* ptr, size_t len)
     appendUnsafe(ptr, len);
 }
 
-Buffer::Buffer(const StringView& v)
+Buffer::Buffer(StringView v)
     : Buffer(v.data(), v.length())
 {
 }

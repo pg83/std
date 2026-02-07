@@ -79,7 +79,7 @@ namespace Std {
         u64 hash64() const noexcept;
     };
 
-    bool operator==(const StringView& l, const StringView& r) noexcept;
-    bool operator!=(const StringView& l, const StringView& r) noexcept;
-    bool operator<(const StringView& l, const StringView& r) noexcept;
+    bool operator==(StringView l, StringView r) noexcept;
+    bool operator!=(StringView l, StringView r) noexcept;
+    bool operator<(StringView l, StringView r) noexcept;
 }

@@ -22,7 +22,7 @@ namespace Std {
             htable.compactify();
         }
 
-        void set(const StringView& key, void* v);
-        void* find(const StringView& key) const noexcept;
+        void set(StringView key, void* v);
+        void* find(StringView key) const noexcept;
     };
 }
