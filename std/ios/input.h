@@ -7,6 +7,8 @@ namespace Std {
         virtual size_t readImpl(void* data, size_t len) = 0;
 
     public:
+        virtual ~Input() noexcept;
+
         inline size_t readP(void* data, size_t len) {
             return readImpl(data, len);
         }

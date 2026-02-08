@@ -4,6 +4,9 @@
 
 using namespace Std;
 
+Input::~Input() noexcept {
+}
+
 void Input::read(void* data, size_t len) {
     while (len) {
         auto p = readP(data, len);
