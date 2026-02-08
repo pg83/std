@@ -22,4 +22,12 @@ namespace Std {
         void close();
         void fsync();
     };
+
+    struct ScopedFD: public FD {
+        using FD::FD;
+
+        inline ~ScopedFD() {
+            close();
+        }
+    };
 }
