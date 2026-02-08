@@ -21,9 +21,7 @@ ZeroCopyOutput::~ZeroCopyOutput() noexcept {
 }
 
 size_t ZeroCopyOutput::writeImpl(const void* data, size_t len) {
-    bump(imbue(len) << StringView((const u8*)data, len));
-
-    return len;
+    return (bump(imbue(len) << StringView((const u8*)data, len)), len);
 }
 
 // std types
