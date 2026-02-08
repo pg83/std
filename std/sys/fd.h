@@ -10,6 +10,11 @@ namespace Std {
         int fd;
 
     public:
+        inline FD() noexcept
+            : fd(-1)
+        {
+        }
+
         inline FD(int _fd) noexcept
             : fd(_fd)
         {

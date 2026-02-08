@@ -117,8 +117,8 @@ STD_TEST_SUITE(FD) {
     }
 
     STD_TEST(PipeReadWrite) {
-        ScopedFD readEnd(-1);
-        ScopedFD writeEnd(-1);
+        ScopedFD readEnd;
+        ScopedFD writeEnd;
         createPipeFD(readEnd, writeEnd);
 
         const char* testData = "Pipe test data";
@@ -134,8 +134,8 @@ STD_TEST_SUITE(FD) {
     }
 
     STD_TEST(PipeMultipleWrites) {
-        ScopedFD readEnd(-1);
-        ScopedFD writeEnd(-1);
+        ScopedFD readEnd;
+        ScopedFD writeEnd;
         createPipeFD(readEnd, writeEnd);
 
         const char* msg1 = "First";
@@ -153,8 +153,8 @@ STD_TEST_SUITE(FD) {
     }
 
     STD_TEST(PipeWriteV) {
-        ScopedFD readEnd(-1);
-        ScopedFD writeEnd(-1);
+        ScopedFD readEnd;
+        ScopedFD writeEnd;
         createPipeFD(readEnd, writeEnd);
 
         const char* part1 = "A";
@@ -239,8 +239,8 @@ STD_TEST_SUITE(ScopedFD) {
     }
 
     STD_TEST(ScopedPipe) {
-        ScopedFD readEnd(-1);
-        ScopedFD writeEnd(-1);
+        ScopedFD readEnd;
+        ScopedFD writeEnd;
         createPipeFD(readEnd, writeEnd);
 
         const char* testData = "Scoped pipe";
