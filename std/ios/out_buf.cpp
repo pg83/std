@@ -7,6 +7,7 @@
 #include <std/sys/crt.h>
 #include <std/str/view.h>
 #include <std/alg/xchg.h>
+#include <std/alg/defer.h>
 #include <std/alg/minmax.h>
 #include <std/alg/advance.h>
 
@@ -100,9 +101,13 @@ void OutBuf::flushImpl() {
     Buffer buf;
 
     buf.xchg(buf_);
+
+    STD_DEFER {
+        buf.reset();
+        buf.xchg(buf_);
+    };
+
     out_->write(buf.data(), buf.used());
-    buf.reset();
-    buf.xchg(buf_);
 }
 
 void OutBuf::finishImpl() {

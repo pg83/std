@@ -1,6 +1,7 @@
 #include "input.h"
 #include "copy.h"
 
+#include <std/alg/defer.h>
 #include <std/lib/buffer.h>
 #include <std/str/builder.h>
 
@@ -20,7 +21,12 @@ void Input::read(void* data, size_t len) {
 
 void Input::readAll(Buffer& res) {
     StringBuilder sb;
+
     sb.xchg(res);
+
+    STD_DEFER {
+        sb.xchg(res);
+    };
+
     zeroCopy(*this, sb);
-    sb.xchg(res);
 }
