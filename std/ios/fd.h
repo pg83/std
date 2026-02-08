@@ -3,6 +3,8 @@
 #include "output.h"
 
 namespace Std {
+    class FD;
+
     class FDOutput: public Output {
         size_t writeImpl(const void* data, size_t len) override;
         size_t writeVImpl(iovec* parts, size_t count) override;
@@ -11,10 +13,10 @@ namespace Std {
 
     public:
         // does not own fd
-        int fd;
+        FD* fd;
 
-        inline FDOutput(int _fd) noexcept
-            : fd(_fd)
+        inline FDOutput(FD& _fd) noexcept
+            : fd(&_fd)
         {
         }
 
@@ -26,20 +28,20 @@ namespace Std {
         size_t hintImpl() const noexcept override;
 
     public:
-        FDRegular(int fd) noexcept;
+        FDRegular(FD& fd) noexcept;
     };
 
     class FDCharacter: public FDOutput {
         size_t hintImpl() const noexcept override;
 
     public:
-        FDCharacter(int fd) noexcept;
+        FDCharacter(FD& fd) noexcept;
     };
 
     class FDPipe: public FDOutput {
         size_t hintImpl() const noexcept override;
 
     public:
-        FDPipe(int fd) noexcept;
+        FDPipe(FD& fd) noexcept;
     };
 }
