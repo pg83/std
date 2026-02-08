@@ -1,10 +1,10 @@
 #include "view.h"
 #include "hash.h"
 
-#include <std/ios/buf.h>
 #include <std/sys/crt.h>
 #include <std/lib/buffer.h>
 #include <std/alg/minmax.h>
+#include <std/ios/zc_out.h>
 
 #define _GNU_SOURCE
 #include <string.h>

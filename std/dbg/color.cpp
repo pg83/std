@@ -1,7 +1,7 @@
 #include "color.h"
 
-#include <std/ios/buf.h>
 #include <std/str/view.h>
+#include <std/ios/out_buf.h>
 
 using namespace Std;
 

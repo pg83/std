@@ -1,5 +1,5 @@
-#include "buf.h"
 #include "mem.h"
+#include "out_buf.h"
 
 #include <std/tst/ut.h>
 #include <std/typ/support.h>

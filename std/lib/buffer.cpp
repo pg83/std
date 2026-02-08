@@ -1,12 +1,12 @@
 #include "buffer.h"
 
-#include <std/ios/buf.h>
 #include <std/sys/crt.h>
 #include <std/str/view.h>
 #include <std/alg/bits.h>
 #include <std/alg/xchg.h>
 #include <std/alg/minmax.h>
 #include <std/dbg/assert.h>
+#include <std/ios/zc_out.h>
 
 using namespace Std;
 

@@ -1,4 +1,5 @@
-#include "buf.h"
+#include "out_buf.h"
+
 #include "manip.h"
 #include "output.h"
 #include "unbound.h"

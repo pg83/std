@@ -1,8 +1,8 @@
 #pragma once
 
-#include "buf.h"
 #include "manip.h"
 #include "output.h"
+#include "out_buf.h"
 
 #define sysO ::Std::OutBuf(::Std::stdoutStream())
 #define sysE ::Std::OutBuf(::Std::stderrStream())
