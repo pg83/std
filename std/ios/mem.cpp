@@ -5,9 +5,7 @@
 using namespace Std;
 
 size_t MemoryOutput::writeImpl(const void* _ptr, size_t len) {
-    ptr = memCpy(ptr, _ptr, len);
-
-    return len;
+    return (ptr = memCpy(ptr, _ptr, len), len);
 }
 
 void* MemoryOutput::imbueImpl(size_t) {
