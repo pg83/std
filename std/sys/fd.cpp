@@ -1,5 +1,6 @@
 #include "fd.h"
 
+#include <std/alg/xchg.h>
 #include <std/str/view.h>
 #include <std/sys/throw.h>
 #include <std/str/builder.h>
@@ -58,9 +59,30 @@ void FD::fsync() {
 }
 
 void FD::close() {
+    if (fd < 0) {
+        return;
+    }
+
     if (::close(exchange(fd, -1)) < 0) {
         auto err = errno;
 
         throwErrno(err, StringBuilder() << StringView(u8"close() failed"));
     }
+}
+
+void FD::xchg(FD& other) noexcept {
+    ::Std::xchg(fd, other.fd);
+}
+
+void Std::createPipeFD(ScopedFD& in, ScopedFD& out) {
+    int fd[2];
+
+    if (auto res = pipe(fd); res < 0) {
+        auto err = errno;
+
+        throwErrno(err, StringBuilder() << StringView(u8"pipe() failed"));
+    }
+
+    ScopedFD(fd[0]).xchg(in);
+    ScopedFD(fd[1]).xchg(out);
 }

@@ -21,6 +21,8 @@ namespace Std {
 
         void close();
         void fsync();
+
+        void xchg(FD& fd) noexcept;
     };
 
     struct ScopedFD: public FD {
@@ -30,4 +32,6 @@ namespace Std {
             close();
         }
     };
+
+    void createPipeFD(ScopedFD& in, ScopedFD& out);
 }
