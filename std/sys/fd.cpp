@@ -3,6 +3,7 @@
 #include <std/str/view.h>
 #include <std/sys/throw.h>
 #include <std/str/builder.h>
+#include <std/alg/exchange.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -57,7 +58,7 @@ void FD::fsync() {
 }
 
 void FD::close() {
-    if (::close(fd) < 0) {
+    if (::close(exchange(fd, -1)) < 0) {
         auto err = errno;
 
         throwErrno(err, StringBuilder() << StringView(u8"close() failed"));
