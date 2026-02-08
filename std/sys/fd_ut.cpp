@@ -117,12 +117,9 @@ STD_TEST_SUITE(FD) {
     }
 
     STD_TEST(PipeReadWrite) {
-        int pipefd[2];
-        int result = pipe(pipefd);
-        STD_INSIST(result == 0);
-
-        FD readEnd(pipefd[0]);
-        FD writeEnd(pipefd[1]);
+        ScopedFD readEnd(-1);
+        ScopedFD writeEnd(-1);
+        createPipeFD(readEnd, writeEnd);
 
         const char* testData = "Pipe test data";
         size_t len = strlen(testData);
@@ -134,17 +131,12 @@ STD_TEST_SUITE(FD) {
         size_t readBytes = readEnd.read(readBuf, len);
         STD_INSIST(readBytes == len);
         STD_INSIST(memcmp(readBuf, testData, len) == 0);
-
-        close(pipefd[0]);
-        close(pipefd[1]);
     }
 
     STD_TEST(PipeMultipleWrites) {
-        int pipefd[2];
-        pipe(pipefd);
-
-        FD readEnd(pipefd[0]);
-        FD writeEnd(pipefd[1]);
+        ScopedFD readEnd(-1);
+        ScopedFD writeEnd(-1);
+        createPipeFD(readEnd, writeEnd);
 
         const char* msg1 = "First";
         const char* msg2 = "Second";
@@ -158,17 +150,12 @@ STD_TEST_SUITE(FD) {
 
         STD_INSIST(readBytes == totalLen);
         STD_INSIST(memcmp(readBuf, "FirstSecond", totalLen) == 0);
-
-        close(pipefd[0]);
-        close(pipefd[1]);
     }
 
     STD_TEST(PipeWriteV) {
-        int pipefd[2];
-        pipe(pipefd);
-
-        FD readEnd(pipefd[0]);
-        FD writeEnd(pipefd[1]);
+        ScopedFD readEnd(-1);
+        ScopedFD writeEnd(-1);
+        createPipeFD(readEnd, writeEnd);
 
         const char* part1 = "A";
         const char* part2 = "B";
@@ -188,9 +175,6 @@ STD_TEST_SUITE(FD) {
         char readBuf[64] = {0};
         size_t readBytes = readEnd.read(readBuf, 3);
         STD_INSIST(strcmp(readBuf, "ABC") == 0);
-
-        close(pipefd[0]);
-        close(pipefd[1]);
     }
 
     STD_TEST(LargeDataMemFd) {
@@ -255,20 +239,16 @@ STD_TEST_SUITE(ScopedFD) {
     }
 
     STD_TEST(ScopedPipe) {
-        int pipefd[2];
-        pipe(pipefd);
+        ScopedFD readEnd(-1);
+        ScopedFD writeEnd(-1);
+        createPipeFD(readEnd, writeEnd);
 
-        {
-            ScopedFD readEnd(pipefd[0]);
-            ScopedFD writeEnd(pipefd[1]);
+        const char* testData = "Scoped pipe";
+        writeEnd.write(testData, strlen(testData));
 
-            const char* testData = "Scoped pipe";
-            writeEnd.write(testData, strlen(testData));
-
-            char readBuf[64] = {0};
-            readEnd.read(readBuf, strlen(testData));
-            STD_INSIST(strcmp(readBuf, testData) == 0);
-        }
+        char readBuf[64] = {0};
+        readEnd.read(readBuf, strlen(testData));
+        STD_INSIST(strcmp(readBuf, testData) == 0);
     }
 
     STD_TEST(ScopedWriteV) {
