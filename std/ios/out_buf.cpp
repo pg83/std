@@ -69,6 +69,11 @@ size_t OutBuf::writeMultipart(const void* ptr, size_t len) {
 
     buf.xchg(buf_);
 
+    STD_DEFER {
+        buf.reset();
+        buf.xchg(buf_);
+    };
+
     iovec parts[] = {
         {
             .iov_base = (void*)buf.data(),
