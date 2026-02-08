@@ -99,7 +99,9 @@ STD_TEST_SUITE(FDInput) {
         size_t totalRead = 0;
         while (totalRead < bufSize) {
             size_t bytesRead = fdInput.readP(readBuf + totalRead, bufSize - totalRead);
-            if (bytesRead == 0) break;
+            if (bytesRead == 0) {
+                break;
+            }
             totalRead += bytesRead;
         }
 

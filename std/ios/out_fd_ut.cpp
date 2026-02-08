@@ -468,7 +468,9 @@ STD_TEST_SUITE(FDPipe) {
         size_t totalRead = 0;
         while (totalRead < bufSize) {
             size_t bytesRead = readEnd.read(readBuf + totalRead, bufSize - totalRead);
-            if (bytesRead == 0) break;
+            if (bytesRead == 0) {
+                break;
+            }
             totalRead += bytesRead;
         }
 
