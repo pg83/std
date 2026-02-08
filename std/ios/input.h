@@ -3,6 +3,8 @@
 #include <std/sys/types.h>
 
 namespace Std {
+    class Buffer;
+
     class Input {
         virtual size_t readImpl(void* data, size_t len) = 0;
 
@@ -14,5 +16,6 @@ namespace Std {
         }
 
         void read(void* data, size_t len);
+        void readAll(Buffer& res);
     };
 }
