@@ -41,8 +41,10 @@ OutBuf::OutBuf() noexcept
 {
 }
 
-void* OutBuf::imbueImpl(size_t len) {
+void* OutBuf::imbueImpl(size_t len, size_t* avail) {
     buf_.growDelta(len);
+
+    *avail = buf_.left();
 
     return (void*)buf_.mutCurrent();
 }

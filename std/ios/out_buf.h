@@ -25,7 +25,7 @@ namespace Std {
         size_t hintImpl() const noexcept override;
 
         // zero-copy
-        void* imbueImpl(size_t len) override;
+        void* imbueImpl(size_t len, size_t* avail) override;
         void bumpImpl(const void* ptr) noexcept override;
 
     public:

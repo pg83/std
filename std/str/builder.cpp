@@ -6,8 +6,10 @@ size_t StringBuilder::writeImpl(const void* ptr, size_t len) {
     return (append(ptr, len), len);
 }
 
-void* StringBuilder::imbueImpl(size_t len) {
+void* StringBuilder::imbueImpl(size_t len, size_t* avail) {
     growDelta(len);
+
+    *avail = left();
 
     return mutCurrent();
 }
