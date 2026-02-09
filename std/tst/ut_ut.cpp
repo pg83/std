@@ -6,6 +6,7 @@ using namespace Std;
 
 STD_TEST_SUITE(UT) {
     STD_TEST(_Test1) {
+        STD_INSIST(false);
     }
 
     STD_TEST(Test2) {
