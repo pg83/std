@@ -1,6 +1,6 @@
 #pragma once
 
-#include <std/ios/zc_out.h>
+#include <std/ios/out_zc.h>
 #include <std/lib/buffer.h>
 
 namespace Std {

@@ -4,7 +4,7 @@
 #include <std/sys/crt.h>
 #include <std/lib/buffer.h>
 #include <std/alg/minmax.h>
-#include <std/ios/zc_out.h>
+#include <std/ios/out_zc.h>
 
 #define _GNU_SOURCE
 #include <string.h>

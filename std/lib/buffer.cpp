@@ -6,7 +6,7 @@
 #include <std/alg/xchg.h>
 #include <std/alg/minmax.h>
 #include <std/dbg/assert.h>
-#include <std/ios/zc_out.h>
+#include <std/ios/out_zc.h>
 
 using namespace Std;
 

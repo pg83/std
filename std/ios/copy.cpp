@@ -1,6 +1,6 @@
 #include "copy.h"
 #include "input.h"
-#include "zc_out.h"
+#include "out_zc.h"
 #include "out_buf.h"
 
 #include <std/alg/minmax.h>
