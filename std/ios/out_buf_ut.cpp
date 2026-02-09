@@ -115,7 +115,7 @@ STD_TEST_SUITE(OutBuf) {
         STD_INSIST(StringView(str) == StringView(u8"abcdefghij"));
     }
 
-    STD_TEST(zero_copy_imbue_bump) {
+    STD_TEST(zero_copy_imbue_commit) {
         Buffer str;
         StringOutput strOut(str);
         OutBuf buf(strOut);
@@ -125,7 +125,7 @@ STD_TEST_SUITE(OutBuf) {
         ptr[0] = 'x';
         ptr[1] = 'y';
         ptr[2] = 'z';
-        buf.bump(ptr + 3);
+        buf.commit(ptr + 3);
 
         buf.finish();
         STD_INSIST(StringView(str) == StringView(u8"xyz"));
@@ -355,7 +355,7 @@ STD_TEST_SUITE(OutBuf) {
 
         STD_INSIST(counter.collectedLength() == 0);
 
-        buf.bump(ptr + 1024);
+        buf.commit(ptr + 1024);
 
         STD_INSIST(counter.collectedLength() == 1024);
     }
@@ -366,13 +366,13 @@ STD_TEST_SUITE(OutBuf) {
 
         auto ubuf = buf.imbue(300);
         u8* ptr = (u8*)ubuf.ptr;
-        buf.bump(ptr + 300);
+        buf.commit(ptr + 300);
 
         STD_INSIST(counter.collectedLength() == 0);
 
         ubuf = buf.imbue(300);
         ptr = (u8*)ubuf.ptr;
-        buf.bump(ptr + 300);
+        buf.commit(ptr + 300);
 
         STD_INSIST(counter.collectedLength() == 512);
     }

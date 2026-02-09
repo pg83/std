@@ -33,7 +33,7 @@ void Std::zeroCopy(Input& in, ZeroCopyOutput& out) {
             return;
         }
 
-        out.bump(advancePtr(ptr, len));
+        out.commit(advancePtr(ptr, len));
 
         if (!hinted) {
             chunkSize = min<size_t>(chunkSize * 2, 1 << 16);

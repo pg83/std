@@ -12,6 +12,6 @@ void* MemoryOutput::imbueImpl(size_t* len) {
     return ptr;
 }
 
-void MemoryOutput::bumpImpl(const void* _ptr) noexcept {
+void MemoryOutput::commitImpl(const void* _ptr) noexcept {
     ptr = (void*)_ptr;
 }

@@ -45,7 +45,7 @@ void* OutBuf::imbueImpl(size_t* len) {
     return buf_.imbueMe(len);
 }
 
-void OutBuf::bumpImpl(const void* ptr) noexcept {
+void OutBuf::commitImpl(const void* ptr) noexcept {
     buf_.seekAbsolute(ptr);
 
     if (buf_.used() >= chunk) {

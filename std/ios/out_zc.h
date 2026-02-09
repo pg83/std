@@ -14,7 +14,7 @@ namespace Std {
         size_t writeImpl(const void* data, size_t len) override;
 
         virtual void* imbueImpl(size_t* len) = 0;
-        virtual void bumpImpl(const void* ptr) noexcept = 0;
+        virtual void commitImpl(const void* ptr) noexcept = 0;
 
     public:
         ~ZeroCopyOutput() noexcept override;
@@ -28,12 +28,12 @@ namespace Std {
             return imbueImpl(avail);
         }
 
-        inline void bump(const void* ptr) noexcept {
-            bumpImpl(ptr);
+        inline void commit(const void* ptr) noexcept {
+            commitImpl(ptr);
         }
 
-        inline void bump(UnboundBuffer buf) noexcept {
-            bump(buf.ptr);
+        inline void commit(UnboundBuffer buf) noexcept {
+            commit(buf.ptr);
         }
     };
 

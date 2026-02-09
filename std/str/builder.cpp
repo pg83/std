@@ -10,7 +10,7 @@ void* StringBuilder::imbueImpl(size_t* len) {
     return imbueMe(len);
 }
 
-void StringBuilder::bumpImpl(const void* ptr) noexcept {
+void StringBuilder::commitImpl(const void* ptr) noexcept {
     seekAbsolute(ptr);
 }
 
