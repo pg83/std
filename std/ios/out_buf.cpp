@@ -14,7 +14,6 @@
 #include <sys/uio.h>
 
 using namespace Std;
-using namespace Std::Manip;
 
 OutBuf::~OutBuf() {
     if (out_) {
