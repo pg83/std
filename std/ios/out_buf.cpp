@@ -112,8 +112,11 @@ void OutBuf::flushImpl() {
 }
 
 void OutBuf::finishImpl() {
+    STD_DEFER {
+        out_ = nullptr;
+    };
+
     flush();
-    out_ = nullptr;
 }
 
 void OutBuf::xchg(OutBuf& buf) noexcept {
