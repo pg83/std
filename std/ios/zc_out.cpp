@@ -20,6 +20,10 @@ namespace {
 ZeroCopyOutput::~ZeroCopyOutput() noexcept {
 }
 
+bool ZeroCopyOutput::isZeroCopy() const noexcept {
+    return true;
+}
+
 size_t ZeroCopyOutput::writeImpl(const void* data, size_t len) {
     return (bump(imbue(len) << StringView((const u8*)data, len)), len);
 }

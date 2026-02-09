@@ -7,6 +7,14 @@
 #include <std/alg/advance.h>
 
 void Std::copy(Input& in, Output& out) {
+    if (out.isZeroCopy()) {
+        zeroCopy(in, static_cast<ZeroCopyOutput&>(out));
+    } else {
+        copyCopy(in, out);
+    }
+}
+
+void Std::copyCopy(Input& in, Output& out) {
     OutBuf ob(out);
     zeroCopy(in, ob);
 }

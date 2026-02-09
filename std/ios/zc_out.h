@@ -10,6 +10,7 @@ namespace Std {
     class StringView;
 
     class ZeroCopyOutput: public Output {
+        bool isZeroCopy() const noexcept override;
         size_t writeImpl(const void* data, size_t len) override;
 
         virtual void* imbueImpl(size_t* len) = 0;
