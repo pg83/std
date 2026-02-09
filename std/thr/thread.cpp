@@ -1,23 +1,21 @@
 #include "thread.h"
 #include "runable.h"
 
-#include <std/mem/new.h>
 #include <std/str/view.h>
 #include <std/sys/throw.h>
 #include <std/ptr/scoped.h>
 #include <std/dbg/insist.h>
 #include <std/str/builder.h>
-#include <std/alg/destruct.h>
 
 #include <pthread.h>
 
 using namespace Std;
 
-struct Thread::Impl: public Newable {
+struct Thread::Impl {
     pthread_t thread;
     Runable* runable;
 
-    explicit Impl(Runable& r)
+    inline explicit Impl(Runable& r)
         : runable(&r)
     {
         if (pthread_create(&thread, nullptr, threadFunc, this)) {
@@ -30,26 +28,21 @@ struct Thread::Impl: public Newable {
     }
 };
 
-Thread::Impl* Thread::impl() const noexcept {
-    return (Impl*)storage_;
-}
-
-Thread::Thread(Runable& runable) {
-    static_assert(sizeof(storage_) >= sizeof(Impl));
-
-    new (storage_) Impl(runable);
+Thread::Thread(Runable& runable)
+    : impl(new Impl(runable))
+{
 }
 
 Thread::~Thread() noexcept {
-    destruct(impl());
+    delete impl;
 }
 
 void Thread::join() noexcept {
-    STD_INSIST(pthread_join(impl()->thread, nullptr) == 0);
+    STD_INSIST(pthread_join(impl->thread, nullptr) == 0);
 }
 
 void Thread::detach() noexcept {
-    STD_INSIST(pthread_detach(impl()->thread) == 0);
+    STD_INSIST(pthread_detach(impl->thread) == 0);
 }
 
 void Std::detach(Runable& runable) {
