@@ -10,32 +10,34 @@
 using namespace Std;
 
 struct Mutex::Impl: public pthread_mutex_t {
+    inline Impl() {
+        if (pthread_mutex_init(this, nullptr) != 0) {
+            Errno().raise(StringBuilder() << StringView(u8"pthread_mutex_init failed"));
+        }
+    }
+
+    inline ~Impl() noexcept {
+        STD_INSIST(pthread_mutex_destroy(this) == 0);
+    }
 };
 
-Mutex::Impl* Mutex::impl() noexcept {
-    return reinterpret_cast<Impl*>(storage_);
-}
-
-Mutex::Mutex() {
-    static_assert(sizeof(storage_) >= sizeof(pthread_mutex_t));
-
-    if (pthread_mutex_init(impl(), nullptr) != 0) {
-        Errno().raise(StringBuilder() << StringView(u8"pthread_mutex_init failed"));
-    }
+Mutex::Mutex()
+    : impl(new Impl())
+{
 }
 
 Mutex::~Mutex() noexcept {
-    STD_INSIST(pthread_mutex_destroy(impl()) == 0);
+    delete impl;
 }
 
 void Mutex::lock() noexcept {
-    STD_INSIST(pthread_mutex_lock(impl()) == 0);
+    STD_INSIST(pthread_mutex_lock(impl) == 0);
 }
 
 void Mutex::unlock() noexcept {
-    STD_INSIST(pthread_mutex_unlock(impl()) == 0);
+    STD_INSIST(pthread_mutex_unlock(impl) == 0);
 }
 
 bool Mutex::tryLock() noexcept {
-    return pthread_mutex_trylock(impl()) == 0;
+    return pthread_mutex_trylock(impl) == 0;
 }

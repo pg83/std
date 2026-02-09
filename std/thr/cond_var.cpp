@@ -32,7 +32,7 @@ CondVar::~CondVar() noexcept {
 }
 
 void CondVar::wait(Mutex& mutex) noexcept {
-    STD_INSIST(pthread_cond_wait(impl, (pthread_mutex_t*)mutex.impl()) == 0);
+    STD_INSIST(pthread_cond_wait(impl, (pthread_mutex_t*)mutex.impl) == 0);
 }
 
 void CondVar::signal() noexcept {

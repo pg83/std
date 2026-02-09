@@ -6,10 +6,8 @@ namespace Std {
     class Mutex {
         friend class CondVar;
 
-        alignas(void*) char storage_[128];
-
         struct Impl;
-        Impl* impl() noexcept;
+        Impl* impl;
 
     public:
         Mutex();
