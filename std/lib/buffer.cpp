@@ -121,11 +121,7 @@ void Buffer::xchg(Buffer& buf) noexcept {
 }
 
 void* Buffer::imbueMe(size_t* len) {
-    growDelta(*len);
-
-    *len = left();
-
-    return (void*)mutCurrent();
+    return (growDelta(*len), *len = left(), (void*)mutCurrent());
 }
 
 template <>
