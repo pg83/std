@@ -14,13 +14,11 @@
 using namespace Std;
 
 size_t FD::read(void* data, size_t len) {
-    auto res = ::read(fd, data, len);
-
-    if (res < 0) {
-        Errno().raise(StringBuilder() << StringView(u8"read() failed"));
+    if (auto res = ::read(fd, data, len); res >= 0) {
+        return res;
     }
 
-    return res;
+    Errno().raise(StringBuilder() << StringView(u8"read() failed"));
 }
 
 size_t FD::write(const void* data, size_t len) {
