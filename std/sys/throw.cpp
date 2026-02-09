@@ -11,16 +11,15 @@
 using namespace Std;
 
 namespace {
-    struct Errno: public Exception {
+    struct ErrnoError: public Exception {
         Buffer full;
         Buffer text;
         int error;
 
-        inline Errno(int e, Buffer&& t) noexcept
+        inline ErrnoError(int e, Buffer&& t) noexcept
             : text(move(t))
             , error(e)
         {
-            errno = 0;
         }
 
         ExceptionKind kind() const noexcept override {
@@ -49,6 +48,12 @@ namespace {
 Exception::~Exception() noexcept {
 }
 
-void Std::throwErrno(int error, Buffer&& text) {
-    throw Errno(error, move(text));
+Errno::Errno() noexcept
+    : error(errno)
+{
+    errno = 0;
+}
+
+void Errno::raise(Buffer&& text) {
+    throw ErrnoError(error, move(text));
 }

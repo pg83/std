@@ -9,7 +9,6 @@
 #include <std/str/builder.h>
 #include <std/alg/destruct.h>
 
-#include <errno.h>
 #include <pthread.h>
 
 using namespace Std;
@@ -22,15 +21,12 @@ struct Thread::Impl: public Newable {
         : runable(&r)
     {
         if (pthread_create(&thread, nullptr, threadFunc, this)) {
-            auto err = errno;
-
-            throwErrno(err, StringBuilder() << StringView(u8"pthread_create failed"));
+            Errno().raise(StringBuilder() << StringView(u8"pthread_create failed"));
         }
     }
 
     static void* threadFunc(void* arg) {
-        ((Impl*)arg)->runable->run();
-        return nullptr;
+        return (((Impl*)arg)->runable->run(), nullptr);
     }
 };
 

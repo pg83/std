@@ -5,7 +5,6 @@
 #include <std/dbg/insist.h>
 #include <std/str/builder.h>
 
-#include <errno.h>
 #include <pthread.h>
 
 using namespace Std;
@@ -21,9 +20,7 @@ Mutex::Mutex() {
     static_assert(sizeof(storage_) >= sizeof(pthread_mutex_t));
 
     if (pthread_mutex_init(impl(), nullptr) != 0) {
-        auto error = errno;
-
-        throwErrno(error, StringBuilder() << StringView(u8"pthread_mutex_init failed"));
+        Errno().raise(StringBuilder() << StringView(u8"pthread_mutex_init failed"));
     }
 }
 

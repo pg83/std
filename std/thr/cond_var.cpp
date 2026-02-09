@@ -6,7 +6,6 @@
 #include <std/dbg/insist.h>
 #include <std/str/builder.h>
 
-#include <errno.h>
 #include <pthread.h>
 
 using namespace Std;
@@ -22,9 +21,7 @@ CondVar::CondVar() {
     static_assert(sizeof(storage_) >= sizeof(pthread_cond_t));
 
     if (pthread_cond_init(impl(), nullptr) != 0) {
-        auto error = errno;
-
-        throwErrno(error, StringBuilder() << StringView(u8"pthread_cond_init failed"));
+        Errno().raise(StringBuilder() << StringView(u8"pthread_cond_init failed"));
     }
 }
 

@@ -15,6 +15,12 @@ namespace Std {
         virtual StringView description() = 0;
     };
 
-    [[noreturn]]
-    void throwErrno(int err, Buffer&& text);
+    struct Errno {
+        int error;
+
+        Errno() noexcept;
+
+        [[noreturn]]
+        void raise(Buffer&& text);
+    };
 }
