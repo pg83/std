@@ -11,32 +11,34 @@
 using namespace Std;
 
 struct CondVar::Impl: public pthread_cond_t {
+    inline Impl() {
+        if (pthread_cond_init(this, nullptr) != 0) {
+            Errno().raise(StringBuilder() << StringView(u8"pthread_cond_init failed"));
+        }
+    }
+
+    inline ~Impl() noexcept {
+        STD_INSIST(pthread_cond_destroy(this) == 0);
+    }
 };
 
-CondVar::Impl* CondVar::impl() noexcept {
-    return (Impl*)storage_;
-}
-
-CondVar::CondVar() {
-    static_assert(sizeof(storage_) >= sizeof(pthread_cond_t));
-
-    if (pthread_cond_init(impl(), nullptr) != 0) {
-        Errno().raise(StringBuilder() << StringView(u8"pthread_cond_init failed"));
-    }
+CondVar::CondVar()
+    : impl(new Impl())
+{
 }
 
 CondVar::~CondVar() noexcept {
-    STD_INSIST(pthread_cond_destroy(impl()) == 0);
+    delete impl;
 }
 
 void CondVar::wait(Mutex& mutex) noexcept {
-    STD_INSIST(pthread_cond_wait(impl(), (pthread_mutex_t*)mutex.impl()) == 0);
+    STD_INSIST(pthread_cond_wait(impl, (pthread_mutex_t*)mutex.impl()) == 0);
 }
 
 void CondVar::signal() noexcept {
-    STD_INSIST(pthread_cond_signal(impl()) == 0);
+    STD_INSIST(pthread_cond_signal(impl) == 0);
 }
 
 void CondVar::broadcast() noexcept {
-    STD_INSIST(pthread_cond_broadcast(impl()) == 0);
+    STD_INSIST(pthread_cond_broadcast(impl) == 0);
 }
