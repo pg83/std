@@ -24,9 +24,9 @@ void Std::zeroCopy(Input& in, ZeroCopyOutput& out) {
     bool hinted = out.hint(&chunkSize);
 
     while (true) {
-        size_t bufLen;
+        size_t bufLen = chunkSize;
 
-        void* ptr = out.imbue(chunkSize, &bufLen);
+        void* ptr = out.imbue(&bufLen);
         const size_t len = in.readP(ptr, bufLen);
 
         if (!len) {

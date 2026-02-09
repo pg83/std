@@ -24,8 +24,8 @@ namespace Std {
             return {imbueImpl(&len)};
         }
 
-        inline void* imbue(size_t len, size_t* avail) {
-            return (*avail = len, imbueImpl(avail));
+        inline void* imbue(size_t* avail) {
+            return imbueImpl(avail);
         }
 
         inline void bump(const void* ptr) noexcept {
