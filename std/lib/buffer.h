@@ -124,5 +124,7 @@ namespace Std {
         inline void growDelta(size_t len) {
             grow(used() + len);
         }
+
+        void* imbueMe(size_t* len);
     };
 }

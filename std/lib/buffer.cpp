@@ -120,6 +120,14 @@ void Buffer::xchg(Buffer& buf) noexcept {
     ::Std::xchg(data_, buf.data_);
 }
 
+void* Buffer::imbueMe(size_t* len) {
+    growDelta(*len);
+
+    *len = left();
+
+    return (void*)mutCurrent();
+}
+
 template <>
 void Std::output<ZeroCopyOutput, Buffer>(ZeroCopyOutput& out, const Buffer& buf) {
     out.write(buf.data(), buf.used());

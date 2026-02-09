@@ -43,11 +43,7 @@ OutBuf::OutBuf() noexcept
 }
 
 void* OutBuf::imbueImpl(size_t* len) {
-    buf_.growDelta(*len);
-
-    *len = buf_.left();
-
-    return (void*)buf_.mutCurrent();
+    return buf_.imbueMe(len);
 }
 
 void OutBuf::bumpImpl(const void* ptr) noexcept {

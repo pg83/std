@@ -7,11 +7,7 @@ size_t StringBuilder::writeImpl(const void* ptr, size_t len) {
 }
 
 void* StringBuilder::imbueImpl(size_t* len) {
-    growDelta(*len);
-
-    *len = left();
-
-    return mutCurrent();
+    return imbueMe(len);
 }
 
 void StringBuilder::bumpImpl(const void* ptr) noexcept {
