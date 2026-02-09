@@ -12,7 +12,7 @@ namespace Std {
     class ZeroCopyOutput: public Output {
         size_t writeImpl(const void* data, size_t len) override;
 
-        virtual void* imbueImpl(size_t len, size_t* avail) = 0;
+        virtual void* imbueImpl(size_t* len) = 0;
         virtual void bumpImpl(const void* ptr) noexcept = 0;
 
     public:
@@ -20,13 +20,11 @@ namespace Std {
 
         // zero-copy interface
         inline UnboundBuffer imbue(size_t len) {
-            size_t avail;
-
-            return {imbueImpl(len, &avail)};
+            return {imbueImpl(&len)};
         }
 
         inline void* imbue(size_t len, size_t* avail) {
-            return imbueImpl(len, avail);
+            return (*avail = len, imbueImpl(avail));
         }
 
         inline void bump(const void* ptr) noexcept {
