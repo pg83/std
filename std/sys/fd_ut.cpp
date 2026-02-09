@@ -289,4 +289,8 @@ STD_TEST_SUITE(ScopedFD) {
         scoped.write(testData, strlen(testData));
         scoped.fsync();
     }
+
+    STD_TEST(ScopedClose) {
+        ScopedFD fd(100500);
+    }
 }

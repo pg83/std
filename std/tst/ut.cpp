@@ -1,21 +1,16 @@
 #include "ut.h"
 
 #include <std/ios/sys.h>
-
-#include <std/typ/support.h>
-
-#include <std/mem/obj_pool.h>
-
 #include <std/str/view.h>
-#include <std/str/builder.h>
-
+#include <std/sys/throw.h>
 #include <std/alg/qsort.h>
 #include <std/alg/range.h>
-
 #include <std/dbg/color.h>
 #include <std/dbg/panic.h>
-
 #include <std/lib/vector.h>
+#include <std/str/builder.h>
+#include <std/typ/support.h>
+#include <std/mem/obj_pool.h>
 #include <std/lib/singleton.h>
 
 #include <stdio.h>
@@ -46,6 +41,13 @@ namespace {
                      << Color::reset() << endL;
             } catch (const Exc&) {
                 outb << Color::bright(AnsiColor::Red)
+                     << StringView(u8"- ") << fullName
+                     << Color::reset() << endL;
+
+                return false;
+            } catch (Exception& exc) {
+                outb << Color::bright(AnsiColor::Red)
+                     << exc.description() << endL
                      << StringView(u8"- ") << fullName
                      << Color::reset() << endL;
 

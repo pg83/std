@@ -63,6 +63,10 @@ void FD::xchg(FD& other) noexcept {
     ::Std::xchg(fd, other.fd);
 }
 
+ScopedFD::~ScopedFD() {
+    close();
+}
+
 void Std::createPipeFD(ScopedFD& in, ScopedFD& out) {
     int fd[2];
 

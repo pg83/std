@@ -33,9 +33,7 @@ namespace Std {
     struct ScopedFD: public FD {
         using FD::FD;
 
-        inline ~ScopedFD() {
-            close();
-        }
+        ~ScopedFD();
     };
 
     void createPipeFD(ScopedFD& in, ScopedFD& out);
