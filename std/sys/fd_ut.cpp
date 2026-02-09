@@ -290,7 +290,7 @@ STD_TEST_SUITE(ScopedFD) {
         scoped.fsync();
     }
 
-    STD_TEST(ScopedClose) {
+    STD_TEST(_ScopedClose) {
         ScopedFD fd(100500);
     }
 }
