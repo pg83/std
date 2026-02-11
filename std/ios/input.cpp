@@ -1,5 +1,4 @@
 #include "input.h"
-#include "copy.h"
 
 #include <std/alg/defer.h>
 #include <std/lib/buffer.h>

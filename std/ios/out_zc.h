@@ -10,9 +10,6 @@ namespace Std {
     class StringView;
 
     class ZeroCopyOutput: public Output {
-        void recvFromI(Input& in) override;
-        void recvFromZ(ZeroCopyInput& in) override;
-
         size_t writeImpl(const void* data, size_t len) override;
 
         virtual void* imbueImpl(size_t* len) = 0;
@@ -37,6 +34,9 @@ namespace Std {
         inline void commit(UnboundBuffer buf) noexcept {
             commit(buf.ptr);
         }
+
+        void recvFromI(Input& in) override;
+        void recvFromZ(ZeroCopyInput& in) override;
     };
 
     template <typename O, typename T>

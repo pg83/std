@@ -1,10 +1,12 @@
 #include "out_zc.h"
-
-#include "copy.h"
 #include "manip.h"
+#include "input.h"
+#include "in_zc.h"
 
 #include <std/sys/crt.h>
 #include <std/str/view.h>
+#include <std/alg/minmax.h>
+#include <std/alg/advance.h>
 
 using namespace Std;
 using namespace Std::Manip;
@@ -23,11 +25,29 @@ ZeroCopyOutput::~ZeroCopyOutput() noexcept {
 }
 
 void ZeroCopyOutput::recvFromI(Input& in) {
-    copyIZ(in, *this);
+    size_t chunkSize = 128;
+    bool hinted = hint(&chunkSize);
+
+    while (true) {
+        size_t bufLen = chunkSize;
+
+        void* ptr = imbue(&bufLen);
+        const size_t len = in.read(ptr, bufLen);
+
+        if (!len) {
+            return;
+        }
+
+        commit(advancePtr(ptr, len));
+
+        if (!hinted) {
+            chunkSize = min<size_t>(chunkSize * 2, 1 << 16);
+        }
+    }
 }
 
 void ZeroCopyOutput::recvFromZ(ZeroCopyInput& in) {
-    copyZZ(in, *this);
+    recvFromI(in);
 }
 
 size_t ZeroCopyOutput::writeImpl(const void* data, size_t len) {

@@ -1,5 +1,6 @@
 #include "output.h"
-#include "copy.h"
+#include "in_zc.h"
+#include "out_buf.h"
 
 #include <std/sys/crt.h>
 #include <std/str/view.h>
@@ -113,9 +114,13 @@ size_t Output::writeP(const void* data, size_t len) {
 }
 
 void Output::recvFromI(Input& in) {
-    copyIO(in, *this);
+    OutBuf(*this).recvFromI(in);
 }
 
 void Output::recvFromZ(ZeroCopyInput& in) {
-    copyZO(in, *this);
+    const void* chunk;
+
+    while (auto len = in.next(&chunk)) {
+        in.commit(writeP(chunk, len));
+    }
 }
