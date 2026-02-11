@@ -27,7 +27,7 @@ void Std::zeroCopy(Input& in, ZeroCopyOutput& out) {
         size_t bufLen = chunkSize;
 
         void* ptr = out.imbue(&bufLen);
-        const size_t len = in.readP(ptr, bufLen);
+        const size_t len = in.read(ptr, bufLen);
 
         if (!len) {
             return;

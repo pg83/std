@@ -11,11 +11,10 @@ namespace Std {
     public:
         virtual ~Input() noexcept;
 
-        inline size_t readP(void* data, size_t len) {
+        inline size_t read(void* data, size_t len) {
             return readImpl(data, len);
         }
 
-        void read(void* data, size_t len);
         void readAll(Buffer& res);
     };
 }

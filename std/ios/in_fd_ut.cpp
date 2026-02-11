@@ -23,7 +23,7 @@ STD_TEST_SUITE(FDInput) {
         fdPipe.finish();
 
         char readBuf[64] = {0};
-        size_t readBytes = fdInput.readP(readBuf, strlen(testData));
+        size_t readBytes = fdInput.read(readBuf, strlen(testData));
         STD_INSIST(readBytes == strlen(testData));
         STD_INSIST(strcmp(readBuf, testData) == 0);
     }
@@ -66,9 +66,9 @@ STD_TEST_SUITE(FDInput) {
         char readBuf2[16] = {0};
         char readBuf3[16] = {0};
 
-        size_t read1 = fdInput.readP(readBuf1, strlen(chunk1));
-        size_t read2 = fdInput.readP(readBuf2, strlen(chunk2));
-        size_t read3 = fdInput.readP(readBuf3, strlen(chunk3));
+        size_t read1 = fdInput.read(readBuf1, strlen(chunk1));
+        size_t read2 = fdInput.read(readBuf2, strlen(chunk2));
+        size_t read3 = fdInput.read(readBuf3, strlen(chunk3));
 
         STD_INSIST(read1 == strlen(chunk1));
         STD_INSIST(read2 == strlen(chunk2));
@@ -98,7 +98,7 @@ STD_TEST_SUITE(FDInput) {
         u8* readBuf = new u8[bufSize];
         size_t totalRead = 0;
         while (totalRead < bufSize) {
-            size_t bytesRead = fdInput.readP(readBuf + totalRead, bufSize - totalRead);
+            size_t bytesRead = fdInput.read(readBuf + totalRead, bufSize - totalRead);
             if (bytesRead == 0) {
                 break;
             }
@@ -129,7 +129,7 @@ STD_TEST_SUITE(FDInput) {
         char readBuf[16] = {0};
         size_t totalRead = 0;
         for (size_t i = 0; i < 5; ++i) {
-            size_t bytesRead = fdInput.readP(readBuf + totalRead, 2);
+            size_t bytesRead = fdInput.read(readBuf + totalRead, 2);
             STD_INSIST(bytesRead == 2);
             totalRead += bytesRead;
         }
@@ -149,7 +149,7 @@ STD_TEST_SUITE(FDInput) {
         writeEnd.close();
 
         char readBuf[64];
-        size_t readBytes = fdInput.readP(readBuf, sizeof(readBuf));
+        size_t readBytes = fdInput.read(readBuf, sizeof(readBuf));
         STD_INSIST(readBytes == 0);
     }
 
@@ -166,12 +166,12 @@ STD_TEST_SUITE(FDInput) {
         fdPipe.finish();
 
         char readBuf1[6] = {0};
-        size_t read1 = fdInput.readP(readBuf1, 5);
+        size_t read1 = fdInput.read(readBuf1, 5);
         STD_INSIST(read1 == 5);
         STD_INSIST(strcmp(readBuf1, "Hello") == 0);
 
         char readBuf2[6] = {0};
-        size_t read2 = fdInput.readP(readBuf2, 5);
+        size_t read2 = fdInput.read(readBuf2, 5);
         STD_INSIST(read2 == 5);
         STD_INSIST(strcmp(readBuf2, "World") == 0);
     }
@@ -201,7 +201,7 @@ STD_TEST_SUITE(FDInput) {
 
         size_t totalLen = strlen(part1) + strlen(part2) + strlen(part3);
         char readBuf[64] = {0};
-        size_t readBytes = fdInput.readP(readBuf, totalLen);
+        size_t readBytes = fdInput.read(readBuf, totalLen);
         STD_INSIST(readBytes == totalLen);
         STD_INSIST(strcmp(readBuf, "AlphaBetaGamma") == 0);
     }
@@ -219,9 +219,9 @@ STD_TEST_SUITE(FDInput) {
         fdPipe.finish();
 
         char byte1, byte2, byte3;
-        size_t read1 = fdInput.readP(&byte1, 1);
-        size_t read2 = fdInput.readP(&byte2, 1);
-        size_t read3 = fdInput.readP(&byte3, 1);
+        size_t read1 = fdInput.read(&byte1, 1);
+        size_t read2 = fdInput.read(&byte2, 1);
+        size_t read3 = fdInput.read(&byte3, 1);
 
         STD_INSIST(read1 == 1 && byte1 == 'A');
         STD_INSIST(read2 == 1 && byte2 == 'B');
@@ -243,7 +243,7 @@ STD_TEST_SUITE(FDInput) {
         fdPipe.flush();
 
         char readBuf1[16] = {0};
-        size_t read1 = fdInput.readP(readBuf1, strlen(data1));
+        size_t read1 = fdInput.read(readBuf1, strlen(data1));
         STD_INSIST(read1 == strlen(data1));
         STD_INSIST(strcmp(readBuf1, data1) == 0);
 
@@ -251,7 +251,7 @@ STD_TEST_SUITE(FDInput) {
         fdPipe.finish();
 
         char readBuf2[16] = {0};
-        size_t read2 = fdInput.readP(readBuf2, strlen(data2));
+        size_t read2 = fdInput.read(readBuf2, strlen(data2));
         STD_INSIST(read2 == strlen(data2));
         STD_INSIST(strcmp(readBuf2, data2) == 0);
     }
@@ -274,13 +274,13 @@ STD_TEST_SUITE(FDInput) {
         size_t totalRead = 0;
         size_t bytesRead;
 
-        bytesRead = fdInput.readP(readBuf + totalRead, 2);
+        bytesRead = fdInput.read(readBuf + totalRead, 2);
         totalRead += bytesRead;
 
-        bytesRead = fdInput.readP(readBuf + totalRead, 3);
+        bytesRead = fdInput.read(readBuf + totalRead, 3);
         totalRead += bytesRead;
 
-        bytesRead = fdInput.readP(readBuf + totalRead, 5);
+        bytesRead = fdInput.read(readBuf + totalRead, 5);
         totalRead += bytesRead;
 
         STD_INSIST(totalRead == 10);
@@ -310,8 +310,8 @@ STD_TEST_SUITE(FDInput) {
         char readBuf1[64] = {0};
         char readBuf2[64] = {0};
 
-        size_t read1 = fdInput1.readP(readBuf1, strlen(msg1));
-        size_t read2 = fdInput2.readP(readBuf2, strlen(msg2));
+        size_t read1 = fdInput1.read(readBuf1, strlen(msg1));
+        size_t read2 = fdInput2.read(readBuf2, strlen(msg2));
 
         STD_INSIST(read1 == strlen(msg1));
         STD_INSIST(read2 == strlen(msg2));
@@ -332,7 +332,7 @@ STD_TEST_SUITE(FDInput) {
         fdPipe.finish();
 
         u8 readBuf[10] = {0};
-        size_t readBytes = fdInput.readP(readBuf, 10);
+        size_t readBytes = fdInput.read(readBuf, 10);
         STD_INSIST(readBytes == 10);
 
         for (size_t i = 0; i < 10; ++i) {
@@ -353,7 +353,7 @@ STD_TEST_SUITE(FDInput) {
         fdPipe.finish();
 
         char readBuf[64] = {0};
-        size_t readBytes = fdInput.readP(readBuf, 0);
+        size_t readBytes = fdInput.read(readBuf, 0);
         STD_INSIST(readBytes == 0);
     }
 
@@ -375,7 +375,7 @@ STD_TEST_SUITE(FDInput) {
         fdPipe.finish();
 
         u8 readBuf[bufSize] = {0};
-        size_t readBytes = fdInput.readP(readBuf, bufSize);
+        size_t readBytes = fdInput.read(readBuf, bufSize);
         STD_INSIST(readBytes == bufSize);
 
         for (size_t i = 0; i < bufSize; ++i) {
