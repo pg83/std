@@ -18,6 +18,8 @@ namespace Std {
             return nextImpl(len);
         }
 
+        const void* nextLimited(size_t* len);
+
         inline void commit(size_t len) noexcept {
             commitImpl(len);
         }

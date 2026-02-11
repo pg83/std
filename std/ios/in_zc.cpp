@@ -9,13 +9,18 @@ using namespace Std;
 ZeroCopyInput::~ZeroCopyInput() noexcept {
 }
 
+const void* ZeroCopyInput::nextLimited(size_t* len) {
+    size_t rlen = *len;
+    auto res = next(&rlen);
+
+    return (*len = min(rlen, *len), res);
+}
+
 size_t ZeroCopyInput::readImpl(void* data, size_t len) {
-    size_t rlen = len;
-    auto chunk = next(&rlen);
-    const size_t res = min(len, rlen);
+    auto chunk = nextLimited(&len);
 
-    memCpy(data, chunk, res);
-    commit(res);
+    memCpy(data, chunk, len);
+    commit(len);
 
-    return res;
+    return len;
 }
