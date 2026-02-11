@@ -8,9 +8,9 @@ namespace Std {
     };
 
     template <typename T>
-    inline UnboundBuffer&& operator<<(UnboundBuffer&& out, const T& t) {
+    inline UnboundBuffer operator<<(UnboundBuffer out, const T& t) {
         output<UnboundBuffer, T>(out, t);
 
-        return static_cast<UnboundBuffer&&>(out);
+        return out;
     }
 }
