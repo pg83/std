@@ -59,6 +59,6 @@ void Std::copyZO(ZeroCopyInput& in, Output& out) {
 }
 
 void Std::copyZZ(ZeroCopyInput& in, ZeroCopyOutput& out) {
-    // TODO(pg): proper zerocopy
-    copyZO(in, out);
+    // assume passthrough read()
+    copyIZ(in, out);
 }
