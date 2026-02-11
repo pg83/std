@@ -34,7 +34,7 @@ STD_TEST_SUITE(ZeroCopy) {
         const char* data = "";
         MemoryInput input(data, 0);
         StringBuilder output;
-        zeroCopy(input, output);
+        copyIZ(input, output);
         STD_INSIST(output.length() == 0);
     }
 
@@ -42,7 +42,7 @@ STD_TEST_SUITE(ZeroCopy) {
         const char* data = "hello";
         MemoryInput input(data, 5);
         StringBuilder output;
-        zeroCopy(input, output);
+        copyIZ(input, output);
         STD_INSIST(output.length() == 5);
         STD_INSIST(memcmp(output.data(), "hello", 5) == 0);
     }
@@ -52,7 +52,7 @@ STD_TEST_SUITE(ZeroCopy) {
         const size_t len = strlen(data);
         MemoryInput input(data, len);
         StringBuilder output;
-        zeroCopy(input, output);
+        copyIZ(input, output);
         STD_INSIST(output.length() == len);
         STD_INSIST(memcmp(output.data(), data, len) == 0);
     }
@@ -65,7 +65,7 @@ STD_TEST_SUITE(ZeroCopy) {
         }
         MemoryInput input(data, bufSize);
         StringBuilder output;
-        zeroCopy(input, output);
+        copyIZ(input, output);
         STD_INSIST(output.length() == bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
             STD_INSIST(((u8*)output.data())[i] == (u8)(i % 256));
@@ -77,7 +77,7 @@ STD_TEST_SUITE(ZeroCopy) {
         u8 data[] = {0, 1, 2, 255, 254, 128, 127, 0, 0, 1};
         MemoryInput input(data, sizeof(data));
         StringBuilder output;
-        zeroCopy(input, output);
+        copyIZ(input, output);
         STD_INSIST(output.length() == sizeof(data));
         STD_INSIST(memcmp(output.data(), data, sizeof(data)) == 0);
     }
@@ -90,7 +90,7 @@ STD_TEST_SUITE(ZeroCopy) {
         }
         MemoryInput input(data, size);
         StringBuilder output;
-        zeroCopy(input, output);
+        copyIZ(input, output);
         STD_INSIST(output.length() == size);
         STD_INSIST(memcmp(output.data(), data, size) == 0);
     }
@@ -103,7 +103,7 @@ STD_TEST_SUITE(ZeroCopy) {
         }
         MemoryInput input(data, size);
         StringBuilder output;
-        zeroCopy(input, output);
+        copyIZ(input, output);
         STD_INSIST(output.length() == size);
         STD_INSIST(memcmp(output.data(), data, size) == 0);
     }
@@ -116,7 +116,7 @@ STD_TEST_SUITE(ZeroCopy) {
         }
         MemoryInput input(data, size);
         StringBuilder output;
-        zeroCopy(input, output);
+        copyIZ(input, output);
         STD_INSIST(output.length() == size);
         STD_INSIST(memcmp(output.data(), data, size) == 0);
         delete[] data;
@@ -128,8 +128,8 @@ STD_TEST_SUITE(ZeroCopy) {
         MemoryInput input1(data1, 5);
         MemoryInput input2(data2, 6);
         StringBuilder output1, output2;
-        zeroCopy(input1, output1);
-        zeroCopy(input2, output2);
+        copyIZ(input1, output1);
+        copyIZ(input2, output2);
         STD_INSIST(output1.length() == 5);
         STD_INSIST(output2.length() == 6);
         STD_INSIST(memcmp(output1.data(), "first", 5) == 0);
@@ -140,7 +140,7 @@ STD_TEST_SUITE(ZeroCopy) {
         u8 data[100] = {0};
         MemoryInput input(data, 100);
         StringBuilder output;
-        zeroCopy(input, output);
+        copyIZ(input, output);
         STD_INSIST(output.length() == 100);
         for (size_t i = 0; i < 100; ++i) {
             STD_INSIST(((u8*)output.data())[i] == 0);
@@ -151,7 +151,7 @@ STD_TEST_SUITE(ZeroCopy) {
         u8 data = 0xAB;
         MemoryInput input(&data, 1);
         StringBuilder output;
-        zeroCopy(input, output);
+        copyIZ(input, output);
         STD_INSIST(output.length() == 1);
         STD_INSIST(*(u8*)output.data() == 0xAB);
     }
@@ -166,7 +166,7 @@ STD_TEST_SUITE(ZeroCopy) {
         }
         MemoryInput input(data, totalSize);
         StringBuilder output;
-        zeroCopy(input, output);
+        copyIZ(input, output);
         STD_INSIST(output.length() == totalSize);
         for (size_t i = 0; i < totalSize; ++i) {
             STD_INSIST(((u8*)output.data())[i] == (u8)(i % patternLen));

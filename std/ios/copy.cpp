@@ -8,18 +8,18 @@
 
 void Std::copy(Input& in, Output& out) {
     if (auto zc = out.zeroCopy(); zc) {
-        zeroCopy(in, *zc);
+        copyIZ(in, *zc);
     } else {
-        copyCopy(in, out);
+        copyIO(in, out);
     }
 }
 
-void Std::copyCopy(Input& in, Output& out) {
+void Std::copyIO(Input& in, Output& out) {
     OutBuf ob(out);
-    zeroCopy(in, ob);
+    copyIZ(in, ob);
 }
 
-void Std::zeroCopy(Input& in, ZeroCopyOutput& out) {
+void Std::copyIZ(Input& in, ZeroCopyOutput& out) {
     size_t chunkSize = 128;
     bool hinted = out.hint(&chunkSize);
 

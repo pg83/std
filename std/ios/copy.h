@@ -8,6 +8,6 @@ namespace Std {
     // dynamic dispatcher
     void copy(Input& in, Output& out);
 
-    void copyCopy(Input& in, Output& out);
-    void zeroCopy(Input& in, ZeroCopyOutput& out);
+    void copyIO(Input& in, Output& out);
+    void copyIZ(Input& in, ZeroCopyOutput& out);
 }

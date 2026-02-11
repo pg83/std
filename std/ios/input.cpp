@@ -19,5 +19,5 @@ void Input::readAll(Buffer& res) {
         sb.xchg(res);
     };
 
-    zeroCopy(*this, sb);
+    copyIZ(*this, sb);
 }
