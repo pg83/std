@@ -38,7 +38,7 @@ void ZeroCopyOutput::recvFromI(Input& in) {
             return;
         }
 
-        commit(advancePtr(ptr, len));
+        commit(len);
 
         if (!hinted) {
             chunkSize = min<size_t>(chunkSize * 2, 1 << 16);
@@ -51,7 +51,9 @@ void ZeroCopyOutput::recvFromZ(ZeroCopyInput& in) {
 }
 
 size_t ZeroCopyOutput::writeImpl(const void* data, size_t len) {
-    return (commit(imbue(len) << StringView((const u8*)data, len)), len);
+    auto buf = imbue(len);
+
+    return (commit(buf.distance(buf << StringView((const u8*)data, len))), len);
 }
 
 // std types
@@ -73,7 +75,8 @@ DEF_OUT(long long)
 #define DEF_OUT_FLOAT(typ)                                               \
     template <>                                                          \
     void Std::output<ZeroCopyOutput, typ>(ZeroCopyOutput & out, typ v) { \
-        out.commit(out.imbue(128) << (long double)v);                      \
+        auto buf = out.imbue(128); \
+        out.commit(buf.distance(buf << (long double)v));                      \
     }
 
 DEF_OUT_FLOAT(float)
@@ -82,12 +85,16 @@ DEF_OUT_FLOAT(long double)
 
 template <>
 void Std::output<ZeroCopyOutput, U64>(ZeroCopyOutput& out, U64 v) {
-    out.commit(out.imbue(24) << v.val);
+    auto buf = out.imbue(24);
+
+    out.commit(buf.distance(buf << v.val));
 }
 
 template <>
 void Std::output<ZeroCopyOutput, I64>(ZeroCopyOutput& out, I64 v) {
-    out.commit(out.imbue(24) << v.val);
+    auto buf = out.imbue(24);
+
+    out.commit(buf.distance(buf << v.val));
 }
 
 template <>

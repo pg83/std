@@ -7,7 +7,7 @@ namespace Std {
     class StringBuilder: public ZeroCopyOutput, public Buffer {
         size_t writeImpl(const void* ptr, size_t len) override;
         void* imbueImpl(size_t* len) override;
-        void commitImpl(const void* ptr) noexcept override;
+        void commitImpl(size_t len) noexcept override;
 
     public:
         StringBuilder() noexcept;

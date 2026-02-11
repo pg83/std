@@ -26,7 +26,7 @@ namespace Std {
 
         // zero-copy
         void* imbueImpl(size_t* len) override;
-        void commitImpl(const void* ptr) noexcept override;
+        void commitImpl(size_t len) noexcept override;
 
     public:
         ~OutBuf() override;

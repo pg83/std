@@ -1,6 +1,7 @@
 #include "out_mem.h"
 
 #include <std/sys/crt.h>
+#include <std/alg/advance.h>
 
 using namespace Std;
 
@@ -12,6 +13,6 @@ void* MemoryOutput::imbueImpl(size_t* len) {
     return ptr;
 }
 
-void MemoryOutput::commitImpl(const void* _ptr) noexcept {
-    ptr = (void*)_ptr;
+void MemoryOutput::commitImpl(size_t len) noexcept {
+    ptr = advancePtr(ptr, len);
 }
