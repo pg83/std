@@ -6,8 +6,10 @@
 
 using namespace Std;
 
-size_t MemoryInput::readImpl(void* data, size_t len) {
-    const size_t rlen = min<size_t>(len, e - b);
+size_t MemoryInput::nextImpl(const void** chunk) {
+    return (*chunk = b, e - b);
+}
 
-    return (memCpy(data, exchange(b, b + rlen), rlen), rlen);
+void MemoryInput::commitImpl(size_t len) noexcept {
+    b += len;
 }
