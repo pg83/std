@@ -19,9 +19,9 @@ void Input::readAll(Buffer& res) {
         sb.xchg(res);
     };
 
-    copy(*this, sb);
+    sendTo(sb);
 }
 
-ZeroCopyInput* Input::zeroCopy() noexcept {
-    return nullptr;
+void Input::sendTo(Output& out) {
+    out.recvFromI(*this);
 }

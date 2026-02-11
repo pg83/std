@@ -1,4 +1,5 @@
 #include "output.h"
+#include "copy.h"
 
 #include <std/sys/crt.h>
 #include <std/str/view.h>
@@ -89,10 +90,6 @@ void Output::writeH(const void* data, size_t len) {
     }
 }
 
-ZeroCopyOutput* Output::zeroCopy() noexcept {
-    return nullptr;
-}
-
 size_t Output::hintImpl() const noexcept {
     return 0;
 }
@@ -113,4 +110,12 @@ size_t Output::writeP(const void* data, size_t len) {
     }
 
     return 0;
+}
+
+void Output::recvFromI(Input& in) {
+    copyIO(in, *this);
+}
+
+void Output::recvFromZ(ZeroCopyInput& in) {
+    copyZO(in, *this);
 }

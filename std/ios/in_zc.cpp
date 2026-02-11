@@ -1,4 +1,5 @@
 #include "in_zc.h"
+#include "output.h"
 
 #include <std/sys/crt.h>
 #include <std/sys/types.h>
@@ -20,6 +21,6 @@ size_t ZeroCopyInput::readImpl(void* data, size_t len) {
     return len;
 }
 
-ZeroCopyInput* ZeroCopyInput::zeroCopy() noexcept {
-    return this;
+void ZeroCopyInput::sendTo(Output& out) {
+    out.recvFromZ(*this);
 }

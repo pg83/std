@@ -5,7 +5,9 @@
 struct iovec;
 
 namespace Std {
+    class Input;
     class StringView;
+    class ZeroCopyInput;
     class ZeroCopyOutput;
 
     class Output {
@@ -19,8 +21,6 @@ namespace Std {
 
     public:
         virtual ~Output() noexcept;
-
-        virtual ZeroCopyOutput* zeroCopy() noexcept;
 
         void writeH(const void* data, size_t len);
         void writeC(const void* data, size_t len);
@@ -43,5 +43,8 @@ namespace Std {
         inline void finish() {
             finishImpl();
         }
+
+        virtual void recvFromI(Input& in);
+        virtual void recvFromZ(ZeroCopyInput& in);
     };
 }

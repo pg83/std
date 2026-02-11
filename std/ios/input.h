@@ -3,6 +3,7 @@
 #include <std/sys/types.h>
 
 namespace Std {
+    class Output;
     class Buffer;
     class ZeroCopyInput;
 
@@ -18,6 +19,6 @@ namespace Std {
 
         void readAll(Buffer& res);
 
-        virtual ZeroCopyInput* zeroCopy() noexcept;
+        virtual void sendTo(Output& out);
     };
 }

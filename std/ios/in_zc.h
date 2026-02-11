@@ -6,6 +6,7 @@
 
 namespace Std {
     class ZeroCopyInput: public Input {
+        void sendTo(Output& out) override;
         size_t readImpl(void* data, size_t len) override;
 
         virtual size_t nextImpl(const void** chunk) = 0;
@@ -21,7 +22,5 @@ namespace Std {
         inline void commit(size_t len) noexcept {
             commitImpl(len);
         }
-
-        ZeroCopyInput* zeroCopy() noexcept override;
     };
 }

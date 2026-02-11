@@ -7,22 +7,6 @@
 #include <std/alg/minmax.h>
 #include <std/alg/advance.h>
 
-void Std::copy(Input& in, Output& out) {
-    if (auto zo = out.zeroCopy(); zo) {
-        if (auto zi = in.zeroCopy(); zi) {
-            copyZZ(*zi, *zo);
-        } else {
-            copyIZ(in, *zo);
-        }
-    } else {
-        if (auto zi = in.zeroCopy(); zi) {
-            copyZO(*zi, out);
-        } else {
-            copyIO(in, out);
-        }
-    }
-}
-
 void Std::copyIO(Input& in, Output& out) {
     OutBuf ob(out);
     copyIZ(in, ob);

@@ -1,4 +1,6 @@
 #include "out_zc.h"
+
+#include "copy.h"
 #include "manip.h"
 
 #include <std/sys/crt.h>
@@ -20,8 +22,12 @@ namespace {
 ZeroCopyOutput::~ZeroCopyOutput() noexcept {
 }
 
-ZeroCopyOutput* ZeroCopyOutput::zeroCopy() noexcept {
-    return this;
+void ZeroCopyOutput::recvFromI(Input& in) {
+    copyIZ(in, *this);
+}
+
+void ZeroCopyOutput::recvFromZ(ZeroCopyInput& in) {
+    copyZZ(in, *this);
 }
 
 size_t ZeroCopyOutput::writeImpl(const void* data, size_t len) {

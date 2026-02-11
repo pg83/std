@@ -9,6 +9,12 @@
 
 using namespace Std;
 
+namespace {
+    static inline void copy(Input& in, Output& out) {
+        in.sendTo(out);
+    }
+}
+
 STD_TEST_SUITE(MemoryInputAsInput) {
     STD_TEST(EmptyRead) {
         const char* data = "";

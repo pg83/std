@@ -11,6 +11,10 @@
 using namespace Std;
 
 namespace {
+    static inline void copy(Input& in, Output& out) {
+        in.sendTo(out);
+    }
+
     struct CountingOutput: public Output {
         u64 len_;
 
