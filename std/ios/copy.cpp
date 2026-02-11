@@ -7,10 +7,18 @@
 #include <std/alg/advance.h>
 
 void Std::copy(Input& in, Output& out) {
-    if (auto zc = out.zeroCopy(); zc) {
-        copyIZ(in, *zc);
+    if (auto zo = out.zeroCopy(); zo) {
+        if (auto zi = in.zeroCopy(); zi) {
+            copyZZ(*zi, *zo);
+        } else {
+            copyIZ(in, *zo);
+        }
     } else {
-        copyIO(in, out);
+        if (auto zi = in.zeroCopy(); zi) {
+            copyZO(*zi, out);
+        } else {
+            copyIO(in, out);
+        }
     }
 }
 
@@ -39,4 +47,10 @@ void Std::copyIZ(Input& in, ZeroCopyOutput& out) {
             chunkSize = min<size_t>(chunkSize * 2, 1 << 16);
         }
     }
+}
+
+void Std::copyZO(ZeroCopyInput& in, Output& out) {
+}
+
+void Std::copyZZ(ZeroCopyInput& in, ZeroCopyOutput& out) {
 }

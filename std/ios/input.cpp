@@ -19,5 +19,9 @@ void Input::readAll(Buffer& res) {
         sb.xchg(res);
     };
 
-    copyIZ(*this, sb);
+    copy(*this, sb);
+}
+
+ZeroCopyInput* Input::zeroCopy() noexcept {
+    return nullptr;
 }

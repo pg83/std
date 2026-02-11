@@ -23,5 +23,7 @@ namespace Std {
         inline void commit(size_t len) noexcept {
             commitImpl(len);
         }
+
+        ZeroCopyInput* zeroCopy() noexcept override;
     };
 }

@@ -24,3 +24,7 @@ size_t ZeroCopyInput::readImpl(void* data, size_t len) {
 
     return len;
 }
+
+ZeroCopyInput* ZeroCopyInput::zeroCopy() noexcept {
+    return this;
+}
