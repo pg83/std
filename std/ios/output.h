@@ -6,6 +6,7 @@ struct iovec;
 
 namespace Std {
     class StringView;
+    class ZeroCopyOutput;
 
     class Output {
         virtual size_t writeImpl(const void* data, size_t len) = 0;
@@ -19,7 +20,7 @@ namespace Std {
     public:
         virtual ~Output() noexcept;
 
-        virtual bool isZeroCopy() const noexcept;
+        virtual ZeroCopyOutput* zeroCopy() noexcept;
 
         void writeH(const void* data, size_t len);
         void writeC(const void* data, size_t len);

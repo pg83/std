@@ -20,8 +20,8 @@ namespace {
 ZeroCopyOutput::~ZeroCopyOutput() noexcept {
 }
 
-bool ZeroCopyOutput::isZeroCopy() const noexcept {
-    return true;
+ZeroCopyOutput* ZeroCopyOutput::zeroCopy() noexcept {
+    return this;
 }
 
 size_t ZeroCopyOutput::writeImpl(const void* data, size_t len) {

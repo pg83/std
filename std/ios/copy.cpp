@@ -7,8 +7,8 @@
 #include <std/alg/advance.h>
 
 void Std::copy(Input& in, Output& out) {
-    if (out.isZeroCopy()) {
-        zeroCopy(in, static_cast<ZeroCopyOutput&>(out));
+    if (auto zc = out.zeroCopy(); zc) {
+        zeroCopy(in, *zc);
     } else {
         copyCopy(in, out);
     }

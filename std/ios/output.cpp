@@ -89,8 +89,8 @@ void Output::writeH(const void* data, size_t len) {
     }
 }
 
-bool Output::isZeroCopy() const noexcept {
-    return false;
+ZeroCopyOutput* Output::zeroCopy() noexcept {
+    return nullptr;
 }
 
 size_t Output::hintImpl() const noexcept {
