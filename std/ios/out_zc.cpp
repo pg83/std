@@ -75,8 +75,8 @@ DEF_OUT(long long)
 #define DEF_OUT_FLOAT(typ)                                               \
     template <>                                                          \
     void Std::output<ZeroCopyOutput, typ>(ZeroCopyOutput & out, typ v) { \
-        auto buf = out.imbue(128); \
-        out.commit(buf.distance(buf << (long double)v));                      \
+        auto buf = out.imbue(128);                                       \
+        out.commit(buf.distance(buf << (long double)v));                 \
     }
 
 DEF_OUT_FLOAT(float)
