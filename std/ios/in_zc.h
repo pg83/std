@@ -8,17 +8,15 @@ namespace Std {
     class ZeroCopyInput: public Input {
         size_t readImpl(void* data, size_t len) override;
 
-        virtual const void* nextImpl(size_t* len) = 0;
+        virtual size_t nextImpl(const void** chunk) = 0;
         virtual void commitImpl(size_t len) noexcept = 0;
 
     public:
         ~ZeroCopyInput() noexcept override;
 
-        inline const void* next(size_t* len) {
-            return nextImpl(len);
+        inline size_t next(const void** chunk) {
+            return nextImpl(chunk);
         }
-
-        const void* nextLimited(size_t* len);
 
         inline void commit(size_t len) noexcept {
             commitImpl(len);

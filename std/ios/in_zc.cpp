@@ -9,15 +9,10 @@ using namespace Std;
 ZeroCopyInput::~ZeroCopyInput() noexcept {
 }
 
-const void* ZeroCopyInput::nextLimited(size_t* len) {
-    size_t rlen = *len;
-    auto res = next(&rlen);
-
-    return (*len = min(rlen, *len), res);
-}
-
 size_t ZeroCopyInput::readImpl(void* data, size_t len) {
-    auto chunk = nextLimited(&len);
+    const void* chunk;
+
+    len = min(next(&chunk), len);
 
     memCpy(data, chunk, len);
     commit(len);

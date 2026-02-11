@@ -1,5 +1,6 @@
 #include "copy.h"
 #include "input.h"
+#include "in_zc.h"
 #include "out_zc.h"
 #include "out_buf.h"
 
@@ -50,7 +51,14 @@ void Std::copyIZ(Input& in, ZeroCopyOutput& out) {
 }
 
 void Std::copyZO(ZeroCopyInput& in, Output& out) {
+    const void* chunk;
+
+    while (auto len = in.next(&chunk)) {
+        in.commit(out.writeP(chunk, len));
+    }
 }
 
 void Std::copyZZ(ZeroCopyInput& in, ZeroCopyOutput& out) {
+    // TODO(pg): proper zerocopy
+    copyZO(in, out);
 }
