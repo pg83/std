@@ -45,7 +45,15 @@ void ZeroCopyOutput::recvFromI(Input& in) {
 }
 
 void ZeroCopyOutput::recvFromZ(ZeroCopyInput& in) {
-    recvFromI(in);
+    if (in.hint() > hint()) {
+        const void* chunk;
+
+        while (auto len = in.next(&chunk)) {
+            in.commit(writeP(chunk, len));
+        }
+    } else {
+        recvFromI(in);
+    }
 }
 
 size_t ZeroCopyOutput::writeImpl(const void* data, size_t len) {
