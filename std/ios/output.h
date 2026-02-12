@@ -22,7 +22,6 @@ namespace Std {
     public:
         virtual ~Output() noexcept;
 
-        void writeH(const void* data, size_t len);
         void writeC(const void* data, size_t len);
 
         size_t writeP(const void* data, size_t len);
