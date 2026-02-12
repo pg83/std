@@ -1,6 +1,5 @@
 #include "out_mem.h"
 
-#include <std/sys/crt.h>
 #include <std/alg/advance.h>
 
 using namespace Std;
