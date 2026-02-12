@@ -29,14 +29,11 @@ void ZeroCopyOutput::recvFromI(Input& in) {
     size_t chunkSize = max(hinted, (size_t)128);
 
     while (true) {
-        void* ptr = imbue(chunkSize).ptr;
-        const size_t len = in.read(ptr, chunkSize);
-
-        if (!len) {
+        if (auto len = in.read(imbue(chunkSize).ptr, chunkSize); len) {
+            commit(len);
+        } else {
             return;
         }
-
-        commit(len);
 
         if (!hinted) {
             chunkSize = min<size_t>(chunkSize * 2, 1 << 16);
