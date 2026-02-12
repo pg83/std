@@ -25,14 +25,15 @@ ZeroCopyOutput::~ZeroCopyOutput() noexcept {
 }
 
 void ZeroCopyOutput::recvFromI(Input& in) {
-    size_t hinted = max(hint(), in.hint());
-    size_t chunkSize = max(hinted, (size_t)128);
+    void* chunk = 0;
 
-    while (auto len = in.read(imbue(chunkSize).ptr, chunkSize)) {
-        commit(len);
+    while (true) {
+        auto clen = next(&chunk);
 
-        if (!hinted) {
-            chunkSize = min<size_t>(chunkSize * 2, 1 << 16);
+        if (auto len = in.read(chunk, clen)) {
+            commit(len);
+        } else {
+            return;
         }
     }
 }

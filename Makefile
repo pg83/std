@@ -15,7 +15,7 @@ CXXF = -I. -W -Wall -std=c++26 $(OPTF) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $(EXTRA
 
 all: $(LIBA) $(TSTA)
 
-$(LIBA): $(LIBO) Makefile
+$(LIBA): $(LIBO) Makefile build.sh run.sh
 	rm -rf $(LIBA)
 	llvm-ar q $(LIBA) $(LIBO)
 
