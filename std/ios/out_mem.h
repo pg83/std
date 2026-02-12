@@ -4,7 +4,6 @@
 
 namespace Std {
     class MemoryOutput: public ZeroCopyOutput {
-        size_t writeImpl(const void* ptr, size_t len) override;
         void* imbueImpl(size_t* avail) override;
         void commitImpl(size_t len) noexcept override;
 

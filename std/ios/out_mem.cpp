@@ -5,12 +5,8 @@
 
 using namespace Std;
 
-size_t MemoryOutput::writeImpl(const void* _ptr, size_t len) {
-    return (ptr = memCpy(ptr, _ptr, len), len);
-}
-
 void* MemoryOutput::imbueImpl(size_t* len) {
-    return ptr;
+    return (*len = (size_t)-1, ptr);
 }
 
 void MemoryOutput::commitImpl(size_t len) noexcept {
