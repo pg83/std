@@ -25,16 +25,11 @@ ZeroCopyOutput::~ZeroCopyOutput() noexcept {
 }
 
 void ZeroCopyOutput::recvFromI(Input& in) {
-    void* chunk = 0;
+    void* chunk;
+    size_t clen;
 
-    while (true) {
-        auto clen = next(&chunk);
-
-        if (auto len = in.read(chunk, clen)) {
-            commit(len);
-        } else {
-            return;
-        }
+    while (auto len = (next(&chunk, &clen), in.read(chunk, clen))) {
+        commit(len);
     }
 }
 

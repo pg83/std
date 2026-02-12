@@ -29,6 +29,10 @@ namespace Std {
 
         size_t next(void** chunk);
 
+        inline void next(void** chunk, size_t* len) {
+            *len = next(chunk);
+        }
+
         inline void commit(size_t len) noexcept {
             commitImpl(len);
         }
