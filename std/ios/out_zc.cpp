@@ -50,9 +50,22 @@ void ZeroCopyOutput::recvFromZ(ZeroCopyInput& in) {
 }
 
 size_t ZeroCopyOutput::writeImpl(const void* data, size_t len) {
-    auto buf = imbue(len);
+    void* chunk;
 
-    return (commit(buf.distance(buf << StringView((const u8*)data, len))), len);
+    len = min(len, next(&chunk));
+
+    memCpy(chunk, data, len);
+    commit(len);
+
+    return len;
+}
+
+size_t ZeroCopyOutput::next(void** chunk) {
+    size_t res = 1;
+
+    *chunk = imbue(&res);
+
+    return res;
 }
 
 // std types

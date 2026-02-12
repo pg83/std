@@ -27,6 +27,8 @@ namespace Std {
             return imbueImpl(avail);
         }
 
+        size_t next(void** chunk);
+
         inline void commit(size_t len) noexcept {
             commitImpl(len);
         }
