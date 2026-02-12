@@ -10,3 +10,7 @@ size_t FDInput::readImpl(void* data, size_t len) {
 
 FDInput::~FDInput() noexcept {
 }
+
+size_t FDInput::hintImpl() const noexcept {
+    return 4096;
+}

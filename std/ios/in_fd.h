@@ -7,6 +7,7 @@ namespace Std {
 
     class FDInput: public Input {
         size_t readImpl(void* data, size_t len) override;
+        size_t hintImpl() const noexcept override;
 
     public:
         FD* fd;

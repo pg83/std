@@ -8,6 +8,7 @@ namespace Std {
     class ZeroCopyInput;
 
     class Input {
+        virtual size_t hintImpl() const noexcept;
         virtual size_t readImpl(void* data, size_t len) = 0;
 
     public:
@@ -15,6 +16,10 @@ namespace Std {
 
         inline size_t read(void* data, size_t len) {
             return readImpl(data, len);
+        }
+
+        inline size_t hint() const noexcept {
+            return hintImpl();
         }
 
         void readAll(Buffer& res);

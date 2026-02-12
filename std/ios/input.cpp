@@ -24,3 +24,7 @@ void Input::readAll(Buffer& res) {
 void Input::sendTo(Output& out) {
     out.recvFromI(*this);
 }
+
+size_t Input::hintImpl() const noexcept {
+    return 0;
+}

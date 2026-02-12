@@ -25,8 +25,8 @@ ZeroCopyOutput::~ZeroCopyOutput() noexcept {
 }
 
 void ZeroCopyOutput::recvFromI(Input& in) {
-    size_t chunkSize = 128;
-    bool hinted = hint(&chunkSize);
+    size_t hinted = max(hint(), in.hint());
+    size_t chunkSize = max(hinted, (size_t)128);
 
     while (true) {
         size_t bufLen = chunkSize;

@@ -30,6 +30,11 @@ namespace Std {
         size_t writeV(iovec* parts, size_t count);
         size_t writeV(const StringView* parts, size_t count);
 
+        // zero == no hint
+        inline size_t hint() const noexcept {
+            return hintImpl();
+        }
+
         bool hint(size_t* res) const noexcept;
 
         inline size_t write(const void* data, size_t len) {
