@@ -37,7 +37,7 @@ void ZeroCopyInput::readLine(Buffer& buf) {
             const auto plen = pos - part.begin();
 
             buf.append(part.begin(), plen);
-            commit(plen);
+            commit(plen + 1);
 
             return;
         } else {
