@@ -5,6 +5,8 @@
 #include <std/sys/types.h>
 
 namespace Std {
+    class Buffer;
+
     class ZeroCopyInput: public Input {
         void sendTo(Output& out) override;
         size_t readImpl(void* data, size_t len) override;
@@ -14,6 +16,8 @@ namespace Std {
 
     public:
         ~ZeroCopyInput() noexcept override;
+
+        void readLine(Buffer& buf);
 
         inline size_t next(const void** chunk) {
             return nextImpl(chunk);
