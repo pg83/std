@@ -110,8 +110,6 @@ namespace {
             setPanicHandler2(panicHandler2);
 
             execute(sysO);
-
-            exit(err);
         }
 
         inline void execute(OutBuf&& outb) {
@@ -156,8 +154,9 @@ namespace {
 
             outb << endL << flsH;
 
-            outbuf = nullptr;
             outb.finish();
+
+            exit(err);
         }
 
         inline void handlePanic1() {
