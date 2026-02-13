@@ -73,6 +73,10 @@ namespace {
                 return true;
             }
 
+            return matchesFilterStrong(testName);
+        }
+
+        inline bool matchesFilterStrong(StringView testName) const noexcept {
             for (auto prefix : range(includes)) {
                 if (testName.startsWith(prefix)) {
                     return true;
@@ -117,7 +121,7 @@ namespace {
             outbuf = &outb;
 
             for (auto test : range(*this)) {
-                if (test->fullName.search(u8"::_")) {
+                if (test->fullName.search(u8"::_") && !opt->matchesFilterStrong(test->fullName)) {
                     ++mute;
                 } else if (!opt->matchesFilter(test->fullName)) {
                     ++skip;
