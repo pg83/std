@@ -34,10 +34,10 @@ void ZeroCopyInput::readLine(Buffer& buf) {
         StringView part((const u8*)chunk, len);
 
         if (auto pos = part.memChr('\n'); pos) {
-            const auto plen = pos - part.begin();
+            StringView line(part.begin(), pos);
 
-            buf.append(part.begin(), plen);
-            commit(plen + 1);
+            buf.append(line.begin(), line.length());
+            commit(line.length() + 1);
 
             return;
         } else {
