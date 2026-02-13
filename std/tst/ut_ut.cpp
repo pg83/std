@@ -2,6 +2,7 @@
 
 #include <std/ios/sys.h>
 #include <std/ios/output.h>
+#include <std/mem/obj_pool.h>
 
 using namespace Std;
 
@@ -24,6 +25,15 @@ STD_TEST_SUITE(UT) {
 
         for (size_t i = 0; i < 1000; ++i) {
             ob << i;
+        }
+    }
+
+    STD_TEST(_ObjPoolPerf) {
+        volatile size_t res = 0;
+
+        for (size_t i = 0; i < 100000000; ++i) {
+            auto p = ObjPool::fromMemory();
+            res += (size_t)p.ptr();
         }
     }
 }
