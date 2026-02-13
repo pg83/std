@@ -112,14 +112,14 @@ namespace {
                 return l->fullName < r->fullName;
             });
 
-            setPanicHandler1(panicHandler1);
-            setPanicHandler2(panicHandler2);
-
             execute(sysO);
         }
 
         inline void execute(OutBuf&& outb) {
             outbuf = &outb;
+
+            setPanicHandler1(panicHandler1);
+            setPanicHandler2(panicHandler2);
 
             for (auto test : range(*this)) {
                 if (test->fullName.search(u8"::_") && !opt->matchesFilterStrong(test->fullName)) {
