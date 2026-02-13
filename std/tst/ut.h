@@ -5,8 +5,14 @@
 #include <std/dbg/insist.h>
 
 namespace Std {
+    class ZeroCopyOutput;
+
+    struct ExecContext {
+        virtual ZeroCopyOutput& output() const = 0;
+    };
+
     struct TestFunc {
-        virtual void execute() const = 0;
+        virtual void execute(ExecContext& ctx) const = 0;
         virtual StringView suite() const = 0;
         virtual StringView name() const = 0;
     };
@@ -40,6 +46,6 @@ namespace Std {
         ::Std::StringView name() const override {        \
             return u8## #_name;                          \
         }                                                \
-        void execute() const override;                   \
+        void execute(ExecContext& ctx) const override;                   \
     } REG_##_name;                                       \
-    void Test_##_name::execute() const
+    void Test_##_name::execute([[maybe_unused]] ExecContext& ctx) const

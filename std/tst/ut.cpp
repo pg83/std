@@ -32,9 +32,11 @@ namespace {
         {
         }
 
-        inline bool execute(OutBuf& outb) {
+        inline bool execute(ExecContext& ctx) {
+            auto& outb = ctx.output();
+
             try {
-                func->execute();
+                func->execute(ctx);
 
                 outb << Color::bright(AnsiColor::Green)
                      << StringView(u8"+ ") << fullName
@@ -87,7 +89,7 @@ namespace {
         }
     };
 
-    struct Tests: public Vector<Test*> {
+    struct Tests: public ExecContext, public Vector<Test*> {
         Buffer str;
         ObjPool::Ref pool = ObjPool::fromMemory();
         Ctx* ctx = 0;
@@ -97,6 +99,10 @@ namespace {
         size_t err = 0;
         size_t skip = 0;
         size_t mute = 0;
+
+        ZeroCopyOutput& output() const override {
+            return *outbuf;
+        }
 
         inline void run(Ctx& ctx_) {
             ctx = &ctx_;
@@ -120,7 +126,7 @@ namespace {
                     ++mute;
                 } else if (!opt->matchesFilter(test->fullName)) {
                     ++skip;
-                } else if (test->execute(outb)) {
+                } else if (test->execute(*this)) {
                     ++ok;
                 } else {
                     ++err;
