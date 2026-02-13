@@ -46,6 +46,6 @@ namespace Std {
         ::Std::StringView name() const override {        \
             return u8## #_name;                          \
         }                                                \
-        void execute(ExecContext& ctx) const override;                   \
+        void execute(ExecContext& ctx) const override;   \
     } REG_##_name;                                       \
     void Test_##_name::execute([[maybe_unused]] ExecContext& ctx) const
