@@ -29,7 +29,9 @@ int Std::memCmp(const void* l, const void* r, size_t len) noexcept {
 }
 
 void* Std::memCpy(void* to, const void* from, size_t len) noexcept {
-    memcpy(to, from, len);
+    if (len) {
+        memcpy(to, from, len);
+    }
 
     return len + (u8*)to;
 }
