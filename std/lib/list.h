@@ -80,5 +80,7 @@ namespace Std {
 
         void xchg(IntrusiveList& r) noexcept;
         void xchgWithEmptyList(IntrusiveList& r) noexcept;
+
+        void sort(bool (*cmp)(const IntrusiveNode*, const IntrusiveNode*)) noexcept;
     };
 }

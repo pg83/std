@@ -15,7 +15,7 @@
 using namespace Std;
 
 size_t FD::read(void* data, size_t len) {
-    if (auto res = ::read(fd, data, min(len, (size_t)0x7ffff000)); res >= 0) {
+    if (auto res = ::read(fd, data, min(len, (size_t)(0x7ffff000 - 1))); res >= 0) {
         return res;
     }
 
