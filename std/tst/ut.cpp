@@ -99,7 +99,7 @@ namespace {
             ctx = &ctx_;
             opt = pool->make<GetOpt>(ctx_);
 
-            sort([](const IntrusiveNode* l, const IntrusiveNode* r){
+            sort([](const IntrusiveNode* l, const IntrusiveNode* r) {
                 return compare(*cvt(l), *cvt(r));
             });
 
