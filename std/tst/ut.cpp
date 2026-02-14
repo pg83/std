@@ -9,7 +9,6 @@
 #include <std/alg/range.h>
 #include <std/lib/vector.h>
 #include <std/str/builder.h>
-#include <std/mem/obj_pool.h>
 #include <std/lib/singleton.h>
 
 #include <stdio.h>
@@ -78,7 +77,6 @@ namespace {
     };
 
     struct Tests: public ExecContext, public IntrusiveList {
-        ObjPool::Ref pool = ObjPool::fromMemory();
         Ctx* ctx = 0;
         OutBuf* outbuf = 0;
         GetOpt* opt = 0;
@@ -97,7 +95,7 @@ namespace {
 
         inline void run(Ctx& ctx_) {
             ctx = &ctx_;
-            opt = pool->make<GetOpt>(ctx_);
+            opt = new GetOpt(ctx_);
 
             sort([](const IntrusiveNode* l, const IntrusiveNode* r) {
                 return compare(*cvt(l), *cvt(r));
