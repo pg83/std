@@ -177,9 +177,7 @@ namespace {
             }
 
             inline void processPending() noexcept {
-                Task* task;
-
-                while ((task = popNoLock()) != nullptr) {
+                while (auto task = popNoLock()) {
                     task->run();
                 }
             }
