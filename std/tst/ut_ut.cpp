@@ -4,6 +4,8 @@
 #include <std/ios/output.h>
 #include <std/mem/obj_pool.h>
 
+#include <stdlib.h>
+
 using namespace Std;
 
 STD_TEST_SUITE(UT) {
@@ -39,8 +41,19 @@ STD_TEST_SUITE(UT) {
         volatile size_t res = 0;
 
         for (size_t i = 0; i < 100000000; ++i) {
-            auto p = ObjPool::fromMemory();
-            res += (size_t)p.ptr();
+            auto p = ObjPool::fromMemoryRaw();
+            res += (size_t)p;
+            delete p;
+        }
+    }
+
+    STD_TEST(_MallocPerf) {
+        volatile size_t res = 0;
+
+        for (size_t i = 0; i < 100000000; ++i) {
+            auto p = malloc(256);
+            res += (size_t)p;
+            free(p);
         }
     }
 }

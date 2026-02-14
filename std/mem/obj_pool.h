@@ -55,6 +55,10 @@ namespace Std {
             }
         }
 
-        static Ref fromMemory();
+        static inline Ref fromMemory() {
+            return fromMemoryRaw();
+        }
+
+        static ObjPool* fromMemoryRaw();
     };
 }

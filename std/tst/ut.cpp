@@ -91,10 +91,23 @@ namespace {
             return *outbuf;
         }
 
+        static inline bool compare(const TestFunc& l, const TestFunc& r) noexcept {
+            return l.suite() < r.suite() || (l.suite() == r.suite() && l.name() < r.name());
+        }
+
         inline void run(Ctx& ctx_) {
             ctx = &ctx_;
             opt = pool->make<GetOpt>(ctx_);
+
+            sort([](const IntrusiveNode* l, const IntrusiveNode* r){
+                return compare(*cvt(l), *cvt(r));
+            });
+
             execute(sysO);
+        }
+
+        static inline TestFunc* cvt(const IntrusiveNode* node) noexcept {
+            return (TestFunc*)((u8*)node - offsetof(TestFunc, node));
         }
 
         inline void execute(OutBuf&& outb) {
@@ -106,7 +119,7 @@ namespace {
             StringBuilder sb;
 
             while (!empty()) {
-                auto test = (TestFunc*)((u8*)popFront() - offsetof(TestFunc, node));
+                auto test = cvt(popFront());
 
                 sb.reset();
                 sb << *test;

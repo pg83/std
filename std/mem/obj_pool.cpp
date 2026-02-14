@@ -43,7 +43,7 @@ namespace {
 ObjPool::~ObjPool() noexcept {
 }
 
-ObjPool::Ref ObjPool::fromMemory() {
+ObjPool* ObjPool::fromMemoryRaw() {
     return new Pool();
 }
 
