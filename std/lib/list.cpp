@@ -1,5 +1,7 @@
 #include "list.h"
 
+#include <std/alg/xchg.h>
+
 using namespace Std;
 
 namespace {
@@ -40,13 +42,10 @@ void IntrusiveList::xchgWithEmptyList(IntrusiveList& r) noexcept {
 }
 
 namespace {
-    static inline void split(IntrusiveList& s, IntrusiveList& l, IntrusiveList& r) noexcept {
-        IntrusiveList* lists[2] = {&l, &r};
-        unsigned idx = 0;
-
+    static inline void split(IntrusiveList& s, IntrusiveList* l, IntrusiveList* r) noexcept {
         while (!s.empty()) {
-            lists[idx]->pushBack(s.popFront());
-            idx ^= 1;
+            l->pushBack(s.popFront());
+            xchg(l, r);
         }
     }
 
@@ -78,7 +77,7 @@ void IntrusiveList::sort(bool (*cmp)(const IntrusiveNode*, const IntrusiveNode*)
     IntrusiveList l;
     IntrusiveList r;
 
-    split(*this, l, r);
+    split(*this, &l, &r);
 
     l.sort(cmp);
     r.sort(cmp);
