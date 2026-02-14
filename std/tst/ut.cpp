@@ -8,6 +8,7 @@
 #include <std/dbg/panic.h>
 #include <std/alg/range.h>
 #include <std/lib/vector.h>
+#include <std/str/builder.h>
 #include <std/mem/obj_pool.h>
 #include <std/lib/singleton.h>
 
@@ -102,12 +103,17 @@ namespace {
             setPanicHandler1(panicHandler1);
             setPanicHandler2(panicHandler2);
 
+            StringBuilder sb;
+
             while (!empty()) {
                 auto test = (TestFunc*)((u8*)popFront() - offsetof(TestFunc, node));
 
-                if (test->name().startsWith(u8"_") && !opt->matchesFilterStrong(test->suite())) {
+                sb.reset();
+                sb << *test;
+
+                if (test->name().startsWith(u8"_") && !opt->matchesFilterStrong(sb)) {
                     ++mute;
-                } else if (!opt->matchesFilter(test->suite())) {
+                } else if (!opt->matchesFilter(sb)) {
                     ++skip;
                 } else if (::execute(test, *this)) {
                     ++ok;
