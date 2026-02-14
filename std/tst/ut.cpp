@@ -1,15 +1,13 @@
 #include "ut.h"
 
 #include <std/ios/sys.h>
+#include <std/lib/list.h>
 #include <std/str/view.h>
 #include <std/sys/throw.h>
-#include <std/alg/qsort.h>
-#include <std/alg/range.h>
 #include <std/dbg/color.h>
 #include <std/dbg/panic.h>
+#include <std/alg/range.h>
 #include <std/lib/vector.h>
-#include <std/str/builder.h>
-#include <std/typ/support.h>
 #include <std/mem/obj_pool.h>
 #include <std/lib/singleton.h>
 
@@ -22,43 +20,32 @@ namespace {
     struct Exc {
     };
 
-    struct Test {
-        TestFunc* func;
-        StringView fullName;
+    static inline bool execute(TestFunc* func, ExecContext& ctx) {
+        auto& outb = ctx.output();
 
-        inline Test(TestFunc* _func, StringView _fullName) noexcept
-            : func(_func)
-            , fullName(_fullName)
-        {
+        try {
+            func->execute(ctx);
+
+            outb << Color::bright(AnsiColor::Green)
+                 << StringView(u8"+ ") << *func
+                 << Color::reset() << endL;
+        } catch (const Exc&) {
+            outb << Color::bright(AnsiColor::Red)
+                 << StringView(u8"- ") << *func
+                 << Color::reset() << endL;
+
+            return false;
+        } catch (Exception& exc) {
+            outb << Color::bright(AnsiColor::Red)
+                 << exc.description() << endL
+                 << StringView(u8"- ") << *func
+                 << Color::reset() << endL;
+
+            return false;
         }
 
-        inline bool execute(ExecContext& ctx) {
-            auto& outb = ctx.output();
-
-            try {
-                func->execute(ctx);
-
-                outb << Color::bright(AnsiColor::Green)
-                     << StringView(u8"+ ") << fullName
-                     << Color::reset() << endL;
-            } catch (const Exc&) {
-                outb << Color::bright(AnsiColor::Red)
-                     << StringView(u8"- ") << fullName
-                     << Color::reset() << endL;
-
-                return false;
-            } catch (Exception& exc) {
-                outb << Color::bright(AnsiColor::Red)
-                     << exc.description() << endL
-                     << StringView(u8"- ") << fullName
-                     << Color::reset() << endL;
-
-                return false;
-            }
-
-            return true;
-        }
-    };
+        return true;
+    }
 
     struct GetOpt {
         bool listTests = false;
@@ -89,8 +76,7 @@ namespace {
         }
     };
 
-    struct Tests: public ExecContext, public Vector<Test*> {
-        Buffer str;
+    struct Tests: public ExecContext, public IntrusiveList {
         ObjPool::Ref pool = ObjPool::fromMemory();
         Ctx* ctx = 0;
         OutBuf* outbuf = 0;
@@ -107,11 +93,6 @@ namespace {
         inline void run(Ctx& ctx_) {
             ctx = &ctx_;
             opt = pool->make<GetOpt>(ctx_);
-
-            quickSort(mutRange(*this), [](auto l, auto r) noexcept {
-                return l->fullName < r->fullName;
-            });
-
             execute(sysO);
         }
 
@@ -121,12 +102,14 @@ namespace {
             setPanicHandler1(panicHandler1);
             setPanicHandler2(panicHandler2);
 
-            for (auto test : range(*this)) {
-                if (test->fullName.search(u8"::_") && !opt->matchesFilterStrong(test->fullName)) {
+            while (!empty()) {
+                auto test = (TestFunc*)((u8*)popFront() - offsetof(TestFunc, node));
+
+                if (test->name().startsWith(u8"_") && !opt->matchesFilterStrong(test->suite())) {
                     ++mute;
-                } else if (!opt->matchesFilter(test->fullName)) {
+                } else if (!opt->matchesFilter(test->suite())) {
                     ++skip;
-                } else if (test->execute(*this)) {
+                } else if (::execute(test, *this)) {
                     ++ok;
                 } else {
                     ++err;
@@ -177,9 +160,7 @@ namespace {
         }
 
         inline void reg(TestFunc* func) {
-            (StringBuilder(move(str)) << *func).xchg(str);
-            pushBack(pool->make<Test>(func, pool->intern(str)));
-            str.reset();
+            pushBack(&func->node);
         }
 
         static inline auto& instance() noexcept {

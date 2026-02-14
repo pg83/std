@@ -1,5 +1,6 @@
 #pragma once
 
+#include <std/lib/node.h>
 #include <std/str/view.h>
 #include <std/sys/types.h>
 #include <std/dbg/insist.h>
@@ -12,6 +13,8 @@ namespace Std {
     };
 
     struct TestFunc {
+        IntrusiveNode node;
+
         virtual void execute(ExecContext& ctx) const = 0;
         virtual StringView suite() const = 0;
         virtual StringView name() const = 0;
