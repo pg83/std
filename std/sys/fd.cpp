@@ -19,6 +19,10 @@ size_t FD::read(void* data, size_t len) {
         return res;
     }
 
+    if (errno == EFAULT && len > 1024) {
+        return read(data, len / 2);
+    }
+
     Errno().raise(StringBuilder() << StringView(u8"read() failed"));
 }
 
