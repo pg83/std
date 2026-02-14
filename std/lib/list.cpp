@@ -40,31 +40,31 @@ void IntrusiveList::xchgWithEmptyList(IntrusiveList& r) noexcept {
 }
 
 namespace {
-    static inline void splitAlternating(IntrusiveList& source, IntrusiveList& left, IntrusiveList& right) noexcept {
-        IntrusiveList* lists[2] = {&left, &right};
+    static inline void split(IntrusiveList& s, IntrusiveList& l, IntrusiveList& r) noexcept {
+        IntrusiveList* lists[2] = {&l, &r};
         unsigned idx = 0;
 
-        while (!source.empty()) {
-            lists[idx]->pushBack(source.popFront());
+        while (!s.empty()) {
+            lists[idx]->pushBack(s.popFront());
             idx ^= 1;
         }
     }
 
-    static inline void merge(IntrusiveList& dest, IntrusiveList& left, IntrusiveList& right, bool (*cmp)(const IntrusiveNode*, const IntrusiveNode*)) noexcept {
-        while (!left.empty() && !right.empty()) {
-            if (cmp(left.front(), right.front())) {
-                dest.pushBack(left.popFront());
+    static inline void merge(IntrusiveList& d, IntrusiveList& l, IntrusiveList& r, bool (*cmp)(const IntrusiveNode*, const IntrusiveNode*)) noexcept {
+        while (!l.empty() && !r.empty()) {
+            if (cmp(l.front(), r.front())) {
+                d.pushBack(l.popFront());
             } else {
-                dest.pushBack(right.popFront());
+                d.pushBack(r.popFront());
             }
         }
 
-        while (!left.empty()) {
-            dest.pushBack(left.popFront());
+        while (!l.empty()) {
+            d.pushBack(l.popFront());
         }
 
-        while (!right.empty()) {
-            dest.pushBack(right.popFront());
+        while (!r.empty()) {
+            d.pushBack(r.popFront());
         }
     }
 }
@@ -75,13 +75,13 @@ void IntrusiveList::sort(bool (*cmp)(const IntrusiveNode*, const IntrusiveNode*)
         return;
     }
 
-    IntrusiveList left;
-    IntrusiveList right;
+    IntrusiveList l;
+    IntrusiveList r;
 
-    splitAlternating(*this, left, right);
+    split(*this, l, r);
 
-    left.sort(cmp);
-    right.sort(cmp);
+    l.sort(cmp);
+    r.sort(cmp);
 
-    merge(*this, left, right, cmp);
+    merge(*this, l, r, cmp);
 }
