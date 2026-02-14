@@ -249,21 +249,17 @@ Task* WorkStealingThreadPool::Worker::next() noexcept {
 
 void WorkStealingThreadPool::Worker::run() noexcept {
     while (true) {
-        if (auto task = next(); task) {
+        while (auto task = next()) {
             task->run();
-        } else {
-            LockGuard lock(mutex_);
-
-            if (pool_->shutdown()) {
-                return processPending();
-            }
-
-            condVar_.wait(mutex_);
-
-            if (pool_->shutdown()) {
-                return processPending();
-            }
         }
+
+        LockGuard lock(mutex_);
+
+        if (pool_->shutdown()) {
+            return processPending();
+        }
+
+        condVar_.wait(mutex_);
     }
 }
 
