@@ -49,7 +49,7 @@ namespace {
         }
     }
 
-    static inline void merge(IntrusiveList& d, IntrusiveList& l, IntrusiveList& r, bool (*cmp)(const IntrusiveNode*, const IntrusiveNode*)) noexcept {
+    static inline void merge(IntrusiveList& d, IntrusiveList& l, IntrusiveList& r, IntrusiveList::Compare cmp) noexcept {
         while (!l.empty() && !r.empty()) {
             if (cmp(l.front(), r.front())) {
                 d.pushBack(l.popFront());
@@ -68,7 +68,7 @@ namespace {
     }
 }
 
-void IntrusiveList::sort(bool (*cmp)(const IntrusiveNode*, const IntrusiveNode*)) noexcept {
+void IntrusiveList::sort(Compare cmp) noexcept {
     // length <= 1
     if (empty() || head.next->next == &head) {
         return;
