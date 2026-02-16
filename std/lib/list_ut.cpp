@@ -1,6 +1,8 @@
 #include "list.h"
 
 #include <std/tst/ut.h>
+#include <std/ios/sys.h>
+#include <iostream>
 
 using namespace Std;
 
@@ -1281,10 +1283,12 @@ STD_TEST_SUITE(IntrusiveList) {
 
         IntrusiveNode* head = list.mutEnd();
         IntrusiveNode* current = head->next;
-        int values[] = {25, 15, 10, 35, 5};
+        int values[] = {25, 15, 10, 5, 35};
         int idx = 0;
         while (current != head) {
             TestData* data = static_cast<TestData*>(current);
+            ctx.output().flush();
+            std::cerr << data->value << std::endl;
             STD_INSIST(data->value == values[idx++]);
             current = current->next;
         }
