@@ -49,7 +49,8 @@ namespace {
         }
     }
 
-    static inline void merge(IntrusiveList& d, IntrusiveList& l, IntrusiveList& r, IntrusiveList::Compare cmp) noexcept {
+    template <typename Compare>
+    static inline void merge(IntrusiveList& d, IntrusiveList& l, IntrusiveList& r, Compare cmp) noexcept {
         while (!l.empty() && !r.empty()) {
             if (cmp(l.front(), r.front())) {
                 d.pushBack(l.popFront());
@@ -66,21 +67,26 @@ namespace {
             d.pushBack(r.popFront());
         }
     }
+
+    template <typename Compare>
+    static inline void sort(IntrusiveList& d, Compare cmp) noexcept {
+        // length <= 1
+        if (d.empty() || d.end()->next->next == d.end()) {
+            return;
+        }
+
+        IntrusiveList l;
+        IntrusiveList r;
+
+        split(d, &l, &r);
+
+        sort(l, cmp);
+        sort(r, cmp);
+
+        merge(d, l, r, cmp);
+    }
 }
 
 void IntrusiveList::sort(Compare cmp) noexcept {
-    // length <= 1
-    if (empty() || head.next->next == &head) {
-        return;
-    }
-
-    IntrusiveList l;
-    IntrusiveList r;
-
-    split(*this, &l, &r);
-
-    l.sort(cmp);
-    r.sort(cmp);
-
-    merge(*this, l, r, cmp);
+    ::sort(*this, cmp);
 }
