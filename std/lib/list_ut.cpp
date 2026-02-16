@@ -1191,4 +1191,508 @@ STD_TEST_SUITE(IntrusiveList) {
         }
         STD_INSIST(idx == 6);
     }
+
+    STD_TEST(templateSortWithLambdaAscending) {
+        IntrusiveList list;
+        TestData d1(50);
+        TestData d2(20);
+        TestData d3(80);
+        TestData d4(10);
+        TestData d5(30);
+
+        list.pushBack(&d1);
+        list.pushBack(&d2);
+        list.pushBack(&d3);
+        list.pushBack(&d4);
+        list.pushBack(&d5);
+
+        list.sort([](const IntrusiveNode* a, const IntrusiveNode* b) {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value < tb->value;
+        });
+
+        IntrusiveNode* head = list.mutEnd();
+        IntrusiveNode* current = head->next;
+        int values[] = {10, 20, 30, 50, 80};
+        int idx = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values[idx++]);
+            current = current->next;
+        }
+        STD_INSIST(idx == 5);
+    }
+
+    STD_TEST(templateSortWithLambdaDescending) {
+        IntrusiveList list;
+        TestData d1(10);
+        TestData d2(50);
+        TestData d3(30);
+        TestData d4(20);
+        TestData d5(40);
+
+        list.pushBack(&d1);
+        list.pushBack(&d2);
+        list.pushBack(&d3);
+        list.pushBack(&d4);
+        list.pushBack(&d5);
+
+        list.sort([](const IntrusiveNode* a, const IntrusiveNode* b) {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value > tb->value;
+        });
+
+        IntrusiveNode* head = list.mutEnd();
+        IntrusiveNode* current = head->next;
+        int values[] = {50, 40, 30, 20, 10};
+        int idx = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values[idx++]);
+            current = current->next;
+        }
+        STD_INSIST(idx == 5);
+    }
+
+    STD_TEST(templateSortWithLambdaCapture) {
+        IntrusiveList list;
+        TestData d1(15);
+        TestData d2(25);
+        TestData d3(5);
+        TestData d4(35);
+        TestData d5(10);
+
+        list.pushBack(&d1);
+        list.pushBack(&d2);
+        list.pushBack(&d3);
+        list.pushBack(&d4);
+        list.pushBack(&d5);
+
+        int threshold = 20;
+        list.sort([threshold](const IntrusiveNode* a, const IntrusiveNode* b) {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            int dist_a = (ta->value - threshold) * (ta->value - threshold);
+            int dist_b = (tb->value - threshold) * (tb->value - threshold);
+            return dist_a < dist_b;
+        });
+
+        IntrusiveNode* head = list.mutEnd();
+        IntrusiveNode* current = head->next;
+        int values[] = {25, 15, 10, 35, 5};
+        int idx = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values[idx++]);
+            current = current->next;
+        }
+        STD_INSIST(idx == 5);
+    }
+
+    struct AscendingFunctor {
+        bool operator()(const IntrusiveNode* a, const IntrusiveNode* b) const {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value < tb->value;
+        }
+    };
+
+    struct DescendingFunctor {
+        bool operator()(const IntrusiveNode* a, const IntrusiveNode* b) const {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value > tb->value;
+        }
+    };
+
+    STD_TEST(templateSortWithFunctor) {
+        IntrusiveList list;
+        TestData d1(40);
+        TestData d2(10);
+        TestData d3(30);
+        TestData d4(20);
+        TestData d5(50);
+
+        list.pushBack(&d1);
+        list.pushBack(&d2);
+        list.pushBack(&d3);
+        list.pushBack(&d4);
+        list.pushBack(&d5);
+
+        AscendingFunctor functor;
+        list.sort(functor);
+
+        IntrusiveNode* head = list.mutEnd();
+        IntrusiveNode* current = head->next;
+        int values[] = {10, 20, 30, 40, 50};
+        int idx = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values[idx++]);
+            current = current->next;
+        }
+        STD_INSIST(idx == 5);
+    }
+
+    STD_TEST(templateSortWithFunctorDescending) {
+        IntrusiveList list;
+        TestData d1(20);
+        TestData d2(50);
+        TestData d3(10);
+        TestData d4(40);
+        TestData d5(30);
+
+        list.pushBack(&d1);
+        list.pushBack(&d2);
+        list.pushBack(&d3);
+        list.pushBack(&d4);
+        list.pushBack(&d5);
+
+        DescendingFunctor functor;
+        list.sort(functor);
+
+        IntrusiveNode* head = list.mutEnd();
+        IntrusiveNode* current = head->next;
+        int values[] = {50, 40, 30, 20, 10};
+        int idx = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values[idx++]);
+            current = current->next;
+        }
+        STD_INSIST(idx == 5);
+    }
+
+    struct StatefulFunctor {
+        mutable int callCount = 0;
+
+        bool operator()(const IntrusiveNode* a, const IntrusiveNode* b) const {
+            callCount++;
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value < tb->value;
+        }
+    };
+
+    STD_TEST(templateSortWithStatefulFunctor) {
+        IntrusiveList list;
+        TestData d1(30);
+        TestData d2(10);
+        TestData d3(20);
+
+        list.pushBack(&d1);
+        list.pushBack(&d2);
+        list.pushBack(&d3);
+
+        StatefulFunctor functor;
+        list.sort(functor);
+
+        STD_INSIST(functor.callCount > 0);
+
+        IntrusiveNode* head = list.mutEnd();
+        IntrusiveNode* current = head->next;
+        int values[] = {10, 20, 30};
+        int idx = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values[idx++]);
+            current = current->next;
+        }
+        STD_INSIST(idx == 3);
+    }
+
+    STD_TEST(templateSortEmptyList) {
+        IntrusiveList list;
+        list.sort([](const IntrusiveNode* a, const IntrusiveNode* b) {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value < tb->value;
+        });
+        STD_INSIST(list.empty());
+    }
+
+    STD_TEST(templateSortSingleElement) {
+        IntrusiveList list;
+        TestData d1(42);
+        list.pushBack(&d1);
+
+        list.sort([](const IntrusiveNode* a, const IntrusiveNode* b) {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value < tb->value;
+        });
+
+        STD_INSIST(list.mutFront() == &d1);
+        STD_INSIST(list.mutBack() == &d1);
+        TestData* data = static_cast<TestData*>(list.mutFront());
+        STD_INSIST(data->value == 42);
+    }
+
+    STD_TEST(templateSortTwoElements) {
+        IntrusiveList list;
+        TestData d1(20);
+        TestData d2(10);
+
+        list.pushBack(&d1);
+        list.pushBack(&d2);
+
+        list.sort([](const IntrusiveNode* a, const IntrusiveNode* b) {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value < tb->value;
+        });
+
+        IntrusiveNode* head = list.mutEnd();
+        IntrusiveNode* current = head->next;
+        int values[] = {10, 20};
+        int idx = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values[idx++]);
+            current = current->next;
+        }
+        STD_INSIST(idx == 2);
+    }
+
+    STD_TEST(templateSortWithDuplicates) {
+        IntrusiveList list;
+        TestData d1(30);
+        TestData d2(10);
+        TestData d3(20);
+        TestData d4(20);
+        TestData d5(10);
+        TestData d6(30);
+
+        list.pushBack(&d1);
+        list.pushBack(&d2);
+        list.pushBack(&d3);
+        list.pushBack(&d4);
+        list.pushBack(&d5);
+        list.pushBack(&d6);
+
+        list.sort([](const IntrusiveNode* a, const IntrusiveNode* b) {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value < tb->value;
+        });
+
+        IntrusiveNode* head = list.mutEnd();
+        IntrusiveNode* current = head->next;
+        int values[] = {10, 10, 20, 20, 30, 30};
+        int idx = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values[idx++]);
+            current = current->next;
+        }
+        STD_INSIST(idx == 6);
+    }
+
+    STD_TEST(templateSortBackwardTraversal) {
+        IntrusiveList list;
+        TestData d1(30);
+        TestData d2(10);
+        TestData d3(50);
+        TestData d4(20);
+        TestData d5(40);
+
+        list.pushBack(&d1);
+        list.pushBack(&d2);
+        list.pushBack(&d3);
+        list.pushBack(&d4);
+        list.pushBack(&d5);
+
+        list.sort([](const IntrusiveNode* a, const IntrusiveNode* b) {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value < tb->value;
+        });
+
+        IntrusiveNode* head = list.mutEnd();
+        IntrusiveNode* current = head->prev;
+        int values[] = {50, 40, 30, 20, 10};
+        int idx = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values[idx++]);
+            current = current->prev;
+        }
+        STD_INSIST(idx == 5);
+    }
+
+    STD_TEST(templateSortMultipleTimes) {
+        IntrusiveList list;
+        TestData d1(30);
+        TestData d2(10);
+        TestData d3(20);
+
+        list.pushBack(&d1);
+        list.pushBack(&d2);
+        list.pushBack(&d3);
+
+        list.sort([](const IntrusiveNode* a, const IntrusiveNode* b) {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value < tb->value;
+        });
+
+        IntrusiveNode* head = list.mutEnd();
+        IntrusiveNode* current = head->next;
+        int values1[] = {10, 20, 30};
+        int idx1 = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values1[idx1++]);
+            current = current->next;
+        }
+        STD_INSIST(idx1 == 3);
+
+        list.sort([](const IntrusiveNode* a, const IntrusiveNode* b) {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value > tb->value;
+        });
+
+        head = list.mutEnd();
+        current = head->next;
+        int values2[] = {30, 20, 10};
+        int idx2 = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values2[idx2++]);
+            current = current->next;
+        }
+        STD_INSIST(idx2 == 3);
+    }
+
+    STD_TEST(templateSortLargeList) {
+        IntrusiveList list;
+        TestData d1(100);
+        TestData d2(25);
+        TestData d3(75);
+        TestData d4(10);
+        TestData d5(90);
+        TestData d6(5);
+        TestData d7(50);
+        TestData d8(30);
+        TestData d9(60);
+        TestData d10(80);
+
+        list.pushBack(&d1);
+        list.pushBack(&d2);
+        list.pushBack(&d3);
+        list.pushBack(&d4);
+        list.pushBack(&d5);
+        list.pushBack(&d6);
+        list.pushBack(&d7);
+        list.pushBack(&d8);
+        list.pushBack(&d9);
+        list.pushBack(&d10);
+
+        list.sort([](const IntrusiveNode* a, const IntrusiveNode* b) {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value < tb->value;
+        });
+
+        IntrusiveNode* head = list.mutEnd();
+        IntrusiveNode* current = head->next;
+        int values[] = {5, 10, 25, 30, 50, 60, 75, 80, 90, 100};
+        int idx = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values[idx++]);
+            current = current->next;
+        }
+        STD_INSIST(idx == 10);
+    }
+
+    STD_TEST(templateSortPreservesLength) {
+        IntrusiveList list;
+        TestData d1(50);
+        TestData d2(20);
+        TestData d3(80);
+        TestData d4(10);
+        TestData d5(30);
+
+        list.pushBack(&d1);
+        list.pushBack(&d2);
+        list.pushBack(&d3);
+        list.pushBack(&d4);
+        list.pushBack(&d5);
+
+        unsigned lengthBefore = list.length();
+
+        list.sort([](const IntrusiveNode* a, const IntrusiveNode* b) {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value < tb->value;
+        });
+
+        unsigned lengthAfter = list.length();
+
+        STD_INSIST(lengthBefore == 5);
+        STD_INSIST(lengthAfter == 5);
+    }
+
+    STD_TEST(templateSortWithMutableLambda) {
+        IntrusiveList list;
+        TestData d1(30);
+        TestData d2(10);
+        TestData d3(20);
+        TestData d4(40);
+
+        list.pushBack(&d1);
+        list.pushBack(&d2);
+        list.pushBack(&d3);
+        list.pushBack(&d4);
+
+        int comparisonCount = 0;
+        list.sort([&comparisonCount](const IntrusiveNode* a, const IntrusiveNode* b) {
+            comparisonCount++;
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value < tb->value;
+        });
+
+        STD_INSIST(comparisonCount > 0);
+
+        IntrusiveNode* head = list.mutEnd();
+        IntrusiveNode* current = head->next;
+        int values[] = {10, 20, 30, 40};
+        int idx = 0;
+        while (current != head) {
+            TestData* data = static_cast<TestData*>(current);
+            STD_INSIST(data->value == values[idx++]);
+            current = current->next;
+        }
+        STD_INSIST(idx == 4);
+    }
+
+    STD_TEST(templateSortFrontAndBackPointers) {
+        IntrusiveList list;
+        TestData d1(40);
+        TestData d2(10);
+        TestData d3(30);
+        TestData d4(20);
+
+        list.pushBack(&d1);
+        list.pushBack(&d2);
+        list.pushBack(&d3);
+        list.pushBack(&d4);
+
+        list.sort([](const IntrusiveNode* a, const IntrusiveNode* b) {
+            const TestData* ta = static_cast<const TestData*>(a);
+            const TestData* tb = static_cast<const TestData*>(b);
+            return ta->value < tb->value;
+        });
+
+        TestData* front = static_cast<TestData*>(list.mutFront());
+        TestData* back = static_cast<TestData*>(list.mutBack());
+
+        STD_INSIST(front->value == 10);
+        STD_INSIST(back->value == 40);
+    }
 }

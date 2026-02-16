@@ -84,10 +84,10 @@ namespace Std {
         void sort(Compare2 cmp, void* ctx) noexcept;
 
         template <typename F>
-        inline void sort(F&& f) noexcept {
+        inline void sort(const F& f) noexcept {
             sort([](void* ctx, const IntrusiveNode* l, const IntrusiveNode* r) -> bool {
-                return (*((F*)ctx))(l, r);
-            }, &f);
+                return (*(F*)ctx)(l, r);
+            }, (void*)&f);
         }
     };
 }
