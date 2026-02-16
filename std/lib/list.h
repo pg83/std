@@ -77,8 +77,10 @@ namespace Std {
         void xchg(IntrusiveList& r) noexcept;
         void xchgWithEmptyList(IntrusiveList& r) noexcept;
 
-        using Compare = bool (*)(const IntrusiveNode*, const IntrusiveNode*);
+        using Compare1 = bool (*)(const IntrusiveNode*, const IntrusiveNode*);
+        using Compare2 = bool (*)(void*, const IntrusiveNode*, const IntrusiveNode*);
 
-        void sort(Compare cmp) noexcept;
+        void sort(Compare1 cmp) noexcept;
+        void sort(Compare2 cmp, void* ctx) noexcept;
     };
 }

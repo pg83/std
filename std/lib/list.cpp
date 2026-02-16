@@ -50,7 +50,7 @@ namespace {
     }
 
     template <typename Compare>
-    static inline void merge(IntrusiveList& d, IntrusiveList& l, IntrusiveList& r, Compare cmp) noexcept {
+    static inline void merge(IntrusiveList& d, IntrusiveList& l, IntrusiveList& r, Compare&& cmp) noexcept {
         while (!l.empty() && !r.empty()) {
             if (cmp(l.front(), r.front())) {
                 d.pushBack(l.popFront());
@@ -69,7 +69,7 @@ namespace {
     }
 
     template <typename Compare>
-    static inline void sort(IntrusiveList& d, Compare cmp) noexcept {
+    static inline void sort(IntrusiveList& d, Compare&& cmp) noexcept {
         // length <= 1
         if (d.empty() || d.end()->next->next == d.end()) {
             return;
@@ -87,6 +87,12 @@ namespace {
     }
 }
 
-void IntrusiveList::sort(Compare cmp) noexcept {
+void IntrusiveList::sort(Compare1 cmp) noexcept {
     ::sort(*this, cmp);
+}
+
+void IntrusiveList::sort(Compare2 cmp, void* ctx) noexcept {
+    ::sort(*this, [cmp, ctx](const IntrusiveNode* l, const IntrusiveNode* r) -> bool {
+        return cmp(ctx, l, r);
+    });
 }
