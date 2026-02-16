@@ -11,11 +11,13 @@ namespace Std {
         {
         }
 
-        inline void remove() noexcept {
+        inline auto remove() noexcept {
             prev->next = next;
             next->prev = prev;
             prev = this;
             next = this;
+
+            return this;
         }
 
         void xchg(IntrusiveNode& r);

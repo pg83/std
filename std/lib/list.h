@@ -31,15 +31,11 @@ namespace Std {
         }
 
         inline IntrusiveNode* popFront() noexcept {
-            IntrusiveNode* node = head.next;
-            node->remove();
-            return node;
+            return head.next->remove();
         }
 
         inline IntrusiveNode* popBack() noexcept {
-            IntrusiveNode* node = head.prev;
-            node->remove();
-            return node;
+            return head.prev->remove();
         }
 
         inline void clear() noexcept {
