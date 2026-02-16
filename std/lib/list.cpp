@@ -52,10 +52,10 @@ namespace {
     template <typename Compare>
     static inline void merge(IntrusiveList& d, IntrusiveList& l, IntrusiveList& r, Compare&& cmp) noexcept {
         while (!l.empty() && !r.empty()) {
-            if (cmp(l.front(), r.front())) {
-                d.pushBack(l.popFront());
-            } else {
+            if (cmp(r.front(), l.front())) {
                 d.pushBack(r.popFront());
+            } else {
+                d.pushBack(l.popFront());
             }
         }
 
