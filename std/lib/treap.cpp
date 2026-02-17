@@ -11,6 +11,10 @@ TreapNode::TreapNode() noexcept
 {
 }
 
+void* TreapNode::key() noexcept {
+    return this;
+}
+
 void Treap::split(TreapNode* t, TreapNode* k, TreapNode** l, TreapNode** r) noexcept {
     if (!t) {
         *l = nullptr;

@@ -8,7 +8,7 @@ namespace Std {
 
         TreapNode() noexcept;
 
-        virtual void* key() noexcept = 0;
+        virtual void* key() noexcept;
     };
 
     class Treap {
