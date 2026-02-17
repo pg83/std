@@ -6,9 +6,9 @@ namespace Std {
         TreapNode* left;
         TreapNode* right;
 
-        TreapNode();
+        TreapNode() noexcept;
 
-        virtual void* key() = 0;
+        virtual void* key() noexcept = 0;
     };
 
     class Treap {
@@ -18,12 +18,12 @@ namespace Std {
         TreapNode* merge(TreapNode* l, TreapNode* r) noexcept;
 
     public:
-        Treap()
+        Treap() noexcept
             : root(nullptr)
         {
         }
 
-        virtual bool cmp(void* a, void* b) = 0;
+        virtual bool cmp(void* a, void* b) noexcept = 0;
 
         TreapNode* find(void* key) noexcept;
 

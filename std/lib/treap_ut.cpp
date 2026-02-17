@@ -13,14 +13,14 @@ STD_TEST_SUITE(Treap) {
         {
         }
 
-        void* key() override {
+        void* key() noexcept override {
             return &value;
         }
     };
 
     class IntTreap: public Treap {
     public:
-        bool cmp(void* a, void* b) override {
+        bool cmp(void* a, void* b) noexcept override {
             int* ia = static_cast<int*>(a);
             int* ib = static_cast<int*>(b);
             return *ia < *ib;

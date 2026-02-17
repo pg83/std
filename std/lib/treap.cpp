@@ -4,7 +4,7 @@
 
 using namespace Std;
 
-TreapNode::TreapNode()
+TreapNode::TreapNode() noexcept
     : priority(rand())
     , left(nullptr)
     , right(nullptr)
