@@ -465,4 +465,13 @@ STD_TEST_SUITE(Treap) {
             STD_INSIST(treap.find(&i) != nullptr);
         }
     }
+
+    STD_TEST(XXX) {
+        IntTreap treap;
+        IntTreapNode node1(10);
+        IntTreapNode node2(10);
+        treap.insert(&node1);
+        treap.insert(&node2);
+        STD_INSIST(treap.find(node2.key()) == &node2);
+    }
 }
