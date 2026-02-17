@@ -80,7 +80,7 @@ void Treap::erase(void* key) noexcept {
     }
 }
 
-void Treap::erase(TreapNode* node) noexcept {
+void Treap::remove(TreapNode* node) noexcept {
     erase(node->key());
 }
 

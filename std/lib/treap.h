@@ -42,7 +42,7 @@ namespace Std {
         TreapNode* find(void* key) const noexcept;
 
         void erase(void* key) noexcept;
-        void erase(TreapNode* node) noexcept;
+        void remove(TreapNode* node) noexcept;
         void insert(TreapNode* node) noexcept;
     };
 }
