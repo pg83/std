@@ -5,10 +5,10 @@
 using namespace Std;
 
 STD_TEST_SUITE(Treap) {
-    struct IntNode: public Node {
+    struct IntTreapNode: public TreapNode {
         int value;
 
-        IntNode(int v)
+        IntTreapNode(int v)
             : value(v)
         {
         }
@@ -35,63 +35,63 @@ STD_TEST_SUITE(Treap) {
 
     STD_TEST(InsertSingleElement) {
         IntTreap treap;
-        IntNode node(10);
+        IntTreapNode node(10);
         treap.insert(&node);
 
         int key = 10;
-        Node* found = treap.find(&key);
+        TreapNode* found = treap.find(&key);
         STD_INSIST(found != nullptr);
-        STD_INSIST(static_cast<IntNode*>(found)->value == 10);
+        STD_INSIST(static_cast<IntTreapNode*>(found)->value == 10);
     }
 
     STD_TEST(InsertMultipleElements) {
         IntTreap treap;
-        IntNode node1(5);
-        IntNode node2(10);
-        IntNode node3(15);
+        IntTreapNode node1(5);
+        IntTreapNode node2(10);
+        IntTreapNode node3(15);
 
         treap.insert(&node1);
         treap.insert(&node2);
         treap.insert(&node3);
 
         int key1 = 5;
-        Node* found1 = treap.find(&key1);
+        TreapNode* found1 = treap.find(&key1);
         STD_INSIST(found1 != nullptr);
-        STD_INSIST(static_cast<IntNode*>(found1)->value == 5);
+        STD_INSIST(static_cast<IntTreapNode*>(found1)->value == 5);
 
         int key2 = 10;
-        Node* found2 = treap.find(&key2);
+        TreapNode* found2 = treap.find(&key2);
         STD_INSIST(found2 != nullptr);
-        STD_INSIST(static_cast<IntNode*>(found2)->value == 10);
+        STD_INSIST(static_cast<IntTreapNode*>(found2)->value == 10);
 
         int key3 = 15;
-        Node* found3 = treap.find(&key3);
+        TreapNode* found3 = treap.find(&key3);
         STD_INSIST(found3 != nullptr);
-        STD_INSIST(static_cast<IntNode*>(found3)->value == 15);
+        STD_INSIST(static_cast<IntTreapNode*>(found3)->value == 15);
     }
 
     STD_TEST(FindNonExistentKey) {
         IntTreap treap;
-        IntNode node1(10);
-        IntNode node2(20);
-        IntNode node3(30);
+        IntTreapNode node1(10);
+        IntTreapNode node2(20);
+        IntTreapNode node3(30);
 
         treap.insert(&node1);
         treap.insert(&node2);
         treap.insert(&node3);
 
         int key = 15;
-        Node* found = treap.find(&key);
+        TreapNode* found = treap.find(&key);
         STD_INSIST(found == nullptr);
     }
 
     STD_TEST(InsertAscendingOrder) {
         IntTreap treap;
-        IntNode node1(1);
-        IntNode node2(2);
-        IntNode node3(3);
-        IntNode node4(4);
-        IntNode node5(5);
+        IntTreapNode node1(1);
+        IntTreapNode node2(2);
+        IntTreapNode node3(3);
+        IntTreapNode node4(4);
+        IntTreapNode node5(5);
 
         treap.insert(&node1);
         treap.insert(&node2);
@@ -100,19 +100,19 @@ STD_TEST_SUITE(Treap) {
         treap.insert(&node5);
 
         for (int i = 1; i <= 5; i++) {
-            Node* found = treap.find(&i);
+            TreapNode* found = treap.find(&i);
             STD_INSIST(found != nullptr);
-            STD_INSIST(static_cast<IntNode*>(found)->value == i);
+            STD_INSIST(static_cast<IntTreapNode*>(found)->value == i);
         }
     }
 
     STD_TEST(InsertDescendingOrder) {
         IntTreap treap;
-        IntNode node1(5);
-        IntNode node2(4);
-        IntNode node3(3);
-        IntNode node4(2);
-        IntNode node5(1);
+        IntTreapNode node1(5);
+        IntTreapNode node2(4);
+        IntTreapNode node3(3);
+        IntTreapNode node4(2);
+        IntTreapNode node5(1);
 
         treap.insert(&node1);
         treap.insert(&node2);
@@ -121,21 +121,21 @@ STD_TEST_SUITE(Treap) {
         treap.insert(&node5);
 
         for (int i = 1; i <= 5; i++) {
-            Node* found = treap.find(&i);
+            TreapNode* found = treap.find(&i);
             STD_INSIST(found != nullptr);
-            STD_INSIST(static_cast<IntNode*>(found)->value == i);
+            STD_INSIST(static_cast<IntTreapNode*>(found)->value == i);
         }
     }
 
     STD_TEST(InsertRandomOrder) {
         IntTreap treap;
-        IntNode node1(15);
-        IntNode node2(5);
-        IntNode node3(25);
-        IntNode node4(3);
-        IntNode node5(20);
-        IntNode node6(30);
-        IntNode node7(10);
+        IntTreapNode node1(15);
+        IntTreapNode node2(5);
+        IntTreapNode node3(25);
+        IntTreapNode node4(3);
+        IntTreapNode node5(20);
+        IntTreapNode node6(30);
+        IntTreapNode node7(10);
 
         treap.insert(&node1);
         treap.insert(&node2);
@@ -147,17 +147,17 @@ STD_TEST_SUITE(Treap) {
 
         int keys[] = {3, 5, 10, 15, 20, 25, 30};
         for (int key : keys) {
-            Node* found = treap.find(&key);
+            TreapNode* found = treap.find(&key);
             STD_INSIST(found != nullptr);
-            STD_INSIST(static_cast<IntNode*>(found)->value == key);
+            STD_INSIST(static_cast<IntTreapNode*>(found)->value == key);
         }
     }
 
     STD_TEST(FindBoundaryKeys) {
         IntTreap treap;
-        IntNode node1(10);
-        IntNode node2(20);
-        IntNode node3(30);
+        IntTreapNode node1(10);
+        IntTreapNode node2(20);
+        IntTreapNode node3(30);
 
         treap.insert(&node1);
         treap.insert(&node2);
@@ -178,52 +178,52 @@ STD_TEST_SUITE(Treap) {
 
     STD_TEST(InsertDuplicateValues) {
         IntTreap treap;
-        IntNode node1(10);
-        IntNode node2(10);
-        IntNode node3(10);
+        IntTreapNode node1(10);
+        IntTreapNode node2(10);
+        IntTreapNode node3(10);
 
         treap.insert(&node1);
         treap.insert(&node2);
         treap.insert(&node3);
 
         int key = 10;
-        Node* found = treap.find(&key);
+        TreapNode* found = treap.find(&key);
         STD_INSIST(found != nullptr);
-        STD_INSIST(static_cast<IntNode*>(found)->value == 10);
+        STD_INSIST(static_cast<IntTreapNode*>(found)->value == 10);
     }
 
     STD_TEST(InsertManyElements) {
         IntTreap treap;
-        IntNode nodes[100] = {
-            IntNode(0), IntNode(1), IntNode(2), IntNode(3), IntNode(4),
-            IntNode(5), IntNode(6), IntNode(7), IntNode(8), IntNode(9),
-            IntNode(10), IntNode(11), IntNode(12), IntNode(13), IntNode(14),
-            IntNode(15), IntNode(16), IntNode(17), IntNode(18), IntNode(19),
-            IntNode(20), IntNode(21), IntNode(22), IntNode(23), IntNode(24),
-            IntNode(25), IntNode(26), IntNode(27), IntNode(28), IntNode(29),
-            IntNode(30), IntNode(31), IntNode(32), IntNode(33), IntNode(34),
-            IntNode(35), IntNode(36), IntNode(37), IntNode(38), IntNode(39),
-            IntNode(40), IntNode(41), IntNode(42), IntNode(43), IntNode(44),
-            IntNode(45), IntNode(46), IntNode(47), IntNode(48), IntNode(49),
-            IntNode(50), IntNode(51), IntNode(52), IntNode(53), IntNode(54),
-            IntNode(55), IntNode(56), IntNode(57), IntNode(58), IntNode(59),
-            IntNode(60), IntNode(61), IntNode(62), IntNode(63), IntNode(64),
-            IntNode(65), IntNode(66), IntNode(67), IntNode(68), IntNode(69),
-            IntNode(70), IntNode(71), IntNode(72), IntNode(73), IntNode(74),
-            IntNode(75), IntNode(76), IntNode(77), IntNode(78), IntNode(79),
-            IntNode(80), IntNode(81), IntNode(82), IntNode(83), IntNode(84),
-            IntNode(85), IntNode(86), IntNode(87), IntNode(88), IntNode(89),
-            IntNode(90), IntNode(91), IntNode(92), IntNode(93), IntNode(94),
-            IntNode(95), IntNode(96), IntNode(97), IntNode(98), IntNode(99)};
+        IntTreapNode nodes[100] = {
+            IntTreapNode(0), IntTreapNode(1), IntTreapNode(2), IntTreapNode(3), IntTreapNode(4),
+            IntTreapNode(5), IntTreapNode(6), IntTreapNode(7), IntTreapNode(8), IntTreapNode(9),
+            IntTreapNode(10), IntTreapNode(11), IntTreapNode(12), IntTreapNode(13), IntTreapNode(14),
+            IntTreapNode(15), IntTreapNode(16), IntTreapNode(17), IntTreapNode(18), IntTreapNode(19),
+            IntTreapNode(20), IntTreapNode(21), IntTreapNode(22), IntTreapNode(23), IntTreapNode(24),
+            IntTreapNode(25), IntTreapNode(26), IntTreapNode(27), IntTreapNode(28), IntTreapNode(29),
+            IntTreapNode(30), IntTreapNode(31), IntTreapNode(32), IntTreapNode(33), IntTreapNode(34),
+            IntTreapNode(35), IntTreapNode(36), IntTreapNode(37), IntTreapNode(38), IntTreapNode(39),
+            IntTreapNode(40), IntTreapNode(41), IntTreapNode(42), IntTreapNode(43), IntTreapNode(44),
+            IntTreapNode(45), IntTreapNode(46), IntTreapNode(47), IntTreapNode(48), IntTreapNode(49),
+            IntTreapNode(50), IntTreapNode(51), IntTreapNode(52), IntTreapNode(53), IntTreapNode(54),
+            IntTreapNode(55), IntTreapNode(56), IntTreapNode(57), IntTreapNode(58), IntTreapNode(59),
+            IntTreapNode(60), IntTreapNode(61), IntTreapNode(62), IntTreapNode(63), IntTreapNode(64),
+            IntTreapNode(65), IntTreapNode(66), IntTreapNode(67), IntTreapNode(68), IntTreapNode(69),
+            IntTreapNode(70), IntTreapNode(71), IntTreapNode(72), IntTreapNode(73), IntTreapNode(74),
+            IntTreapNode(75), IntTreapNode(76), IntTreapNode(77), IntTreapNode(78), IntTreapNode(79),
+            IntTreapNode(80), IntTreapNode(81), IntTreapNode(82), IntTreapNode(83), IntTreapNode(84),
+            IntTreapNode(85), IntTreapNode(86), IntTreapNode(87), IntTreapNode(88), IntTreapNode(89),
+            IntTreapNode(90), IntTreapNode(91), IntTreapNode(92), IntTreapNode(93), IntTreapNode(94),
+            IntTreapNode(95), IntTreapNode(96), IntTreapNode(97), IntTreapNode(98), IntTreapNode(99)};
 
         for (int i = 0; i < 100; i++) {
             treap.insert(&nodes[i]);
         }
 
         for (int i = 0; i < 100; i++) {
-            Node* found = treap.find(&i);
+            TreapNode* found = treap.find(&i);
             STD_INSIST(found != nullptr);
-            STD_INSIST(static_cast<IntNode*>(found)->value == i);
+            STD_INSIST(static_cast<IntTreapNode*>(found)->value == i);
         }
 
         int key = 100;
@@ -235,33 +235,33 @@ STD_TEST_SUITE(Treap) {
 
     STD_TEST(NegativeValues) {
         IntTreap treap;
-        IntNode node1(-10);
-        IntNode node2(0);
-        IntNode node3(10);
+        IntTreapNode node1(-10);
+        IntTreapNode node2(0);
+        IntTreapNode node3(10);
 
         treap.insert(&node1);
         treap.insert(&node2);
         treap.insert(&node3);
 
         int key1 = -10;
-        Node* found1 = treap.find(&key1);
+        TreapNode* found1 = treap.find(&key1);
         STD_INSIST(found1 != nullptr);
-        STD_INSIST(static_cast<IntNode*>(found1)->value == -10);
+        STD_INSIST(static_cast<IntTreapNode*>(found1)->value == -10);
 
         int key2 = 0;
-        Node* found2 = treap.find(&key2);
+        TreapNode* found2 = treap.find(&key2);
         STD_INSIST(found2 != nullptr);
-        STD_INSIST(static_cast<IntNode*>(found2)->value == 0);
+        STD_INSIST(static_cast<IntTreapNode*>(found2)->value == 0);
 
         int key3 = 10;
-        Node* found3 = treap.find(&key3);
+        TreapNode* found3 = treap.find(&key3);
         STD_INSIST(found3 != nullptr);
-        STD_INSIST(static_cast<IntNode*>(found3)->value == 10);
+        STD_INSIST(static_cast<IntTreapNode*>(found3)->value == 10);
     }
 
     STD_TEST(SingleElementFind) {
         IntTreap treap;
-        IntNode node(42);
+        IntTreapNode node(42);
         treap.insert(&node);
 
         int key1 = 41;
@@ -276,21 +276,21 @@ STD_TEST_SUITE(Treap) {
 
     STD_TEST(TwoElements) {
         IntTreap treap;
-        IntNode node1(10);
-        IntNode node2(20);
+        IntTreapNode node1(10);
+        IntTreapNode node2(20);
 
         treap.insert(&node1);
         treap.insert(&node2);
 
         int key1 = 10;
-        Node* found1 = treap.find(&key1);
+        TreapNode* found1 = treap.find(&key1);
         STD_INSIST(found1 != nullptr);
-        STD_INSIST(static_cast<IntNode*>(found1)->value == 10);
+        STD_INSIST(static_cast<IntTreapNode*>(found1)->value == 10);
 
         int key2 = 20;
-        Node* found2 = treap.find(&key2);
+        TreapNode* found2 = treap.find(&key2);
         STD_INSIST(found2 != nullptr);
-        STD_INSIST(static_cast<IntNode*>(found2)->value == 20);
+        STD_INSIST(static_cast<IntTreapNode*>(found2)->value == 20);
 
         int key3 = 15;
         STD_INSIST(treap.find(&key3) == nullptr);
@@ -298,7 +298,7 @@ STD_TEST_SUITE(Treap) {
 
     STD_TEST(EraseSingleElement) {
         IntTreap treap;
-        IntNode node(42);
+        IntTreapNode node(42);
         treap.insert(&node);
 
         int key = 42;
@@ -310,9 +310,9 @@ STD_TEST_SUITE(Treap) {
 
     STD_TEST(EraseFromMultipleElements) {
         IntTreap treap;
-        IntNode node1(10);
-        IntNode node2(20);
-        IntNode node3(30);
+        IntTreapNode node1(10);
+        IntTreapNode node2(20);
+        IntTreapNode node3(30);
 
         treap.insert(&node1);
         treap.insert(&node2);
@@ -332,8 +332,8 @@ STD_TEST_SUITE(Treap) {
 
     STD_TEST(EraseNonExistentKey) {
         IntTreap treap;
-        IntNode node1(10);
-        IntNode node2(20);
+        IntTreapNode node1(10);
+        IntTreapNode node2(20);
 
         treap.insert(&node1);
         treap.insert(&node2);
@@ -350,9 +350,9 @@ STD_TEST_SUITE(Treap) {
 
     STD_TEST(EraseAllElements) {
         IntTreap treap;
-        IntNode node1(10);
-        IntNode node2(20);
-        IntNode node3(30);
+        IntTreapNode node1(10);
+        IntTreapNode node2(20);
+        IntTreapNode node3(30);
 
         treap.insert(&node1);
         treap.insert(&node2);
@@ -373,8 +373,8 @@ STD_TEST_SUITE(Treap) {
 
     STD_TEST(EraseAndReinsert) {
         IntTreap treap;
-        IntNode node1(10);
-        IntNode node2(20);
+        IntTreapNode node1(10);
+        IntTreapNode node2(20);
 
         treap.insert(&node1);
 
@@ -387,11 +387,11 @@ STD_TEST_SUITE(Treap) {
         STD_INSIST(treap.find(&key2) != nullptr);
     }
 
-    STD_TEST(EraseRootNode) {
+    STD_TEST(EraseRootTreapNode) {
         IntTreap treap;
-        IntNode node1(20);
-        IntNode node2(10);
-        IntNode node3(30);
+        IntTreapNode node1(20);
+        IntTreapNode node2(10);
+        IntTreapNode node3(30);
 
         treap.insert(&node1);
         treap.insert(&node2);
@@ -408,13 +408,13 @@ STD_TEST_SUITE(Treap) {
         STD_INSIST(treap.find(&key3) != nullptr);
     }
 
-    STD_TEST(EraseLeafNodes) {
+    STD_TEST(EraseLeafTreapNodes) {
         IntTreap treap;
-        IntNode node1(20);
-        IntNode node2(10);
-        IntNode node3(30);
-        IntNode node4(5);
-        IntNode node5(15);
+        IntTreapNode node1(20);
+        IntTreapNode node2(10);
+        IntTreapNode node3(30);
+        IntTreapNode node4(5);
+        IntTreapNode node5(15);
 
         treap.insert(&node1);
         treap.insert(&node2);
@@ -447,9 +447,9 @@ STD_TEST_SUITE(Treap) {
 
     STD_TEST(EraseSequentialElements) {
         IntTreap treap;
-        IntNode nodes[10] = {
-            IntNode(0), IntNode(1), IntNode(2), IntNode(3), IntNode(4),
-            IntNode(5), IntNode(6), IntNode(7), IntNode(8), IntNode(9)};
+        IntTreapNode nodes[10] = {
+            IntTreapNode(0), IntTreapNode(1), IntTreapNode(2), IntTreapNode(3), IntTreapNode(4),
+            IntTreapNode(5), IntTreapNode(6), IntTreapNode(7), IntTreapNode(8), IntTreapNode(9)};
 
         for (int i = 0; i < 10; i++) {
             treap.insert(&nodes[i]);

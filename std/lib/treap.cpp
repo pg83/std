@@ -4,14 +4,14 @@
 
 using namespace Std;
 
-Node::Node()
+TreapNode::TreapNode()
     : priority(rand())
     , left(nullptr)
     , right(nullptr)
 {
 }
 
-void Treap::split(Node* t, Node* k, Node** l, Node** r) noexcept {
+void Treap::split(TreapNode* t, TreapNode* k, TreapNode** l, TreapNode** r) noexcept {
     if (!t) {
         *l = nullptr;
         *r = nullptr;
@@ -28,7 +28,7 @@ void Treap::split(Node* t, Node* k, Node** l, Node** r) noexcept {
     }
 }
 
-Node* Treap::merge(Node* l, Node* r) noexcept {
+TreapNode* Treap::merge(TreapNode* l, TreapNode* r) noexcept {
     if (!l) {
         return r;
     }
@@ -48,14 +48,14 @@ Node* Treap::merge(Node* l, Node* r) noexcept {
     return r;
 }
 
-void Treap::insert(Node* node) noexcept {
-    Node *l, *r;
+void Treap::insert(TreapNode* node) noexcept {
+    TreapNode *l, *r;
     split(root, node, &l, &r);
     root = merge(merge(l, node), r);
 }
 
-Node* Treap::find(void* key) noexcept {
-    Node* t = root;
+TreapNode* Treap::find(void* key) noexcept {
+    TreapNode* t = root;
 
     while (t) {
         if (cmp(key, t->key())) {
@@ -71,10 +71,10 @@ Node* Treap::find(void* key) noexcept {
 }
 
 void Treap::erase(void* key) noexcept {
-    Node** ptr = &root;
+    TreapNode** ptr = &root;
 
     while (*ptr) {
-        Node* current = *ptr;
+        TreapNode* current = *ptr;
 
         if (cmp(key, current->key())) {
             ptr = &current->left;

@@ -1,21 +1,21 @@
 #pragma once
 
 namespace Std {
-    struct Node {
+    struct TreapNode {
         int priority;
-        Node* left;
-        Node* right;
+        TreapNode* left;
+        TreapNode* right;
 
-        Node();
+        TreapNode();
 
         virtual void* key() = 0;
     };
 
     class Treap {
-        Node* root;
+        TreapNode* root;
 
-        void split(Node* t, Node* k, Node** l, Node** r) noexcept;
-        Node* merge(Node* l, Node* r) noexcept;
+        void split(TreapNode* t, TreapNode* k, TreapNode** l, TreapNode** r) noexcept;
+        TreapNode* merge(TreapNode* l, TreapNode* r) noexcept;
 
     public:
         Treap()
@@ -25,12 +25,12 @@ namespace Std {
 
         virtual bool cmp(void* a, void* b) = 0;
 
-        Node* find(void* key) noexcept;
+        TreapNode* find(void* key) noexcept;
 
         void erase(void* key) noexcept;
-        void insert(Node* node) noexcept;
+        void insert(TreapNode* node) noexcept;
 
-        inline void erase(Node* node) noexcept {
+        inline void erase(TreapNode* node) noexcept {
             erase(node->key());
         }
     };
