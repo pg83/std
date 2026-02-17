@@ -472,6 +472,7 @@ STD_TEST_SUITE(Treap) {
         IntTreapNode node2(10);
         treap.insert(&node1);
         treap.insert(&node2);
+        STD_INSIST(treap.length() == 1);
         STD_INSIST(treap.find(node2.key()) == &node2);
     }
 }

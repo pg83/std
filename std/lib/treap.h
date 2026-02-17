@@ -44,5 +44,7 @@ namespace Std {
         void erase(void* key) noexcept;
         void remove(TreapNode* node) noexcept;
         void insert(TreapNode* node) noexcept;
+
+        unsigned length() const noexcept;
     };
 }

@@ -43,6 +43,7 @@ void Treap::split(TreapNode* t, TreapNode* k, TreapNode** l, TreapNode** r) noex
 }
 
 void Treap::insert(TreapNode* node) noexcept {
+    remove(node);
     TreapNode *l, *r;
     split(root, node, &l, &r);
     root = merge(merge(l, node), r);
@@ -88,4 +89,14 @@ void Treap::visitImpl(TreapVisitor&& vis) {
     if (root) {
         root->visit(vis);
     }
+}
+
+unsigned Treap::length() const noexcept {
+    unsigned res = 0;
+
+    ((Treap*)this)->visit([&res](void*) {
+        res += 1;
+    });
+
+    return res;
 }
