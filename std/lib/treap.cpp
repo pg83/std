@@ -19,7 +19,7 @@ void Treap::split(Node* t, Node* k, Node** l, Node** r) noexcept {
         return;
     }
 
-    if (cmp(t->key(), k)) {
+    if (cmp(t->key(), k->key())) {
         split(t->right, k, &t->right, r);
         *l = t;
     } else {
@@ -48,18 +48,6 @@ void Treap::insert(Node* node) noexcept {
     Node *l, *r;
     split(root, node, &l, &r);
     root = merge(merge(l, node), r);
-}
-
-void Treap::erase(Node* node) noexcept {
-    Node *l, *m, *r;
-
-    split(root, node, &l, &r);
-
-    if (r) {
-        split(r, node, &m, &r);
-    }
-
-    root = merge(l, r);
 }
 
 Node* Treap::find(void* key) noexcept {

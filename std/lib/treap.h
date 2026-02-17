@@ -26,8 +26,6 @@ namespace Std {
         virtual bool cmp(void* a, void* b) = 0;
 
         Node* find(void* key) noexcept;
-
-        void erase(Node* node) noexcept;
         void insert(Node* node) noexcept;
     };
 }
