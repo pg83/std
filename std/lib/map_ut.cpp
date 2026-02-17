@@ -180,6 +180,7 @@ STD_TEST_SUITE(Map) {
 
         int* val = m.find(10);
         STD_INSIST(val != nullptr);
+        STD_INSIST(*val == 300);
     }
 
     STD_TEST(ManyKeysRandomOrder) {
