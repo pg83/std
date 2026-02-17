@@ -1,4 +1,5 @@
 #include "treap.h"
+#include "treap_node.h"
 
 #include <std/tst/ut.h>
 
@@ -20,7 +21,7 @@ STD_TEST_SUITE(Treap) {
 
     class IntTreap: public Treap {
     public:
-        bool cmp(void* a, void* b) noexcept override {
+        bool cmp(void* a, void* b) const noexcept override {
             int* ia = static_cast<int*>(a);
             int* ib = static_cast<int*>(b);
             return *ia < *ib;

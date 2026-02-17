@@ -1,19 +1,7 @@
 #include "treap.h"
-
-#include <stdlib.h>
+#include "treap_node.h"
 
 using namespace Std;
-
-TreapNode::TreapNode() noexcept
-    : priority(rand())
-    , left(nullptr)
-    , right(nullptr)
-{
-}
-
-void* TreapNode::key() noexcept {
-    return this;
-}
 
 void Treap::split(TreapNode* t, TreapNode* k, TreapNode** l, TreapNode** r) noexcept {
     if (!t) {
@@ -58,7 +46,7 @@ void Treap::insert(TreapNode* node) noexcept {
     root = merge(merge(l, node), r);
 }
 
-TreapNode* Treap::find(void* key) noexcept {
+TreapNode* Treap::find(void* key) const noexcept {
     auto t = root;
 
     while (t) {
@@ -88,4 +76,8 @@ void Treap::erase(void* key) noexcept {
             return;
         }
     }
+}
+
+void Treap::erase(TreapNode* node) noexcept {
+    erase(node->key());
 }
