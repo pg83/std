@@ -1,5 +1,7 @@
 #pragma once
 
+#include <std/sys/types.h>
+
 namespace Std {
     struct TreapNode;
 
@@ -45,6 +47,6 @@ namespace Std {
         void remove(TreapNode* node) noexcept;
         void insert(TreapNode* node) noexcept;
 
-        unsigned length() const noexcept;
+        size_t length() const noexcept;
     };
 }

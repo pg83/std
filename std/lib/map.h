@@ -5,6 +5,7 @@
 
 #include <std/typ/support.h>
 #include <std/mem/obj_pool.h>
+#include <std/rng/split_mix_64.h>
 
 namespace Std {
     template <typename K, typename V>
@@ -14,8 +15,9 @@ namespace Std {
             V v;
 
             template <typename... A>
-            inline Node(K key, A&&... a)
-                : k(key)
+            inline Node(u64 prio, K key, A&&... a)
+                : TreapNode(prio)
+                , k(key)
                 , v(forward<A>(a)...)
             {
             }
@@ -25,6 +27,7 @@ namespace Std {
             }
         };
 
+        u64 rng;
         ObjPool::Ref pool = ObjPool::fromMemory();
 
         bool cmp(void* l, void* r) const noexcept override {
@@ -32,6 +35,11 @@ namespace Std {
         }
 
     public:
+        inline Map()
+            : rng((u64)this)
+        {
+        }
+
         inline V* find(K k) const noexcept {
             if (auto res = Treap::find((void*)&k); res) {
                 return &(((Node*)res)->v);
@@ -43,7 +51,7 @@ namespace Std {
         template <typename... A>
         inline V* insert(K key, A&&... a) {
             erase(key);
-            auto node = pool->make<Node>(key, forward<A>(a)...);
+            auto node = pool->make<Node>(nextSplitMix64(&rng), key, forward<A>(a)...);
             Treap::insert(node);
             return &node->v;
         }

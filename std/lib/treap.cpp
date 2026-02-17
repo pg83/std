@@ -90,8 +90,8 @@ void Treap::visitImpl(TreapVisitor&& vis) {
     }
 }
 
-unsigned Treap::length() const noexcept {
-    unsigned res = 0;
+size_t Treap::length() const noexcept {
+    size_t res = 0;
 
     ((Treap*)this)->visit([&res](void*) {
         res += 1;

@@ -1,14 +1,16 @@
 #pragma once
 
+#include <std/sys/types.h>
+
 namespace Std {
     struct TreapVisitor;
 
     struct TreapNode {
-        int priority;
+        u64 priority;
         TreapNode* left;
         TreapNode* right;
 
-        TreapNode() noexcept;
+        TreapNode(u64 prio) noexcept;
 
         virtual void* key() const noexcept;
 

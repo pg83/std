@@ -13,6 +13,8 @@ namespace Std {
     };
 
     struct TestFunc: public TreapNode {
+        TestFunc() noexcept;
+
         virtual void execute(ExecContext& ctx) const = 0;
         virtual StringView suite() const = 0;
         virtual StringView name() const = 0;

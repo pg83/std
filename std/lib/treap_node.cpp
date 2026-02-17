@@ -1,12 +1,10 @@
 #include "treap.h"
 #include "treap_node.h"
 
-#include <stdlib.h>
-
 using namespace Std;
 
-TreapNode::TreapNode() noexcept
-    : priority(rand())
+TreapNode::TreapNode(u64 prio) noexcept
+    : priority(prio)
     , left(nullptr)
     , right(nullptr)
 {
