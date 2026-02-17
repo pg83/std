@@ -29,8 +29,12 @@ void Treap::split(Node* t, Node* k, Node** l, Node** r) noexcept {
 }
 
 Node* Treap::merge(Node* l, Node* r) noexcept {
-    if (!l || !r) {
-        return l ? l : r;
+    if (!l) {
+        return r;
+    }
+
+    if (!r) {
+        return l;
     }
 
     if (l->priority > r->priority) {
