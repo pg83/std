@@ -10,9 +10,15 @@ namespace Std {
     template <typename K, typename V>
     class Map: public Treap {
         struct Node: public TreapNode, public Embed<V> {
-            using Embed<V>::Embed;
-
             K k;
+            V v;
+
+            template <typename... A>
+            inline Node(K key, A&&... a)
+                : k(key)
+                , v(forward<A>(a)...)
+            {
+            }
 
             void* key() const noexcept override {
                 return (void*)&k;
@@ -22,13 +28,13 @@ namespace Std {
         ObjPool::Ref pool = ObjPool::fromMemory();
 
         bool cmp(void* l, void* r) const noexcept override {
-            return *(K*)l == *(K*)r;
+            return *(K*)l < *(K*)r;
         }
 
     public:
         inline V* find(K k) const noexcept {
             if (auto res = Treap::find((void*)&k); res) {
-                return &(((Node*)res)->t);
+                return &(((Node*)res)->v);
             }
 
             return nullptr;
@@ -36,9 +42,9 @@ namespace Std {
 
         template <typename... A>
         inline V* insert(K key, A&&... a) {
-            auto node = pool->make<Node>(forward<A>(a)...);
+            auto node = pool->make<Node>(key, forward<A>(a)...);
             Treap::insert(node);
-            return &node->t;
+            return &node->v;
         }
 
         inline V& operator[](K k) {
