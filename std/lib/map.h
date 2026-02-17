@@ -9,7 +9,7 @@
 namespace Std {
     template <typename K, typename V>
     class Map: public Treap {
-        struct Node: public TreapNode, public Embed<V> {
+        struct Node: public TreapNode  {
             K k;
             V v;
 
