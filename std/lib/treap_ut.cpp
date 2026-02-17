@@ -214,8 +214,7 @@ STD_TEST_SUITE(Treap) {
             IntNode(80), IntNode(81), IntNode(82), IntNode(83), IntNode(84),
             IntNode(85), IntNode(86), IntNode(87), IntNode(88), IntNode(89),
             IntNode(90), IntNode(91), IntNode(92), IntNode(93), IntNode(94),
-            IntNode(95), IntNode(96), IntNode(97), IntNode(98), IntNode(99)
-        };
+            IntNode(95), IntNode(96), IntNode(97), IntNode(98), IntNode(99)};
 
         for (int i = 0; i < 100; i++) {
             treap.insert(&nodes[i]);
@@ -295,5 +294,174 @@ STD_TEST_SUITE(Treap) {
 
         int key3 = 15;
         STD_INSIST(treap.find(&key3) == nullptr);
+    }
+
+    STD_TEST(EraseSingleElement) {
+        IntTreap treap;
+        IntNode node(42);
+        treap.insert(&node);
+
+        int key = 42;
+        STD_INSIST(treap.find(&key) != nullptr);
+
+        treap.erase(&key);
+        STD_INSIST(treap.find(&key) == nullptr);
+    }
+
+    STD_TEST(EraseFromMultipleElements) {
+        IntTreap treap;
+        IntNode node1(10);
+        IntNode node2(20);
+        IntNode node3(30);
+
+        treap.insert(&node1);
+        treap.insert(&node2);
+        treap.insert(&node3);
+
+        int key = 20;
+        treap.erase(&key);
+
+        STD_INSIST(treap.find(&key) == nullptr);
+
+        int key1 = 10;
+        STD_INSIST(treap.find(&key1) != nullptr);
+
+        int key3 = 30;
+        STD_INSIST(treap.find(&key3) != nullptr);
+    }
+
+    STD_TEST(EraseNonExistentKey) {
+        IntTreap treap;
+        IntNode node1(10);
+        IntNode node2(20);
+
+        treap.insert(&node1);
+        treap.insert(&node2);
+
+        int key = 15;
+        treap.erase(&key);
+
+        int key1 = 10;
+        STD_INSIST(treap.find(&key1) != nullptr);
+
+        int key2 = 20;
+        STD_INSIST(treap.find(&key2) != nullptr);
+    }
+
+    STD_TEST(EraseAllElements) {
+        IntTreap treap;
+        IntNode node1(10);
+        IntNode node2(20);
+        IntNode node3(30);
+
+        treap.insert(&node1);
+        treap.insert(&node2);
+        treap.insert(&node3);
+
+        int key1 = 10;
+        treap.erase(&key1);
+        STD_INSIST(treap.find(&key1) == nullptr);
+
+        int key2 = 20;
+        treap.erase(&key2);
+        STD_INSIST(treap.find(&key2) == nullptr);
+
+        int key3 = 30;
+        treap.erase(&key3);
+        STD_INSIST(treap.find(&key3) == nullptr);
+    }
+
+    STD_TEST(EraseAndReinsert) {
+        IntTreap treap;
+        IntNode node1(10);
+        IntNode node2(20);
+
+        treap.insert(&node1);
+
+        int key1 = 10;
+        treap.erase(&key1);
+        STD_INSIST(treap.find(&key1) == nullptr);
+
+        treap.insert(&node2);
+        int key2 = 20;
+        STD_INSIST(treap.find(&key2) != nullptr);
+    }
+
+    STD_TEST(EraseRootNode) {
+        IntTreap treap;
+        IntNode node1(20);
+        IntNode node2(10);
+        IntNode node3(30);
+
+        treap.insert(&node1);
+        treap.insert(&node2);
+        treap.insert(&node3);
+
+        int key1 = 20;
+        treap.erase(&key1);
+        STD_INSIST(treap.find(&key1) == nullptr);
+
+        int key2 = 10;
+        STD_INSIST(treap.find(&key2) != nullptr);
+
+        int key3 = 30;
+        STD_INSIST(treap.find(&key3) != nullptr);
+    }
+
+    STD_TEST(EraseLeafNodes) {
+        IntTreap treap;
+        IntNode node1(20);
+        IntNode node2(10);
+        IntNode node3(30);
+        IntNode node4(5);
+        IntNode node5(15);
+
+        treap.insert(&node1);
+        treap.insert(&node2);
+        treap.insert(&node3);
+        treap.insert(&node4);
+        treap.insert(&node5);
+
+        int key4 = 5;
+        treap.erase(&key4);
+        STD_INSIST(treap.find(&key4) == nullptr);
+
+        int key5 = 15;
+        treap.erase(&key5);
+        STD_INSIST(treap.find(&key5) == nullptr);
+
+        int key1 = 20;
+        STD_INSIST(treap.find(&key1) != nullptr);
+        int key2 = 10;
+        STD_INSIST(treap.find(&key2) != nullptr);
+        int key3 = 30;
+        STD_INSIST(treap.find(&key3) != nullptr);
+    }
+
+    STD_TEST(EraseFromEmptyTreap) {
+        IntTreap treap;
+        int key = 42;
+        treap.erase(&key);
+        STD_INSIST(treap.find(&key) == nullptr);
+    }
+
+    STD_TEST(EraseSequentialElements) {
+        IntTreap treap;
+        IntNode nodes[10] = {
+            IntNode(0), IntNode(1), IntNode(2), IntNode(3), IntNode(4),
+            IntNode(5), IntNode(6), IntNode(7), IntNode(8), IntNode(9)};
+
+        for (int i = 0; i < 10; i++) {
+            treap.insert(&nodes[i]);
+        }
+
+        for (int i = 0; i < 10; i += 2) {
+            treap.erase(&i);
+            STD_INSIST(treap.find(&i) == nullptr);
+        }
+
+        for (int i = 1; i < 10; i += 2) {
+            STD_INSIST(treap.find(&i) != nullptr);
+        }
     }
 }

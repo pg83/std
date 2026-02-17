@@ -65,3 +65,20 @@ Node* Treap::find(void* key) noexcept {
 
     return nullptr;
 }
+
+void Treap::erase(void* key) noexcept {
+    Node** ptr = &root;
+
+    while (*ptr) {
+        Node* current = *ptr;
+
+        if (cmp(key, current->key())) {
+            ptr = &current->left;
+        } else if (cmp(current->key(), key)) {
+            ptr = &current->right;
+        } else {
+            *ptr = merge(current->left, current->right);
+            return;
+        }
+    }
+}

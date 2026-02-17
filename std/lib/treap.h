@@ -27,5 +27,10 @@ namespace Std {
 
         Node* find(void* key) noexcept;
         void insert(Node* node) noexcept;
+        void erase(void* key) noexcept;
+
+        inline void erase(Node* node) noexcept {
+            erase(node->key());
+        }
     };
 }
