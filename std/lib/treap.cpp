@@ -55,7 +55,7 @@ void Treap::insert(TreapNode* node) noexcept {
 }
 
 TreapNode* Treap::find(void* key) noexcept {
-    TreapNode* t = root;
+    auto t = root;
 
     while (t) {
         if (cmp(key, t->key())) {
@@ -71,17 +71,16 @@ TreapNode* Treap::find(void* key) noexcept {
 }
 
 void Treap::erase(void* key) noexcept {
-    TreapNode** ptr = &root;
+    auto ptr = &root;
 
-    while (*ptr) {
-        TreapNode* current = *ptr;
-
+    while (auto current = *ptr) {
         if (cmp(key, current->key())) {
             ptr = &current->left;
         } else if (cmp(current->key(), key)) {
             ptr = &current->right;
         } else {
             *ptr = merge(current->left, current->right);
+
             return;
         }
     }
