@@ -42,6 +42,7 @@ namespace Std {
 
         template <typename... A>
         inline V* insert(K key, A&&... a) {
+            erase(key);
             auto node = pool->make<Node>(key, forward<A>(a)...);
             Treap::insert(node);
             return &node->v;
@@ -53,6 +54,10 @@ namespace Std {
             }
 
             return *insert(k);
+        }
+
+        inline void erase(K key) noexcept {
+            Treap::erase((void*)&key);
         }
     };
 }
