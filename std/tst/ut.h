@@ -12,9 +12,7 @@ namespace Std {
         virtual ZeroCopyOutput& output() const = 0;
     };
 
-    struct TestFunc {
-        TreapNode node;
-
+    struct TestFunc: public TreapNode {
         virtual void execute(ExecContext& ctx) const = 0;
         virtual StringView suite() const = 0;
         virtual StringView name() const = 0;

@@ -89,12 +89,8 @@ namespace {
             return *outbuf;
         }
 
-        static inline auto cvt(void* el) noexcept {
-            return (TestFunc*)((u8*)el - offsetof(TestFunc, node));
-        }
-
         bool cmp(void* l, void* r) const noexcept override {
-            return compare(*cvt(l), *cvt(r));
+            return compare(*(const TestFunc*)(l), *(const TestFunc*)(r));
         }
 
         static inline bool compare(const TestFunc& l, const TestFunc& r) noexcept {
@@ -116,7 +112,7 @@ namespace {
             StringBuilder sb;
 
             visit([&](void* el) {
-                auto test = cvt(el);
+                auto test = (TestFunc*)el;
 
                 sb.reset();
                 sb << *test;
@@ -175,10 +171,6 @@ namespace {
             throw Exc();
         }
 
-        inline void reg(TestFunc* func) {
-            insert(&func->node);
-        }
-
         static inline auto& instance() noexcept {
             return singleton<Tests>();
         }
@@ -203,5 +195,5 @@ void Std::Ctx::run() {
 }
 
 void Std::registerTest(TestFunc* test) {
-    Tests::instance().reg(test);
+    Tests::instance().insert(test);
 }
