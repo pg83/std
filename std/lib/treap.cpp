@@ -84,7 +84,7 @@ void Treap::erase(TreapNode* node) noexcept {
     erase(node->key());
 }
 
-void Treap::visitImpl(TreapVisitor& vis) {
+void Treap::visitImpl(TreapVisitor&& vis) {
     if (root) {
         root->visit(vis);
     }

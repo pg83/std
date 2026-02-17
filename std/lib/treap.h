@@ -10,6 +10,7 @@ namespace Std {
     class Treap {
         TreapNode* root;
 
+        void visitImpl(TreapVisitor&& vis);
         void split(TreapNode* t, TreapNode* k, TreapNode** l, TreapNode** r) noexcept;
 
     public:
@@ -19,8 +20,6 @@ namespace Std {
         }
 
         virtual bool cmp(void* a, void* b) const noexcept = 0;
-
-        void visitImpl(TreapVisitor& vis);
 
         template <typename V>
         inline void visit(V v) {
@@ -37,8 +36,7 @@ namespace Std {
                 }
             };
 
-            H h(v);
-            visitImpl(h);
+            visitImpl(H(v));
         }
 
         TreapNode* find(void* key) const noexcept;
