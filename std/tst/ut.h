@@ -1,9 +1,9 @@
 #pragma once
 
-#include <std/lib/node.h>
 #include <std/str/view.h>
 #include <std/sys/types.h>
 #include <std/dbg/insist.h>
+#include <std/lib/treap_node.h>
 
 namespace Std {
     class ZeroCopyOutput;
@@ -13,7 +13,7 @@ namespace Std {
     };
 
     struct TestFunc {
-        IntrusiveNode node;
+        TreapNode node;
 
         virtual void execute(ExecContext& ctx) const = 0;
         virtual StringView suite() const = 0;

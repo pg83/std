@@ -1,6 +1,8 @@
 #pragma once
 
 namespace Std {
+    struct TreapVisitor;
+
     struct TreapNode {
         int priority;
         TreapNode* left;
@@ -9,5 +11,7 @@ namespace Std {
         TreapNode() noexcept;
 
         virtual void* key() noexcept;
+
+        void visit(TreapVisitor& vis);
     };
 }

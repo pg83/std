@@ -3,6 +3,10 @@
 namespace Std {
     struct TreapNode;
 
+    struct TreapVisitor {
+        virtual void visit(void*) = 0;
+    };
+
     class Treap {
         TreapNode* root;
 
@@ -10,12 +14,33 @@ namespace Std {
         TreapNode* merge(TreapNode* l, TreapNode* r) noexcept;
 
     public:
-        Treap() noexcept
+        inline Treap() noexcept
             : root(nullptr)
         {
         }
 
         virtual bool cmp(void* a, void* b) const noexcept = 0;
+
+        void visitImpl(TreapVisitor& vis);
+
+        template <typename V>
+        inline void visit(V v) {
+            struct H: public TreapVisitor {
+                V v;
+
+                inline H(V vv)
+                    : v(vv)
+                {
+                }
+
+                virtual void visit(void* el) {
+                    v(el);
+                }
+            };
+
+            H h(v);
+            visitImpl(h);
+        }
 
         TreapNode* find(void* key) const noexcept;
 

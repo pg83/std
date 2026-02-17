@@ -1,12 +1,12 @@
 #include "ut.h"
 
 #include <std/ios/sys.h>
-#include <std/lib/list.h>
 #include <std/str/view.h>
 #include <std/sys/throw.h>
 #include <std/dbg/color.h>
 #include <std/dbg/panic.h>
 #include <std/alg/range.h>
+#include <std/lib/treap.h>
 #include <std/lib/vector.h>
 #include <std/str/builder.h>
 #include <std/lib/singleton.h>
@@ -76,7 +76,7 @@ namespace {
         }
     };
 
-    struct Tests: public ExecContext, public IntrusiveList {
+    struct Tests: public ExecContext, public Treap {
         Ctx* ctx = 0;
         OutBuf* outbuf = 0;
         GetOpt* opt = 0;
@@ -89,6 +89,14 @@ namespace {
             return *outbuf;
         }
 
+        static inline auto cvt(void* el) noexcept {
+            return (TestFunc*)((u8*)el - offsetof(TestFunc, node));
+        }
+
+        bool cmp(void* l, void* r) const noexcept override {
+            return compare(*cvt(l), *cvt(r));
+        }
+
         static inline bool compare(const TestFunc& l, const TestFunc& r) noexcept {
             return l.suite() < r.suite() || (l.suite() == r.suite() && l.name() < r.name());
         }
@@ -96,16 +104,7 @@ namespace {
         inline void run(Ctx& ctx_) {
             ctx = &ctx_;
             opt = new GetOpt(ctx_);
-
-            sort([](const IntrusiveNode* l, const IntrusiveNode* r) {
-                return compare(*cvt(l), *cvt(r));
-            });
-
             execute(sysO);
-        }
-
-        static inline TestFunc* cvt(const IntrusiveNode* node) noexcept {
-            return (TestFunc*)((u8*)node - offsetof(TestFunc, node));
         }
 
         inline void execute(OutBuf&& outb) {
@@ -116,8 +115,8 @@ namespace {
 
             StringBuilder sb;
 
-            while (!empty()) {
-                auto test = cvt(popFront());
+            visit([&](void* el) {
+                auto test = cvt(el);
 
                 sb.reset();
                 sb << *test;
@@ -131,7 +130,7 @@ namespace {
                 } else {
                     ++err;
                 }
-            }
+            });
 
             outb << Color::bright(AnsiColor::Green)
                  << StringView(u8"OK: ") << ok
@@ -177,7 +176,7 @@ namespace {
         }
 
         inline void reg(TestFunc* func) {
-            pushBack(&func->node);
+            insert(&func->node);
         }
 
         static inline auto& instance() noexcept {
