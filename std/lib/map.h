@@ -15,7 +15,7 @@ namespace Std {
             K k;
 
             void* key() const noexcept override {
-                return &k;
+                return (void*)&k;
             }
         };
 
@@ -26,9 +26,9 @@ namespace Std {
         }
 
     public:
-        inline V* find(const K& k) const noexcept {
-            if (auto res = find(&k); res) {
-                return *((Node*)res)->t;
+        inline V* find(K k) const noexcept {
+            if (auto res = Treap::find((void*)&k); res) {
+                return &(((Node*)res)->t);
             }
 
             return nullptr;
@@ -37,16 +37,16 @@ namespace Std {
         template <typename... A>
         inline V* insert(K key, A&&... a) {
             auto node = pool->make<Node>(forward<A>(a)...);
-            insert(node);
+            Treap::insert(node);
             return &node->t;
         }
 
-        inline V& operator[](const K& k) {
+        inline V& operator[](K k) {
             if (auto res = find(k); res) {
                 return *res;
             }
 
-            return insert(k);
+            return *insert(k);
         }
     };
 }

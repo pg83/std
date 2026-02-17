@@ -10,7 +10,7 @@ namespace Std {
 
         TreapNode() noexcept;
 
-        virtual void* key() noexcept;
+        virtual void* key() const noexcept;
 
         void visit(TreapVisitor& vis);
     };

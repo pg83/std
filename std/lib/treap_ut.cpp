@@ -14,8 +14,8 @@ STD_TEST_SUITE(Treap) {
         {
         }
 
-        void* key() noexcept override {
-            return &value;
+        void* key() const noexcept override {
+            return (void*)&value;
         }
     };
 

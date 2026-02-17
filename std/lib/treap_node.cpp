@@ -12,8 +12,8 @@ TreapNode::TreapNode() noexcept
 {
 }
 
-void* TreapNode::key() noexcept {
-    return this;
+void* TreapNode::key() const noexcept {
+    return (void*)this;
 }
 
 void TreapNode::visit(TreapVisitor& vis) {
