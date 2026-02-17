@@ -3,6 +3,28 @@
 
 using namespace Std;
 
+namespace {
+    static inline TreapNode* merge(TreapNode* l, TreapNode* r) noexcept {
+        if (!l) {
+            return r;
+        }
+
+        if (!r) {
+            return l;
+        }
+
+        if (l->priority > r->priority) {
+            l->right = merge(l->right, r);
+
+            return l;
+        }
+
+        r->left = merge(l, r->left);
+
+        return r;
+    }
+}
+
 void Treap::split(TreapNode* t, TreapNode* k, TreapNode** l, TreapNode** r) noexcept {
     if (!t) {
         *l = nullptr;
@@ -18,26 +40,6 @@ void Treap::split(TreapNode* t, TreapNode* k, TreapNode** l, TreapNode** r) noex
         split(t->left, k, l, &t->left);
         *r = t;
     }
-}
-
-TreapNode* Treap::merge(TreapNode* l, TreapNode* r) noexcept {
-    if (!l) {
-        return r;
-    }
-
-    if (!r) {
-        return l;
-    }
-
-    if (l->priority > r->priority) {
-        l->right = merge(l->right, r);
-
-        return l;
-    }
-
-    r->left = merge(l, r->left);
-
-    return r;
 }
 
 void Treap::insert(TreapNode* node) noexcept {

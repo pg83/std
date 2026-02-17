@@ -11,7 +11,6 @@ namespace Std {
         TreapNode* root;
 
         void split(TreapNode* t, TreapNode* k, TreapNode** l, TreapNode** r) noexcept;
-        TreapNode* merge(TreapNode* l, TreapNode* r) noexcept;
 
     public:
         inline Treap() noexcept
