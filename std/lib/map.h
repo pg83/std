@@ -27,7 +27,6 @@ namespace Std {
             }
         };
 
-        u64 rng;
         ObjPool::Ref pool = ObjPool::fromMemory();
 
         bool cmp(void* l, void* r) const noexcept override {
@@ -35,11 +34,6 @@ namespace Std {
         }
 
     public:
-        inline Map()
-            : rng((u64)this)
-        {
-        }
-
         inline V* find(K k) const noexcept {
             if (auto res = Treap::find((void*)&k); res) {
                 return &(((Node*)res)->v);
@@ -51,7 +45,7 @@ namespace Std {
         template <typename... A>
         inline V* insert(K key, A&&... a) {
             erase(key);
-            auto node = pool->make<Node>(nextSplitMix64(&rng), key, forward<A>(a)...);
+            auto node = pool->make<Node>(nextSplitMix64((size_t)pool->current()), key, forward<A>(a)...);
             Treap::insert(node);
             return &node->v;
         }

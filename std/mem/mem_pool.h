@@ -18,6 +18,7 @@ namespace Std {
 
         ~MemoryPool() noexcept;
 
+        void* current() const noexcept;
         void* allocate(size_t len);
     };
 }
