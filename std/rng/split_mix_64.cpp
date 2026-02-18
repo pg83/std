@@ -2,7 +2,7 @@
 
 using namespace Std;
 
-u64 Std::nextSplitMix64(u64 x) noexcept {
+u64 Std::splitMix64(u64 x) noexcept {
     x ^= x >> 30;
     x *= 0xbf58476d1ce4e5b9U;
     x ^= x >> 27;

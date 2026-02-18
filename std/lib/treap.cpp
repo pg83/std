@@ -7,7 +7,7 @@ using namespace Std;
 
 namespace {
     static inline u64 prio(const void* el) noexcept {
-        return nextSplitMix64((size_t)el);
+        return splitMix64((size_t)el);
     }
 
     static inline TreapNode* merge(TreapNode* l, TreapNode* r) noexcept {
