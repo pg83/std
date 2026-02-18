@@ -8,7 +8,13 @@
 
 namespace Std {
     template <typename K, typename V>
-    class Map: public Treap {
+    class Map {
+        struct Data: public Treap {
+            bool cmp(void* l, void* r) const noexcept override {
+                return *(K*)l < *(K*)r;
+            }
+        };
+
         struct Node: public TreapNode  {
             K k;
             V v;
@@ -25,15 +31,12 @@ namespace Std {
             }
         };
 
+        Data map;
         ObjPool::Ref pool = ObjPool::fromMemory();
-
-        bool cmp(void* l, void* r) const noexcept override {
-            return *(K*)l < *(K*)r;
-        }
 
     public:
         inline V* find(K k) const noexcept {
-            if (auto res = Treap::find((void*)&k); res) {
+            if (auto res = map.find((void*)&k); res) {
                 return &(((Node*)res)->v);
             }
 
@@ -44,7 +47,7 @@ namespace Std {
         inline V* insert(K key, A&&... a) {
             erase(key);
             auto node = pool->make<Node>(key, forward<A>(a)...);
-            Treap::insert(node);
+            map.insert(node);
             return &node->v;
         }
 
@@ -57,7 +60,7 @@ namespace Std {
         }
 
         inline void erase(K key) noexcept {
-            Treap::erase((void*)&key);
+            map.erase((void*)&key);
         }
     };
 }
