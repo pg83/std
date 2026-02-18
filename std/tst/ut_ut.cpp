@@ -1,8 +1,11 @@
 #include "ut.h"
 
+#include <std/lib/map.h>
 #include <std/ios/sys.h>
 #include <std/ios/output.h>
 #include <std/mem/obj_pool.h>
+
+#include <map>
 
 #include <stdlib.h>
 
@@ -54,6 +57,15 @@ STD_TEST_SUITE(UT) {
             auto p = malloc(256);
             res += (size_t)p;
             free(p);
+        }
+    }
+
+    STD_TEST(_MapPerf) {
+        Map<int, int> m;
+        //std::map<int, int> m;
+
+        for (size_t i = 0; i < 10000000; ++i) {
+            m[i] = i;
         }
     }
 }

@@ -45,9 +45,8 @@ namespace Std {
 
         template <typename... A>
         inline V* insert(K key, A&&... a) {
-            erase(key);
             auto node = pool->make<Node>(key, forward<A>(a)...);
-            map.insert(node);
+            map.insertUnique(node);
             return &node->v;
         }
 

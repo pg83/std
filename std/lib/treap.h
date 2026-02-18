@@ -46,6 +46,7 @@ namespace Std {
         void erase(void* key) noexcept;
         void remove(TreapNode* node) noexcept;
         void insert(TreapNode* node) noexcept;
+        void insertUnique(TreapNode* node) noexcept;
 
         size_t height() const noexcept;
         size_t length() const noexcept;
