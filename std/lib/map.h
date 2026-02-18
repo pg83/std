@@ -16,7 +16,7 @@ namespace Std {
 
             template <typename... A>
             inline Node(K key, A&&... a)
-                : TreapNode(nextSplitMix64((size_t)this))
+                : TreapNode(nextSplitMix64(7 + (size_t)this))
                 , k(key)
                 , v(forward<A>(a)...)
             {
