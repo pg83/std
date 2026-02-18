@@ -153,9 +153,7 @@ namespace {
                      << Color::reset();
             }
 
-            outb << endL << flsH;
-
-            outb.finish();
+            outb << endL << flsH << finI;
 
             exit(err);
         }
