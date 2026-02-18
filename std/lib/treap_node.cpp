@@ -21,9 +21,9 @@ void TreapNode::visit(TreapVisitor& vis) {
     }
 }
 
-size_t TreapNode::height() const noexcept {
-    const size_t lh = left ? left->height() : 0;
-    const size_t rh = right ? right->height() : 0;
+unsigned TreapNode::height() const noexcept {
+    const unsigned lh = left ? left->height() : 0;
+    const unsigned rh = right ? right->height() : 0;
 
     return 1 + max(lh, rh);
 }
