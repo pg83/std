@@ -1,9 +1,15 @@
 #include "treap.h"
 #include "treap_node.h"
 
+#include <std/rng/split_mix_64.h>
+
 using namespace Std;
 
 namespace {
+    static inline u64 prio(const void* el) noexcept {
+        return nextSplitMix64(1 + (size_t)el);
+    }
+
     static inline TreapNode* merge(TreapNode* l, TreapNode* r) noexcept {
         if (!l) {
             return r;
@@ -13,7 +19,7 @@ namespace {
             return l;
         }
 
-        if (l->priority > r->priority) {
+        if (prio(l) > prio(r)) {
             l->right = merge(l->right, r);
 
             return l;

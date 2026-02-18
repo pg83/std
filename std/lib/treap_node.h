@@ -6,12 +6,8 @@ namespace Std {
     struct TreapVisitor;
 
     struct TreapNode {
-        u64 priority;
-        TreapNode* left;
-        TreapNode* right;
-
-        TreapNode() noexcept;
-        TreapNode(u64 prio) noexcept;
+        TreapNode* left = nullptr;
+        TreapNode* right = nullptr;
 
         virtual void* key() const noexcept;
 

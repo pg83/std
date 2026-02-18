@@ -2,19 +2,15 @@
 #include "treap_node.h"
 
 #include <std/tst/ut.h>
-#include <std/rng/pcg.h>
 
 using namespace Std;
 
 STD_TEST_SUITE(Treap) {
-    PCG32 rng(100500);
-
     struct IntTreapNode: public TreapNode {
         int value;
 
         IntTreapNode(int v)
-            : TreapNode(rng.nextU32())
-            , value(v)
+            : value(v)
         {
         }
 
