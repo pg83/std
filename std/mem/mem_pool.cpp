@@ -80,7 +80,3 @@ void MemoryPool::allocateNewChunk(size_t minSize) {
 
     STD_ASSERT(currentChunkEnd - currentChunk >= minSize);
 }
-
-void* MemoryPool::current() const noexcept {
-    return currentChunk;
-}

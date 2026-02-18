@@ -28,7 +28,6 @@ namespace Std {
         virtual ~ObjPool() noexcept;
 
         virtual void* allocate(size_t len) = 0;
-        virtual void* current() const noexcept = 0;
 
         StringView intern(StringView s);
 

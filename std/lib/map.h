@@ -15,8 +15,8 @@ namespace Std {
             V v;
 
             template <typename... A>
-            inline Node(u64 prio, K key, A&&... a)
-                : TreapNode(prio)
+            inline Node(K key, A&&... a)
+                : TreapNode(nextSplitMix64((size_t)this))
                 , k(key)
                 , v(forward<A>(a)...)
             {
@@ -45,7 +45,7 @@ namespace Std {
         template <typename... A>
         inline V* insert(K key, A&&... a) {
             erase(key);
-            auto node = pool->make<Node>(nextSplitMix64((size_t)pool->current()), key, forward<A>(a)...);
+            auto node = pool->make<Node>(key, forward<A>(a)...);
             Treap::insert(node);
             return &node->v;
         }

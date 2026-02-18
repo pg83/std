@@ -35,10 +35,6 @@ namespace {
         void submit(Disposable* d) noexcept override {
             ds.submit(d);
         }
-
-        void* current() const noexcept override {
-            return mp.current();
-        }
     };
 
     static_assert(sizeof(Pool) == 256);
