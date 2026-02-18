@@ -63,9 +63,9 @@ TreapNode* Treap::find(void* key) const noexcept {
     auto t = root;
 
     while (t) {
-        if (cmp(key, t->key())) {
+        if (auto tkey = t->key(); cmp(key, tkey)) {
             t = t->left;
-        } else if (cmp(t->key(), key)) {
+        } else if (cmp(tkey, key)) {
             t = t->right;
         } else {
             return t;
@@ -79,9 +79,9 @@ void Treap::erase(void* key) noexcept {
     auto ptr = &root;
 
     while (auto current = *ptr) {
-        if (cmp(key, current->key())) {
+        if (auto ckey = current->key(); cmp(key, ckey)) {
             ptr = &current->left;
-        } else if (cmp(current->key(), key)) {
+        } else if (cmp(ckey, key)) {
             ptr = &current->right;
         } else {
             *ptr = merge(current->left, current->right);
