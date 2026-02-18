@@ -99,3 +99,11 @@ size_t Treap::length() const noexcept {
 
     return res;
 }
+
+size_t Treap::height() const noexcept {
+    if (root) {
+        return root->height();
+    }
+
+    return 0;
+}

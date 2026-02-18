@@ -1,6 +1,7 @@
 #include "treap.h"
 #include "treap_node.h"
 
+#include <std/alg/minmax.h>
 #include <std/rng/split_mix_64.h>
 
 using namespace Std;
@@ -31,4 +32,11 @@ void TreapNode::visit(TreapVisitor& vis) {
     if (right) {
         right->visit(vis);
     }
+}
+
+size_t TreapNode::height() const noexcept {
+    const size_t lh = left ? left->height() : 0;
+    const size_t rh = right ? right->height() : 0;
+
+    return 1 + max(lh, rh);
 }

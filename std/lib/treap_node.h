@@ -16,5 +16,6 @@ namespace Std {
         virtual void* key() const noexcept;
 
         void visit(TreapVisitor& vis);
+        size_t height() const noexcept;
     };
 }
