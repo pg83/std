@@ -14,6 +14,11 @@ namespace {
     }
 }
 
+PCG32::PCG32(u64 seq) noexcept
+    : PCG32(nextSplitMix64((size_t)this), seq)
+{
+}
+
 PCG32::PCG32(const void* seq) noexcept
     : PCG32(nextSplitMix64((size_t)seq))
 {

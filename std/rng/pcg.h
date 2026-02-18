@@ -8,14 +8,9 @@ namespace Std {
         u64 seq_;
 
     public:
-        PCG32(u64 state, u64 seq) noexcept;
-
-        inline PCG32(u64 seq) noexcept
-            : PCG32((size_t)this, seq)
-        {
-        }
-
+        PCG32(u64 seq) noexcept;
         PCG32(const void* seq) noexcept;
+        PCG32(u64 state, u64 seq) noexcept;
 
         u32 nextU32() noexcept;
 
