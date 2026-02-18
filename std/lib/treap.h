@@ -13,7 +13,7 @@ namespace Std {
         TreapNode* root;
 
         void visitImpl(TreapVisitor&& vis);
-        void split(TreapNode* t, TreapNode* k, TreapNode** l, TreapNode** r) noexcept;
+        void split(TreapNode* t, void* k, TreapNode** l, TreapNode** r) noexcept;
 
     public:
         inline Treap() noexcept

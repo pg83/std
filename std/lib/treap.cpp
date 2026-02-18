@@ -31,7 +31,7 @@ namespace {
     }
 }
 
-void Treap::split(TreapNode* t, TreapNode* k, TreapNode** l, TreapNode** r) noexcept {
+void Treap::split(TreapNode* t, void* k, TreapNode** l, TreapNode** r) noexcept {
     if (!t) {
         *l = nullptr;
         *r = nullptr;
@@ -39,7 +39,7 @@ void Treap::split(TreapNode* t, TreapNode* k, TreapNode** l, TreapNode** r) noex
         return;
     }
 
-    if (cmp(t->key(), k->key())) {
+    if (cmp(t->key(), k)) {
         split(t->right, k, &t->right, r);
         *l = t;
     } else {
@@ -50,7 +50,7 @@ void Treap::split(TreapNode* t, TreapNode* k, TreapNode** l, TreapNode** r) noex
 
 void Treap::insert(TreapNode* node) noexcept {
     TreapNode *l, *r;
-    split(root, node, &l, &r);
+    split(root, node->key(), &l, &r);
     root = merge(merge(l, node), r);
 }
 
