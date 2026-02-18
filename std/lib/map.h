@@ -31,8 +31,8 @@ namespace Std {
             }
         };
 
-        Data map;
         ObjPool::Ref pool = ObjPool::fromMemory();
+        Data map;
 
     public:
         inline V* find(K k) const noexcept {
