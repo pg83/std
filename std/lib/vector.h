@@ -12,6 +12,10 @@ namespace Std {
     public:
         static_assert(stdHasTrivialDestructor(T));
 
+        inline Vector(size_t reserve) {
+            grow(reserve);
+        }
+
         inline Vector() = default;
         inline Vector(Vector&&) = default;
         inline Vector(const Vector&) = default;

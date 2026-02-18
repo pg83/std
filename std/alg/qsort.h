@@ -15,12 +15,13 @@ namespace Std::QSP {
         };
 
         C& f;
-        PCG32 r;
         Vector<WorkItem> w;
+        PCG32 r;
 
         inline Context(C& _f) noexcept
             : f(_f)
-            , r(&f) // use address as seed
+            , w(16)
+            , r(w.data())
         {
         }
 

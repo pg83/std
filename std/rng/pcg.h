@@ -15,7 +15,7 @@ namespace Std {
         {
         }
 
-        PCG32(void* seq) noexcept;
+        PCG32(const void* seq) noexcept;
 
         u32 nextU32() noexcept;
 
