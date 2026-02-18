@@ -10,6 +10,7 @@ namespace Std {
         TreapNode* left;
         TreapNode* right;
 
+        TreapNode() noexcept;
         TreapNode(u64 prio) noexcept;
 
         virtual void* key() const noexcept;

@@ -5,7 +5,6 @@
 
 #include <std/typ/support.h>
 #include <std/mem/obj_pool.h>
-#include <std/rng/split_mix_64.h>
 
 namespace Std {
     template <typename K, typename V>
@@ -16,8 +15,7 @@ namespace Std {
 
             template <typename... A>
             inline Node(K key, A&&... a)
-                : TreapNode(nextSplitMix64(7 + (size_t)this))
-                , k(key)
+                : k(key)
                 , v(forward<A>(a)...)
             {
             }

@@ -197,8 +197,3 @@ void Std::Ctx::run() {
 void Std::registerTest(TestFunc* test) {
     Tests::instance().insert(test);
 }
-
-TestFunc::TestFunc() noexcept
-    : TreapNode((u64)this)
-{
-}
