@@ -20,7 +20,7 @@ namespace Std::QSP {
 
         inline Context(C& _f) noexcept
             : f(_f)
-            , r((size_t)&f) // use address as seed
+            , r(&f) // use address as seed
         {
         }
 

@@ -1,4 +1,5 @@
 #include "pcg.h"
+#include "split_mix_64.h"
 
 #include <std/alg/exchange.h>
 
@@ -11,6 +12,11 @@ namespace {
 
         return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
     }
+}
+
+PCG32::PCG32(void* seq) noexcept
+    : PCG32(nextSplitMix64((size_t)seq))
+{
 }
 
 PCG32::PCG32(u64 state, u64 seq) noexcept

@@ -15,6 +15,8 @@ namespace Std {
         {
         }
 
+        PCG32(void* seq) noexcept;
+
         u32 nextU32() noexcept;
 
         inline u32 uniformBiased(u32 n) noexcept {
