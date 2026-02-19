@@ -9,7 +9,7 @@ void* TreapNode::key() const noexcept {
     return (void*)this;
 }
 
-void TreapNode::visit(TreapVisitor& vis) {
+void TreapNode::visit(VisitorFace& vis) {
     if (left) {
         left->visit(vis);
     }

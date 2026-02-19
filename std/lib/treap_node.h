@@ -1,7 +1,7 @@
 #pragma once
 
 namespace Std {
-    struct TreapVisitor;
+    struct VisitorFace;
 
     struct TreapNode {
         TreapNode* left = nullptr;
@@ -9,7 +9,7 @@ namespace Std {
 
         virtual void* key() const noexcept;
 
-        void visit(TreapVisitor& vis);
+        void visit(VisitorFace& vis);
         unsigned height() const noexcept;
     };
 }
