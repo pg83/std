@@ -13,21 +13,13 @@ namespace {
     static inline TreapNode* merge(TreapNode* l, TreapNode* r) noexcept {
         if (!l) {
             return r;
-        }
-
-        if (!r) {
+        } else if (!r) {
             return l;
+        } else if (prio(l) > prio(r)) {
+            return (l->right = merge(l->right, r), l);
+        } else {
+            return (r->left = merge(l, r->left), r);
         }
-
-        if (prio(l) > prio(r)) {
-            l->right = merge(l->right, r);
-
-            return l;
-        }
-
-        r->left = merge(l, r->left);
-
-        return r;
     }
 }
 
