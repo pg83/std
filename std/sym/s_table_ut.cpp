@@ -7,7 +7,6 @@
 
 using namespace Std;
 
-/*
 STD_TEST_SUITE(SymbolTable) {
     STD_TEST(BasicSetAndFind) {
         SymbolTable s;
@@ -301,17 +300,12 @@ STD_TEST_SUITE(SymbolTable) {
     STD_TEST(ForEachEmpty) {
         SymbolTable s;
 
-        struct CountIterator: HashTable::Iterator {
-            int count = 0;
-            void process(void** el) override {
-                count++;
-            }
-        };
+        int count = 0;
+        s.visit([&count](void** el) {
+            count++;
+        });
 
-        CountIterator it;
-        s.forEach(it);
-
-        STD_INSIST(it.count == 0);
+        STD_INSIST(count == 0);
     }
 
     STD_TEST(ForEachSingle) {
@@ -320,21 +314,16 @@ STD_TEST_SUITE(SymbolTable) {
         int value = 42;
         s.set("key", &value);
 
-        struct CountIterator: HashTable::Iterator {
-            int count = 0;
-            void** lastEl = nullptr;
-            void process(void** el) override {
-                count++;
-                lastEl = el;
-            }
-        };
+        int count = 0;
+        void** lastEl = nullptr;
+        s.visit([&count, &lastEl](void** el) {
+            count++;
+            lastEl = el;
+        });
 
-        CountIterator it;
-        s.forEach(it);
-
-        STD_INSIST(it.count == 1);
-        STD_INSIST(it.lastEl != nullptr);
-        STD_INSIST(*it.lastEl == &value);
+        STD_INSIST(count == 1);
+        STD_INSIST(lastEl != nullptr);
+        STD_INSIST(*lastEl == &value);
     }
 
     STD_TEST(ForEachMultiple) {
@@ -348,17 +337,12 @@ STD_TEST_SUITE(SymbolTable) {
         s.set("k4", &v4);
         s.set("k5", &v5);
 
-        struct CountIterator: HashTable::Iterator {
-            int count = 0;
-            void process(void** el) override {
-                count++;
-            }
-        };
+        int count = 0;
+        s.visit([&count](void** el) {
+            count++;
+        });
 
-        CountIterator it;
-        s.forEach(it);
-
-        STD_INSIST(it.count == 5);
+        STD_INSIST(count == 5);
     }
 
     STD_TEST(ForEachSumValues) {
@@ -372,18 +356,13 @@ STD_TEST_SUITE(SymbolTable) {
             s.set((const char*)key, &values[i]);
         }
 
-        struct SumIterator: HashTable::Iterator {
-            int sum = 0;
-            void process(void** el) override {
-                int* ptr = static_cast<int*>(*el);
-                sum += *ptr;
-            }
-        };
+        int sum = 0;
+        s.visit([&sum](void** el) {
+            int* ptr = static_cast<int*>(*el);
+            sum += *ptr;
+        });
 
-        SumIterator it;
-        s.forEach(it);
-
-        STD_INSIST(it.sum == 0 + 10 + 20 + 30 + 40 + 50 + 60 + 70 + 80 + 90);
+        STD_INSIST(sum == 0 + 10 + 20 + 30 + 40 + 50 + 60 + 70 + 80 + 90);
     }
 
     STD_TEST(ForEachModifyValues) {
@@ -396,15 +375,10 @@ STD_TEST_SUITE(SymbolTable) {
             s.set((const char*)key, &values[i]);
         }
 
-        struct MultiplyIterator: HashTable::Iterator {
-            void process(void** el) override {
-                int* ptr = static_cast<int*>(*el);
-                *ptr *= 2;
-            }
-        };
-
-        MultiplyIterator it;
-        s.forEach(it);
+        s.visit([](void** el) {
+            int* ptr = static_cast<int*>(*el);
+            *ptr *= 2;
+        });
 
         for (int i = 0; i < 5; ++i) {
             STD_INSIST(values[i] == (i + 1) * 2);
@@ -420,30 +394,25 @@ STD_TEST_SUITE(SymbolTable) {
         s.set("b", &v2);
         s.set("c", &v3);
 
-        struct CollectIterator: HashTable::Iterator {
-            void* collected[3];
-            int index = 0;
-            void process(void** el) override {
-                if (index < 3) {
-                    collected[index++] = *el;
-                }
+        void* collected[3];
+        int index = 0;
+        s.visit([&collected, &index](void** el) {
+            if (index < 3) {
+                collected[index++] = *el;
             }
-        };
+        });
 
-        CollectIterator it;
-        s.forEach(it);
-
-        STD_INSIST(it.index == 3);
+        STD_INSIST(index == 3);
 
         bool found[3] = {false, false, false};
         for (int i = 0; i < 3; ++i) {
-            if (it.collected[i] == &v1) {
+            if (collected[i] == &v1) {
                 found[0] = true;
             }
-            if (it.collected[i] == &v2) {
+            if (collected[i] == &v2) {
                 found[1] = true;
             }
-            if (it.collected[i] == &v3) {
+            if (collected[i] == &v3) {
                 found[2] = true;
             }
         }
@@ -534,4 +503,3 @@ STD_TEST_SUITE(SymbolTable) {
         }
     }
 }
-*/
