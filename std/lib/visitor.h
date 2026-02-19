@@ -25,6 +25,6 @@ namespace Std {
 
     template <typename T>
     inline Visitor<T> makeVisitor(T t) {
-        return Visitor<T>{t};
+        return {t};
     }
 }
