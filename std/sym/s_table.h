@@ -2,6 +2,8 @@
 
 #include "h_table.h"
 
+#include <std/lib/visitor.h>
+
 namespace Std {
     class StringView;
 
@@ -9,13 +11,12 @@ namespace Std {
         HashTable htable;
 
     public:
-        using Iterator = HashTable::Iterator;
-
         SymbolTable();
         ~SymbolTable() noexcept;
 
-        inline void forEach(Iterator& it) {
-            htable.forEach(it);
+        template <typename V>
+        inline void visit(V v) {
+            htable.visit(v);
         }
 
         inline void compactify() {

@@ -14,8 +14,17 @@ namespace Std {
         {
         }
 
-        void visit(void* el) noexcept {
+        void operator()(void* el) {
+            visit(el);
+        }
+
+        void visit(void* el) {
             v(el);
         }
     };
+
+    template <typename T>
+    inline Visitor<T> makeVisitor(T t) {
+        return Visitor<T>{t};
+    }
 }

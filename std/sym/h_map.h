@@ -30,18 +30,13 @@ namespace Std {
         }
 
         inline void compactify() {
-            struct Helper: public S::Iterator {
-                ObjPool::Ref pool = ObjPool::fromMemory();
-
-                void process(void** el) override {
-                    *el = pool->make<T>(move(*(T*)*el));
-                }
-            };
+            ObjPool::Ref np = ObjPool::fromMemory();
 
             st.compactify();
-            Helper it;
-            st.forEach(it);
-            pool.xchg(it.pool);
+            st.visit([&np](void** el) {
+                *el = np->make<T>(move(*(T*)*el));
+            });
+            pool.xchg(np);
         }
     };
 }

@@ -2,21 +2,19 @@
 
 #include <std/sys/types.h>
 #include <std/lib/buffer.h>
+#include <std/lib/visitor.h>
 
 namespace Std {
     class HashTable {
         Buffer buf;
 
         void rehash();
+        void visitImpl(VisitorFace&& v);
         void rehashImpl(size_t initial);
         void setNoRehash(u64 key, void* value);
         void* findEntryPtr(u64 key) const noexcept;
 
     public:
-        struct Iterator {
-            virtual void process(void** el) = 0;
-        };
-
         HashTable(size_t initial);
 
         HashTable()
@@ -38,7 +36,13 @@ namespace Std {
         size_t capacity() const noexcept;
         void set(u64 key, void* value);
         void erase(u64 key) noexcept;
-        void forEach(Iterator& it);
         void compactify();
+
+        template <typename V>
+        inline void visit(V v) {
+            visitImpl(makeVisitor([&v](void* ptr) {
+                v((void**)ptr);
+            }));
+        }
     };
 }

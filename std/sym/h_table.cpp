@@ -145,10 +145,10 @@ size_t HashTable::capacity() const noexcept {
     return erange(buf).length();
 }
 
-void HashTable::forEach(Iterator& it) {
+void HashTable::visitImpl(VisitorFace&& v) {
     for (auto& el : erange(buf)) {
         if (el.used()) {
-            it.process(&el.value);
+            v.visit(&el.value);
         }
     }
 }
