@@ -18,7 +18,7 @@ namespace Std {
             visit(el);
         }
 
-        void visit(void* el) {
+        void visit(void* el) override {
             v(el);
         }
     };
