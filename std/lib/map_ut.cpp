@@ -417,10 +417,296 @@ STD_TEST_SUITE(Map) {
         STD_INSIST(ref1 == 10);
     }
 
-    STD_TEST(VisitorX) {
+    STD_TEST(VisitEmptyMap) {
+        Map<int, int> m;
+        int count = 0;
+        m.visit([&count](int, int) {
+            count++;
+        });
+        STD_INSIST(count == 0);
+    }
+
+    STD_TEST(VisitSingleElement) {
+        Map<int, int> m;
+        m[42] = 100;
+        int count = 0;
+        int foundKey = 0;
+        int foundValue = 0;
+        m.visit([&](int k, int v) {
+            count++;
+            foundKey = k;
+            foundValue = v;
+        });
+        STD_INSIST(count == 1);
+        STD_INSIST(foundKey == 42);
+        STD_INSIST(foundValue == 100);
+    }
+
+    STD_TEST(VisitMultipleElements) {
         Map<int, int> m;
         m[1] = 10;
-        m.visit([](int, int) {
+        m[2] = 20;
+        m[3] = 30;
+        int count = 0;
+        int sum = 0;
+        m.visit([&](int k, int v) {
+            count++;
+            sum += v;
         });
+        STD_INSIST(count == 3);
+        STD_INSIST(sum == 60);
+    }
+
+    STD_TEST(VisitInSortedOrder) {
+        Map<int, int> m;
+        m[5] = 50;
+        m[2] = 20;
+        m[8] = 80;
+        m[1] = 10;
+        m[9] = 90;
+        int prev = -1;
+        m.visit([&](int k, int v) {
+            STD_INSIST(k > prev);
+            STD_INSIST(k * 10 == v);
+            prev = k;
+        });
+        STD_INSIST(prev == 9);
+    }
+
+    STD_TEST(VisitAllKeys) {
+        Map<int, int> m;
+        for (int i = 0; i < 100; ++i) {
+            m[i] = i * 2;
+        }
+        int count = 0;
+        m.visit([&](int k, int v) {
+            STD_INSIST(v == k * 2);
+            count++;
+        });
+        STD_INSIST(count == 100);
+    }
+
+    STD_TEST(VisitCanModifyValues) {
+        Map<int, int> m;
+        m[1] = 10;
+        m[2] = 20;
+        m[3] = 30;
+        m.visit([](int k, int& v) {
+            v = v * 2;
+        });
+        STD_INSIST(*m.find(1) == 20);
+        STD_INSIST(*m.find(2) == 40);
+        STD_INSIST(*m.find(3) == 60);
+    }
+
+    STD_TEST(VisitWithNegativeKeys) {
+        Map<int, int> m;
+        m[-10] = 100;
+        m[-5] = 50;
+        m[0] = 0;
+        m[5] = 50;
+        m[10] = 100;
+        int count = 0;
+        int prev = -100;
+        m.visit([&](int k, int v) {
+            STD_INSIST(k > prev);
+            count++;
+            prev = k;
+        });
+        STD_INSIST(count == 5);
+    }
+
+    STD_TEST(VisitAfterInsertAndErase) {
+        Map<int, int> m;
+        m[1] = 10;
+        m[2] = 20;
+        m[3] = 30;
+        m.erase(2);
+        int count = 0;
+        m.visit([&](int k, int v) {
+            STD_INSIST(k != 2);
+            count++;
+        });
+        STD_INSIST(count == 2);
+    }
+
+    STD_TEST(VisitLargeMap) {
+        Map<int, int> m;
+        for (int i = 0; i < 1000; ++i) {
+            m[i] = i * 10;
+        }
+        int count = 0;
+        int prev = -1;
+        m.visit([&](int k, int v) {
+            STD_INSIST(k == prev + 1);
+            STD_INSIST(v == k * 10);
+            count++;
+            prev = k;
+        });
+        STD_INSIST(count == 1000);
+    }
+
+    STD_TEST(VisitWithDifferentTypes) {
+        Map<u32, u64> m;
+        m[1] = 100ULL;
+        m[2] = 200ULL;
+        m[3] = 300ULL;
+        u64 sum = 0;
+        m.visit([&](u32 k, u64 v) {
+            sum += v;
+        });
+        STD_INSIST(sum == 600ULL);
+    }
+
+    STD_TEST(VisitWithPointers) {
+        Map<int, int*> m;
+        int a = 10, b = 20, c = 30;
+        m[1] = &a;
+        m[2] = &b;
+        m[3] = &c;
+        int sum = 0;
+        m.visit([&](int k, int* v) {
+            sum += *v;
+        });
+        STD_INSIST(sum == 60);
+    }
+
+    STD_TEST(VisitMultipleTimes) {
+        Map<int, int> m;
+        m[1] = 10;
+        m[2] = 20;
+        
+        int sum1 = 0;
+        m.visit([&](int k, int v) {
+            sum1 += v;
+        });
+        
+        int sum2 = 0;
+        m.visit([&](int k, int v) {
+            sum2 += v;
+        });
+        
+        STD_INSIST(sum1 == 30);
+        STD_INSIST(sum2 == 30);
+    }
+
+    STD_TEST(VisitReverseOrderInsert) {
+        Map<int, int> m;
+        for (int i = 100; i > 0; --i) {
+            m[i] = i * 2;
+        }
+        int count = 0;
+        int expected = 1;
+        m.visit([&](int k, int v) {
+            STD_INSIST(k == expected);
+            STD_INSIST(v == k * 2);
+            expected++;
+            count++;
+        });
+        STD_INSIST(count == 100);
+    }
+
+    STD_TEST(VisitRandomOrderInsert) {
+        Map<int, int> m;
+        m[50] = 500;
+        m[25] = 250;
+        m[75] = 750;
+        m[10] = 100;
+        m[30] = 300;
+        m[60] = 600;
+        m[90] = 900;
+        
+        int count = 0;
+        int prev = -1;
+        m.visit([&](int k, int v) {
+            STD_INSIST(k > prev);
+            STD_INSIST(v == k * 10);
+            prev = k;
+            count++;
+        });
+        STD_INSIST(count == 7);
+    }
+
+    STD_TEST(VisitAfterUpdate) {
+        Map<int, int> m;
+        m[1] = 10;
+        m[2] = 20;
+        m[3] = 30;
+        
+        m[2] = 200;
+        
+        int sum = 0;
+        m.visit([&](int k, int v) {
+            sum += v;
+        });
+        STD_INSIST(sum == 240);
+    }
+
+    STD_TEST(VisitCountsCorrectly) {
+        Map<int, int> m;
+        for (int i = 1; i <= 50; ++i) {
+            m[i] = i;
+        }
+        
+        int count = 0;
+        m.visit([&](int, int) {
+            count++;
+        });
+        
+        STD_INSIST(count == 50);
+    }
+
+    STD_TEST(VisitWithBoolValues) {
+        Map<int, bool> m;
+        m[1] = true;
+        m[2] = false;
+        m[3] = true;
+        
+        int trueCount = 0;
+        int falseCount = 0;
+        m.visit([&](int k, bool v) {
+            if (v) {
+                trueCount++;
+            } else {
+                falseCount++;
+            }
+        });
+        
+        STD_INSIST(trueCount == 2);
+        STD_INSIST(falseCount == 1);
+    }
+
+    STD_TEST(VisitWithCharKeys) {
+        Map<char, int> m;
+        m['z'] = 26;
+        m['a'] = 1;
+        m['m'] = 13;
+        
+        char prevKey = 0;
+        int count = 0;
+        m.visit([&](char k, int v) {
+            STD_INSIST(k > prevKey);
+            prevKey = k;
+            count++;
+        });
+        
+        STD_INSIST(count == 3);
+        STD_INSIST(prevKey == 'z');
+    }
+
+    STD_TEST(VisitCapturesExternalState) {
+        Map<int, int> m;
+        m[1] = 10;
+        m[2] = 20;
+        m[3] = 30;
+        
+        int accumulator = 0;
+        int multiplier = 2;
+        
+        m.visit([&](int k, int v) {
+            accumulator += v * multiplier;
+        });
+        
+        STD_INSIST(accumulator == 120);
     }
 }

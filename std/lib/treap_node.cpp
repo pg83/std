@@ -14,7 +14,7 @@ void TreapNode::visit(VisitorFace& vis) {
         left->visit(vis);
     }
 
-    vis.visit(key());
+    vis.visit(this);
 
     if (right) {
         right->visit(vis);

@@ -64,7 +64,7 @@ namespace Std {
 
         template <typename F>
         inline void visit(F v) {
-            map.visit([&v](void* ptr) {
+            map.visit([&v](TreapNode* ptr) {
                 v(((const Node*)ptr)->k, ((Node*)ptr)->v);
             });
         }
