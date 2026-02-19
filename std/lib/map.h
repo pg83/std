@@ -15,7 +15,7 @@ namespace Std {
             }
         };
 
-        struct Node: public TreapNode  {
+        struct Node: public TreapNode {
             K k;
             V v;
 

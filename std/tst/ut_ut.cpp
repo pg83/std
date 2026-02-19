@@ -62,7 +62,7 @@ STD_TEST_SUITE(UT) {
 
     STD_TEST(_MapPerf) {
         Map<int, int> m;
-        //std::map<int, int> m;
+        // std::map<int, int> m;
 
         for (size_t i = 0; i < 10000000; ++i) {
             m[i] = i;
