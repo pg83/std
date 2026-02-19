@@ -29,14 +29,21 @@ namespace Std {
             return *insert(key);
         }
 
+        template <typename F>
+        inline void visit(F f) {
+            st.visit([&f](void** el) {
+                v(**(T**)el);
+            });
+        }
+
         inline void compactify() {
-            ObjPool::Ref np = ObjPool::fromMemory();
+            auto np = ObjPool::fromMemory();
 
             st.compactify();
             st.visit([&np](void** el) {
-                *el = np->make<T>(move(*(T*)*el));
+                *el = np->make<T>(move(**(T**)el));
             });
-            pool.xchg(np);
+            np.xchg(pool);
         }
     };
 }
