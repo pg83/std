@@ -71,7 +71,7 @@ namespace {
     template <typename Compare>
     static inline void sort(IntrusiveList& d, Compare&& cmp) noexcept {
         // length <= 1
-        if (d.empty() || d.end()->next->next == d.end()) {
+        if (auto end = d.end(); end->next->next == end) {
             return;
         }
 
