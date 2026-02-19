@@ -27,11 +27,7 @@ void Treap::split(TreapNode* t, void* k, TreapNode** l, TreapNode** r) noexcept 
     if (!t) {
         *l = nullptr;
         *r = nullptr;
-
-        return;
-    }
-
-    if (cmp(t->key(), k)) {
+    } else if (cmp(t->key(), k)) {
         split(t->right, k, &t->right, r);
         *l = t;
     } else {
