@@ -575,17 +575,17 @@ STD_TEST_SUITE(Map) {
         Map<int, int> m;
         m[1] = 10;
         m[2] = 20;
-        
+
         int sum1 = 0;
         m.visit([&](int k, int v) {
             sum1 += v;
         });
-        
+
         int sum2 = 0;
         m.visit([&](int k, int v) {
             sum2 += v;
         });
-        
+
         STD_INSIST(sum1 == 30);
         STD_INSIST(sum2 == 30);
     }
@@ -615,7 +615,7 @@ STD_TEST_SUITE(Map) {
         m[30] = 300;
         m[60] = 600;
         m[90] = 900;
-        
+
         int count = 0;
         int prev = -1;
         m.visit([&](int k, int v) {
@@ -632,9 +632,9 @@ STD_TEST_SUITE(Map) {
         m[1] = 10;
         m[2] = 20;
         m[3] = 30;
-        
+
         m[2] = 200;
-        
+
         int sum = 0;
         m.visit([&](int k, int v) {
             sum += v;
@@ -647,12 +647,12 @@ STD_TEST_SUITE(Map) {
         for (int i = 1; i <= 50; ++i) {
             m[i] = i;
         }
-        
+
         int count = 0;
         m.visit([&](int, int) {
             count++;
         });
-        
+
         STD_INSIST(count == 50);
     }
 
@@ -661,7 +661,7 @@ STD_TEST_SUITE(Map) {
         m[1] = true;
         m[2] = false;
         m[3] = true;
-        
+
         int trueCount = 0;
         int falseCount = 0;
         m.visit([&](int k, bool v) {
@@ -671,7 +671,7 @@ STD_TEST_SUITE(Map) {
                 falseCount++;
             }
         });
-        
+
         STD_INSIST(trueCount == 2);
         STD_INSIST(falseCount == 1);
     }
@@ -681,7 +681,7 @@ STD_TEST_SUITE(Map) {
         m['z'] = 26;
         m['a'] = 1;
         m['m'] = 13;
-        
+
         char prevKey = 0;
         int count = 0;
         m.visit([&](char k, int v) {
@@ -689,7 +689,7 @@ STD_TEST_SUITE(Map) {
             prevKey = k;
             count++;
         });
-        
+
         STD_INSIST(count == 3);
         STD_INSIST(prevKey == 'z');
     }
@@ -699,14 +699,14 @@ STD_TEST_SUITE(Map) {
         m[1] = 10;
         m[2] = 20;
         m[3] = 30;
-        
+
         int accumulator = 0;
         int multiplier = 2;
-        
+
         m.visit([&](int k, int v) {
             accumulator += v * multiplier;
         });
-        
+
         STD_INSIST(accumulator == 120);
     }
 }
