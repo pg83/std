@@ -61,5 +61,12 @@ namespace Std {
         inline void erase(K key) noexcept {
             map.erase((void*)&key);
         }
+
+        template <typename F>
+        inline void visit(F v) {
+            map.visit([&v](void* ptr) {
+                v(((const Node*)ptr)->k, ((Node*)ptr)->v);
+            });
+        }
     };
 }

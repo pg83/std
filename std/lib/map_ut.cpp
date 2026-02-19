@@ -416,4 +416,11 @@ STD_TEST_SUITE(Map) {
         STD_INSIST(&ref1 == &ref2);
         STD_INSIST(ref1 == 10);
     }
+
+    STD_TEST(VisitorX) {
+        Map<int, int> m;
+        m[1] = 10;
+        m.visit([](int, int) {
+        });
+    }
 }
