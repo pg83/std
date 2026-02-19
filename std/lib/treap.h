@@ -1,8 +1,8 @@
 #pragma once
 
-#include <std/sys/types.h>
-
 #include "visitor.h"
+
+#include <std/sys/types.h>
 
 namespace Std {
     struct TreapNode;

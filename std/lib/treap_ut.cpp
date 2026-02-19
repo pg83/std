@@ -215,7 +215,8 @@ STD_TEST_SUITE(Treap) {
             IntTreapNode(80), IntTreapNode(81), IntTreapNode(82), IntTreapNode(83), IntTreapNode(84),
             IntTreapNode(85), IntTreapNode(86), IntTreapNode(87), IntTreapNode(88), IntTreapNode(89),
             IntTreapNode(90), IntTreapNode(91), IntTreapNode(92), IntTreapNode(93), IntTreapNode(94),
-            IntTreapNode(95), IntTreapNode(96), IntTreapNode(97), IntTreapNode(98), IntTreapNode(99)};
+            IntTreapNode(95), IntTreapNode(96), IntTreapNode(97), IntTreapNode(98), IntTreapNode(99),
+        };
 
         for (int i = 0; i < 100; i++) {
             treap.insert(&nodes[i]);
@@ -450,7 +451,8 @@ STD_TEST_SUITE(Treap) {
         IntTreap treap;
         IntTreapNode nodes[10] = {
             IntTreapNode(0), IntTreapNode(1), IntTreapNode(2), IntTreapNode(3), IntTreapNode(4),
-            IntTreapNode(5), IntTreapNode(6), IntTreapNode(7), IntTreapNode(8), IntTreapNode(9)};
+            IntTreapNode(5), IntTreapNode(6), IntTreapNode(7), IntTreapNode(8), IntTreapNode(9),
+        };
 
         for (int i = 0; i < 10; i++) {
             treap.insert(&nodes[i]);
