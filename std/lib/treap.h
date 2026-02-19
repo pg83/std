@@ -15,13 +15,13 @@ namespace Std {
         void visitImpl(TreapVisitor&& vis);
         void split(TreapNode* t, void* k, TreapNode** l, TreapNode** r) noexcept;
 
+        virtual bool cmp(void* a, void* b) const noexcept = 0;
+
     public:
         inline Treap() noexcept
             : root(nullptr)
         {
         }
-
-        virtual bool cmp(void* a, void* b) const noexcept = 0;
 
         template <typename V>
         inline void visit(V v) {
