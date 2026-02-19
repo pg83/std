@@ -14,10 +14,6 @@ namespace Std {
         {
         }
 
-        void operator()(void* el) {
-            visit(el);
-        }
-
         void visit(void* el) override {
             v(el);
         }
