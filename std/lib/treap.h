@@ -23,7 +23,7 @@ namespace Std {
 
         template <typename V>
         inline void visit(V v) {
-            visitImpl(makeVisitor([&v](void* ptr) {
+            visitImpl(makeVisitor([v](void* ptr) {
                 v((TreapNode*)ptr);
             }));
         }

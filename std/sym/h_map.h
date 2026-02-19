@@ -31,7 +31,7 @@ namespace Std {
 
         template <typename F>
         inline void visit(F f) {
-            st.visit([&f](void** el) {
+            st.visit([f](void** el) {
                 v(**(T**)el);
             });
         }
