@@ -37,7 +37,9 @@ void Treap::split(TreapNode* t, void* k, TreapNode** l, TreapNode** r) noexcept 
 }
 
 void Treap::insert(TreapNode* node) noexcept {
-    TreapNode *l, *r;
+    TreapNode* l;
+    TreapNode* r;
+
     split(root, node->key(), &l, &r);
     root = merge(merge(l, node), r);
 }
