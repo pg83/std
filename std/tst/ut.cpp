@@ -189,7 +189,7 @@ void Std::output<ZeroCopyOutput, TestFunc>(ZeroCopyOutput& buf, const TestFunc& 
     buf << test.suite() << StringView(u8"::") << test.name();
 }
 
-void Std::Ctx::run() {
+void Ctx::run() {
     Tests::instance().run(*this);
 }
 
