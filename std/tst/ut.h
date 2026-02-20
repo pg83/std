@@ -22,10 +22,11 @@ namespace Std {
     void registerTest(TestFunc* test);
 }
 
-#define STD_TEST_SUITE(_name)                                          \
-    namespace Suite_##_name {                                          \
-        static const auto SUITE_NAME = ::Std::StringView(u8## #_name); \
-    }                                                                  \
+#define STD_TEST_SUITE(_name)                     \
+    namespace Suite_##_name {                     \
+        using S_V = ::Std::StringView;            \
+        static const auto S_N = S_V(u8## #_name); \
+    }                                             \
     namespace Suite_##_name
 
 #define STD_TEST(_name)                           \
@@ -34,7 +35,7 @@ namespace Std {
             ::Std::registerTest(this);            \
         }                                         \
         ::Std::StringView suite() const {         \
-            return SUITE_NAME;                    \
+            return S_N;                           \
         }                                         \
         ::Std::StringView name() const {          \
             return u8## #_name;                   \
