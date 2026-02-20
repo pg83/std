@@ -18,10 +18,9 @@ namespace Std::QSP {
         Vector<WorkItem> w;
         PCG32 r;
 
-        inline Context(C& _f) noexcept
+        inline Context(C& _f, void* seed) noexcept
             : f(_f)
-            , w(16)
-            , r(w.data())
+            , r(seed)
         {
         }
 
@@ -111,7 +110,9 @@ namespace Std::QSP {
 namespace Std {
     template <typename I, typename C>
     inline void quickSort(I b, I e, C&& f) {
-        QSP::Context<I, C>(f).qSort(b, e);
+        if (b != e) {
+            QSP::Context<I, C>(f, (void*)&*b).qSort(b, e);
+        }
     }
 
     template <typename I>
