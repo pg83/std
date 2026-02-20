@@ -8,3 +8,10 @@ void IntrusiveNode::xchg(IntrusiveNode& r) {
     ::Std::xchg(next, r.next);
     ::Std::xchg(prev, r.prev);
 }
+
+void IntrusiveNode::unlink() noexcept {
+    prev->next = next;
+    next->prev = prev;
+    prev = this;
+    next = this;
+}

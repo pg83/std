@@ -12,14 +12,10 @@ namespace Std {
         }
 
         inline auto remove() noexcept {
-            prev->next = next;
-            next->prev = prev;
-            prev = this;
-            next = this;
-
-            return this;
+            return (unlink(), this);
         }
 
+        void unlink() noexcept;
         void xchg(IntrusiveNode& r);
     };
 }
