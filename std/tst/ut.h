@@ -17,9 +17,9 @@ namespace Std {
         virtual void execute(ExecContext& ctx) const = 0;
         virtual StringView suite() const = 0;
         virtual StringView name() const = 0;
-    };
 
-    void registerTest(TestFunc* test);
+        void registerMe();
+    };
 }
 
 #define STD_TEST_SUITE(_name)                     \
@@ -32,7 +32,7 @@ namespace Std {
 #define STD_TEST(_name)                           \
     static struct Test_##_name: ::Std::TestFunc { \
         inline Test_##_name() {                   \
-            ::Std::registerTest(this);            \
+            registerMe();            \
         }                                         \
         ::Std::StringView suite() const {         \
             return S_N;                           \

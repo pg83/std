@@ -193,6 +193,6 @@ void Std::Ctx::run() {
     Tests::instance().run(*this);
 }
 
-void Std::registerTest(TestFunc* test) {
-    Tests::instance().insert(test);
+void TestFunc::registerMe() {
+    Tests::instance().insert(this);
 }
