@@ -2,14 +2,8 @@
 
 namespace Std {
     struct IntrusiveNode {
-        IntrusiveNode* prev;
-        IntrusiveNode* next;
-
-        inline IntrusiveNode() noexcept
-            : prev(this)
-            , next(this)
-        {
-        }
+        IntrusiveNode* prev = this;
+        IntrusiveNode* next = this;
 
         inline auto remove() noexcept {
             return (unlink(), this);
