@@ -9,6 +9,10 @@
 namespace Std {
     template <typename K, typename V>
     class Map {
+        static inline void* tov(const K& k) noexcept {
+            return (void*)&k;
+        }
+
         struct Data: public Treap {
             bool cmp(void* l, void* r) const noexcept override {
                 return *(K*)l < *(K*)r;
@@ -27,7 +31,7 @@ namespace Std {
             }
 
             void* key() const noexcept override {
-                return (void*)&k;
+                return tov(k);
             }
         };
 
@@ -36,7 +40,7 @@ namespace Std {
 
     public:
         inline V* find(K k) const noexcept {
-            if (auto res = map.find((void*)&k); res) {
+            if (auto res = map.find(tov(k)); res) {
                 return &(((Node*)res)->v);
             }
 
@@ -59,7 +63,7 @@ namespace Std {
         }
 
         inline void erase(K key) noexcept {
-            map.erase((void*)&key);
+            map.erase(tov(key));
         }
 
         template <typename F>
