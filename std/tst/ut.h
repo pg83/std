@@ -32,7 +32,7 @@ namespace Std {
 #define STD_TEST(_name)                           \
     static struct Test_##_name: ::Std::TestFunc { \
         inline Test_##_name() {                   \
-            registerMe();            \
+            registerMe();                         \
         }                                         \
         ::Std::StringView suite() const {         \
             return S_N;                           \
