@@ -8,7 +8,7 @@ namespace Std {
     struct TreapNode;
 
     class Treap {
-        TreapNode* root;
+        TreapNode* root = nullptr;
 
         void visitImpl(VisitorFace&& vis);
         void split(TreapNode* t, void* k, TreapNode** l, TreapNode** r) noexcept;
@@ -16,11 +16,6 @@ namespace Std {
         virtual bool cmp(void* a, void* b) const noexcept = 0;
 
     public:
-        inline Treap() noexcept
-            : root(nullptr)
-        {
-        }
-
         template <typename V>
         inline void visit(V v) {
             visitImpl(makeVisitor([v](void* ptr) {
