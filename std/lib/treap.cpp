@@ -65,7 +65,7 @@ TreapNode* Treap::find(void* key) const noexcept {
     return nullptr;
 }
 
-void Treap::erase(void* key) noexcept {
+TreapNode* Treap::erase(void* key) noexcept {
     auto ptr = &root;
 
     while (auto current = *ptr) {
@@ -74,15 +74,15 @@ void Treap::erase(void* key) noexcept {
         } else if (cmp(ckey, key)) {
             ptr = &current->right;
         } else {
-            *ptr = merge(current->left, current->right);
-
-            return;
+            return (*ptr = merge(current->left, current->right), current);
         }
     }
+
+    return nullptr;
 }
 
-void Treap::remove(TreapNode* node) noexcept {
-    erase(node->key());
+TreapNode* Treap::remove(TreapNode* node) noexcept {
+    return erase(node->key());
 }
 
 void Treap::visitImpl(VisitorFace&& vis) {

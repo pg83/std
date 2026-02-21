@@ -14,10 +14,12 @@ void TreapNode::visit(VisitorFace& vis) {
         left->visit(vis);
     }
 
+    auto r = right;
+
     vis.visit(this);
 
-    if (right) {
-        right->visit(vis);
+    if (r) {
+        r->visit(vis);
     }
 }
 

@@ -3,8 +3,9 @@
 #include "treap.h"
 #include "treap_node.h"
 
+#include <std/mem/new.h>
 #include <std/typ/support.h>
-#include <std/mem/obj_pool.h>
+#include <std/mem/free_list.h>
 
 namespace Std {
     template <typename K, typename V>
@@ -19,7 +20,7 @@ namespace Std {
             }
         };
 
-        struct Node: public TreapNode {
+        struct Node: public TreapNode, public Newable {
             K k;
             V v;
 
@@ -35,10 +36,16 @@ namespace Std {
             }
         };
 
-        ObjPool::Ref pool = ObjPool::fromMemory();
+        FreeList::Ref fl = FreeList::fromMemory(sizeof(Node));
         Data map;
 
     public:
+        inline ~Map() noexcept {
+            map.visit([](TreapNode* ptr) {
+                ((Node*)ptr)->~Node();
+            });
+        }
+
         inline V* find(K k) const noexcept {
             if (auto res = map.find(tov(k)); res) {
                 return &(((Node*)res)->v);
@@ -49,8 +56,12 @@ namespace Std {
 
         template <typename... A>
         inline V* insert(K key, A&&... a) {
-            auto node = pool->make<Node>(key, forward<A>(a)...);
-            map.insertUnique(node);
+            if (auto prev = (Node*)map.find(tov(key)); prev) {
+                return &(prev->v = V(forward<A>(a)...));
+            }
+
+            auto node = new (fl->allocate()) Node(key, forward<A>(a)...);
+            map.insert(node);
             return &node->v;
         }
 
@@ -63,7 +74,9 @@ namespace Std {
         }
 
         inline void erase(K key) noexcept {
-            map.erase(tov(key));
+            if (auto res = map.erase(tov(key)); res) {
+                fl->release((Node*)res);
+            }
         }
 
         template <typename F>
