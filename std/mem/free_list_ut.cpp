@@ -1,4 +1,4 @@
-#include "obj_allocator.h"
+#include "free_list.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/types.h>
@@ -18,9 +18,9 @@ namespace {
     };
 }
 
-STD_TEST_SUITE(ObjAllocator) {
+STD_TEST_SUITE(FreeList) {
     STD_TEST(AllocateReturnsNonNull) {
-        ObjAllocator::Ref allocator = ObjAllocator::fromMemory(64);
+        FreeList::Ref allocator = FreeList::fromMemory(64);
 
         void* ptr = allocator->allocate();
 
@@ -28,7 +28,7 @@ STD_TEST_SUITE(ObjAllocator) {
     }
 
     STD_TEST(AllocateReturnsDifferentAddresses) {
-        ObjAllocator::Ref allocator = ObjAllocator::fromMemory(32);
+        FreeList::Ref allocator = FreeList::fromMemory(32);
 
         void* ptr1 = allocator->allocate();
         void* ptr2 = allocator->allocate();
@@ -39,7 +39,7 @@ STD_TEST_SUITE(ObjAllocator) {
     }
 
     STD_TEST(AllocateAfterRelease) {
-        ObjAllocator::Ref allocator = ObjAllocator::fromMemory(64);
+        FreeList::Ref allocator = FreeList::fromMemory(64);
 
         void* ptr1 = allocator->allocate();
         allocator->release(ptr1);
@@ -49,7 +49,7 @@ STD_TEST_SUITE(ObjAllocator) {
     }
 
     STD_TEST(AllocateAfterMultipleReleases) {
-        ObjAllocator::Ref allocator = ObjAllocator::fromMemory(64);
+        FreeList::Ref allocator = FreeList::fromMemory(64);
 
         void* ptr1 = allocator->allocate();
         void* ptr2 = allocator->allocate();
@@ -69,7 +69,7 @@ STD_TEST_SUITE(ObjAllocator) {
     }
 
     STD_TEST(AllocateAndReleasePattern) {
-        ObjAllocator::Ref allocator = ObjAllocator::fromMemory(sizeof(int));
+        FreeList::Ref allocator = FreeList::fromMemory(sizeof(int));
 
         void* ptr1 = allocator->allocate();
         void* ptr2 = allocator->allocate();
@@ -86,7 +86,7 @@ STD_TEST_SUITE(ObjAllocator) {
     }
 
     STD_TEST(WorksWithSmallObjectSize) {
-        ObjAllocator::Ref allocator = ObjAllocator::fromMemory(1);
+        FreeList::Ref allocator = FreeList::fromMemory(1);
 
         void* ptr1 = allocator->allocate();
         void* ptr2 = allocator->allocate();
@@ -101,7 +101,7 @@ STD_TEST_SUITE(ObjAllocator) {
     }
 
     STD_TEST(WorksWithLargeObjects) {
-        ObjAllocator::Ref allocator = ObjAllocator::fromMemory(sizeof(LargeStruct));
+        FreeList::Ref allocator = FreeList::fromMemory(sizeof(LargeStruct));
 
         LargeStruct* obj1 = static_cast<LargeStruct*>(allocator->allocate());
         LargeStruct* obj2 = static_cast<LargeStruct*>(allocator->allocate());
@@ -120,7 +120,7 @@ STD_TEST_SUITE(ObjAllocator) {
     }
 
     STD_TEST(AllocateAndAccessManyObjects) {
-        ObjAllocator::Ref allocator = ObjAllocator::fromMemory(sizeof(TestStruct));
+        FreeList::Ref allocator = FreeList::fromMemory(sizeof(TestStruct));
 
         constexpr size_t count = 100;
         TestStruct* objects[count];
@@ -140,7 +140,7 @@ STD_TEST_SUITE(ObjAllocator) {
     }
 
     STD_TEST(ReleaseAndReallocateMany) {
-        ObjAllocator::Ref allocator = ObjAllocator::fromMemory(sizeof(int));
+        FreeList::Ref allocator = FreeList::fromMemory(sizeof(int));
 
         constexpr size_t count = 50;
         int* pointers[count];
@@ -160,7 +160,7 @@ STD_TEST_SUITE(ObjAllocator) {
     }
 
     STD_TEST(InterleavedAllocateAndRelease) {
-        ObjAllocator::Ref allocator = ObjAllocator::fromMemory(sizeof(double));
+        FreeList::Ref allocator = FreeList::fromMemory(sizeof(double));
 
         double* ptr1 = static_cast<double*>(allocator->allocate());
         double* ptr2 = static_cast<double*>(allocator->allocate());
@@ -183,8 +183,8 @@ STD_TEST_SUITE(ObjAllocator) {
     }
 
     STD_TEST(MultipleAllocators) {
-        ObjAllocator::Ref allocator1 = ObjAllocator::fromMemory(32);
-        ObjAllocator::Ref allocator2 = ObjAllocator::fromMemory(64);
+        FreeList::Ref allocator1 = FreeList::fromMemory(32);
+        FreeList::Ref allocator2 = FreeList::fromMemory(64);
 
         void* ptr1 = allocator1->allocate();
         void* ptr2 = allocator2->allocate();
@@ -203,10 +203,10 @@ STD_TEST_SUITE(ObjAllocator) {
     }
 
     STD_TEST(RefCounting) {
-        ObjAllocator::Ref allocator1 = ObjAllocator::fromMemory(32);
+        FreeList::Ref allocator1 = FreeList::fromMemory(32);
 
         {
-            ObjAllocator::Ref allocator2 = allocator1;
+            FreeList::Ref allocator2 = allocator1;
             void* ptr = allocator2->allocate();
             STD_INSIST(ptr != nullptr);
         }

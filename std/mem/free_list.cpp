@@ -1,4 +1,4 @@
-#include "obj_allocator.h"
+#include "free_list.h"
 #include "mem_pool.h"
 
 #include <std/alg/minmax.h>
@@ -11,7 +11,7 @@ namespace {
         FreeNode* next;
     };
 
-    struct alignas(max_align_t) Base: public ObjAllocator {
+    struct alignas(max_align_t) Base: public FreeList {
         MemoryPool mp;
         size_t objSize;
         FreeNode* freeList;
@@ -51,9 +51,9 @@ namespace {
     static_assert(sizeof(Base) % sizeof(max_align_t) == 0);
 }
 
-ObjAllocator::~ObjAllocator() noexcept {
+FreeList::~FreeList() noexcept {
 }
 
-ObjAllocator::Ref ObjAllocator::fromMemory(size_t objSize) {
+FreeList::Ref FreeList::fromMemory(size_t objSize) {
     return new Impl(objSize);
 }

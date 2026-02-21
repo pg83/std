@@ -5,11 +5,11 @@
 #include <std/ptr/intrusive.h>
 
 namespace Std {
-    class ObjAllocator: public ARC {
+    class FreeList: public ARC {
     public:
-        using Ref = IntrusivePtr<ObjAllocator>;
+        using Ref = IntrusivePtr<FreeList>;
 
-        virtual ~ObjAllocator() noexcept;
+        virtual ~FreeList() noexcept;
 
         virtual void* allocate() = 0;
         virtual void release(void* ptr) noexcept = 0;
