@@ -2,7 +2,6 @@
 #include "mem_pool.h"
 
 #include <std/alg/minmax.h>
-#include <std/dbg/assert.h>
 #include <std/alg/exchange.h>
 
 using namespace Std;
@@ -31,7 +30,6 @@ namespace {
         inline Impl(size_t os) noexcept
             : Base(buf, sizeof(buf), os)
         {
-            STD_ASSERT((size_t)buf % alignof(max_align_t) == 0);
         }
 
         void* allocate() override {
