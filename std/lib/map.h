@@ -56,8 +56,8 @@ namespace Std {
 
         template <typename... A>
         inline V* insert(K key, A&&... a) {
-            if (auto prev = (Node*)map.find(tov(key)); prev) {
-                return &(prev->v = V(forward<A>(a)...));
+            if (auto prev = find(key); prev) {
+                return &(*prev = V(forward<A>(a)...));
             }
 
             auto node = new (fl->allocate()) Node(key, forward<A>(a)...);
