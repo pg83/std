@@ -26,7 +26,7 @@ namespace {
     };
 
     struct Impl: public Base {
-        u8 buf[256 - sizeof(Base)];
+        alignas(max_align_t) u8 buf[256 - sizeof(Base)];
 
         inline Impl(size_t os) noexcept
             : Base(buf, sizeof(buf), os)
@@ -50,6 +50,7 @@ namespace {
     };
 
     static_assert(sizeof(Impl) == 256);
+    static_assert(sizeof(Base) % sizeof(max_align_t) == 0);
 }
 
 ObjAllocator::~ObjAllocator() noexcept {

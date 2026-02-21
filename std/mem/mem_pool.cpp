@@ -28,6 +28,12 @@ namespace {
     static_assert(sizeof(Chunk) % alignment == 0);
     static_assert(sizeof(ChunkDisposer) % alignment == 0);
     static_assert(sizeof(ChunkDestructor) % alignment == 0);
+
+    static inline void* chk(void* buf) noexcept {
+        STD_ASSERT((size_t)buf % alignof(max_align_t) == 0);
+
+        return buf;
+    }
 }
 
 MemoryPool::MemoryPool()
@@ -40,12 +46,11 @@ MemoryPool::MemoryPool()
 }
 
 MemoryPool::MemoryPool(void* buf, size_t len) noexcept
-    : currentChunk((u8*)buf)
+    : currentChunk((u8*)chk(buf))
     , currentChunkEnd(currentChunk + len)
     , ds(new (allocate(sizeof(ChunkDestructor))) ChunkDestructor())
 {
     STD_ASSERT(len >= initial);
-    STD_ASSERT((size_t)buf % alignof(max_align_t) == 0);
     STD_ASSERT((size_t)currentChunk % alignof(max_align_t) == 0);
     ds->submit((ChunkDestructor*)ds);
 }
