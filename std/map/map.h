@@ -39,6 +39,13 @@ namespace Std {
         FreeList::Ref fl = FreeList::fromMemory(sizeof(Node));
         Data map;
 
+        template <typename... A>
+        inline V* insertNew(K key, A&&... a) {
+            auto node = new (fl->allocate()) Node(key, forward<A>(a)...);
+            map.insert(node);
+            return &node->v;
+        }
+
     public:
         inline ~Map() noexcept {
             map.visit([](TreapNode* ptr) {
@@ -60,9 +67,7 @@ namespace Std {
                 return (*prev = V(forward<A>(a)...), prev);
             }
 
-            auto node = new (fl->allocate()) Node(key, forward<A>(a)...);
-            map.insert(node);
-            return &node->v;
+            return insertNew(key, forward<A>(a)...);
         }
 
         inline V& operator[](K k) {
@@ -70,7 +75,7 @@ namespace Std {
                 return *res;
             }
 
-            return *insert(k);
+            return *insertNew(k);
         }
 
         inline void erase(K key) noexcept {
