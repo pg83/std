@@ -44,11 +44,6 @@ void Treap::insert(TreapNode* node) noexcept {
     root = merge(merge(l, node), r);
 }
 
-void Treap::insertUnique(TreapNode* node) noexcept {
-    remove(node);
-    insert(node);
-}
-
 TreapNode* Treap::find(void* key) const noexcept {
     auto t = root;
 
