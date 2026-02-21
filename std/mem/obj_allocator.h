@@ -1,23 +1,19 @@
 #pragma once
 
 #include <std/sys/types.h>
+#include <std/ptr/arc.h>
+#include <std/ptr/intrusive.h>
 
 namespace Std {
-    class MemoryPool;
-
-    class ObjAllocator {
-        struct FreeNode {
-            FreeNode* next;
-        };
-
-        size_t objSize;
-        MemoryPool* pool;
-        FreeNode* freeList;
-
+    class ObjAllocator: public ARC {
     public:
-        ObjAllocator(size_t objSize, MemoryPool* pool);
+        using Ref = IntrusivePtr<ObjAllocator>;
 
-        void* allocate();
-        void release(void* ptr) noexcept;
+        virtual ~ObjAllocator() noexcept;
+
+        virtual void* allocate() = 0;
+        virtual void release(void* ptr) noexcept = 0;
+
+        static Ref fromMemory(size_t objSize);
     };
 }

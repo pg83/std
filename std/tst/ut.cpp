@@ -127,6 +127,8 @@ namespace {
                 } else {
                     ++err;
                 }
+
+                //outb.flush();
             });
 
             outb << Color::bright(AnsiColor::Green)
