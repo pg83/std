@@ -7,7 +7,7 @@
 #include <std/dbg/color.h>
 #include <std/dbg/panic.h>
 #include <std/alg/range.h>
-#include <std/lib/treap.h>
+#include <std/map/treap.h>
 #include <std/lib/vector.h>
 #include <std/str/builder.h>
 #include <std/lib/singleton.h>

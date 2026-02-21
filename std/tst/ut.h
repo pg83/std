@@ -4,7 +4,7 @@
 #include <std/str/view.h>
 #include <std/sys/types.h>
 #include <std/dbg/insist.h>
-#include <std/lib/treap_node.h>
+#include <std/map/treap_node.h>
 
 namespace Std {
     class ZeroCopyOutput;

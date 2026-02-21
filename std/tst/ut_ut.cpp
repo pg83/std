@@ -1,6 +1,6 @@
 #include "ut.h"
 
-#include <std/lib/map.h>
+#include <std/map/map.h>
 #include <std/ios/sys.h>
 #include <std/ios/output.h>
 #include <std/mem/obj_pool.h>
