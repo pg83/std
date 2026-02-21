@@ -5,6 +5,25 @@
 
 using namespace Std;
 
+struct DestructorCounter {
+    int* counter;
+
+    DestructorCounter(int* c = nullptr) : counter(c) {}
+
+    DestructorCounter(const DestructorCounter& other) : counter(other.counter) {}
+
+    DestructorCounter& operator=(const DestructorCounter& other) {
+        counter = other.counter;
+        return *this;
+    }
+
+    ~DestructorCounter() {
+        if (counter) {
+            (*counter)++;
+        }
+    }
+};
+
 STD_TEST_SUITE(Map) {
     STD_TEST(DefaultConstruction) {
         Map<int, int> m;
@@ -708,5 +727,116 @@ STD_TEST_SUITE(Map) {
         });
 
         STD_INSIST(accumulator == 120);
+    }
+
+    STD_TEST(DestructorCalledOnErase) {
+        int destructorCount = 0;
+
+        Map<int, DestructorCounter> m;
+        m.insert(1, DestructorCounter(&destructorCount));
+        m.insert(2, DestructorCounter(&destructorCount));
+        m.insert(3, DestructorCounter(&destructorCount));
+
+        int countBefore = destructorCount;
+        m.erase(2);
+
+        STD_INSIST(destructorCount > countBefore);
+    }
+
+    STD_TEST(DestructorCalledOnMultipleErases) {
+        int destructorCount = 0;
+
+        Map<int, DestructorCounter> m;
+        m.insert(1, DestructorCounter(&destructorCount));
+        m.insert(2, DestructorCounter(&destructorCount));
+        m.insert(3, DestructorCounter(&destructorCount));
+        m.insert(4, DestructorCounter(&destructorCount));
+        m.insert(5, DestructorCounter(&destructorCount));
+
+        int countBefore = destructorCount;
+        m.erase(1);
+        int countAfterFirst = destructorCount;
+        m.erase(3);
+        int countAfterSecond = destructorCount;
+        m.erase(5);
+        int countAfterThird = destructorCount;
+
+        STD_INSIST(countAfterFirst > countBefore);
+        STD_INSIST(countAfterSecond > countAfterFirst);
+        STD_INSIST(countAfterThird > countAfterSecond);
+    }
+
+    STD_TEST(DestructorCalledWhenMapGoesOutOfScope) {
+        int destructorCount = 0;
+
+        {
+            Map<int, DestructorCounter> m;
+            m.insert(1, DestructorCounter(&destructorCount));
+            m.insert(2, DestructorCounter(&destructorCount));
+            m.insert(3, DestructorCounter(&destructorCount));
+        }
+
+        STD_INSIST(destructorCount > 0);
+    }
+
+    STD_TEST(DestructorCalledForAllElementsOnScopeExit) {
+        int destructorCount = 0;
+
+        {
+            Map<int, DestructorCounter> m;
+            for (int i = 0; i < 10; ++i) {
+                m.insert(i, DestructorCounter(&destructorCount));
+            }
+        }
+
+        STD_INSIST(destructorCount >= 10);
+    }
+
+    STD_TEST(DestructorCalledOnEraseNonExistentKey) {
+        int destructorCount = 0;
+
+        Map<int, DestructorCounter> m;
+        m.insert(1, DestructorCounter(&destructorCount));
+        m.insert(2, DestructorCounter(&destructorCount));
+
+        int countBefore = destructorCount;
+        m.erase(999);
+
+        STD_INSIST(destructorCount == countBefore);
+    }
+
+    STD_TEST(DestructorCalledAfterEraseAndScopeExit) {
+        int destructorCount = 0;
+
+        {
+            Map<int, DestructorCounter> m;
+            m.insert(1, DestructorCounter(&destructorCount));
+            m.insert(2, DestructorCounter(&destructorCount));
+            m.insert(3, DestructorCounter(&destructorCount));
+            m.insert(4, DestructorCounter(&destructorCount));
+            m.insert(5, DestructorCounter(&destructorCount));
+
+            m.erase(2);
+            m.erase(4);
+        }
+
+        STD_INSIST(destructorCount >= 5);
+    }
+
+    STD_TEST(DestructorCalledForComplexType) {
+        int destructorCount = 0;
+
+        {
+            Map<int, DestructorCounter> m;
+            for (int i = 0; i < 100; ++i) {
+                m.insert(i, &destructorCount);
+            }
+
+            for (int i = 0; i < 50; ++i) {
+                m.erase(i * 2);
+            }
+        }
+
+        STD_INSIST(destructorCount == 100);
     }
 }

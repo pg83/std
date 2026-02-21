@@ -75,7 +75,9 @@ namespace Std {
 
         inline void erase(K key) noexcept {
             if (auto res = map.erase(tov(key)); res) {
-                fl->release((Node*)res);
+                auto node = (Node*)res;
+                node->~Node();
+                fl->release(node);
             }
         }
 
