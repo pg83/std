@@ -41,7 +41,7 @@ namespace Std {
         template <typename F, typename... A>
         inline V* insertImpl(F func, K key, A&&... a) {
             if (auto prev = find(key); prev) {
-                return (func(prev), prev);
+                return func(prev);
             }
 
             auto node = ol.make(key, forward<A>(a)...);
@@ -67,13 +67,13 @@ namespace Std {
         template <typename... A>
         inline V* insert(K key, A&&... a) {
             return insertImpl([&](auto node) {
-                *node = V(forward<A>(a)...);
+                return (*node = V(forward<A>(a)...), node);
             }, key, forward<A>(a)...);
         }
 
         inline V& operator[](K key) {
-            return *insertImpl([](auto) {
-                // nope
+            return *insertImpl([](auto node) {
+                return node;
             }, key);
         }
 
