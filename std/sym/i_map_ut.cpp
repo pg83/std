@@ -396,21 +396,6 @@ STD_TEST_SUITE(IntMap) {
         STD_INSIST(d3->value == 3.5f);
     }
 
-    STD_TEST(CompactifyChangesPointers) {
-        IntMap<int> m;
-
-        m[42] = 100;
-
-        int* oldPtr = m.find(42);
-
-        m.compactify();
-
-        int* newPtr = m.find(42);
-
-        STD_INSIST(oldPtr != newPtr);
-        STD_INSIST(*newPtr == 100);
-    }
-
     STD_TEST(CompactifyMultipleTimes) {
         IntMap<int> m;
 

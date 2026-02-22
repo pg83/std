@@ -11,7 +11,7 @@ namespace Std {
         void rehash();
         void visitImpl(VisitorFace&& v);
         void rehashImpl(size_t initial);
-        void setNoRehash(u64 key, void* value);
+        void* setNoRehash(u64 key, void* value);
         void* findEntryPtr(u64 key) const noexcept;
 
     public:
@@ -34,7 +34,7 @@ namespace Std {
 
         void* find(u64 key) const noexcept;
         size_t capacity() const noexcept;
-        void set(u64 key, void* value);
+        void* set(u64 key, void* value);
         void erase(u64 key) noexcept;
         void compactify();
 

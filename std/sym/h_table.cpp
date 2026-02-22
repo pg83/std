@@ -5,6 +5,7 @@
 #include <std/alg/range.h>
 #include <std/alg/minmax.h>
 #include <std/dbg/assert.h>
+#include <std/alg/exchange.h>
 
 using namespace Std;
 
@@ -107,17 +108,17 @@ void* HashTable::find(u64 key) const noexcept {
     return nullptr;
 }
 
-void HashTable::set(u64 key, void* value) {
+void* HashTable::set(u64 key, void* value) {
     STD_ASSERT((size_t)value > 1);
 
     if (size() >= capacity() * 0.7) {
         rehash();
     }
 
-    setNoRehash(key, value);
+    return setNoRehash(key, value);
 }
 
-void HashTable::setNoRehash(u64 key, void* value) {
+void* HashTable::setNoRehash(u64 key, void* value) {
     auto r = erange(buf);
     auto c = r.length();
 
@@ -130,13 +131,11 @@ void HashTable::setNoRehash(u64 key, void* value) {
 
             buf.seekRelative(1);
 
-            return;
+            return nullptr;
         }
 
         if (el.key == key) {
-            el.value = value;
-
-            return;
+            return exchange(el.value, value);
         }
     }
 }

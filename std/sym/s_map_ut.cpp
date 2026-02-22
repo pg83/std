@@ -470,21 +470,6 @@ STD_TEST_SUITE(SymbolMap) {
         STD_INSIST(d3->value == 3.5f);
     }
 
-    STD_TEST(CompactifyChangesPointers) {
-        SymbolMap<int> s;
-
-        s["key"] = 42;
-
-        int* oldPtr = s.find("key");
-
-        s.compactify();
-
-        int* newPtr = s.find("key");
-
-        STD_INSIST(oldPtr != newPtr);
-        STD_INSIST(*newPtr == 42);
-    }
-
     STD_TEST(CompactifyMultipleTimes) {
         SymbolMap<int> s;
 

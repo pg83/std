@@ -1,12 +1,12 @@
 #pragma once
 
 #include <std/typ/support.h>
-#include <std/mem/obj_pool.h>
+#include <std/mem/obj_list.h>
 
 namespace Std {
     template <typename T, typename K, typename S>
     class HashMap {
-        ObjPool::Ref pool = ObjPool::fromMemory();
+        ObjList<T> ol;
         S st;
 
     public:
@@ -16,8 +16,12 @@ namespace Std {
 
         template <typename... A>
         inline T* insert(K key, A&&... a) {
-            auto value = pool->make<T>(forward<A>(a)...);
-            st.set(key, value);
+            auto value = ol.make(forward<A>(a)...);
+
+            if (auto prev = (T*)st.set(key, value); prev) {
+                ol.release(prev);
+            }
+
             return value;
         }
 
@@ -32,18 +36,12 @@ namespace Std {
         template <typename F>
         inline void visit(F f) {
             st.visit([f](void** el) {
-                v(**(T**)el);
+                f(**(T**)el);
             });
         }
 
         inline void compactify() {
-            auto np = ObjPool::fromMemory();
-
             st.compactify();
-            st.visit([&np](void** el) {
-                *el = np->make<T>(move(**(T**)el));
-            });
-            np.xchg(pool);
         }
     };
 }

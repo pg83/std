@@ -10,8 +10,8 @@ SymbolTable::SymbolTable() {
 SymbolTable::~SymbolTable() noexcept {
 }
 
-void SymbolTable::set(StringView key, void* v) {
-    htable.set(key.hash64(), v);
+void* SymbolTable::set(StringView key, void* v) {
+    return htable.set(key.hash64(), v);
 }
 
 void* SymbolTable::find(StringView key) const noexcept {
