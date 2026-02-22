@@ -3,9 +3,8 @@
 #include "treap.h"
 #include "treap_node.h"
 
-#include <std/mem/new.h>
 #include <std/typ/support.h>
-#include <std/mem/free_list.h>
+#include <std/mem/obj_list.h>
 
 namespace Std {
     template <typename K, typename V>
@@ -20,7 +19,7 @@ namespace Std {
             }
         };
 
-        struct Node: public TreapNode, public Newable {
+        struct Node: public TreapNode {
             K k;
             V v;
 
@@ -36,12 +35,12 @@ namespace Std {
             }
         };
 
-        FreeList::Ref fl = FreeList::fromMemory(sizeof(Node));
+        ObjList<Node> ol;
         Data map;
 
         template <typename... A>
         inline V* insertNew(K key, A&&... a) {
-            auto node = new (fl->allocate()) Node(key, forward<A>(a)...);
+            auto node = ol.make(key, forward<A>(a)...);
             map.insert(node);
             return &node->v;
         }
@@ -80,7 +79,7 @@ namespace Std {
 
         inline void erase(K key) noexcept {
             if (auto res = map.erase(tov(key)); res) {
-                fl->release((Node*)res);
+                ol.release((Node*)res);
             }
         }
 

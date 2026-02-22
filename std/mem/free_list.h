@@ -14,12 +14,6 @@ namespace Std {
         virtual void* allocate() = 0;
         virtual void release(void* ptr) noexcept = 0;
 
-        template <typename T>
-        inline void release(T* t) noexcept {
-             t->~T();
-             release((void*)t);
-        }
-
         static Ref fromMemory(size_t objSize);
     };
 }
