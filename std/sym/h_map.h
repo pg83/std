@@ -10,6 +10,12 @@ namespace Std {
         S st;
 
     public:
+        inline ~HashMap() {
+            visit([](auto& node) {
+                node.~T();
+            });
+        }
+
         inline T* find(K key) const noexcept {
             return (T*)st.find(key);
         }
