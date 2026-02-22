@@ -38,8 +38,12 @@ namespace Std {
         ObjList<Node> ol;
         Data map;
 
-        template <typename... A>
-        inline V* insertNew(K key, A&&... a) {
+        template <typename F, typename... A>
+        inline V* insertImpl(F func, K key, A&&... a) {
+            if (auto prev = find(key); prev) {
+                return (func(prev), prev);
+            }
+
             auto node = ol.make(key, forward<A>(a)...);
             map.insert(node);
             return &node->v;
@@ -62,19 +66,15 @@ namespace Std {
 
         template <typename... A>
         inline V* insert(K key, A&&... a) {
-            if (auto prev = find(key); prev) {
-                return (*prev = V(forward<A>(a)...), prev);
-            }
-
-            return insertNew(key, forward<A>(a)...);
+            return insertImpl([&](auto node) {
+                *node = V(forward<A>(a)...);
+            }, key, forward<A>(a)...);
         }
 
-        inline V& operator[](K k) {
-            if (auto res = find(k); res) {
-                return *res;
-            }
-
-            return *insertNew(k);
+        inline V& operator[](K key) {
+            return *insertImpl([](auto) {
+                // nope
+            }, key);
         }
 
         inline void erase(K key) noexcept {
