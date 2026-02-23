@@ -78,8 +78,8 @@ namespace Std {
         }
 
         inline void erase(K key) noexcept {
-            if (auto res = map.erase(tov(key)); res) {
-                ol.release((Node*)res);
+            if (auto res = (Node*)map.erase(tov(key)); res) {
+                ol.release(res);
             }
         }
 
