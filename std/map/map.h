@@ -40,12 +40,8 @@ namespace Std {
         ObjList<Node> ol;
         Impl map;
 
-        template <typename F, typename... A>
-        inline V* insertImpl(F func, K key, A&&... a) {
-            if (auto prev = find(key); prev) {
-                return func(prev);
-            }
-
+        template <typename... A>
+        inline V* insertNew(K key, A&&... a) {
             auto node = ol.make(key, forward<A>(a)...);
             map.insert(node);
             return &node->v;
@@ -70,15 +66,15 @@ namespace Std {
 
         template <typename... A>
         inline V* insert(K key, A&&... a) {
-            return insertImpl([&](auto node) {
-                return (*node = V(forward<A>(a)...), node);
-            }, key, forward<A>(a)...);
+            return (erase(key), insertNew(key, forward<A>(a)...));
         }
 
         inline V& operator[](K key) {
-            return *insertImpl([](auto node) {
-                return node;
-            }, key);
+            if (auto res = find(key); res) {
+                return *res;
+            }
+
+            return *insertNew(key);
         }
 
         inline void erase(K key) noexcept {
