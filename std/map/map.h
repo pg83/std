@@ -57,8 +57,8 @@ namespace Std {
         }
 
         inline V* find(K k) const noexcept {
-            if (auto res = map.find(tov(k)); res) {
-                return &(((Node*)res)->v);
+            if (auto res = (Node*)map.find(tov(k)); res) {
+                return &res->v;
             }
 
             return nullptr;
