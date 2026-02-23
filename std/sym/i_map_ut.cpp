@@ -634,4 +634,444 @@ STD_TEST_SUITE(IntMap) {
         STD_INSIST(*map.find(1) == 3.14f);
         STD_INSIST(*map.find(2) == 2.71f);
     }
+
+    STD_TEST(EraseNonExistent) {
+        IntMap<int> map;
+
+        map.erase(42);
+
+        STD_INSIST(map.find(42) == nullptr);
+    }
+
+    STD_TEST(EraseExisting) {
+        IntMap<int> map;
+        map[10] = 100;
+
+        map.erase(10);
+
+        STD_INSIST(map.find(10) == nullptr);
+    }
+
+    STD_TEST(EraseAndReinsert) {
+        IntMap<int> map;
+        map[5] = 50;
+
+        map.erase(5);
+        map[5] = 100;
+
+        STD_INSIST(*map.find(5) == 100);
+    }
+
+    STD_TEST(EraseMultiple) {
+        IntMap<int> map;
+        map[1] = 10;
+        map[2] = 20;
+        map[3] = 30;
+
+        map.erase(2);
+
+        STD_INSIST(*map.find(1) == 10);
+        STD_INSIST(map.find(2) == nullptr);
+        STD_INSIST(*map.find(3) == 30);
+    }
+
+    STD_TEST(EraseAllElements) {
+        IntMap<int> map;
+        map[1] = 10;
+        map[2] = 20;
+        map[3] = 30;
+
+        map.erase(1);
+        map.erase(2);
+        map.erase(3);
+
+        STD_INSIST(map.find(1) == nullptr);
+        STD_INSIST(map.find(2) == nullptr);
+        STD_INSIST(map.find(3) == nullptr);
+    }
+
+    STD_TEST(EraseZeroKey) {
+        IntMap<int> map;
+        map[0] = 999;
+        map[1] = 111;
+
+        map.erase(0);
+
+        STD_INSIST(map.find(0) == nullptr);
+        STD_INSIST(*map.find(1) == 111);
+    }
+
+    STD_TEST(EraseLargeKey) {
+        IntMap<int> map;
+        map[0xFFFFFFFFFFFFFFFFULL] = 100;
+        map[1] = 10;
+
+        map.erase(0xFFFFFFFFFFFFFFFFULL);
+
+        STD_INSIST(map.find(0xFFFFFFFFFFFFFFFFULL) == nullptr);
+        STD_INSIST(*map.find(1) == 10);
+    }
+
+    STD_TEST(EraseComplexType) {
+        struct Data {
+            int id;
+            float value;
+
+            Data()
+                : id(0)
+                , value(0.0f)
+            {
+            }
+            Data(int i, float v)
+                : id(i)
+                , value(v)
+            {
+            }
+        };
+
+        IntMap<Data> map;
+        map.insert(1, 10, 1.5f);
+        map.insert(2, 20, 2.5f);
+
+        map.erase(1);
+
+        STD_INSIST(map.find(1) == nullptr);
+        Data* d2 = map.find(2);
+        STD_INSIST(d2 != nullptr);
+        STD_INSIST(d2->id == 20);
+        STD_INSIST(d2->value == 2.5f);
+    }
+
+    STD_TEST(EraseWithVector) {
+        IntMap<Vector<int>> map;
+        map[1].pushBack(10);
+        map[1].pushBack(20);
+        map[2].pushBack(30);
+
+        map.erase(1);
+
+        STD_INSIST(map.find(1) == nullptr);
+        STD_INSIST(map[2][0] == 30);
+    }
+
+    STD_TEST(EraseManyElements) {
+        IntMap<int> map;
+
+        for (int i = 0; i < 100; ++i) {
+            map[i] = i * 10;
+        }
+
+        for (int i = 0; i < 50; ++i) {
+            map.erase(i);
+        }
+
+        for (int i = 0; i < 50; ++i) {
+            STD_INSIST(map.find(i) == nullptr);
+        }
+
+        for (int i = 50; i < 100; ++i) {
+            STD_INSIST(*map.find(i) == i * 10);
+        }
+    }
+
+    STD_TEST(EraseAlternatingElements) {
+        IntMap<int> map;
+
+        for (int i = 0; i < 20; ++i) {
+            map[i] = i;
+        }
+
+        for (int i = 0; i < 20; i += 2) {
+            map.erase(i);
+        }
+
+        for (int i = 0; i < 20; ++i) {
+            if (i % 2 == 0) {
+                STD_INSIST(map.find(i) == nullptr);
+            } else {
+                STD_INSIST(*map.find(i) == i);
+            }
+        }
+    }
+
+    STD_TEST(EraseAndCompactify) {
+        IntMap<int> map;
+        map[1] = 10;
+        map[2] = 20;
+        map[3] = 30;
+
+        map.erase(2);
+        map.compactify();
+
+        STD_INSIST(*map.find(1) == 10);
+        STD_INSIST(map.find(2) == nullptr);
+        STD_INSIST(*map.find(3) == 30);
+    }
+
+    STD_TEST(EraseSameKeyTwice) {
+        IntMap<int> map;
+        map[10] = 100;
+
+        map.erase(10);
+        map.erase(10);
+
+        STD_INSIST(map.find(10) == nullptr);
+    }
+
+    STD_TEST(VisitEmpty) {
+        IntMap<int> map;
+
+        int count = 0;
+        map.visit([&count](int&) {
+            count++;
+        });
+
+        STD_INSIST(count == 0);
+    }
+
+    STD_TEST(VisitSingleElement) {
+        IntMap<int> map;
+        map[10] = 100;
+
+        int count = 0;
+        int sum = 0;
+        map.visit([&count, &sum](int& value) {
+            count++;
+            sum += value;
+        });
+
+        STD_INSIST(count == 1);
+        STD_INSIST(sum == 100);
+    }
+
+    STD_TEST(VisitMultipleElements) {
+        IntMap<int> map;
+        map[1] = 10;
+        map[2] = 20;
+        map[3] = 30;
+
+        int count = 0;
+        int sum = 0;
+        map.visit([&count, &sum](int& value) {
+            count++;
+            sum += value;
+        });
+
+        STD_INSIST(count == 3);
+        STD_INSIST(sum == 60);
+    }
+
+    STD_TEST(VisitModifyValues) {
+        IntMap<int> map;
+        map[1] = 10;
+        map[2] = 20;
+        map[3] = 30;
+
+        map.visit([](int& value) {
+            value *= 2;
+        });
+
+        STD_INSIST(*map.find(1) == 20);
+        STD_INSIST(*map.find(2) == 40);
+        STD_INSIST(*map.find(3) == 60);
+    }
+
+    STD_TEST(VisitComplexType) {
+        struct Data {
+            int id;
+            float value;
+
+            Data()
+                : id(0)
+                , value(0.0f)
+            {
+            }
+            Data(int i, float v)
+                : id(i)
+                , value(v)
+            {
+            }
+        };
+
+        IntMap<Data> map;
+        map.insert(1, 10, 1.5f);
+        map.insert(2, 20, 2.5f);
+
+        int count = 0;
+        float sumValues = 0.0f;
+        map.visit([&count, &sumValues](Data& d) {
+            count++;
+            sumValues += d.value;
+        });
+
+        STD_INSIST(count == 2);
+        STD_INSIST(sumValues == 4.0f);
+    }
+
+    STD_TEST(VisitModifyComplexType) {
+        struct Data {
+            int id;
+            float value;
+
+            Data()
+                : id(0)
+                , value(0.0f)
+            {
+            }
+            Data(int i, float v)
+                : id(i)
+                , value(v)
+            {
+            }
+        };
+
+        IntMap<Data> map;
+        map.insert(1, 10, 1.0f);
+        map.insert(2, 20, 2.0f);
+
+        map.visit([](Data& d) {
+            d.id *= 10;
+            d.value *= 10.0f;
+        });
+
+        Data* d1 = map.find(1);
+        Data* d2 = map.find(2);
+
+        STD_INSIST(d1->id == 100);
+        STD_INSIST(d1->value == 10.0f);
+        STD_INSIST(d2->id == 200);
+        STD_INSIST(d2->value == 20.0f);
+    }
+
+    STD_TEST(VisitWithVector) {
+        IntMap<Vector<int>> map;
+        map[1].pushBack(10);
+        map[1].pushBack(20);
+        map[2].pushBack(30);
+        map[2].pushBack(40);
+        map[2].pushBack(50);
+
+        int totalElements = 0;
+        map.visit([&totalElements](Vector<int>& vec) {
+            totalElements += (int)vec.length();
+        });
+
+        STD_INSIST(totalElements == 5);
+    }
+
+    STD_TEST(VisitManyElements) {
+        IntMap<int> map;
+
+        for (int i = 0; i < 100; ++i) {
+            map[i] = i * 2;
+        }
+
+        int count = 0;
+        int sum = 0;
+        map.visit([&count, &sum](int& value) {
+            count++;
+            sum += value;
+        });
+
+        STD_INSIST(count == 100);
+        STD_INSIST(sum == 9900);
+    }
+
+    STD_TEST(VisitAfterErase) {
+        IntMap<int> map;
+        map[1] = 10;
+        map[2] = 20;
+        map[3] = 30;
+
+        map.erase(2);
+
+        int count = 0;
+        int sum = 0;
+        map.visit([&count, &sum](int& value) {
+            count++;
+            sum += value;
+        });
+
+        STD_INSIST(count == 2);
+        STD_INSIST(sum == 40);
+    }
+
+    STD_TEST(VisitAfterCompactify) {
+        IntMap<int> map;
+        map[1] = 10;
+        map[2] = 20;
+        map[3] = 30;
+
+        map.compactify();
+
+        int count = 0;
+        int sum = 0;
+        map.visit([&count, &sum](int& value) {
+            count++;
+            sum += value;
+        });
+
+        STD_INSIST(count == 3);
+        STD_INSIST(sum == 60);
+    }
+
+    STD_TEST(VisitZeroKey) {
+        IntMap<int> map;
+        map[0] = 999;
+        map[1] = 111;
+
+        int count = 0;
+        int sum = 0;
+        map.visit([&count, &sum](int& value) {
+            count++;
+            sum += value;
+        });
+
+        STD_INSIST(count == 2);
+        STD_INSIST(sum == 1110);
+    }
+
+    STD_TEST(VisitReadOnly) {
+        IntMap<int> map;
+        map[1] = 10;
+        map[2] = 20;
+        map[3] = 30;
+
+        int maxValue = 0;
+        map.visit([&maxValue](int& value) {
+            if (value > maxValue) {
+                maxValue = value;
+            }
+        });
+
+        STD_INSIST(maxValue == 30);
+    }
+
+    STD_TEST(VisitCollectKeys) {
+        IntMap<int> map;
+        map[10] = 100;
+        map[20] = 200;
+        map[30] = 300;
+
+        Vector<int> values;
+        map.visit([&values](int& value) {
+            values.pushBack(value);
+        });
+
+        STD_INSIST(values.length() == 3);
+
+        bool found100 = false;
+        bool found200 = false;
+        bool found300 = false;
+
+        for (size_t i = 0; i < values.length(); ++i) {
+            if (values[i] == 100) found100 = true;
+            if (values[i] == 200) found200 = true;
+            if (values[i] == 300) found300 = true;
+        }
+
+        STD_INSIST(found100);
+        STD_INSIST(found200);
+        STD_INSIST(found300);
+    }
 }
