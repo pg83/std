@@ -93,11 +93,17 @@ void* HashTable::findEntryPtr(u64 key) const noexcept {
     return nullptr;
 }
 
-void HashTable::erase(u64 key) noexcept {
-    if (auto el = findEntryPtr(key); el) {
-        ((Entry*)el)->erase();
+void* HashTable::erase(u64 key) noexcept {
+    if (auto el = (Entry*)findEntryPtr(key); el) {
+        auto res = el->value;
+
+        el->erase();
         buf.seekNegative(1);
+
+        return res;
     }
+
+    return nullptr;
 }
 
 void* HashTable::find(u64 key) const noexcept {

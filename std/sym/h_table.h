@@ -35,7 +35,7 @@ namespace Std {
         void* find(u64 key) const noexcept;
         size_t capacity() const noexcept;
         void* set(u64 key, void* value);
-        void erase(u64 key) noexcept;
+        void* erase(u64 key) noexcept;
         void compactify();
 
         template <typename V>

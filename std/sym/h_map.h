@@ -39,6 +39,12 @@ namespace Std {
             return *insert(key);
         }
 
+        inline void erase(K key) noexcept {
+            if (auto prev = (T*)st.erase(key); prev) {
+                ol.release(prev);
+            }
+        }
+
         template <typename F>
         inline void visit(F f) {
             st.visit([f](void** el) {
