@@ -15,7 +15,7 @@ namespace Std {
             return (void*)&k;
         }
 
-        struct Data: public Treap {
+        struct Impl: public Treap {
             bool cmp(void* l, void* r) const noexcept override {
                 return *(K*)l < *(K*)r;
             }
@@ -38,7 +38,7 @@ namespace Std {
         };
 
         ObjList<Node> ol;
-        Data map;
+        Impl map;
 
         template <typename F, typename... A>
         inline V* insertImpl(F func, K key, A&&... a) {
