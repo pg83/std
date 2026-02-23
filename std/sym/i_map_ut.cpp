@@ -818,6 +818,77 @@ STD_TEST_SUITE(IntMap) {
         STD_INSIST(map.find(10) == nullptr);
     }
 
+    STD_TEST(EraseCallsDestructor) {
+        struct TrackedObject {
+            int* destructorCount;
+
+            TrackedObject(int* counter)
+                : destructorCount(counter)
+            {
+            }
+
+            ~TrackedObject() {
+                if (destructorCount) {
+                    (*destructorCount)++;
+                }
+            }
+        };
+
+        int destructorCount = 0;
+        IntMap<TrackedObject> map;
+        map.insert(1, &destructorCount);
+        map.insert(2, &destructorCount);
+        map.insert(3, &destructorCount);
+
+        STD_INSIST(destructorCount == 0);
+
+        map.erase(2);
+
+        STD_INSIST(destructorCount == 1);
+    }
+
+    STD_TEST(EraseCallsDestructorMultipleTimes) {
+        struct TrackedObject {
+            int* destructorCount;
+
+            TrackedObject(int* counter)
+                : destructorCount(counter)
+            {
+            }
+
+            ~TrackedObject() {
+                if (destructorCount) {
+                    (*destructorCount)++;
+                }
+            }
+        };
+
+        int destructorCount = 0;
+
+        {
+            IntMap<TrackedObject> map;
+
+            map.insert(10, &destructorCount);
+            map.insert(20, &destructorCount);
+            map.insert(30, &destructorCount);
+            map.insert(40, &destructorCount);
+            map.insert(50, &destructorCount);
+
+            STD_INSIST(destructorCount == 0);
+
+            map.erase(10);
+            STD_INSIST(destructorCount == 1);
+
+            map.erase(30);
+            STD_INSIST(destructorCount == 2);
+
+            map.erase(50);
+            STD_INSIST(destructorCount == 3);
+        }
+
+        STD_INSIST(destructorCount == 5);
+    }
+
     STD_TEST(VisitEmpty) {
         IntMap<int> map;
 
@@ -1065,9 +1136,15 @@ STD_TEST_SUITE(IntMap) {
         bool found300 = false;
 
         for (size_t i = 0; i < values.length(); ++i) {
-            if (values[i] == 100) found100 = true;
-            if (values[i] == 200) found200 = true;
-            if (values[i] == 300) found300 = true;
+            if (values[i] == 100) {
+                found100 = true;
+            }
+            if (values[i] == 200) {
+                found200 = true;
+            }
+            if (values[i] == 300) {
+                found300 = true;
+            }
         }
 
         STD_INSIST(found100);
