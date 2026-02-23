@@ -7,19 +7,19 @@
 using namespace Std;
 
 namespace {
-    struct FreeNode {
-        FreeNode* next;
+    struct Node {
+        Node* next;
     };
 
     struct alignas(max_align_t) Base: public FreeList {
         MemoryPool mp;
         size_t objSize;
-        FreeNode* freeList;
+        Node* freeList;
 
         inline Base(void* buf, size_t len, size_t os)
             : mp(buf, len)
             , freeList(nullptr)
-            , objSize(max(os, sizeof(FreeNode)))
+            , objSize(max(os, sizeof(Node)))
         {
         }
     };
@@ -41,7 +41,7 @@ namespace {
         }
 
         void release(void* ptr) noexcept override {
-            auto node = (FreeNode*)ptr;
+            auto node = (Node*)ptr;
             node->next = freeList;
             freeList = node;
         }
