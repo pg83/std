@@ -2,7 +2,7 @@
 
 namespace Std {
     template <typename T>
-    inline void destruct(T* t) {
-        t->~T();
+    inline void* destruct(T* t) {
+        return (t->~T(), (void*)t);
     }
 }

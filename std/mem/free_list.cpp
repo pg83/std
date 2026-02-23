@@ -18,8 +18,8 @@ namespace {
 
         inline Base(void* buf, size_t len, size_t os)
             : mp(buf, len)
-            , freeList(nullptr)
             , objSize(max(os, sizeof(Node)))
+            , freeList(nullptr)
         {
         }
     };

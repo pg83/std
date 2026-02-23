@@ -3,7 +3,9 @@
 #include "treap.h"
 #include "treap_node.h"
 
+#include <std/typ/intrin.h>
 #include <std/typ/support.h>
+#include <std/alg/destruct.h>
 #include <std/mem/obj_list.h>
 
 namespace Std {
@@ -51,9 +53,11 @@ namespace Std {
 
     public:
         inline ~Map() noexcept {
-            map.visit([](TreapNode* ptr) {
-                ((Node*)ptr)->~Node();
-            });
+            if constexpr (!stdHasTrivialDestructor(Node)) {
+                map.visit([](auto ptr) {
+                    destruct((Node*)ptr);
+                });
+            }
         }
 
         inline V* find(K k) const noexcept {

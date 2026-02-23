@@ -1,6 +1,8 @@
 #pragma once
 
+#include <std/typ/intrin.h>
 #include <std/typ/support.h>
+#include <std/alg/destruct.h>
 #include <std/mem/obj_list.h>
 
 namespace Std {
@@ -11,9 +13,11 @@ namespace Std {
 
     public:
         inline ~HashMap() {
-            visit([](auto& node) {
-                node.~T();
-            });
+            if constexpr (!stdHasTrivialDestructor(T)) {
+                visit([](auto& node) {
+                    destruct(&node);
+                });
+            }
         }
 
         inline T* find(K key) const noexcept {

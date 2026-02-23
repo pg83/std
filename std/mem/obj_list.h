@@ -4,6 +4,7 @@
 #include "embed.h"
 #include "free_list.h"
 
+#include <std/alg/destruct.h>
 #include <std/typ/support.h>
 
 namespace Std {
@@ -25,9 +26,7 @@ namespace Std {
         }
 
         inline void release(T* t) {
-            auto tt = (TT*)(void*)t;
-            tt->~TT();
-            fl->release(tt);
+            fl->release(destruct((TT*)(void*)t));
         }
     };
 }
