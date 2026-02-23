@@ -8,9 +8,15 @@ using namespace Std;
 struct DestructorCounter {
     int* counter;
 
-    DestructorCounter(int* c = nullptr) : counter(c) {}
+    DestructorCounter(int* c = nullptr)
+        : counter(c)
+    {
+    }
 
-    DestructorCounter(const DestructorCounter& other) : counter(other.counter) {}
+    DestructorCounter(const DestructorCounter& other)
+        : counter(other.counter)
+    {
+    }
 
     DestructorCounter& operator=(const DestructorCounter& other) {
         counter = other.counter;

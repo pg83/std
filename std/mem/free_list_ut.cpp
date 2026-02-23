@@ -164,20 +164,20 @@ STD_TEST_SUITE(FreeList) {
 
         double* ptr1 = static_cast<double*>(allocator->allocate());
         double* ptr2 = static_cast<double*>(allocator->allocate());
-        
+
         allocator->release(ptr1);
-        
+
         double* ptr3 = static_cast<double*>(allocator->allocate());
         STD_INSIST(ptr3 == ptr1);
-        
+
         double* ptr4 = static_cast<double*>(allocator->allocate());
-        
+
         allocator->release(ptr2);
         allocator->release(ptr3);
-        
+
         double* ptr5 = static_cast<double*>(allocator->allocate());
         STD_INSIST(ptr5 == ptr3);
-        
+
         double* ptr6 = static_cast<double*>(allocator->allocate());
         STD_INSIST(ptr6 == ptr2);
     }
