@@ -13,6 +13,8 @@ namespace Std {
 
         virtual ExceptionKind kind() const noexcept = 0;
         virtual StringView description() = 0;
+
+        static StringView current();
     };
 
     struct Errno {

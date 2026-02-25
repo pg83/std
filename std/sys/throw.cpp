@@ -48,6 +48,16 @@ namespace {
 Exception::~Exception() noexcept {
 }
 
+StringView Exception::current() {
+    try {
+        throw;
+    } catch (Exception& e) {
+        return e.description();
+    }
+
+    return StringView(u8"unknown exception");
+}
+
 Errno::Errno() noexcept
     : error(errno)
 {
