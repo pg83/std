@@ -14,7 +14,7 @@ namespace Std {
     template <typename F>
     inline void listDir(StringView path, F f) {
         listDirImpl(path, makeVisitor([f](void* ptr) {
-            f(*(TPathInfo*)ptr);
-        }));
+                        f(*(TPathInfo*)ptr);
+                    }));
     }
 }

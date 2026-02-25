@@ -8,7 +8,7 @@ using namespace Std;
 STD_TEST_SUITE(ListDir) {
     STD_TEST(CurrentDirectoryBasic) {
         Vector<TPathInfo> items;
-        
+
         listDir(StringView(u8"."), [&items](const TPathInfo& pi) {
             items.pushBack(pi);
         });
