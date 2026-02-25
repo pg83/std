@@ -10,7 +10,7 @@
 
 using namespace Std;
 
-void Std::listDir(StringView path, VisitorFace&& vis) {
+void Std::listDirImpl(StringView path, VisitorFace&& vis) {
     Buffer pathBuf(path);
 
     pathBuf.append("", 1);

@@ -9,11 +9,11 @@ namespace Std {
         bool isDir;
     };
 
-    void listDir(StringView path, VisitorFace&& vis);
+    void listDirImpl(StringView path, VisitorFace&& vis);
 
     template <typename F>
     inline void listDir(StringView path, F f) {
-        listDir(makeVisitor([f](void* ptr) {
+        listDirImpl(path, makeVisitor([f](void* ptr) {
             f(*(TPathInfo*)ptr);
         }));
     }
