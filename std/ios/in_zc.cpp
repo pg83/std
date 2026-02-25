@@ -28,12 +28,16 @@ void ZeroCopyInput::sendTo(Output& out) {
 }
 
 void ZeroCopyInput::readLine(Buffer& buf) {
+    readTo(buf, u8'\n');
+}
+
+void ZeroCopyInput::readTo(Buffer& buf, u8 delim) {
     const void* chunk;
 
     while (auto len = next(&chunk)) {
         StringView part((const u8*)chunk, len);
 
-        if (auto pos = part.memChr('\n'); pos) {
+        if (auto pos = part.memChr(delim); pos) {
             StringView line(part.begin(), pos);
 
             buf.append(line.begin(), line.length());

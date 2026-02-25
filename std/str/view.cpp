@@ -84,6 +84,20 @@ const u8* StringView::memChr(u8 ch) const noexcept {
     return (const u8*)memchr(fix(data()), ch, length());
 }
 
+u64 StringView::stol() const noexcept {
+    u64 result = 0;
+
+    for (size_t i = 0; i < length(); ++i) {
+        u8 ch = (*this)[i];
+
+        if (ch >= '0' && ch <= '9') {
+            result = result * 10 + (ch - '0');
+        }
+    }
+
+    return result;
+}
+
 template <>
 void Std::output<ZeroCopyOutput, StringView>(ZeroCopyOutput& out, StringView str) {
     out.write(str.data(), str.length());

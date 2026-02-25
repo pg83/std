@@ -124,6 +124,12 @@ void* Buffer::imbueMe(size_t* len) {
     return (growDelta(*len), *len = left(), (void*)mutCurrent());
 }
 
+char* Buffer::cStr() {
+    growDelta(1);
+    *(u8*)mutCurrent() = 0;
+    return (char*)mutData();
+}
+
 template <>
 void Std::output<ZeroCopyOutput, Buffer>(ZeroCopyOutput& out, const Buffer& buf) {
     out.write(buf.data(), buf.used());

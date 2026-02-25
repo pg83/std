@@ -77,6 +77,9 @@ namespace Std {
         // hash ops
         u32 hash32() const noexcept;
         u64 hash64() const noexcept;
+
+        // parse
+        u64 stol() const noexcept;
     };
 
     bool operator==(StringView l, StringView r) noexcept;
