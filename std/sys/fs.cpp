@@ -11,11 +11,7 @@
 using namespace Std;
 
 void Std::listDirImpl(StringView path, VisitorFace&& vis) {
-    Buffer pathBuf(path);
-
-    pathBuf.append("", 1);
-
-    DIR* dir = opendir((const char*)pathBuf.data());
+    DIR* dir = opendir(Buffer(path).cStr());
 
     if (!dir) {
         Errno().raise(StringBuilder() << StringView(u8"opendir() failed for ") << path);
