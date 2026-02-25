@@ -10,7 +10,7 @@
 
 using namespace Std;
 
-void Std::listDir(StringView path, TFsVisitor& vis) {
+void Std::listDir(StringView path, VisitorFace&& vis) {
     Buffer pathBuf(path);
 
     pathBuf.append("", 1);
@@ -18,12 +18,12 @@ void Std::listDir(StringView path, TFsVisitor& vis) {
     DIR* dir = opendir((const char*)pathBuf.data());
 
     if (!dir) {
-        Errno().raise(StringBuilder() << StringView(u8"opendir() failed"));
+        Errno().raise(StringBuilder() << StringView(u8"opendir() failed for ") << path);
     }
 
     STD_DEFER {
         if (closedir(dir) != 0) {
-            Errno().raise(StringBuilder() << StringView(u8"closedir() failed"));
+            Errno().raise(StringBuilder() << StringView(u8"closedir() failed for ") << path);
         }
     };
 
@@ -34,9 +34,11 @@ void Std::listDir(StringView path, TFsVisitor& vis) {
             continue;
         }
 
-        vis.visit({
+        TPathInfo pi = {
             .item = name,
             .isDir = entry->d_type == DT_DIR,
-        });
+        };
+
+        vis.visit(&pi);
     }
 }
