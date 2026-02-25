@@ -12,5 +12,5 @@ namespace Std {
         virtual void visit(TPathInfo pi) = 0;
     };
 
-    void listDir(TFsVisitor&& vis);
+    void listDir(StringView path, TFsVisitor& vis);
 }

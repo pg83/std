@@ -1,0 +1,42 @@
+#include "fs.h"
+
+#include <std/alg/defer.h>
+#include <std/sys/throw.h>
+#include <std/lib/buffer.h>
+#include <std/str/builder.h>
+
+#include <dirent.h>
+#include <sys/types.h>
+
+using namespace Std;
+
+void Std::listDir(StringView path, TFsVisitor& vis) {
+    Buffer pathBuf(path);
+
+    pathBuf.append("", 1);
+
+    DIR* dir = opendir((const char*)pathBuf.data());
+
+    if (!dir) {
+        Errno().raise(StringBuilder() << StringView(u8"opendir() failed"));
+    }
+
+    STD_DEFER {
+        if (closedir(dir) != 0) {
+            Errno().raise(StringBuilder() << StringView(u8"closedir() failed"));
+        }
+    };
+
+    while (struct dirent* entry = readdir(dir)) {
+        StringView name((const char*)entry->d_name);
+
+        if (name == StringView(u8".") || name == StringView(u8"..")) {
+            continue;
+        }
+
+        vis.visit({
+            .item = name,
+            .isDir = entry->d_type == DT_DIR,
+        });
+    }
+}
