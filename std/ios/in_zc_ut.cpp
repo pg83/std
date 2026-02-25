@@ -508,5 +508,7 @@ STD_TEST_SUITE(ZeroCopyInputReadTo) {
         STD_INSIST(memcmp(buf2.data(), "World!", 6) == 0);
         STD_INSIST(buf3.length() == 3);
         STD_INSIST(memcmp(buf3.data(), "How", 3) == 0);
+        STD_INSIST(buf4 == StringView(u8"are"));
+        STD_INSIST(buf5 == StringView(u8"you?"));
     }
 }
