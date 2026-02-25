@@ -1,18 +1,18 @@
-#include <std/map/map.h>
-#include <std/lib/vector.h>
-#include <std/lib/buffer.h>
-#include <std/str/view.h>
-#include <std/str/builder.h>
-#include <std/str/hash.h>
 #include <std/sys/fs.h>
 #include <std/sys/fd.h>
-#include <std/sys/throw.h>
 #include <std/ios/sys.h>
+#include <std/map/map.h>
+#include <std/str/view.h>
+#include <std/str/hash.h>
+#include <std/sys/throw.h>
 #include <std/ios/in_fd.h>
 #include <std/ios/in_mem.h>
+#include <std/lib/vector.h>
+#include <std/lib/buffer.h>
+#include <std/str/builder.h>
 
-#include <fcntl.h>
 #include <time.h>
+#include <fcntl.h>
 #include <spawn.h>
 #include <signal.h>
 #include <unistd.h>
@@ -110,16 +110,16 @@ namespace {
         void step() {
             Map<ProcID, bool> cur;
 
-            StringBuilder pathBuilder;
+            StringBuilder pb;
 
             listDir(StringView(where), [&](TPathInfo info) {
                 if (!info.isDir) {
                     return;
                 }
 
-                pathBuilder.reset();
+                pb.reset();
 
-                StringView p(pathBuilder << where << StringView(u8"/") << info.item << StringView(u8"/run"));
+                StringView p(pb << where << StringView(u8"/") << info.item << StringView(u8"/run"));
 
                 try {
                     auto md5 = fhash(p);
@@ -161,13 +161,13 @@ namespace {
 
             Buffer line;
 
-            while ((input.readTo(line, ' '), line.length())) {
+            while ((line.reset(), input.readTo(line, ' '), line.length())) {
                 auto pid = (pid_t)StringView(line).stol();
 
                 if (pids.find(pid) == nullptr) {
                     ++stale;
-                    sysE << StringView(u8"stale pid ") << pid << endL << flsH;
                     kill(pid, SIGKILL);
+                    sysE << StringView(u8"stale pid ") << pid << endL << flsH;
                 }
             }
 
