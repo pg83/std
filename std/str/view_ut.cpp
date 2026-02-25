@@ -730,4 +730,100 @@ STD_TEST_SUITE(StringView) {
         size_t pos = xsearch(sv, StringView("baaab"));
         STD_INSIST(pos == 3);
     }
+
+    STD_TEST(StolBasic) {
+        StringView sv("123");
+        STD_INSIST(sv.stol() == 123);
+    }
+
+    STD_TEST(StolZero) {
+        StringView sv("0");
+        STD_INSIST(sv.stol() == 0);
+    }
+
+    STD_TEST(StolEmpty) {
+        StringView sv("");
+        STD_INSIST(sv.stol() == 0);
+    }
+
+    STD_TEST(StolLargeNumber) {
+        StringView sv("9876543210");
+        STD_INSIST(sv.stol() == 9876543210ULL);
+    }
+
+    STD_TEST(StolWithLeadingZeros) {
+        StringView sv("00123");
+        STD_INSIST(sv.stol() == 123);
+    }
+
+    STD_TEST(StolSingleDigit) {
+        StringView sv("7");
+        STD_INSIST(sv.stol() == 7);
+    }
+
+    STD_TEST(StolNineNines) {
+        StringView sv("999999999");
+        STD_INSIST(sv.stol() == 999999999ULL);
+    }
+
+    STD_TEST(StolWithNonDigits) {
+        StringView sv("123abc456");
+        STD_INSIST(sv.stol() == 123456);
+    }
+
+    STD_TEST(StolOnlyNonDigits) {
+        StringView sv("abc");
+        STD_INSIST(sv.stol() == 0);
+    }
+
+    STD_TEST(StolLeadingNonDigits) {
+        StringView sv("abc123");
+        STD_INSIST(sv.stol() == 123);
+    }
+
+    STD_TEST(StolTrailingNonDigits) {
+        StringView sv("123abc");
+        STD_INSIST(sv.stol() == 123);
+    }
+
+    STD_TEST(StolMixedCharacters) {
+        StringView sv("1a2b3c");
+        STD_INSIST(sv.stol() == 123);
+    }
+
+    STD_TEST(StolWithSpaces) {
+        StringView sv("1 2 3");
+        STD_INSIST(sv.stol() == 123);
+    }
+
+    STD_TEST(StolMaxU64) {
+        StringView sv("18446744073709551615");
+        STD_INSIST(sv.stol() == 18446744073709551615ULL);
+    }
+
+    STD_TEST(StolVeryLongNumber) {
+        StringView sv("12345678901234567890");
+        u64 result = sv.stol();
+        STD_INSIST(result > 0);
+    }
+
+    STD_TEST(StolAllZeros) {
+        StringView sv("00000");
+        STD_INSIST(sv.stol() == 0);
+    }
+
+    STD_TEST(StolWithNewline) {
+        StringView sv("123\n456");
+        STD_INSIST(sv.stol() == 123456);
+    }
+
+    STD_TEST(StolWithTab) {
+        StringView sv("123\t456");
+        STD_INSIST(sv.stol() == 123456);
+    }
+
+    STD_TEST(StolWithSpecialChars) {
+        StringView sv("1!2@3#4$5");
+        STD_INSIST(sv.stol() == 12345);
+    }
 }

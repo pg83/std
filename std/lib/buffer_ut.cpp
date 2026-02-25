@@ -345,4 +345,74 @@ STD_TEST_SUITE(Buffer) {
 
         STD_INSIST(capacityCount > 1);
     }
+
+    STD_TEST(CStrBasic) {
+        Buffer b("hello", 5);
+        char* str = b.cStr();
+        STD_INSIST(str != nullptr);
+        STD_INSIST(strLen((const u8*)str) == 5);
+        STD_INSIST(memCmp(str, "hello", 5) == 0);
+        STD_INSIST(str[5] == 0);
+    }
+
+    STD_TEST(CStrEmpty) {
+        Buffer b;
+        char* str = b.cStr();
+        STD_INSIST(str != nullptr);
+        STD_INSIST(strLen((const u8*)str) == 0);
+        STD_INSIST(str[0] == 0);
+    }
+
+    STD_TEST(CStrPreservesContent) {
+        Buffer b("test data", 9);
+        size_t originalUsed = b.used();
+        char* str = b.cStr();
+        STD_INSIST(b.used() == originalUsed);
+        STD_INSIST(memCmp(str, "test data", 9) == 0);
+        STD_INSIST(str[9] == 0);
+    }
+
+    STD_TEST(CStrAfterMultipleAppends) {
+        Buffer b;
+        b.append("Hello", 5);
+        b.append(" ", 1);
+        b.append("World", 5);
+        char* str = b.cStr();
+        STD_INSIST(strLen((const u8*)str) == 11);
+        STD_INSIST(memCmp(str, "Hello World", 11) == 0);
+        STD_INSIST(str[11] == 0);
+    }
+
+    STD_TEST(CStrDoesNotChangeUsed) {
+        Buffer b("data", 4);
+        size_t usedBefore = b.used();
+        b.cStr();
+        STD_INSIST(b.used() == usedBefore);
+    }
+
+    STD_TEST(CStrGrowsCapacity) {
+        Buffer b(5);
+        b.append("hello", 5);
+        size_t leftBefore = b.left();
+        char* str = b.cStr();
+        STD_INSIST(str[5] == 0);
+        STD_INSIST(memCmp(str, "hello", 5) == 0);
+        STD_INSIST(b.capacity() >= 5);
+    }
+
+    STD_TEST(CStrWithBinaryData) {
+        u8 data[] = {0x48, 0x65, 0x6C, 0x6C, 0x6F};
+        Buffer b(data, 5);
+        char* str = b.cStr();
+        STD_INSIST(memCmp(str, "Hello", 5) == 0);
+        STD_INSIST(str[5] == 0);
+    }
+
+    STD_TEST(CStrMultipleCalls) {
+        Buffer b("test", 4);
+        char* str1 = b.cStr();
+        char* str2 = b.cStr();
+        STD_INSIST(str1 == str2);
+        STD_INSIST(str1[4] == 0);
+    }
 }
