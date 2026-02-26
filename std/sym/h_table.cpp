@@ -127,21 +127,28 @@ void* HashTable::set(u64 key, void* value) {
 void* HashTable::setNoRehash(u64 key, void* value) {
     auto r = erange(buf);
     auto c = r.length();
+    Entry* f = nullptr;
 
     for (auto i = hash(key, c);; i = (i + 1) % c) {
         auto& el = r.b[i];
 
-        if (!el.used()) {
-            el.key = key;
-            el.value = value;
+        if (el.used()) {
+            if (el.key == key) {
+                return exchange(el.value, value);
+            }
+        } else {
+            if (!f) {
+                f = &el;
+            }
 
-            buf.seekRelative(1);
+            if (!el.erased()) {
+                f->key = key;
+                f->value = value;
 
-            return nullptr;
-        }
+                buf.seekRelative(1);
 
-        if (el.key == key) {
-            return exchange(el.value, value);
+                return nullptr;
+            }
         }
     }
 }
