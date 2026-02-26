@@ -140,12 +140,6 @@ void HashTable::setNoRehash(u64 key, void* value) {
 
             return;
         }
-
-        if (el.key == key) {
-            el.value = value;
-
-            return;
-        }
     }
 }
 
