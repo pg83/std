@@ -5,10 +5,9 @@
 #include <std/alg/range.h>
 #include <std/alg/minmax.h>
 #include <std/dbg/assert.h>
-#include <std/alg/exchange.h>
 
 using namespace Std;
-#include <stdlib.h>
+
 namespace {
     struct Entry {
         u64 key;
@@ -117,38 +116,35 @@ void* HashTable::find(u64 key) const noexcept {
 void* HashTable::set(u64 key, void* value) {
     STD_ASSERT((size_t)value > 1);
 
+    auto res = erase(key);
+
     if (size() >= capacity() * 0.7) {
         rehash();
     }
 
-    return setNoRehash(key, value);
+    return (setNoRehash(key, value), res);
 }
 
-void* HashTable::setNoRehash(u64 key, void* value) {
+void HashTable::setNoRehash(u64 key, void* value) {
     auto r = erange(buf);
     auto c = r.length();
-    Entry* f = nullptr;
 
     for (auto i = hash(key, c);; i = (i + 1) % c) {
         auto& el = r.b[i];
 
-        if (el.used()) {
-            if (el.key == key) {
-                return exchange(el.value, value);
-            }
-        } else {
-            if (!f) {
-                f = &el;
-            }
+        if (!el.used()) {
+            el.key = key;
+            el.value = value;
 
-            if (!el.erased()) {
-                f->key = key;
-                f->value = value;
+            buf.seekRelative(1);
 
-                buf.seekRelative(1);
+            return;
+        }
 
-                return nullptr;
-            }
+        if (el.key == key) {
+            el.value = value;
+
+            return;
         }
     }
 }
