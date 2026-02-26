@@ -38,11 +38,7 @@ size_t InBuf::nextImpl(const void** ptr) {
         pos = 0;
     }
 
-    auto available = buf_.used() - pos;
-
-    *ptr = (const u8*)buf_.data() + pos;
-
-    return available;
+    return (*ptr = (const u8*)buf_.data() + pos, buf_.used() - pos);
 }
 
 void InBuf::commitImpl(size_t len) noexcept {
