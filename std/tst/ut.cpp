@@ -49,7 +49,6 @@ namespace {
     }
 
     struct GetOpt {
-        bool listTests = false;
         Vector<StringView> includes;
 
         inline GetOpt(Ctx& ctx) noexcept {
