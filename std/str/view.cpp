@@ -84,7 +84,7 @@ const u8* StringView::memChr(u8 ch) const noexcept {
     return (const u8*)memchr(fix(data()), ch, length());
 }
 
-u64 StringView::stol() const noexcept {
+u64 StringView::stou() const noexcept {
     u64 result = 0;
 
     for (size_t i = 0; i < length(); ++i) {

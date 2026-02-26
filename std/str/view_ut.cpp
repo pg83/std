@@ -731,99 +731,99 @@ STD_TEST_SUITE(StringView) {
         STD_INSIST(pos == 3);
     }
 
-    STD_TEST(StolBasic) {
+    STD_TEST(stouBasic) {
         StringView sv("123");
-        STD_INSIST(sv.stol() == 123);
+        STD_INSIST(sv.stou() == 123);
     }
 
-    STD_TEST(StolZero) {
+    STD_TEST(stouZero) {
         StringView sv("0");
-        STD_INSIST(sv.stol() == 0);
+        STD_INSIST(sv.stou() == 0);
     }
 
-    STD_TEST(StolEmpty) {
+    STD_TEST(stouEmpty) {
         StringView sv("");
-        STD_INSIST(sv.stol() == 0);
+        STD_INSIST(sv.stou() == 0);
     }
 
-    STD_TEST(StolLargeNumber) {
+    STD_TEST(stouLargeNumber) {
         StringView sv("9876543210");
-        STD_INSIST(sv.stol() == 9876543210ULL);
+        STD_INSIST(sv.stou() == 9876543210ULL);
     }
 
-    STD_TEST(StolWithLeadingZeros) {
+    STD_TEST(stouWithLeadingZeros) {
         StringView sv("00123");
-        STD_INSIST(sv.stol() == 123);
+        STD_INSIST(sv.stou() == 123);
     }
 
-    STD_TEST(StolSingleDigit) {
+    STD_TEST(stouSingleDigit) {
         StringView sv("7");
-        STD_INSIST(sv.stol() == 7);
+        STD_INSIST(sv.stou() == 7);
     }
 
-    STD_TEST(StolNineNines) {
+    STD_TEST(stouNineNines) {
         StringView sv("999999999");
-        STD_INSIST(sv.stol() == 999999999ULL);
+        STD_INSIST(sv.stou() == 999999999ULL);
     }
 
-    STD_TEST(StolWithNonDigits) {
+    STD_TEST(stouWithNonDigits) {
         StringView sv("123abc456");
-        STD_INSIST(sv.stol() == 123456);
+        STD_INSIST(sv.stou() == 123456);
     }
 
-    STD_TEST(StolOnlyNonDigits) {
+    STD_TEST(stouOnlyNonDigits) {
         StringView sv("abc");
-        STD_INSIST(sv.stol() == 0);
+        STD_INSIST(sv.stou() == 0);
     }
 
-    STD_TEST(StolLeadingNonDigits) {
+    STD_TEST(stouLeadingNonDigits) {
         StringView sv("abc123");
-        STD_INSIST(sv.stol() == 123);
+        STD_INSIST(sv.stou() == 123);
     }
 
-    STD_TEST(StolTrailingNonDigits) {
+    STD_TEST(stouTrailingNonDigits) {
         StringView sv("123abc");
-        STD_INSIST(sv.stol() == 123);
+        STD_INSIST(sv.stou() == 123);
     }
 
-    STD_TEST(StolMixedCharacters) {
+    STD_TEST(stouMixedCharacters) {
         StringView sv("1a2b3c");
-        STD_INSIST(sv.stol() == 123);
+        STD_INSIST(sv.stou() == 123);
     }
 
-    STD_TEST(StolWithSpaces) {
+    STD_TEST(stouWithSpaces) {
         StringView sv("1 2 3");
-        STD_INSIST(sv.stol() == 123);
+        STD_INSIST(sv.stou() == 123);
     }
 
-    STD_TEST(StolMaxU64) {
+    STD_TEST(stouMaxU64) {
         StringView sv("18446744073709551615");
-        STD_INSIST(sv.stol() == 18446744073709551615ULL);
+        STD_INSIST(sv.stou() == 18446744073709551615ULL);
     }
 
-    STD_TEST(StolVeryLongNumber) {
+    STD_TEST(stouVeryLongNumber) {
         StringView sv("12345678901234567890");
-        u64 result = sv.stol();
+        u64 result = sv.stou();
         STD_INSIST(result > 0);
     }
 
-    STD_TEST(StolAllZeros) {
+    STD_TEST(stouAllZeros) {
         StringView sv("00000");
-        STD_INSIST(sv.stol() == 0);
+        STD_INSIST(sv.stou() == 0);
     }
 
-    STD_TEST(StolWithNewline) {
+    STD_TEST(stouWithNewline) {
         StringView sv("123\n456");
-        STD_INSIST(sv.stol() == 123456);
+        STD_INSIST(sv.stou() == 123456);
     }
 
-    STD_TEST(StolWithTab) {
+    STD_TEST(stouWithTab) {
         StringView sv("123\t456");
-        STD_INSIST(sv.stol() == 123456);
+        STD_INSIST(sv.stou() == 123456);
     }
 
-    STD_TEST(StolWithSpecialChars) {
+    STD_TEST(stouWithSpecialChars) {
         StringView sv("1!2@3#4$5");
-        STD_INSIST(sv.stol() == 12345);
+        STD_INSIST(sv.stou() == 12345);
     }
 }
