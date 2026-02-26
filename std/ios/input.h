@@ -22,6 +22,14 @@ namespace Std {
             return hintImpl();
         }
 
+        inline size_t hint(size_t def) const noexcept {
+            if (auto h = hint(); h) {
+                return h;
+            }
+
+            return def;
+        }
+
         void readAll(Buffer& res);
 
         virtual void sendTo(Output& out);

@@ -125,7 +125,7 @@ void* HashTable::set(u64 key, void* value) {
     return (addNoRehash(key, value), res);
 }
 
-void HashTable::addNoRehash(u64 key, void* value) {
+void HashTable::addNoRehash(u64 key, void* value) noexcept {
     auto r = erange(buf);
     auto c = r.length();
 
