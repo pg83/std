@@ -34,7 +34,6 @@ size_t InBuf::hintImpl() const noexcept {
 
 size_t InBuf::nextImpl(const void** ptr) {
     if (pos >= buf_.used()) {
-        buf_.reset();
         buf_.seekAbsolute(in_->read(buf_.mutData(), buf_.capacity()));
         pos = 0;
     }
