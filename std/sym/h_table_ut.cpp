@@ -962,4 +962,582 @@ STD_TEST_SUITE(HashTable) {
 
         delete[] values;
     }
+
+    STD_TEST(StressTestRandomOperations) {
+        HashTable ht;
+        PCG32 rng(0xDEADBEEF);
+
+        const size_t iterations = 10000;
+        const size_t keyRange = 1000;
+        int values[keyRange * 2];
+        void* expectedValues[keyRange];
+        bool shouldExist[keyRange];
+
+        for (size_t i = 0; i < keyRange * 2; ++i) {
+            values[i] = i * 17;
+        }
+
+        for (size_t i = 0; i < keyRange; ++i) {
+            expectedValues[i] = nullptr;
+            shouldExist[i] = false;
+        }
+
+        size_t expectedSize = 0;
+
+        for (size_t iter = 0; iter < iterations; ++iter) {
+            u32 op = rng.uniformBiased(100);
+            u64 key = rng.uniformBiased(keyRange) + 1;
+            size_t idx = key - 1;
+
+            if (op < 40) {
+                ht.set(key, &values[idx]);
+                expectedValues[idx] = &values[idx];
+                if (!shouldExist[idx]) {
+                    shouldExist[idx] = true;
+                    expectedSize++;
+                }
+            } else if (op < 70) {
+                void* result = ht.find(key);
+                if (shouldExist[idx]) {
+                    STD_INSIST(result == expectedValues[idx]);
+                } else {
+                    STD_INSIST(result == nullptr);
+                }
+            } else if (op < 90) {
+                ht.erase(key);
+                if (shouldExist[idx]) {
+                    shouldExist[idx] = false;
+                    expectedValues[idx] = nullptr;
+                    expectedSize--;
+                }
+            } else {
+                if (shouldExist[idx]) {
+                    size_t newIdx = (idx + keyRange + iter) % (keyRange * 2);
+                    ht.set(key, &values[newIdx]);
+                    expectedValues[idx] = &values[newIdx];
+                }
+            }
+            ctx.output() << ht.size() << StringView(u8" ") << expectedSize << endL;
+            STD_INSIST(ht.size() == expectedSize);
+        }
+
+        for (size_t i = 0; i < keyRange; ++i) {
+            void* result = ht.find(i + 1);
+            if (shouldExist[i]) {
+                STD_INSIST(result == expectedValues[i]);
+            } else {
+                STD_INSIST(result == nullptr);
+            }
+        }
+    }
+
+    STD_TEST(StressTestSequentialPattern) {
+        HashTable ht;
+
+        const size_t rounds = 100;
+        const size_t perRound = 200;
+        int values[perRound];
+
+        for (size_t i = 0; i < perRound; ++i) {
+            values[i] = i;
+        }
+
+        for (size_t round = 0; round < rounds; ++round) {
+            for (size_t i = 0; i < perRound; ++i) {
+                ht.set(i + 1, &values[i]);
+            }
+
+            for (size_t i = 0; i < perRound; ++i) {
+                STD_INSIST(ht.find(i + 1) == &values[i]);
+            }
+
+            for (size_t i = 0; i < perRound; i += 2) {
+                ht.erase(i + 1);
+            }
+
+            for (size_t i = 0; i < perRound; i += 2) {
+                STD_INSIST(ht.find(i + 1) == nullptr);
+            }
+
+            for (size_t i = 1; i < perRound; i += 2) {
+                STD_INSIST(ht.find(i + 1) == &values[i]);
+            }
+
+            for (size_t i = 0; i < perRound; i += 2) {
+                ht.set(i + 1, &values[i]);
+            }
+        }
+    }
+
+    STD_TEST(StressTestCollisionHeavy) {
+        HashTable ht(32);
+
+        const size_t count = 500;
+        int values[count];
+        u64 keys[count];
+
+        for (size_t i = 0; i < count; ++i) {
+            values[i] = i;
+            keys[i] = i * 32;
+        }
+
+        for (size_t i = 0; i < count; ++i) {
+            ht.set(keys[i], &values[i]);
+        }
+
+        for (size_t i = 0; i < count; ++i) {
+            STD_INSIST(ht.find(keys[i]) == &values[i]);
+        }
+
+        for (size_t i = 0; i < count; i += 3) {
+            ht.erase(keys[i]);
+        }
+
+        for (size_t i = 0; i < count; ++i) {
+            void* result = ht.find(keys[i]);
+            if (i % 3 == 0) {
+                STD_INSIST(result == nullptr);
+            } else {
+                STD_INSIST(result == &values[i]);
+            }
+        }
+
+        for (size_t i = 0; i < count; i += 3) {
+            ht.set(keys[i], &values[i]);
+        }
+
+        for (size_t i = 0; i < count; ++i) {
+            STD_INSIST(ht.find(keys[i]) == &values[i]);
+        }
+    }
+
+    STD_TEST(StressTestAlternatingInsertErase) {
+        HashTable ht;
+        PCG32 rng(12345);
+
+        const size_t iterations = 5000;
+        const size_t keyRange = 500;
+        int values[keyRange];
+
+        for (size_t i = 0; i < keyRange; ++i) {
+            values[i] = i;
+        }
+
+        for (size_t iter = 0; iter < iterations; ++iter) {
+            u64 key = rng.uniformBiased(keyRange) + 1;
+            size_t idx = key - 1;
+
+            ht.set(key, &values[idx]);
+            STD_INSIST(ht.find(key) == &values[idx]);
+
+            ht.erase(key);
+            STD_INSIST(ht.find(key) == nullptr);
+
+            ht.set(key, &values[idx]);
+            STD_INSIST(ht.find(key) == &values[idx]);
+        }
+    }
+
+    STD_TEST(StressTestGrowthAndShrinkage) {
+        HashTable ht(4);
+
+        const size_t maxSize = 2000;
+        int values[maxSize];
+
+        for (size_t i = 0; i < maxSize; ++i) {
+            values[i] = i;
+        }
+
+        for (size_t phase = 0; phase < 10; ++phase) {
+            for (size_t i = 0; i < maxSize; ++i) {
+                ht.set(i + 1, &values[i]);
+            }
+
+            STD_INSIST(ht.size() == maxSize);
+
+            for (size_t i = 0; i < maxSize; i += 2) {
+                ht.erase(i + 1);
+            }
+
+            STD_INSIST(ht.size() == maxSize / 2);
+
+            for (size_t i = 0; i < maxSize; i += 2) {
+                ht.erase(i + 1 + 1);
+            }
+
+            STD_INSIST(ht.size() == 0);
+        }
+    }
+
+    STD_TEST(StressTestCompactifyUnderLoad) {
+        HashTable ht;
+        PCG32 rng(99999);
+
+        const size_t keyRange = 1000;
+        int values[keyRange];
+        bool present[keyRange];
+
+        for (size_t i = 0; i < keyRange; ++i) {
+            values[i] = i;
+            present[i] = false;
+        }
+
+        for (size_t round = 0; round < 20; ++round) {
+            for (size_t i = 0; i < 300; ++i) {
+                u64 key = rng.uniformBiased(keyRange) + 1;
+                ht.set(key, &values[key - 1]);
+                present[key - 1] = true;
+            }
+
+            for (size_t i = 0; i < 150; ++i) {
+                u64 key = rng.uniformBiased(keyRange) + 1;
+                ht.erase(key);
+                present[key - 1] = false;
+            }
+
+            ht.compactify();
+
+            for (size_t i = 0; i < keyRange; ++i) {
+                void* result = ht.find(i + 1);
+                if (present[i]) {
+                    STD_INSIST(result == &values[i]);
+                } else {
+                    STD_INSIST(result == nullptr);
+                }
+            }
+        }
+    }
+
+    STD_TEST(StressTestUpdatePattern) {
+        HashTable ht;
+        PCG32 rng(0xCAFEBABE);
+
+        const size_t keyRange = 800;
+        int values[keyRange * 2];
+
+        for (size_t i = 0; i < keyRange * 2; ++i) {
+            values[i] = i;
+        }
+
+        for (size_t i = 0; i < keyRange; ++i) {
+            ht.set(i + 1, &values[i]);
+        }
+
+        for (size_t iter = 0; iter < 3000; ++iter) {
+            u64 key = rng.uniformBiased(keyRange) + 1;
+            size_t newIdx = rng.uniformBiased(keyRange * 2);
+
+            ht.set(key, &values[newIdx]);
+            STD_INSIST(ht.find(key) == &values[newIdx]);
+        }
+
+        STD_INSIST(ht.size() == keyRange);
+    }
+
+    STD_TEST(StressTestFindAfterManyErases) {
+        HashTable ht;
+        PCG32 rng(777);
+
+        const size_t totalKeys = 1000;
+        int values[totalKeys];
+
+        for (size_t i = 0; i < totalKeys; ++i) {
+            values[i] = i;
+            ht.set(i + 1, &values[i]);
+        }
+
+        u64 keys[totalKeys];
+        for (size_t i = 0; i < totalKeys; ++i) {
+            keys[i] = i + 1;
+        }
+
+        for (size_t i = totalKeys - 1; i > 0; --i) {
+            size_t j = rng.uniformBiased(i + 1);
+            u64 temp = keys[i];
+            keys[i] = keys[j];
+            keys[j] = temp;
+        }
+
+        for (size_t i = 0; i < totalKeys * 3 / 4; ++i) {
+            ht.erase(keys[i]);
+        }
+
+        for (size_t trial = 0; trial < 5000; ++trial) {
+            u64 key = rng.uniformBiased(totalKeys) + 1;
+            ht.find(key);
+        }
+
+        for (size_t i = 0; i < totalKeys; ++i) {
+            void* result = ht.find(i + 1);
+            bool shouldExist = false;
+            for (size_t j = totalKeys * 3 / 4; j < totalKeys; ++j) {
+                if (keys[j] == i + 1) {
+                    shouldExist = true;
+                    break;
+                }
+            }
+
+            if (shouldExist) {
+                STD_INSIST(result == &values[i]);
+            } else {
+                STD_INSIST(result == nullptr);
+            }
+        }
+    }
+
+    STD_TEST(StressTestDenseKeySpace) {
+        HashTable ht;
+
+        const size_t count = 1500;
+        int values[count];
+
+        for (size_t i = 0; i < count; ++i) {
+            values[i] = i;
+            ht.set(i + 1, &values[i]);
+        }
+
+        for (size_t i = 0; i < count; ++i) {
+            STD_INSIST(ht.find(i + 1) == &values[i]);
+        }
+
+        for (size_t i = 0; i < count; i += 5) {
+            ht.erase(i + 1);
+        }
+
+        for (size_t i = 0; i < count; i += 5) {
+            STD_INSIST(ht.find(i + 1) == nullptr);
+        }
+
+        for (size_t i = 0; i < count; i += 5) {
+            ht.set(i + 1, &values[i]);
+        }
+
+        for (size_t i = 0; i < count; ++i) {
+            STD_INSIST(ht.find(i + 1) == &values[i]);
+        }
+    }
+
+    STD_TEST(StressTestSparseKeySpace) {
+        HashTable ht;
+        PCG32 rng(0x123456);
+
+        const size_t count = 800;
+        int values[count];
+        u64 keys[count];
+
+        for (size_t i = 0; i < count; ++i) {
+            values[i] = i;
+            keys[i] = ((u64)rng.nextU32() << 32) | rng.nextU32();
+            if (keys[i] == 0) {
+                keys[i] = 1;
+            }
+        }
+
+        for (size_t i = 0; i < count; ++i) {
+            ht.set(keys[i], &values[i]);
+        }
+
+        for (size_t i = 0; i < count; ++i) {
+            STD_INSIST(ht.find(keys[i]) == &values[i]);
+        }
+
+        for (size_t i = 0; i < count; i += 4) {
+            ht.erase(keys[i]);
+        }
+
+        for (size_t i = 0; i < count; ++i) {
+            void* result = ht.find(keys[i]);
+            if (i % 4 == 0) {
+                STD_INSIST(result == nullptr);
+            } else {
+                STD_INSIST(result == &values[i]);
+            }
+        }
+    }
+
+    STD_TEST(StressTestFullTableRecovery) {
+        HashTable ht(16);
+
+        const size_t capacity = ht.capacity();
+        const size_t fillCount = capacity * 0.7 - 1;
+
+        int values[capacity];
+        for (size_t i = 0; i < capacity; ++i) {
+            values[i] = i;
+        }
+
+        for (size_t i = 0; i < fillCount; ++i) {
+            ht.set(i + 1, &values[i]);
+        }
+
+        for (size_t i = 0; i < fillCount / 2; ++i) {
+            ht.erase(i + 1);
+        }
+
+        for (size_t i = 0; i < fillCount / 2; ++i) {
+            ht.set(i + 1, &values[i]);
+        }
+
+        for (size_t i = 0; i < fillCount; ++i) {
+            STD_INSIST(ht.find(i + 1) == &values[i]);
+        }
+    }
+
+    STD_TEST(StressTestMixedPatterns) {
+        HashTable ht;
+        PCG32 rng(0xABCDEF);
+
+        const size_t keyRange = 1000;
+        int values[keyRange];
+
+        for (size_t i = 0; i < keyRange; ++i) {
+            values[i] = i;
+        }
+
+        for (size_t phase = 0; phase < 5; ++phase) {
+            for (size_t i = 0; i < keyRange; i += 2) {
+                ht.set(i + 1, &values[i]);
+            }
+
+            for (size_t i = 1; i < keyRange; i += 2) {
+                ht.set(i + 1, &values[i]);
+            }
+
+            for (size_t i = 0; i < 200; ++i) {
+                u64 key = rng.uniformBiased(keyRange) + 1;
+                ht.erase(key);
+            }
+
+            for (size_t i = 0; i < 200; ++i) {
+                u64 key = rng.uniformBiased(keyRange) + 1;
+                ht.set(key, &values[key - 1]);
+            }
+
+            for (size_t i = 0; i < 500; ++i) {
+                u64 key = rng.uniformBiased(keyRange) + 1;
+                ht.find(key);
+            }
+
+            if (phase % 2 == 0) {
+                ht.compactify();
+            }
+
+            for (size_t i = 0; i < keyRange; i += 3) {
+                ht.erase(i + 1);
+            }
+        }
+    }
+
+    STD_TEST(StressTestRehashDuringOperations) {
+        HashTable ht(4);
+        PCG32 rng(54321);
+
+        const size_t iterations = 2000;
+        const size_t keyRange = 300;
+        int values[keyRange];
+
+        for (size_t i = 0; i < keyRange; ++i) {
+            values[i] = i;
+        }
+
+        size_t insertCount = 0;
+        size_t eraseCount = 0;
+
+        for (size_t iter = 0; iter < iterations; ++iter) {
+            if (rng.uniformBiased(100) < 60) {
+                u64 key = rng.uniformBiased(keyRange) + 1;
+                ht.set(key, &values[key - 1]);
+                insertCount++;
+            } else {
+                u64 key = rng.uniformBiased(keyRange) + 1;
+                ht.erase(key);
+                eraseCount++;
+            }
+
+            if (iter % 100 == 0) {
+                for (size_t verify = 0; verify < 50; ++verify) {
+                    u64 key = rng.uniformBiased(keyRange) + 1;
+                    ht.find(key);
+                }
+            }
+        }
+    }
+
+    STD_TEST(StressTestDeepCollisionChains) {
+        HashTable ht(64);
+
+        const size_t capacity = ht.capacity();
+        const size_t chainLength = 30;
+        int values[chainLength];
+
+        for (size_t i = 0; i < chainLength; ++i) {
+            values[i] = i;
+            u64 key = i * capacity;
+            ht.set(key, &values[i]);
+        }
+
+        for (size_t i = 0; i < chainLength; ++i) {
+            u64 key = i * capacity;
+            STD_INSIST(ht.find(key) == &values[i]);
+        }
+
+        for (size_t i = 0; i < chainLength; i += 3) {
+            u64 key = i * capacity;
+            ht.erase(key);
+        }
+
+        for (size_t i = 0; i < chainLength; ++i) {
+            u64 key = i * capacity;
+            void* result = ht.find(key);
+            if (i % 3 == 0) {
+                STD_INSIST(result == nullptr);
+            } else {
+                STD_INSIST(result == &values[i]);
+            }
+        }
+
+        for (size_t i = 0; i < chainLength; i += 3) {
+            u64 key = i * capacity;
+            ht.set(key, &values[i]);
+        }
+
+        for (size_t i = 0; i < chainLength; ++i) {
+            u64 key = i * capacity;
+            STD_INSIST(ht.find(key) == &values[i]);
+        }
+    }
+
+    STD_TEST(StressTestHeavyLoad) {
+        HashTable ht;
+        PCG32 rng(0xFEEDBEEF);
+
+        const size_t keyRange = 2000;
+        const size_t operations = 20000;
+        int values[keyRange];
+
+        for (size_t i = 0; i < keyRange; ++i) {
+            values[i] = i;
+        }
+
+        for (size_t op = 0; op < operations; ++op) {
+            u32 choice = rng.uniformBiased(100);
+            u64 key = rng.uniformBiased(keyRange) + 1;
+            size_t idx = key - 1;
+
+            if (choice < 50) {
+                ht.set(key, &values[idx]);
+            } else if (choice < 80) {
+                ht.find(key);
+            } else if (choice < 95) {
+                ht.erase(key);
+            } else {
+                ht.compactify();
+            }
+        }
+
+        for (size_t verify = 0; verify < 1000; ++verify) {
+            u64 key = rng.uniformBiased(keyRange) + 1;
+            ht.find(key);
+        }
+    }
 }
