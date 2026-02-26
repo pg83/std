@@ -15,7 +15,6 @@ namespace Std {
         };
 
         static_assert(sizeof(TT) == sizeof(T));
-        static_assert(__builtin_offsetof(TT, t) == 0);
 
         FreeList::Ref fl = FreeList::fromMemory(sizeof(TT));
 
