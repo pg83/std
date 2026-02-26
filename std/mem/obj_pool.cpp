@@ -19,7 +19,7 @@ namespace {
     };
 
     struct Pool: public Base {
-        u8 buf[256 - sizeof(Base)];
+        alignas(max_align_t) u8 buf[256 - sizeof(Base)];
 
         inline Pool() noexcept
             : Base(buf, sizeof(buf))
