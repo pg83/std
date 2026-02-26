@@ -122,10 +122,10 @@ void* HashTable::set(u64 key, void* value) {
         rehash();
     }
 
-    return (setNoRehash(key, value), res);
+    return (addNoRehash(key, value), res);
 }
 
-void HashTable::setNoRehash(u64 key, void* value) {
+void HashTable::addNoRehash(u64 key, void* value) {
     auto r = erange(buf);
     auto c = r.length();
 
@@ -139,24 +139,6 @@ void HashTable::setNoRehash(u64 key, void* value) {
             buf.seekRelative(1);
 
             return;
-        }
-    }
-}
-
-void HashTable::addNoRehash(u64 key, void* value) {
-    auto r = erange(buf);
-    auto c = r.length();
-
-    for (auto i = hash(key, c);; i = (i + 1) % c) {
-        auto& el = r.b[i];
-
-        if (!el.filled()) {
-                el.key = key;
-                el.value = value;
-
-                buf.seekRelative(1);
-
-                return;
         }
     }
 }
