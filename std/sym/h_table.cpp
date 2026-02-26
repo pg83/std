@@ -46,7 +46,7 @@ namespace {
 
 void HashTable::rehash() {
     // 1.5 * 0.7 == 1.05 > 1
-    rehashImpl(erange(buf).length() * 1.5);
+    rehashImpl(capacity() * 1.5);
 }
 
 void HashTable::rehashImpl(size_t initial) {
