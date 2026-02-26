@@ -990,13 +990,18 @@ STD_TEST_SUITE(HashTable) {
             size_t idx = key - 1;
 
             if (op < 40) {
-                ht.set(key, &values[idx]);
+                ctx.output() << StringView(u8"set ") << key << endL;
+                auto prev = ht.set(key, &values[idx]);
                 expectedValues[idx] = &values[idx];
                 if (!shouldExist[idx]) {
+                    STD_INSIST(!prev);
                     shouldExist[idx] = true;
                     expectedSize++;
+                } else {
+                    STD_INSIST(prev);
                 }
             } else if (op < 70) {
+                ctx.output() << StringView(u8"find ") << key << endL;
                 void* result = ht.find(key);
                 if (shouldExist[idx]) {
                     STD_INSIST(result == expectedValues[idx]);
@@ -1004,6 +1009,7 @@ STD_TEST_SUITE(HashTable) {
                     STD_INSIST(result == nullptr);
                 }
             } else if (op < 90) {
+                ctx.output() << StringView(u8"erase ") << key << endL;
                 ht.erase(key);
                 if (shouldExist[idx]) {
                     shouldExist[idx] = false;
@@ -1012,12 +1018,17 @@ STD_TEST_SUITE(HashTable) {
                 }
             } else {
                 if (shouldExist[idx]) {
+                    ctx.output() << StringView(u8"set 2 ") << key << endL;
                     size_t newIdx = (idx + keyRange + iter) % (keyRange * 2);
-                    ht.set(key, &values[newIdx]);
+                    STD_INSIST(ht.set(key, &values[newIdx]));
                     expectedValues[idx] = &values[newIdx];
                 }
             }
-            ctx.output() << ht.size() << StringView(u8" ") << expectedSize << endL;
+            size_t cnt = 0;
+            ht.visit([&](auto x) {
+                ++cnt;
+            });
+            ctx.output() << ht.size() << StringView(u8" ") << expectedSize << StringView(u8" ") << cnt << StringView(u8" ") << ht.capacity() << endL;
             STD_INSIST(ht.size() == expectedSize);
         }
 

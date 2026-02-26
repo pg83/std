@@ -8,7 +8,7 @@
 #include <std/alg/exchange.h>
 
 using namespace Std;
-
+#include <stdlib.h>
 namespace {
     struct Entry {
         u64 key;
