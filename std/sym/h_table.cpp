@@ -130,9 +130,7 @@ void HashTable::addNoRehash(u64 key, void* value) {
     auto c = r.length();
 
     for (auto i = hash(key, c);; i = (i + 1) % c) {
-        auto& el = r.b[i];
-
-        if (!el.used()) {
+        if (auto& el = r.b[i]; !el.used()) {
             el.key = key;
             el.value = value;
 
