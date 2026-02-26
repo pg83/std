@@ -54,7 +54,7 @@ void HashTable::rehashImpl(size_t initial) {
 
     for (const auto& c : erange(buf)) {
         if (c.used()) {
-            next.setNoRehash(c.key, c.value);
+            next.addNoRehash(c.key, c.value);
         }
     }
 
@@ -149,6 +149,24 @@ void* HashTable::setNoRehash(u64 key, void* value) {
 
                 return nullptr;
             }
+        }
+    }
+}
+
+void HashTable::addNoRehash(u64 key, void* value) {
+    auto r = erange(buf);
+    auto c = r.length();
+
+    for (auto i = hash(key, c);; i = (i + 1) % c) {
+        auto& el = r.b[i];
+
+        if (!el.filled()) {
+                el.key = key;
+                el.value = value;
+
+                buf.seekRelative(1);
+
+                return;
         }
     }
 }

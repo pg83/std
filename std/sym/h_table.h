@@ -11,6 +11,7 @@ namespace Std {
         void rehash();
         void visitImpl(VisitorFace&& v);
         void rehashImpl(size_t initial);
+        void addNoRehash(u64 key, void* value);
         void* setNoRehash(u64 key, void* value);
         void* findEntryPtr(u64 key) const noexcept;
 
