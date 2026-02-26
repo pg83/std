@@ -22,11 +22,8 @@ OutBuf::~OutBuf() {
 }
 
 OutBuf::OutBuf(Output& out) noexcept
-    : out_(&out)
+    : OutBuf(out, out.hint(1 << 16))
 {
-    if (!out.hint(&chunk)) {
-        chunk = 1 << 16;
-    }
 }
 
 OutBuf::OutBuf(Output& out, size_t chunkSize) noexcept

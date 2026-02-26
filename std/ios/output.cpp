@@ -109,3 +109,11 @@ void Output::recvFromZ(ZeroCopyInput& in) {
         in.commit(writeP(chunk, len));
     }
 }
+
+size_t Output::hint(size_t def) const noexcept {
+    if (auto h = hint(); h) {
+        return h;
+    }
+
+    return def;
+}
