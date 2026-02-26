@@ -124,6 +124,13 @@ void* Buffer::imbueMe(size_t* len) {
     return (growDelta(*len), *len = left(), (void*)mutCurrent());
 }
 
+void Buffer::setCapacity(size_t cap) noexcept {
+    if (header()->size) {
+        STD_ASSERT(header()->size >= cap);
+        header()->size = cap;
+    }
+}
+
 char* Buffer::cStr() {
     growDelta(1);
     *(u8*)mutCurrent() = 0;

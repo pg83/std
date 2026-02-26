@@ -119,6 +119,7 @@ namespace Std {
 
         void shrinkToFit();
         void grow(size_t size);
+        void setCapacity(size_t cap) noexcept;
         void append(const void* data, size_t len);
 
         inline void growDelta(size_t len) {

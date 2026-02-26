@@ -10,9 +10,7 @@ InBuf::~InBuf() {
 }
 
 InBuf::InBuf(Input& in) noexcept
-    : in_(&in)
-    , buf_(in.hint(1 << 16))
-    , pos(0)
+    : InBuf(in, in.hint(1 << 16))
 {
 }
 
@@ -21,6 +19,7 @@ InBuf::InBuf(Input& in, size_t chunkSize) noexcept
     , buf_(chunkSize)
     , pos(0)
 {
+    buf_.setCapacity(chunkSize);
 }
 
 InBuf::InBuf() noexcept
