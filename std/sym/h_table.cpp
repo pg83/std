@@ -5,6 +5,7 @@
 #include <std/alg/range.h>
 #include <std/alg/minmax.h>
 #include <std/dbg/assert.h>
+#include <std/alg/exchange.h>
 
 using namespace Std;
 
@@ -17,8 +18,8 @@ namespace {
             return value;
         }
 
-        inline void erase() noexcept {
-            value = (void*)1;
+        inline auto erase() noexcept {
+            return exchange(value, (void*)1);
         }
 
         inline bool erased() const noexcept {
@@ -94,12 +95,9 @@ void* HashTable::findEntryPtr(u64 key) const noexcept {
 
 void* HashTable::erase(u64 key) noexcept {
     if (auto el = (Entry*)findEntryPtr(key); el) {
-        auto res = el->value;
-
-        el->erase();
         buf.seekNegative(1);
 
-        return res;
+        return el->erase();
     }
 
     return nullptr;
