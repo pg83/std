@@ -10,7 +10,6 @@
 #include <std/map/treap.h>
 #include <std/lib/vector.h>
 #include <std/str/builder.h>
-#include <std/lib/singleton.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -172,7 +171,9 @@ namespace {
         }
 
         static inline auto& instance() noexcept {
-            return singleton<Tests>();
+            static auto res = new Tests();
+
+            return *res;
         }
 
         static void panicHandler1() {
