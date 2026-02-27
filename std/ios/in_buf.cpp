@@ -19,7 +19,7 @@ InBuf::InBuf(Input& in, size_t chunkSize) noexcept
     , buf(chunkSize)
     , pos(0)
 {
-    buf.setCapacity(chunkSize);
+    // buf.setCapacity(chunkSize);
 }
 
 InBuf::InBuf() noexcept
