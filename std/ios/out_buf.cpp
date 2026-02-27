@@ -22,7 +22,7 @@ OutBuf::~OutBuf() {
 }
 
 OutBuf::OutBuf(Output& out) noexcept
-    : OutBuf(out, out.hint(1 << 16))
+    : OutBuf(out, out.hint(1 << 14))
 {
 }
 

@@ -24,7 +24,7 @@ void FDRegular::flushImpl() {
 }
 
 size_t FDRegular::hintImpl() const noexcept {
-    return 1 << 16;
+    return 1 << 14;
 }
 
 FDRegular::FDRegular(FD& fd) noexcept

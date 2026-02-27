@@ -353,7 +353,7 @@ STD_TEST_SUITE(InBufHint) {
         MemoryInput slave(data, 4);
         InBuf buf(slave);
         size_t hint = buf.hint();
-        STD_INSIST(hint >= (1 << 16));
+        STD_INSIST(hint >= (1 << 14));
     }
 
     STD_TEST(CustomHint) {

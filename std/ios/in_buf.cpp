@@ -10,7 +10,7 @@ InBuf::~InBuf() {
 }
 
 InBuf::InBuf(Input& in) noexcept
-    : InBuf(in, in.hint(1 << 16))
+    : InBuf(in, in.hint(1 << 14))
 {
 }
 

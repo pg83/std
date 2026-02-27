@@ -12,5 +12,5 @@ FDInput::~FDInput() noexcept {
 }
 
 size_t FDInput::hintImpl() const noexcept {
-    return 4096;
+    return 1 << 14;
 }

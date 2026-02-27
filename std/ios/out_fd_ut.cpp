@@ -236,7 +236,7 @@ STD_TEST_SUITE(FDRegular) {
         size_t hintSize = 0;
         bool hasHint = fdRegular.hint(&hintSize);
         STD_INSIST(hasHint);
-        STD_INSIST(hintSize == (1 << 16));
+        STD_INSIST(hintSize == (1 << 14));
 
         close(fd);
     }
