@@ -8,7 +8,7 @@
 namespace Std {
     class InBuf: public ZeroCopyInput {
         Input* in_;
-        Buffer buf_;
+        Buffer buf;
         size_t pos;
 
         InBuf() noexcept;

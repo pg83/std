@@ -16,10 +16,10 @@ InBuf::InBuf(Input& in) noexcept
 
 InBuf::InBuf(Input& in, size_t chunkSize) noexcept
     : in_(&in)
-    , buf_(chunkSize)
+    , buf(chunkSize)
     , pos(0)
 {
-    buf_.setCapacity(chunkSize);
+    buf.setCapacity(chunkSize);
 }
 
 InBuf::InBuf() noexcept
@@ -29,24 +29,24 @@ InBuf::InBuf() noexcept
 }
 
 size_t InBuf::hintImpl() const noexcept {
-    return buf_.capacity();
+    return buf.capacity();
 }
 
 size_t InBuf::nextImpl(const void** ptr) {
-    if (pos >= buf_.used()) {
-        buf_.seekAbsolute(in_->read(buf_.mutData(), buf_.capacity()));
+    if (pos >= buf.used()) {
+        buf.seekAbsolute(in_->read(buf.mutData(), buf.capacity()));
         pos = 0;
     }
 
-    return (*ptr = (const u8*)buf_.data() + pos, buf_.used() - pos);
+    return (*ptr = (const u8*)buf.data() + pos, buf.used() - pos);
 }
 
 void InBuf::commitImpl(size_t len) noexcept {
     pos += len;
 }
 
-void InBuf::xchg(InBuf& buf) noexcept {
-    ::Std::xchg(buf_, buf.buf_);
-    ::Std::xchg(in_, buf.in_);
-    ::Std::xchg(pos, buf.pos);
+void InBuf::xchg(InBuf& r) noexcept {
+    ::Std::xchg(buf, r.buf);
+    ::Std::xchg(in_, r.in_);
+    ::Std::xchg(pos, r.pos);
 }

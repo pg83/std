@@ -4,8 +4,8 @@
 #include "embed.h"
 #include "free_list.h"
 
-#include <std/alg/destruct.h>
 #include <std/typ/support.h>
+#include <std/alg/destruct.h>
 
 namespace Std {
     template <typename T>
