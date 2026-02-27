@@ -33,9 +33,14 @@ bool ZeroCopyInput::readLine(Buffer& buf) {
 
 bool ZeroCopyInput::readTo(Buffer& buf, u8 delim) {
     const void* chunk;
-    bool hasData = false;
 
-    while (auto len = next(&chunk)) {
+    size_t len = next(&chunk);
+
+    if (!len) {
+        return false;
+    }
+
+    do {
         StringView part((const u8*)chunk, len);
 
         if (auto pos = part.memChr(delim); pos) {
@@ -48,9 +53,8 @@ bool ZeroCopyInput::readTo(Buffer& buf, u8 delim) {
         } else {
             buf.append(part.begin(), part.length());
             commit(part.length());
-            hasData = true;
         }
-    }
+    } while (len = next(&chunk));
 
-    return hasData;
+    return true;
 }
