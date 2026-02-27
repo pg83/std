@@ -17,8 +17,8 @@ namespace Std {
     public:
         ~ZeroCopyInput() noexcept override;
 
-        void readLine(Buffer& buf);
-        void readTo(Buffer& buf, u8 delim);
+        bool readLine(Buffer& buf);
+        bool readTo(Buffer& buf, u8 delim);
 
         inline size_t next(const void** chunk) {
             return nextImpl(chunk);

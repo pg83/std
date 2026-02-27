@@ -27,12 +27,13 @@ void ZeroCopyInput::sendTo(Output& out) {
     out.recvFromZ(*this);
 }
 
-void ZeroCopyInput::readLine(Buffer& buf) {
-    readTo(buf, u8'\n');
+bool ZeroCopyInput::readLine(Buffer& buf) {
+    return readTo(buf, u8'\n');
 }
 
-void ZeroCopyInput::readTo(Buffer& buf, u8 delim) {
+bool ZeroCopyInput::readTo(Buffer& buf, u8 delim) {
     const void* chunk;
+    bool hasData = false;
 
     while (auto len = next(&chunk)) {
         StringView part((const u8*)chunk, len);
@@ -43,10 +44,13 @@ void ZeroCopyInput::readTo(Buffer& buf, u8 delim) {
             buf.append(line.begin(), line.length());
             commit(line.length() + 1);
 
-            return;
+            return true;
         } else {
             buf.append(part.begin(), part.length());
             commit(part.length());
+            hasData = true;
         }
     }
+
+    return hasData;
 }

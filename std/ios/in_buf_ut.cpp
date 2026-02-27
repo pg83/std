@@ -178,9 +178,10 @@ STD_TEST_SUITE(InBufReadLine) {
         MemoryInput slave(data, 6);
         InBuf buf(slave);
         Buffer line;
-        buf.readLine(line);
+        bool hasData = buf.readLine(line);
         STD_INSIST(line.length() == 5);
         STD_INSIST(memcmp(line.data(), "hello", 5) == 0);
+        STD_INSIST(hasData);
     }
 
     STD_TEST(MultipleLines) {
@@ -188,15 +189,18 @@ STD_TEST_SUITE(InBufReadLine) {
         MemoryInput slave(data, 18);
         InBuf buf(slave);
         Buffer buf1, buf2, buf3;
-        buf.readLine(buf1);
-        buf.readLine(buf2);
-        buf.readLine(buf3);
+        bool hasData1 = buf.readLine(buf1);
+        bool hasData2 = buf.readLine(buf2);
+        bool hasData3 = buf.readLine(buf3);
         STD_INSIST(buf1.length() == 5);
         STD_INSIST(memcmp(buf1.data(), "first", 5) == 0);
+        STD_INSIST(hasData1);
         STD_INSIST(buf2.length() == 6);
         STD_INSIST(memcmp(buf2.data(), "second", 6) == 0);
+        STD_INSIST(hasData2);
         STD_INSIST(buf3.length() == 5);
         STD_INSIST(memcmp(buf3.data(), "third", 5) == 0);
+        STD_INSIST(hasData3);
     }
 
     STD_TEST(EmptyLine) {
@@ -204,8 +208,9 @@ STD_TEST_SUITE(InBufReadLine) {
         MemoryInput slave(data, 1);
         InBuf buf(slave);
         Buffer line;
-        buf.readLine(line);
+        bool hasData = buf.readLine(line);
         STD_INSIST(line.empty());
+        STD_INSIST(hasData);
     }
 }
 
