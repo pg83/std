@@ -49,7 +49,7 @@ struct HashTable::Impl {
         return nullptr;
     }
 
-    void* setNoRehash(u64 key, void* value) {
+    inline void* setNoRehash(u64 key, void* value) {
         if (auto node = findNode(key); node) {
             return exchange(node->value, value);
         }
@@ -67,7 +67,7 @@ struct HashTable::Impl {
         return nullptr;
     }
 
-    void* erase(u64 key) noexcept {
+    inline void* erase(u64 key) noexcept {
         for (auto ptr = bucketFor(key); *ptr; ptr = &(*ptr)->next) {
             auto node = *ptr;
 
