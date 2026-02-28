@@ -22,8 +22,8 @@ namespace {
 }
 
 struct HashTable::Impl {
+    ObjList<Node> np;
     Vector<Node*> buckets;
-    ObjList<Node> nodePool;
     size_t count;
 
     inline Impl(size_t initialCapacity)
@@ -56,7 +56,7 @@ struct HashTable::Impl {
 
         auto b = bucketFor(key);
 
-        *b = nodePool.make(Node{
+        *b = np.make(Node{
             .value = value,
             .next = *b,
             .key = key,
@@ -75,7 +75,7 @@ struct HashTable::Impl {
                 void* value = node->value;
 
                 *nodePtr = node->next;
-                nodePool.release(node);
+                np.release(node);
                 --count;
 
                 return value;
