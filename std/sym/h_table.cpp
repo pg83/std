@@ -51,6 +51,10 @@ struct HashTable::Impl {
             return exchange(node->value, value);
         }
 
+        return (addNoRehash(key, value), nullptr);
+    }
+
+    inline void addNoRehash(u64 key, void* value) {
         auto b = bucketFor(key);
 
         *b = np.make(Node{
@@ -60,8 +64,6 @@ struct HashTable::Impl {
         });
 
         ++count;
-
-        return nullptr;
     }
 
     inline void* erase(u64 key) noexcept {
@@ -125,7 +127,7 @@ void HashTable::rehash(size_t len) {
     HashTable next(len);
 
     impl->visit([&](auto node) {
-        next.setNoRehash(node->key, node->value);
+        next.impl->addNoRehash(node->key, node->value);
     });
 
     next.xchg(*this);
