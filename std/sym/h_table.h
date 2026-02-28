@@ -10,7 +10,6 @@ namespace Std {
 
         void rehash(size_t len);
         void visitImpl(VisitorFace&& v);
-        void* setNoRehash(u64 key, void* value);
 
     public:
         HashTable(size_t initial);

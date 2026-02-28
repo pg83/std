@@ -133,16 +133,12 @@ void HashTable::rehash(size_t len) {
     next.xchg(*this);
 }
 
-void* HashTable::setNoRehash(u64 key, void* value) {
-    return impl->setNoRehash(key, value);
-}
-
 void* HashTable::set(u64 key, void* value) {
     if (size() >= capacity() * 0.7) {
         rehash(capacity() * 1.5);
     }
 
-    return setNoRehash(key, value);
+    return impl->setNoRehash(key, value);
 }
 
 void* HashTable::erase(u64 key) noexcept {
