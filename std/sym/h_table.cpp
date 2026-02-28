@@ -2,6 +2,7 @@
 
 #include <std/alg/xchg.h>
 #include <std/alg/minmax.h>
+#include <std/alg/exchange.h>
 #include <std/dbg/assert.h>
 #include <std/lib/vector.h>
 #include <std/mem/obj_list.h>
@@ -36,36 +37,37 @@ struct HashTable::Impl {
 
     Node* findNode(u64 key) const noexcept {
         size_t idx = hash(key, buckets.length());
-        Node* node = buckets[idx];
-        while (node) {
+
+        for (Node* node = buckets[idx]; node; node = node->next) {
             if (node->hash == key) {
                 return node;
             }
-            node = node->next;
         }
+
         return nullptr;
     }
 
     void* find(u64 key) const noexcept {
-        Node* node = findNode(key);
+        auto node = findNode(key);
+
         return node ? node->value : nullptr;
     }
 
     void* set(u64 key, void* value) {
-        Node* node = findNode(key);
+        auto node = findNode(key);
 
         if (node) {
-            void* oldValue = node->value;
-            node->value = value;
-            return oldValue;
+            return exchange(node->value, value);
         }
 
         size_t idx = hash(key, buckets.length());
         Node* newNode = nodePool.make();
+
         newNode->hash = key;
         newNode->value = value;
         newNode->next = buckets.mut(idx);
         buckets.mut(idx) = newNode;
+
         ++count;
 
         return nullptr;
@@ -77,13 +79,18 @@ struct HashTable::Impl {
 
         while (*nodePtr) {
             Node* node = *nodePtr;
+
             if (node->hash == key) {
                 void* value = node->value;
+
                 *nodePtr = node->next;
                 nodePool.release(node);
+
                 --count;
+
                 return value;
             }
+
             nodePtr = &node->next;
         }
 
@@ -93,30 +100,25 @@ struct HashTable::Impl {
     void rehash(size_t newCapacity) {
         Vector<Node*> oldBuckets;
 
-        oldBuckets.xchg(buckets);
+        Std::xchg(oldBuckets, buckets);
 
         for (size_t i = 0; i < newCapacity; ++i) {
             buckets.pushBack(nullptr);
         }
 
         for (size_t i = 0; i < oldBuckets.length(); ++i) {
-            Node* node = oldBuckets[i];
-            while (node) {
-                Node* next = node->next;
+            for (Node* node = oldBuckets[i], *next; node; node = next) {
+                next = node->next;
                 size_t idx = hash(node->hash, buckets.length());
-                node->next = buckets.mut(idx);
-                buckets.mut(idx) = node;
-                node = next;
+                node->next = exchange(buckets.mut(idx), node);
             }
         }
     }
 
     void visit(VisitorFace& v) {
         for (size_t i = 0; i < buckets.length(); ++i) {
-            Node* node = buckets[i];
-            while (node) {
+            for (Node* node = buckets[i]; node; node = node->next) {
                 v.visit(&node->value);
-                node = node->next;
             }
         }
     }
