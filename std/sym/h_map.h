@@ -55,9 +55,5 @@ namespace Std {
                 f(**(T**)el);
             });
         }
-
-        inline void compactify() {
-            st.compactify();
-        }
     };
 }

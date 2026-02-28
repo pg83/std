@@ -840,129 +840,6 @@ STD_TEST_SUITE(HashTable) {
         delete[] values;
     }
 
-    STD_TEST(CompactifyWithSizeInvariants) {
-        HashTable ht;
-
-        const size_t totalCount = 200;
-        int* values = new int[totalCount];
-        for (size_t i = 0; i < totalCount; ++i) {
-            values[i] = i * 7;
-        }
-
-        for (size_t i = 0; i < totalCount; ++i) {
-            size_t sizeBefore = ht.size();
-            ht.set(i + 1, &values[i]);
-            STD_INSIST(ht.size() == sizeBefore + 1);
-        }
-
-        STD_INSIST(ht.size() == totalCount);
-
-        for (size_t i = 0; i < totalCount; i += 3) {
-            size_t sizeBefore = ht.size();
-            ht.erase(i + 1);
-            STD_INSIST(ht.size() == sizeBefore - 1);
-        }
-
-        size_t expectedSize = totalCount - (totalCount + 2) / 3;
-        STD_INSIST(ht.size() == expectedSize);
-
-        size_t sizeBeforeCompactify = ht.size();
-        size_t capacityBeforeCompactify = ht.capacity();
-        ht.compactify();
-        STD_INSIST(ht.size() == sizeBeforeCompactify);
-        STD_INSIST(ht.capacity() == capacityBeforeCompactify);
-
-        for (size_t i = 0; i < totalCount; ++i) {
-            void* found = ht.find(i + 1);
-            if (i % 3 == 0) {
-                STD_INSIST(found == nullptr);
-            } else {
-                STD_INSIST(found == &values[i]);
-            }
-        }
-
-        for (size_t i = 0; i < totalCount; i += 2) {
-            if (i % 3 == 0) {
-                size_t sizeBefore = ht.size();
-                ht.set(i + 1, &values[i]);
-                STD_INSIST(ht.size() == sizeBefore + 1);
-            }
-        }
-
-        for (size_t i = totalCount; i < totalCount + 50; ++i) {
-            values[i % totalCount] = i * 11;
-            size_t sizeBefore = ht.size();
-            ht.set(i + 1, &values[i % totalCount]);
-            STD_INSIST(ht.size() == sizeBefore + 1);
-        }
-
-        size_t sizeBeforeSecondCompactify = ht.size();
-        ht.compactify();
-        STD_INSIST(ht.size() == sizeBeforeSecondCompactify);
-
-        for (size_t i = 0; i < totalCount; i += 5) {
-            void* foundBefore = ht.find(i + 1);
-            if (foundBefore != nullptr) {
-                size_t sizeBefore = ht.size();
-                ht.erase(i + 1);
-                STD_INSIST(ht.size() == sizeBefore - 1);
-                STD_INSIST(ht.find(i + 1) == nullptr);
-            }
-        }
-
-        PCG32 rng(12345);
-        for (size_t iteration = 0; iteration < 100; ++iteration) {
-            u64 key = rng.uniformBiased(totalCount * 2) + 1;
-            void* existing = ht.find(key);
-
-            if (existing != nullptr) {
-                size_t sizeBefore = ht.size();
-                ht.erase(key);
-                STD_INSIST(ht.size() == sizeBefore - 1);
-                STD_INSIST(ht.find(key) == nullptr);
-
-                size_t sizeBeforeReinsert = ht.size();
-                ht.set(key, &values[key % totalCount]);
-                STD_INSIST(ht.size() == sizeBeforeReinsert + 1);
-            } else {
-                size_t sizeBefore = ht.size();
-                ht.set(key, &values[key % totalCount]);
-                STD_INSIST(ht.size() == sizeBefore + 1);
-
-                size_t sizeBeforeUpdate = ht.size();
-                ht.set(key, &values[(key + 1) % totalCount]);
-                STD_INSIST(ht.size() == sizeBeforeUpdate);
-            }
-        }
-
-        size_t sizeBeforeFinalCompactify = ht.size();
-        ht.compactify();
-        STD_INSIST(ht.size() == sizeBeforeFinalCompactify);
-
-        size_t count = 0;
-        ht.visit([&count](void** el) {
-            count++;
-        });
-        STD_INSIST(count == ht.size());
-
-        for (size_t i = 0; i < 50; ++i) {
-            u64 key = rng.uniformBiased(totalCount * 3) + 1;
-            void* found = ht.find(key);
-
-            if (found != nullptr) {
-                size_t sizeBefore = ht.size();
-                ht.erase(key);
-                STD_INSIST(ht.size() == sizeBefore - 1);
-            } else {
-                size_t sizeBefore = ht.size();
-                ht.erase(key);
-                STD_INSIST(ht.size() == sizeBefore);
-            }
-        }
-
-        delete[] values;
-    }
-
     STD_TEST(StressTestRandomOperations) {
         HashTable ht;
         PCG32 rng(0xDEADBEEF);
@@ -1181,45 +1058,6 @@ STD_TEST_SUITE(HashTable) {
         }
     }
 
-    STD_TEST(StressTestCompactifyUnderLoad) {
-        HashTable ht;
-        PCG32 rng(99999);
-
-        const size_t keyRange = 1000;
-        int values[keyRange];
-        bool present[keyRange];
-
-        for (size_t i = 0; i < keyRange; ++i) {
-            values[i] = i;
-            present[i] = false;
-        }
-
-        for (size_t round = 0; round < 20; ++round) {
-            for (size_t i = 0; i < 300; ++i) {
-                u64 key = rng.uniformBiased(keyRange) + 1;
-                ht.set(key, &values[key - 1]);
-                present[key - 1] = true;
-            }
-
-            for (size_t i = 0; i < 150; ++i) {
-                u64 key = rng.uniformBiased(keyRange) + 1;
-                ht.erase(key);
-                present[key - 1] = false;
-            }
-
-            ht.compactify();
-
-            for (size_t i = 0; i < keyRange; ++i) {
-                void* result = ht.find(i + 1);
-                if (present[i]) {
-                    STD_INSIST(result == &values[i]);
-                } else {
-                    STD_INSIST(result == nullptr);
-                }
-            }
-        }
-    }
-
     STD_TEST(StressTestUpdatePattern) {
         HashTable ht;
         PCG32 rng(0xCAFEBABE);
@@ -1430,10 +1268,6 @@ STD_TEST_SUITE(HashTable) {
                 ht.find(key);
             }
 
-            if (phase % 2 == 0) {
-                ht.compactify();
-            }
-
             for (size_t i = 0; i < keyRange; i += 3) {
                 ht.erase(i + 1);
             }
@@ -1543,7 +1377,7 @@ STD_TEST_SUITE(HashTable) {
             } else if (choice < 95) {
                 ht.erase(key);
             } else {
-                ht.compactify();
+                ht.erase(key);
             }
         }
 

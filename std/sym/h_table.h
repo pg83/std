@@ -28,9 +28,6 @@ namespace Std {
         void* erase(u64 key) noexcept;
         size_t size() const noexcept;
 
-        inline void compactify() {
-        }
-
         template <typename V>
         inline void visit(V v) {
             visitImpl(makeVisitor([v](void* ptr) {

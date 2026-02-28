@@ -19,10 +19,6 @@ namespace Std {
             htable.visit(v);
         }
 
-        inline void compactify() {
-            htable.compactify();
-        }
-
         void* set(StringView key, void* v);
         void* find(StringView key) const noexcept;
     };
