@@ -64,24 +64,18 @@ struct HashTable::Impl {
     }
 
     void* erase(u64 key) noexcept {
-        size_t idx = hash(key, buckets.length());
-        Node** nodePtr = &buckets.mut(idx);
-
-        while (*nodePtr) {
-            Node* node = *nodePtr;
+        for (auto nodePtr = &buckets.mut(hash(key, buckets.length())); *nodePtr; nodePtr = &(*nodePtr)->next) {
+            auto node = *nodePtr;
 
             if (node->key == key) {
                 void* value = node->value;
 
                 *nodePtr = node->next;
                 nodePool.release(node);
-
                 --count;
 
                 return value;
             }
-
-            nodePtr = &node->next;
         }
 
         return nullptr;
