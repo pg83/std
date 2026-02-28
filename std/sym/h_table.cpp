@@ -35,8 +35,12 @@ struct HashTable::Impl {
         }
     }
 
+    inline auto bucketFor(u64 key) const noexcept {
+        return (Node**)&buckets[hash(key, buckets.length())];
+    }
+
     inline Node* findNode(u64 key) const noexcept {
-        for (auto node = buckets[hash(key, buckets.length())]; node; node = node->next) {
+        for (auto node = *bucketFor(key); node; node = node->next) {
             if (node->key == key) {
                 return node;
             }
@@ -50,12 +54,12 @@ struct HashTable::Impl {
             return exchange(node->value, value);
         }
 
-        size_t idx = hash(key, buckets.length());
+        auto b = bucketFor(key);
 
-        buckets.mut(idx) = nodePool.make(Node{
-            .key = key,
+        *b = nodePool.make(Node{
             .value = value,
-            .next = buckets.mut(idx),
+            .next = *b,
+            .key = key,
         });
 
         ++count;
@@ -64,7 +68,7 @@ struct HashTable::Impl {
     }
 
     void* erase(u64 key) noexcept {
-        for (auto nodePtr = &buckets.mut(hash(key, buckets.length())); *nodePtr; nodePtr = &(*nodePtr)->next) {
+        for (auto nodePtr = bucketFor(key); *nodePtr; nodePtr = &(*nodePtr)->next) {
             auto node = *nodePtr;
 
             if (node->key == key) {
