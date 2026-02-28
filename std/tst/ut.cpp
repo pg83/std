@@ -49,14 +49,25 @@ namespace {
 
     struct GetOpt {
         Vector<StringView> includes;
+        Vector<StringView> excludes;
 
         inline GetOpt(Ctx& ctx) noexcept {
             for (int i = 1; i < ctx.argc; ++i) {
-                includes.pushBack(StringView(ctx.argv[i]));
+                StringView arg(ctx.argv[i]);
+
+                if (arg.startsWith(u8"-") && arg.length() > 1) {
+                    excludes.pushBack(StringView(arg.data() + 1, arg.length() - 1));
+                } else {
+                    includes.pushBack(arg);
+                }
             }
         }
 
         inline bool matchesFilter(StringView testName) const noexcept {
+            if (matchesExclude(testName)) {
+                return false;
+            }
+
             if (includes.empty()) {
                 return true;
             }
@@ -65,7 +76,21 @@ namespace {
         }
 
         inline bool matchesFilterStrong(StringView testName) const noexcept {
+            if (matchesExclude(testName)) {
+                return false;
+            }
+
             for (auto prefix : range(includes)) {
+                if (testName.startsWith(prefix)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        inline bool matchesExclude(StringView testName) const noexcept {
+            for (auto prefix : range(excludes)) {
                 if (testName.startsWith(prefix)) {
                     return true;
                 }
