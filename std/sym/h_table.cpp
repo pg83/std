@@ -46,27 +46,21 @@ struct HashTable::Impl {
     }
 
     void* setNoRehash(u64 key, void* value) {
-        auto node = findNode(key);
-
-        if (node) {
+        if (auto node = findNode(key); node) {
             return exchange(node->value, value);
         }
 
         size_t idx = hash(key, buckets.length());
-        Node* newNode = nodePool.make();
 
-        newNode->hash = key;
-        newNode->value = value;
-        newNode->next = buckets.mut(idx);
-        buckets.mut(idx) = newNode;
+        buckets.mut(idx) = nodePool.make(Node{
+            .hash = key,
+            .value = value,
+            .next = buckets.mut(idx),
+        });
 
         ++count;
 
         return nullptr;
-    }
-
-    void* set(u64 key, void* value) {
-        return setNoRehash(key, value);
     }
 
     void* erase(u64 key) noexcept {
@@ -94,7 +88,7 @@ struct HashTable::Impl {
     }
 
     template <typename T>
-    void visit(T t) {
+    inline void visit(T t) {
         for (size_t i = 0; i < buckets.length(); ++i) {
             for (auto node = buckets[i]; node; node = node->next) {
                 t(node);
@@ -143,7 +137,7 @@ void HashTable::rehash(size_t len) {
 }
 
 void* HashTable::setNoRehash(u64 key, void* value) {
-    return impl->set(key, value);
+    return impl->setNoRehash(key, value);
 }
 
 void* HashTable::set(u64 key, void* value) {
