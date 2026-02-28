@@ -1,19 +1,12 @@
 #pragma once
 
 #include <std/sys/types.h>
-#include <std/lib/buffer.h>
 #include <std/lib/visitor.h>
 
 namespace Std {
     class HashTable {
-        Buffer buf;
-
-        void rehash();
-        void visitImpl(VisitorFace&& v);
-        void rehashImpl(size_t initial);
-        void addNoRehash(u64 key, void* value) noexcept;
-
-        void* findEntryPtr(u64 key) const noexcept;
+        struct Impl;
+        Impl* impl;
 
     public:
         HashTable(size_t initial);
@@ -25,19 +18,16 @@ namespace Std {
 
         ~HashTable() noexcept;
 
-        inline void xchg(HashTable& t) noexcept {
-            buf.xchg(t.buf);
-        }
-
-        inline size_t size() const noexcept {
-            return buf.used();
-        }
+        void xchg(HashTable& t) noexcept;
+        size_t size() const noexcept;
 
         void* find(u64 key) const noexcept;
         size_t capacity() const noexcept;
         void* set(u64 key, void* value);
         void* erase(u64 key) noexcept;
-        void compactify();
+
+        inline void compactify() {
+        }
 
         template <typename V>
         inline void visit(V v) {
@@ -45,5 +35,8 @@ namespace Std {
                 v((void**)ptr);
             }));
         }
+
+    private:
+        void visitImpl(VisitorFace&& v);
     };
 }

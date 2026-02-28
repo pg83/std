@@ -1,156 +1,166 @@
 #include "h_table.h"
 
-#include <std/sys/crt.h>
 #include <std/alg/xchg.h>
-#include <std/alg/range.h>
 #include <std/alg/minmax.h>
 #include <std/dbg/assert.h>
-#include <std/alg/exchange.h>
+#include <std/lib/vector.h>
+#include <std/mem/obj_list.h>
 
 using namespace Std;
 
 namespace {
-    struct Entry {
-        u64 key;
+    struct Node {
+        u64 hash;
         void* value;
-
-        inline bool filled() const noexcept {
-            return value;
-        }
-
-        inline auto erase() noexcept {
-            return exchange(value, (void*)1);
-        }
-
-        inline bool erased() const noexcept {
-            return value == (void*)1;
-        }
-
-        inline bool used() const noexcept {
-            return ((size_t)value) > 1;
-        }
+        Node* next;
     };
-
-    static inline auto erange(Buffer& b) noexcept {
-        return range((Entry*)b.mutData(), (Entry*)b.mutStorageEnd());
-    }
-
-    static inline auto erange(const Buffer& b) noexcept {
-        return range((const Entry*)b.data(), (const Entry*)b.storageEnd());
-    }
 
     static inline size_t hash(u64 key, size_t capacity) noexcept {
         return key % capacity;
     }
 }
 
-void HashTable::rehash() {
-    // 1.5 * 0.7 == 1.05 > 1
-    rehashImpl(capacity() * 1.5);
-}
+struct HashTable::Impl {
+    Vector<Node*> buckets;
+    ObjList<Node> nodePool;
+    size_t count;
 
-void HashTable::rehashImpl(size_t initial) {
-    HashTable next(initial);
-
-    for (const auto& c : erange(buf)) {
-        if (c.used()) {
-            next.addNoRehash(c.key, c.value);
+    inline Impl(size_t initialCapacity)
+        : buckets(initialCapacity)
+        , count(0)
+    {
+        for (size_t i = 0; i < initialCapacity; ++i) {
+            buckets.pushBack(nullptr);
         }
     }
 
-    next.xchg(*this);
-}
+    Node* findNode(u64 key) const noexcept {
+        size_t idx = hash(key, buckets.length());
+        Node* node = buckets[idx];
+        while (node) {
+            if (node->hash == key) {
+                return node;
+            }
+            node = node->next;
+        }
+        return nullptr;
+    }
+
+    void* find(u64 key) const noexcept {
+        Node* node = findNode(key);
+        return node ? node->value : nullptr;
+    }
+
+    void* set(u64 key, void* value) {
+        Node* node = findNode(key);
+
+        if (node) {
+            void* oldValue = node->value;
+            node->value = value;
+            return oldValue;
+        }
+
+        size_t idx = hash(key, buckets.length());
+        Node* newNode = nodePool.make();
+        newNode->hash = key;
+        newNode->value = value;
+        newNode->next = buckets.mut(idx);
+        buckets.mut(idx) = newNode;
+        ++count;
+
+        return nullptr;
+    }
+
+    void* erase(u64 key) noexcept {
+        size_t idx = hash(key, buckets.length());
+        Node** nodePtr = &buckets.mut(idx);
+
+        while (*nodePtr) {
+            Node* node = *nodePtr;
+            if (node->hash == key) {
+                void* value = node->value;
+                *nodePtr = node->next;
+                nodePool.release(node);
+                --count;
+                return value;
+            }
+            nodePtr = &node->next;
+        }
+
+        return nullptr;
+    }
+
+    void rehash(size_t newCapacity) {
+        Vector<Node*> oldBuckets;
+
+        oldBuckets.xchg(buckets);
+
+        for (size_t i = 0; i < newCapacity; ++i) {
+            buckets.pushBack(nullptr);
+        }
+
+        for (size_t i = 0; i < oldBuckets.length(); ++i) {
+            Node* node = oldBuckets[i];
+            while (node) {
+                Node* next = node->next;
+                size_t idx = hash(node->hash, buckets.length());
+                node->next = buckets.mut(idx);
+                buckets.mut(idx) = node;
+                node = next;
+            }
+        }
+    }
+
+    void visit(VisitorFace& v) {
+        for (size_t i = 0; i < buckets.length(); ++i) {
+            Node* node = buckets[i];
+            while (node) {
+                v.visit(&node->value);
+                node = node->next;
+            }
+        }
+    }
+};
 
 HashTable::HashTable(size_t initialCapacity)
-    : buf(max(initialCapacity, (size_t)1) * sizeof(Entry))
+    : impl(new Impl(initialCapacity))
 {
-    memZero(buf.mutData(), buf.mutStorageEnd());
 }
 
 HashTable::~HashTable() noexcept {
+    delete impl;
 }
 
-void* HashTable::findEntryPtr(u64 key) const noexcept {
-    auto r = erange(buf);
-    auto c = r.length();
-
-    for (auto i = hash(key, c);; i = (i + 1) % c) {
-        const auto& el = r.b[i];
-
-        if (!el.filled()) {
-            return nullptr;
-        }
-
-        if (el.key == key) {
-            if (el.erased()) {
-                return nullptr;
-            }
-
-            return (void*)&el;
-        }
-    }
-
-    return nullptr;
+void HashTable::xchg(HashTable& t) noexcept {
+    Std::xchg(impl, t.impl);
 }
 
-void* HashTable::erase(u64 key) noexcept {
-    if (auto el = (Entry*)findEntryPtr(key); el) {
-        buf.seekNegative(1);
-
-        return el->erase();
-    }
-
-    return nullptr;
+size_t HashTable::size() const noexcept {
+    return impl->count;
 }
 
 void* HashTable::find(u64 key) const noexcept {
-    if (auto el = findEntryPtr(key); el) {
-        return ((const Entry*)el)->value;
-    }
-
-    return nullptr;
-}
-
-void* HashTable::set(u64 key, void* value) {
-    STD_ASSERT((size_t)value > 1);
-
-    auto res = erase(key);
-
-    if (size() >= capacity() * 0.7) {
-        rehash();
-    }
-
-    return (addNoRehash(key, value), res);
-}
-
-void HashTable::addNoRehash(u64 key, void* value) noexcept {
-    auto r = erange(buf);
-    auto c = r.length();
-
-    for (auto i = hash(key, c);; i = (i + 1) % c) {
-        if (auto& el = r.b[i]; !el.used()) {
-            el.key = key;
-            el.value = value;
-
-            buf.seekRelative(1);
-
-            return;
-        }
-    }
+    return impl->find(key);
 }
 
 size_t HashTable::capacity() const noexcept {
-    return erange(buf).length();
+    return impl->buckets.length();
+}
+
+void* HashTable::set(u64 key, void* value) {
+    void* result = impl->set(key, value);
+
+    if (impl->count >= impl->buckets.length() * 0.7) {
+        impl->rehash(impl->buckets.length() * 1.5);
+    }
+
+    return result;
+}
+
+void* HashTable::erase(u64 key) noexcept {
+    return impl->erase(key);
 }
 
 void HashTable::visitImpl(VisitorFace&& v) {
-    for (auto& el : erange(buf)) {
-        if (el.used()) {
-            v.visit(&el.value);
-        }
-    }
-}
-
-void HashTable::compactify() {
-    rehashImpl(capacity());
+    impl->visit(v);
 }
