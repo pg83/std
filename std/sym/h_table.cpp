@@ -11,9 +11,9 @@ using namespace Std;
 
 namespace {
     struct Node {
-        Node* next;
         void* value;
-        u64 hash;
+        Node* next;
+        u64 key;
     };
 
     static inline size_t hash(u64 key, size_t capacity) noexcept {
@@ -37,7 +37,7 @@ struct HashTable::Impl {
 
     inline Node* findNode(u64 key) const noexcept {
         for (auto node = buckets[hash(key, buckets.length())]; node; node = node->next) {
-            if (node->hash == key) {
+            if (node->key == key) {
                 return node;
             }
         }
@@ -53,7 +53,7 @@ struct HashTable::Impl {
         size_t idx = hash(key, buckets.length());
 
         buckets.mut(idx) = nodePool.make(Node{
-            .hash = key,
+            .key = key,
             .value = value,
             .next = buckets.mut(idx),
         });
@@ -70,7 +70,7 @@ struct HashTable::Impl {
         while (*nodePtr) {
             Node* node = *nodePtr;
 
-            if (node->hash == key) {
+            if (node->key == key) {
                 void* value = node->value;
 
                 *nodePtr = node->next;
@@ -130,7 +130,7 @@ void HashTable::rehash(size_t len) {
     HashTable next(len);
 
     impl->visit([&](auto node) {
-        next.setNoRehash(node->hash, node->value);
+        next.setNoRehash(node->key, node->value);
     });
 
     next.xchg(*this);
