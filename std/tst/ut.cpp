@@ -27,19 +27,26 @@ namespace {
             func->execute(ctx);
 
             outb << Color::bright(AnsiColor::Green)
-                 << StringView(u8"+ ") << *func
-                 << Color::reset() << endL;
+                 << StringView(u8"+ ")
+                 << *func
+                 << Color::reset()
+                 << endL;
         } catch (const Exc&) {
             outb << Color::bright(AnsiColor::Red)
-                 << StringView(u8"- ") << *func
-                 << Color::reset() << endL;
+                 << StringView(u8"- ")
+                 << *func
+                 << Color::reset()
+                 << endL;
 
             return false;
         } catch (Exception& exc) {
             outb << Color::bright(AnsiColor::Red)
-                 << exc.description() << endL
-                 << StringView(u8"- ") << *func
-                 << Color::reset() << endL;
+                 << exc.description()
+                 << endL
+                 << StringView(u8"- ")
+                 << *func
+                 << Color::reset()
+                 << endL;
 
             return false;
         }
