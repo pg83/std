@@ -137,6 +137,12 @@ char* Buffer::cStr() {
     return (char*)mutData();
 }
 
+void Buffer::zero(size_t len) {
+    grow(len);
+    seekAbsolute(len);
+    memZero(mutData(), mutCurrent());
+}
+
 template <>
 void Std::output<ZeroCopyOutput, Buffer>(ZeroCopyOutput& out, const Buffer& buf) {
     out.write(buf.data(), buf.used());

@@ -129,5 +129,6 @@ namespace Std {
         void* imbueMe(size_t* len);
 
         char* cStr();
+        void zero(size_t len);
     };
 }

@@ -27,12 +27,9 @@ struct HashTable::Impl {
     size_t count;
 
     inline Impl(size_t initialCapacity)
-        : buckets(initialCapacity)
-        , count(0)
+        : count(0)
     {
-        for (size_t i = 0; i < initialCapacity; ++i) {
-            buckets.pushBack(nullptr);
-        }
+        buckets.zero(max(initialCapacity, (size_t)1));
     }
 
     inline auto bucketFor(u64 key) const noexcept {

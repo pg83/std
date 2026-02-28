@@ -115,5 +115,9 @@ namespace Std {
         inline void xchg(Vector& v) noexcept {
             buf_.xchg(v.buf_);
         }
+
+        inline void zero(size_t cnt) {
+            buf_.zero(cnt * sizeof(T));
+        }
     };
 }
