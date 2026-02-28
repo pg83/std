@@ -9,12 +9,13 @@ namespace Std {
         Impl* impl;
 
         void rehash(size_t len);
+        void visitImpl(VisitorFace&& v);
         void* setNoRehash(u64 key, void* value);
 
     public:
         HashTable(size_t initial);
 
-        HashTable()
+        inline HashTable()
             : HashTable(8)
         {
         }
@@ -34,8 +35,5 @@ namespace Std {
                 v((void**)ptr);
             }));
         }
-
-    private:
-        void visitImpl(VisitorFace&& v);
     };
 }

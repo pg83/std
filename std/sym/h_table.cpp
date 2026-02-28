@@ -2,10 +2,10 @@
 
 #include <std/alg/xchg.h>
 #include <std/alg/minmax.h>
-#include <std/alg/exchange.h>
 #include <std/dbg/assert.h>
 #include <std/lib/vector.h>
 #include <std/mem/obj_list.h>
+#include <std/alg/exchange.h>
 
 using namespace Std;
 
@@ -68,13 +68,13 @@ struct HashTable::Impl {
     }
 
     void* erase(u64 key) noexcept {
-        for (auto nodePtr = bucketFor(key); *nodePtr; nodePtr = &(*nodePtr)->next) {
-            auto node = *nodePtr;
+        for (auto ptr = bucketFor(key); *ptr; ptr = &(*ptr)->next) {
+            auto node = *ptr;
 
             if (node->key == key) {
                 void* value = node->value;
 
-                *nodePtr = node->next;
+                *ptr = node->next;
                 np.release(node);
                 --count;
 
