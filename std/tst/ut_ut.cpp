@@ -2,10 +2,12 @@
 
 #include <std/map/map.h>
 #include <std/ios/sys.h>
+#include <std/sym/i_map.h>
 #include <std/ios/output.h>
 #include <std/mem/obj_pool.h>
 
 #include <map>
+#include <unordered_map>
 
 #include <stdlib.h>
 
@@ -63,6 +65,15 @@ STD_TEST_SUITE(UT) {
     STD_TEST(_MapPerf) {
         Map<int, int> m;
         // std::map<int, int> m;
+
+        for (size_t i = 0; i < 20000000; ++i) {
+            m[i] = i;
+        }
+    }
+
+    STD_TEST(_HashPerf) {
+        IntMap<int> m;
+        // std::unordered_map<u64, int> m;
 
         for (size_t i = 0; i < 20000000; ++i) {
             m[i] = i;
