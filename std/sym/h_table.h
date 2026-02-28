@@ -8,6 +8,9 @@ namespace Std {
         struct Impl;
         Impl* impl;
 
+        void rehash(size_t len);
+        void* setNoRehash(u64 key, void* value);
+
     public:
         HashTable(size_t initial);
 
@@ -18,13 +21,12 @@ namespace Std {
 
         ~HashTable() noexcept;
 
-        void xchg(HashTable& t) noexcept;
-        size_t size() const noexcept;
-
         void* find(u64 key) const noexcept;
+        void xchg(HashTable& t) noexcept;
         size_t capacity() const noexcept;
         void* set(u64 key, void* value);
         void* erase(u64 key) noexcept;
+        size_t size() const noexcept;
 
         inline void compactify() {
         }
