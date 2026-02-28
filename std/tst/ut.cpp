@@ -155,27 +155,31 @@ namespace {
             });
 
             outb << Color::bright(AnsiColor::Green)
-                 << StringView(u8"OK: ") << ok
+                 << StringView(u8"OK: ")
+                 << ok
                  << Color::reset();
 
             if (err) {
                 outb << StringView(u8", ")
                      << Color::bright(AnsiColor::Red)
-                     << StringView(u8"ERR: ") << err
+                     << StringView(u8"ERR: ")
+                     << err
                      << Color::reset();
             }
 
             if (skip) {
                 outb << StringView(u8", ")
                      << Color::bright(AnsiColor::Yellow)
-                     << StringView(u8"SKIP: ") << skip
+                     << StringView(u8"SKIP: ")
+                     << skip
                      << Color::reset();
             }
 
             if (mute) {
                 outb << StringView(u8", ")
                      << Color::bright(AnsiColor::Blue)
-                     << StringView(u8"MUTE: ") << mute
+                     << StringView(u8"MUTE: ")
+                     << mute
                      << Color::reset();
             }
 
@@ -213,7 +217,9 @@ namespace {
 
 template <>
 void Std::output<ZeroCopyOutput, TestFunc>(ZeroCopyOutput& buf, const TestFunc& test) {
-    buf << test.suite() << StringView(u8"::") << test.name();
+    buf << test.suite()
+        << StringView(u8"::")
+        << test.name();
 }
 
 void Ctx::run() {
