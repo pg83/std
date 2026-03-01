@@ -1,7 +1,6 @@
 #pragma once
 
 #include "h_map.h"
-#include "h_table.h"
 
 namespace Std {
     struct IntHasher {

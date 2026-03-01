@@ -16,7 +16,9 @@ namespace Std {
         Impl* impl;
 
         void rehash(size_t len);
+        void addNoRehash(Node* node);
         void visitImpl(VisitorFace&& v);
+        Node** bucketFor(u64 key) const noexcept;
 
     public:
         HashTable(size_t initial);
@@ -31,9 +33,9 @@ namespace Std {
         Node* find(u64 key) const noexcept;
         void xchg(HashTable& t) noexcept;
         size_t capacity() const noexcept;
-        Node* insert(Node* node);
         Node* erase(u64 key) noexcept;
         size_t size() const noexcept;
+        Node* insert(Node* node);
 
         template <typename V>
         inline void visit(V v) {
