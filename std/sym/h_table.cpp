@@ -10,7 +10,7 @@
 using namespace Std;
 
 namespace {
-    static inline auto buckets(const Buffer& buf) {
+    static inline auto buckets(const Buffer& buf) noexcept {
         return range((HashTable::Node**)buf.data(), (HashTable::Node**)buf.storageEnd());
     }
 }
