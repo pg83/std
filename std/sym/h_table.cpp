@@ -68,9 +68,7 @@ HashTable::Node* HashTable::insert(Node* nn) {
 
 HashTable::Node* HashTable::erase(u64 key) noexcept {
     for (auto ptr = bucketFor(key); *ptr; ptr = &(*ptr)->next) {
-        auto node = *ptr;
-
-        if (node->key == key) {
+        if (auto node = *ptr; node->key == key) {
             *ptr = node->next;
             buf.seekNegative(1);
 
@@ -84,7 +82,7 @@ HashTable::Node* HashTable::erase(u64 key) noexcept {
 HashTable::Node** HashTable::bucketFor(u64 key) const noexcept {
     auto bb = buckets(buf);
 
-    return (Node**)&bb.b[key % bb.length()];
+    return &bb.b[key % bb.length()];
 }
 
 void HashTable::addNoRehash(Node* nn) {
