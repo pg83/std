@@ -4,25 +4,11 @@
 #include <std/alg/minmax.h>
 #include <std/dbg/assert.h>
 #include <std/lib/vector.h>
-#include <std/mem/obj_list.h>
 #include <std/alg/exchange.h>
 
 using namespace Std;
 
-namespace {
-    struct Node {
-        void* value;
-        Node* next;
-        u64 key;
-    };
-
-    static inline size_t hash(u64 key, size_t capacity) noexcept {
-        return key % capacity;
-    }
-}
-
 struct HashTable::Impl {
-    ObjList<Node> np;
     Vector<Node*> buckets;
     size_t count;
 
@@ -33,7 +19,7 @@ struct HashTable::Impl {
     }
 
     inline auto bucketFor(u64 key) const noexcept {
-        return (Node**)&buckets[hash(key, buckets.length())];
+        return (Node**)&buckets[key % buckets.length()];
     }
 
     inline Node* findNode(u64 key) const noexcept {
@@ -46,38 +32,30 @@ struct HashTable::Impl {
         return nullptr;
     }
 
-    inline void* setNoRehash(u64 key, void* value) {
-        if (auto node = findNode(key); node) {
-            return exchange(node->value, value);
-        }
+    inline Node* insertNoRehash(Node* newNode) {
+        auto res = erase(newNode->key);
 
-        return (addNoRehash(key, value), nullptr);
+        return (addNoRehash(newNode), res);
     }
 
-    inline void addNoRehash(u64 key, void* value) {
-        auto b = bucketFor(key);
+    inline void addNoRehash(Node* newNode) {
+        auto b = bucketFor(newNode->key);
 
-        *b = np.make(Node{
-            .value = value,
-            .next = *b,
-            .key = key,
-        });
+        newNode->next = *b;
+        *b = newNode;
 
         ++count;
     }
 
-    inline void* erase(u64 key) noexcept {
+    inline Node* erase(u64 key) noexcept {
         for (auto ptr = bucketFor(key); *ptr; ptr = &(*ptr)->next) {
             auto node = *ptr;
 
             if (node->key == key) {
-                void* value = node->value;
-
                 *ptr = node->next;
-                np.release(node);
                 --count;
 
-                return value;
+                return node;
             }
         }
 
@@ -87,8 +65,8 @@ struct HashTable::Impl {
     template <typename T>
     inline void visit(T t) {
         for (size_t i = 0; i < buckets.length(); ++i) {
-            for (auto node = buckets[i]; node; node = node->next) {
-                t(node);
+            for (auto node = buckets[i]; node;) {
+                t(exchange(node, node->next));
             }
         }
     }
@@ -111,12 +89,8 @@ size_t HashTable::size() const noexcept {
     return impl->count;
 }
 
-void* HashTable::find(u64 key) const noexcept {
-    if (auto node = impl->findNode(key); node) {
-        return node->value;
-    }
-
-    return nullptr;
+HashTable::Node* HashTable::find(u64 key) const noexcept {
+    return impl->findNode(key);
 }
 
 size_t HashTable::capacity() const noexcept {
@@ -127,26 +101,26 @@ void HashTable::rehash(size_t len) {
     HashTable next(len);
 
     impl->visit([&](auto node) {
-        next.impl->addNoRehash(node->key, node->value);
+        next.impl->addNoRehash(node);
     });
 
     next.xchg(*this);
 }
 
-void* HashTable::set(u64 key, void* value) {
+HashTable::Node* HashTable::insert(Node* newNode) {
     if (size() >= capacity() * 0.7) {
         rehash(capacity() * 1.5);
     }
 
-    return impl->setNoRehash(key, value);
+    return impl->insertNoRehash(newNode);
 }
 
-void* HashTable::erase(u64 key) noexcept {
+HashTable::Node* HashTable::erase(u64 key) noexcept {
     return impl->erase(key);
 }
 
 void HashTable::visitImpl(VisitorFace&& v) {
     impl->visit([&](auto node) {
-        v.visit(&node->value);
+        v.visit(node);
     });
 }

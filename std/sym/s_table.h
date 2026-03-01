@@ -2,24 +2,12 @@
 
 #include "h_table.h"
 
-#include <std/lib/visitor.h>
+#include <std/str/view.h>
 
 namespace Std {
-    class StringView;
-
-    class SymbolTable {
-        HashTable htable;
-
-    public:
-        SymbolTable();
-        ~SymbolTable() noexcept;
-
-        template <typename V>
-        inline void visit(V v) {
-            htable.visit(v);
+    struct SymbolTable: public HashTable {
+        static inline u64 hash(StringView k) noexcept {
+            return k.hash64();
         }
-
-        void* set(StringView key, void* v);
-        void* find(StringView key) const noexcept;
     };
 }

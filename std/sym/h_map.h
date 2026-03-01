@@ -8,31 +8,46 @@
 namespace Std {
     template <typename T, typename K, typename S>
     class HashMap {
-        ObjList<T> ol;
+        struct Node: public S::Node {
+            T v;
+
+            template <typename... A>
+            inline Node(K k, A&&... a)
+                : v(forward<A>(a)...)
+            {
+                this->key = S::hash(k);
+            }
+        };
+
+        ObjList<Node> ol;
         S st;
 
     public:
         inline ~HashMap() {
-            if constexpr (!stdHasTrivialDestructor(T)) {
-                visit([](auto& node) {
-                    destruct(&node);
+            if constexpr (!stdHasTrivialDestructor(Node)) {
+                st.visit([](auto node) {
+                    destruct((Node*)node);
                 });
             }
         }
 
         inline T* find(K key) const noexcept {
-            return (T*)st.find(key);
+            if (auto n = (Node*)st.find(S::hash(key)); n) {
+                return &n->v;
+            }
+
+            return nullptr;
         }
 
         template <typename... A>
         inline T* insert(K key, A&&... a) {
-            auto value = ol.make(forward<A>(a)...);
+            auto value = ol.make(key, forward<A>(a)...);
 
-            if (auto prev = (T*)st.set(key, value); prev) {
+            if (auto prev = (Node*)st.insert(value); prev) {
                 ol.release(prev);
             }
 
-            return value;
+            return &value->v;
         }
 
         inline T& operator[](K key) {
@@ -44,15 +59,15 @@ namespace Std {
         }
 
         inline void erase(K key) noexcept {
-            if (auto prev = (T*)st.erase(key); prev) {
+            if (auto prev = (Node*)st.erase(S::hash(key)); prev) {
                 ol.release(prev);
             }
         }
 
         template <typename F>
         inline void visit(F f) {
-            st.visit([f](void** el) {
-                f(**(T**)el);
+            st.visit([f](auto el) {
+                f(((Node*)el)->v);
             });
         }
     };
