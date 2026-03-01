@@ -31,7 +31,7 @@ namespace Std {
         Node* find(u64 key) const noexcept;
         void xchg(HashTable& t) noexcept;
         size_t capacity() const noexcept;
-        Node* insert(Node*);
+        Node* insert(Node* node);
         Node* erase(u64 key) noexcept;
         size_t size() const noexcept;
 

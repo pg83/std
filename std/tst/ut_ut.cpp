@@ -75,7 +75,7 @@ STD_TEST_SUITE(UT) {
         IntMap<int> m;
         // std::unordered_map<u64, int> m;
 
-        for (size_t i = 0; i < 20000000; ++i) {
+        for (size_t i = 0; i < 200000000; ++i) {
             m[i] = i;
         }
     }
