@@ -41,9 +41,5 @@ namespace Std {
                 v((Node*)ptr);
             }));
         }
-
-        static inline u64 hash(u64 k) noexcept {
-            return k;
-        }
     };
 }
