@@ -32,17 +32,11 @@ struct HashTable::Impl {
         return nullptr;
     }
 
-    inline Node* insertNoRehash(Node* newNode) {
-        auto res = erase(newNode->key);
+    inline void addNoRehash(Node* nn) {
+        auto b = bucketFor(nn->key);
 
-        return (addNoRehash(newNode), res);
-    }
-
-    inline void addNoRehash(Node* newNode) {
-        auto b = bucketFor(newNode->key);
-
-        newNode->next = *b;
-        *b = newNode;
+        nn->next = *b;
+        *b = nn;
 
         ++count;
     }
@@ -107,12 +101,14 @@ void HashTable::rehash(size_t len) {
     next.xchg(*this);
 }
 
-HashTable::Node* HashTable::insert(Node* newNode) {
+HashTable::Node* HashTable::insert(Node* nn) {
     if (size() >= capacity() * 0.7) {
         rehash(capacity() * 1.5);
     }
 
-    return impl->insertNoRehash(newNode);
+    auto res = impl->erase(nn->key);
+
+    return (impl->addNoRehash(nn), res);
 }
 
 HashTable::Node* HashTable::erase(u64 key) noexcept {
