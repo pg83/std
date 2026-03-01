@@ -1,6 +1,7 @@
 #include "h_table.h"
 
-#include <std/alg/xchg.h>
+#include <std/sys/crt.h>
+#include <std/alg/range.h>
 #include <std/alg/minmax.h>
 #include <std/dbg/assert.h>
 #include <std/lib/vector.h>
@@ -8,41 +9,27 @@
 
 using namespace Std;
 
-struct HashTable::Impl {
-    Vector<Node*> buckets;
-    size_t count;
-
-    inline Impl(size_t initialCapacity)
-        : count(0)
-    {
-        buckets.zero(max(initialCapacity, (size_t)1));
+namespace {
+    static inline auto buckets(const Buffer& buf) {
+        return range((HashTable::Node**)buf.data(), (HashTable::Node**)buf.storageEnd());
     }
-
-    template <typename T>
-    inline void visit(T t) {
-        for (size_t i = 0; i < buckets.length(); ++i) {
-            for (auto node = buckets[i]; node;) {
-                t(exchange(node, node->next));
-            }
-        }
-    }
-};
+}
 
 HashTable::HashTable(size_t initialCapacity)
-    : impl(new Impl(initialCapacity))
+    : buf(max(initialCapacity, (size_t)1) * sizeof(Node*))
 {
+    memZero(buf.mutData(), buf.mutStorageEnd());
 }
 
 HashTable::~HashTable() noexcept {
-    delete impl;
 }
 
 void HashTable::xchg(HashTable& t) noexcept {
-    Std::xchg(impl, t.impl);
+    buf.xchg(t.buf);
 }
 
 size_t HashTable::size() const noexcept {
-    return impl->count;
+    return buf.used();
 }
 
 HashTable::Node* HashTable::find(u64 key) const noexcept {
@@ -56,13 +43,13 @@ HashTable::Node* HashTable::find(u64 key) const noexcept {
 }
 
 size_t HashTable::capacity() const noexcept {
-    return impl->buckets.length();
+    return buckets(buf).length();
 }
 
 void HashTable::rehash(size_t len) {
     HashTable next(len);
 
-    impl->visit([&](auto node) {
+    visit([&](auto node) {
         next.addNoRehash(node);
     });
 
@@ -85,7 +72,7 @@ HashTable::Node* HashTable::erase(u64 key) noexcept {
 
         if (node->key == key) {
             *ptr = node->next;
-            --impl->count;
+            buf.seekNegative(1);
 
             return node;
         }
@@ -95,7 +82,9 @@ HashTable::Node* HashTable::erase(u64 key) noexcept {
 }
 
 HashTable::Node** HashTable::bucketFor(u64 key) const noexcept {
-    return (Node**)&impl->buckets[key % impl->buckets.length()];
+    auto bb = buckets(buf);
+
+    return (Node**)&bb.b[key % bb.length()];
 }
 
 void HashTable::addNoRehash(Node* nn) {
@@ -104,11 +93,13 @@ void HashTable::addNoRehash(Node* nn) {
     nn->next = *b;
     *b = nn;
 
-    ++impl->count;
+    buf.seekRelative(1);
 }
 
 void HashTable::visitImpl(VisitorFace&& v) {
-    impl->visit([&](auto node) {
-        v.visit(node);
-    });
+    for (auto node : buckets(buf)) {
+        while (node) {
+            v.visit(exchange(node, node->next));
+        }
+    }
 }

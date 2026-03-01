@@ -1,6 +1,7 @@
 #pragma once
 
 #include <std/sys/types.h>
+#include <std/lib/buffer.h>
 #include <std/lib/visitor.h>
 
 namespace Std {
@@ -12,8 +13,7 @@ namespace Std {
         };
 
     private:
-        struct Impl;
-        Impl* impl;
+        Buffer buf;
 
         void rehash(size_t len);
         void addNoRehash(Node* node);

@@ -91,21 +91,21 @@ STD_TEST_SUITE(HashTable) {
     STD_TEST(RehashWorks) {
         HashTable ht(4);
 
-        TestNode nodes[20];
-        for (int i = 0; i < 20; ++i) {
+        TestNode nodes[200];
+        for (int i = 0; i < 200; ++i) {
             nodes[i] = {{(u64)(i + 1), nullptr}, i * 10};
         }
 
         size_t initialCapacity = ht.capacity();
 
-        for (int i = 0; i < 20; ++i) {
+        for (int i = 0; i < 200; ++i) {
             ht.insert(&nodes[i]);
         }
 
         STD_INSIST(ht.capacity() > initialCapacity);
-        STD_INSIST(ht.size() == 20);
+        STD_INSIST(ht.size() == 200);
 
-        for (int i = 0; i < 20; ++i) {
+        for (int i = 0; i < 200; ++i) {
             auto* found = static_cast<TestNode*>(ht.find(i + 1));
             STD_INSIST(found != nullptr);
             STD_INSIST(found->value == i * 10);
