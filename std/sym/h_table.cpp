@@ -57,8 +57,8 @@ void HashTable::rehash(size_t len) {
 }
 
 HashTable::Node* HashTable::insert(Node* nn) {
-    if (size() >= capacity() * 0.7) {
-        rehash(capacity() * 1.5);
+    if (auto cap = capacity(); size() >= cap * 0.7) {
+        rehash(cap * 1.5);
     }
 
     auto res = erase(nn->key);
