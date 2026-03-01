@@ -46,13 +46,13 @@ size_t HashTable::size() const noexcept {
 }
 
 HashTable::Node* HashTable::find(u64 key) const noexcept {
-        for (auto node = *bucketFor(key); node; node = node->next) {
-            if (node->key == key) {
-                return node;
-            }
+    for (auto node = *bucketFor(key); node; node = node->next) {
+        if (node->key == key) {
+            return node;
         }
+    }
 
-        return nullptr;
+    return nullptr;
 }
 
 size_t HashTable::capacity() const noexcept {
@@ -80,32 +80,32 @@ HashTable::Node* HashTable::insert(Node* nn) {
 }
 
 HashTable::Node* HashTable::erase(u64 key) noexcept {
-        for (auto ptr = bucketFor(key); *ptr; ptr = &(*ptr)->next) {
-            auto node = *ptr;
+    for (auto ptr = bucketFor(key); *ptr; ptr = &(*ptr)->next) {
+        auto node = *ptr;
 
-            if (node->key == key) {
-                *ptr = node->next;
-                --impl->count;
+        if (node->key == key) {
+            *ptr = node->next;
+            --impl->count;
 
-                return node;
-            }
+            return node;
         }
+    }
 
-        return nullptr;
+    return nullptr;
 }
 
-    HashTable::Node** HashTable::bucketFor(u64 key) const noexcept {
-        return (Node**)&impl->buckets[key % impl->buckets.length()];
-    }
+HashTable::Node** HashTable::bucketFor(u64 key) const noexcept {
+    return (Node**)&impl->buckets[key % impl->buckets.length()];
+}
 
-    void HashTable::addNoRehash(Node* nn) {
-        auto b = bucketFor(nn->key);
+void HashTable::addNoRehash(Node* nn) {
+    auto b = bucketFor(nn->key);
 
-        nn->next = *b;
-        *b = nn;
+    nn->next = *b;
+    *b = nn;
 
-        ++impl->count;
-    }
+    ++impl->count;
+}
 
 void HashTable::visitImpl(VisitorFace&& v) {
     impl->visit([&](auto node) {
