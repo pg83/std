@@ -16,6 +16,7 @@ namespace {
 HashTable::HashTable(size_t initialCapacity)
     : buf(max(initialCapacity, (size_t)1) * sizeof(Node*))
 {
+    // here we assume (2^N - 2 * sizeof(void*)) % sizeof(void*) == 0 for N > 2
     memZero(buf.mutData(), buf.mutStorageEnd());
 }
 
