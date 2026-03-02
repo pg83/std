@@ -3,8 +3,6 @@
 #include <std/sys/crt.h>
 #include <std/alg/range.h>
 #include <std/alg/minmax.h>
-#include <std/dbg/assert.h>
-#include <std/lib/vector.h>
 #include <std/alg/exchange.h>
 
 using namespace Std;

@@ -347,4 +347,91 @@ STD_TEST_SUITE(Vector) {
         STD_INSIST(v1[0] == v2[0]);
         STD_INSIST(v1[1] == v2[1]);
     }
+
+    STD_TEST(OddSizeStorageEndInvariant) {
+        struct S7 { u8 x[7]; };
+        static_assert(sizeof(S7) == 7);
+
+        Vector<S7> v;
+        v.grow(1);
+
+        STD_INSIST(v.end() + v.left() == v.storageEnd());
+    }
+
+    STD_TEST(OddSizeByteDistance) {
+        struct S7 { u8 x[7]; };
+
+        Vector<S7> v;
+        v.grow(1);
+
+        auto byteDist = (const u8*)v.storageEnd() - (const u8*)v.data();
+        auto slotBytes = (v.length() + v.left()) * sizeof(S7);
+
+        STD_INSIST(byteDist == (ptrdiff_t)slotBytes);
+    }
+
+    STD_TEST(OddSizeLeftAfterFill) {
+        struct S7 { u8 x[7]; };
+
+        Vector<S7> v;
+        v.grow(1);
+        auto cap = v.left();
+
+        ctx.output() << cap << endL << flsH;
+
+        for (size_t i = 0; i < cap; i++) {
+            S7 elem{};
+            elem.x[0] = (u8)(i & 0xFF);
+            v.pushBack(elem);
+        }
+
+        STD_INSIST(v.length() == cap);
+        STD_INSIST(v.left() == 0);
+    }
+
+    STD_TEST(OddSizeGrowGuarantee) {
+        struct S7 { u8 x[7]; };
+
+        Vector<S7> v;
+        v.grow(10);
+
+        STD_INSIST(v.left() >= 10);
+
+        for (size_t i = 0; i < 10; i++) {
+            v.pushBack(S7{});
+        }
+        STD_INSIST(v.length() == 10);
+    }
+
+    STD_TEST(OddSizeDataCorrectness) {
+        struct S7 {
+            u8 x[7];
+            u8 val() const { return x[0]; }
+        };
+
+        Vector<S7> v;
+        for (u8 i = 0; i < 20; ++i) {
+            S7 elem{};
+            elem.x[0] = i;
+            v.pushBack(elem);
+        }
+        for (u8 i = 0; i < 20; ++i) {
+            STD_INSIST(v[i].val() == i);
+        }
+    }
+
+    STD_TEST(OddSize3StorageEndInvariant) {
+        struct S3 { u8 x[3]; };
+        static_assert(sizeof(S3) == 3);
+
+        Vector<S3> v;
+        v.grow(1);
+        auto cap = v.left();
+        for (size_t i = 0; i < cap; i++) {
+            v.pushBack(S3{});
+        }
+        v.pushBack(S3{});
+
+        STD_INSIST(v.end() + v.left() == v.storageEnd());
+    }
 }

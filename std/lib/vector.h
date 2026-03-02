@@ -33,7 +33,7 @@ namespace Std {
         }
 
         inline auto storageEnd() const noexcept {
-            return (const T*)buf_.storageEnd();
+            return begin() + capacity();
         }
 
         inline auto mutData() noexcept {
@@ -54,6 +54,10 @@ namespace Std {
 
         inline size_t left() const noexcept {
             return storageEnd() - end();
+        }
+
+        inline size_t capacity() const noexcept {
+            return buf_.capacity() / sizeof(T);
         }
 
         inline size_t length() const noexcept {
