@@ -53,7 +53,7 @@ namespace Std {
         }
 
         inline size_t left() const noexcept {
-            return storageEnd() - end();
+            return capacity() - length();
         }
 
         inline size_t capacity() const noexcept {
