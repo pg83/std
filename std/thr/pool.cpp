@@ -138,11 +138,7 @@ namespace {
             }
 
             inline Task* popNoLock() noexcept {
-                if (tasks_.empty()) {
-                    return nullptr;
-                }
-
-                return static_cast<Task*>(tasks_.popBack());
+                return (Task*)tasks_.popBackOrNull();
             }
 
             inline Task* pop() noexcept {
