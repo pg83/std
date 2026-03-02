@@ -349,7 +349,9 @@ STD_TEST_SUITE(Vector) {
     }
 
     STD_TEST(OddSizeStorageEndInvariant) {
-        struct S7 { u8 x[7]; };
+        struct S7 {
+            u8 x[7];
+        };
         static_assert(sizeof(S7) == 7);
 
         Vector<S7> v;
@@ -359,7 +361,9 @@ STD_TEST_SUITE(Vector) {
     }
 
     STD_TEST(OddSizeByteDistance) {
-        struct S7 { u8 x[7]; };
+        struct S7 {
+            u8 x[7];
+        };
 
         Vector<S7> v;
         v.grow(1);
@@ -371,7 +375,9 @@ STD_TEST_SUITE(Vector) {
     }
 
     STD_TEST(OddSizeLeftAfterFill) {
-        struct S7 { u8 x[7]; };
+        struct S7 {
+            u8 x[7];
+        };
 
         Vector<S7> v;
         v.grow(1);
@@ -390,7 +396,9 @@ STD_TEST_SUITE(Vector) {
     }
 
     STD_TEST(OddSizeGrowGuarantee) {
-        struct S7 { u8 x[7]; };
+        struct S7 {
+            u8 x[7];
+        };
 
         Vector<S7> v;
         v.grow(10);
@@ -406,7 +414,9 @@ STD_TEST_SUITE(Vector) {
     STD_TEST(OddSizeDataCorrectness) {
         struct S7 {
             u8 x[7];
-            u8 val() const { return x[0]; }
+            u8 val() const {
+                return x[0];
+            }
         };
 
         Vector<S7> v;
@@ -421,7 +431,9 @@ STD_TEST_SUITE(Vector) {
     }
 
     STD_TEST(OddSize3StorageEndInvariant) {
-        struct S3 { u8 x[3]; };
+        struct S3 {
+            u8 x[3];
+        };
         static_assert(sizeof(S3) == 3);
 
         Vector<S3> v;

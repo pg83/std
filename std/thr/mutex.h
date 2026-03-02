@@ -32,4 +32,19 @@ namespace Std {
             mutex_.unlock();
         }
     };
+
+    class UnlockGuard {
+        Mutex& mutex_;
+
+    public:
+        inline explicit UnlockGuard(Mutex& mutex)
+            : mutex_(mutex)
+        {
+            mutex_.unlock();
+        }
+
+        inline ~UnlockGuard() noexcept {
+            mutex_.lock();
+        }
+    };
 }

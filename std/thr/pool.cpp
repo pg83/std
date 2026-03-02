@@ -90,27 +90,17 @@ void ThreadPoolImpl::join() noexcept {
 }
 
 void ThreadPoolImpl::workerLoop() noexcept {
-    while (true) {
-        Task* task = nullptr;
+    LockGuard lock(mutex_);
 
-        {
-            LockGuard lock(mutex_);
+    while (!shutdown_) {
+        while (auto t = (Task*)queue_.popFrontOrNull()) {
+            UnlockGuard unlock(mutex_);
 
-            while (queue_.empty() && !shutdown_) {
-                condVar_.wait(mutex_);
-            }
-
-            if (shutdown_ && queue_.empty()) {
-                return;
-            }
-
-            if (!queue_.empty()) {
-                task = static_cast<Task*>(queue_.popFront());
-            }
+            t->run();
         }
 
-        if (task) {
-            task->run();
+        if (!shutdown_) {
+            condVar_.wait(mutex_);
         }
     }
 }

@@ -34,9 +34,13 @@ namespace Std {
             return head.next->remove();
         }
 
+        IntrusiveNode* popFrontOrNull() noexcept;
+
         inline IntrusiveNode* popBack() noexcept {
             return head.prev->remove();
         }
+
+        IntrusiveNode* popBackOrNull() noexcept;
 
         inline void clear() noexcept {
             head.remove();

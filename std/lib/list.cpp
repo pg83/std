@@ -96,3 +96,19 @@ void IntrusiveList::sort(Compare2 cmp, void* ctx) noexcept {
         return cmp(ctx, l, r);
     });
 }
+
+IntrusiveNode* IntrusiveList::popFrontOrNull() noexcept {
+    if (empty()) {
+        return nullptr;
+    }
+
+    return popFront();
+}
+
+IntrusiveNode* IntrusiveList::popBackOrNull() noexcept {
+    if (empty()) {
+        return nullptr;
+    }
+
+    return popBack();
+}
