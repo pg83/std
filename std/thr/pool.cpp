@@ -176,7 +176,7 @@ namespace {
         ObjPool::Ref pool_;
         int shutdown_;
         Vector<Worker*> workers_;
-        int nextWorker_;
+        unsigned int nextWorker_;
 
         Task* tryStealTask(size_t myId) noexcept;
 
