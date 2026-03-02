@@ -257,7 +257,9 @@ void WorkStealingThreadPool::Worker::run() noexcept {
             return processPending();
         }
 
-        condVar_.wait(mutex_);
+        if (tasks_.empty()) {
+            condVar_.wait(mutex_);
+        }
     }
 }
 
