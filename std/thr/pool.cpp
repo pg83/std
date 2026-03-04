@@ -85,10 +85,6 @@ void ThreadPoolImpl::join() noexcept {
     for (auto node = workers_.mutFront(), end = workers_.mutEnd(); node != end; node = node->next) {
         static_cast<Worker*>(node)->thread_.join();
     }
-
-    while (!queue_.empty()) {
-        static_cast<Task*>(queue_.popFront())->run();
-    }
 }
 
 void ThreadPoolImpl::workerLoop() noexcept {
@@ -164,12 +160,6 @@ namespace {
                 thread_.join();
             }
 
-            inline void processPending() noexcept {
-                while (auto task = popNoLock()) {
-                    task->run();
-                }
-            }
-
             void run() noexcept override;
         };
 
@@ -220,10 +210,6 @@ void WorkStealingThreadPool::join() noexcept {
 
     for (auto w : mutRange(workers_)) {
         w->join();
-    }
-
-    for (auto w : mutRange(workers_)) {
-        w->processPending();
     }
 }
 
