@@ -249,25 +249,19 @@ void WorkStealingThreadPool::Worker::loop() {
         pool_ = nullptr;
     };
 
-    while (true) {
+    do {
         while (auto task = popNoLock()) {
             UnlockGuard unlock(mutex_);
 
             task->run();
         }
 
-        {
-            UnlockGuard unlock(mutex_);
+        UnlockGuard unlock(mutex_);
 
-            if (auto task = pool_->tryStealTask(rng_); task) {
-                task->run();
-            }
+        if (auto task = pool_->tryStealTask(rng_); task) {
+            task->run();
         }
-
-        if (tasks_.empty()) {
-            condVar_.wait(mutex_);
-        }
-    }
+    } while (!tasks_.empty() || (condVar_.wait(mutex_), true));
 }
 
 Task* WorkStealingThreadPool::tryStealTask(PCG32& rng) noexcept {
