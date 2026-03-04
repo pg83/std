@@ -2,27 +2,28 @@
 
 #include "h_table.h"
 
+#include <std/mem/embed.h>
 #include <std/typ/intrin.h>
-#include <std/typ/support.h>
 #include <std/alg/destruct.h>
 #include <std/mem/obj_list.h>
 
 namespace Std {
     template <typename T, typename K, typename H>
     class HashMap {
-        struct Node: public HashTable::Node {
-            T v;
-
-            template <typename... A>
-            inline Node(K k, A&&... a)
-                : v(forward<A>(a)...)
-            {
-                this->key = H::hash(k);
-            }
+        struct Node: public HashTable::Node, public Embed<T> {
+            using Embed<T>::Embed;
         };
 
         ObjList<Node> ol;
         HashTable st;
+
+        inline T* insertNode(Node* value) {
+            if (auto prev = (Node*)st.insert(value); prev) {
+                ol.release(prev);
+            }
+
+            return &value->t;
+        }
 
     public:
         inline ~HashMap() {
@@ -35,7 +36,7 @@ namespace Std {
 
         inline T* find(K key) const noexcept {
             if (auto n = (Node*)st.find(H::hash(key)); n) {
-                return &n->v;
+                return &n->t;
             }
 
             return nullptr;
@@ -43,13 +44,16 @@ namespace Std {
 
         template <typename... A>
         inline T* insert(K key, A&&... a) {
-            auto value = ol.make(key, forward<A>(a)...);
+            auto value = ol.make(forward<A>(a)...);
 
-            if (auto prev = (Node*)st.insert(value); prev) {
-                ol.release(prev);
-            }
+            return (value->key = H::hash(key), insertNode(value));
+        }
 
-            return &value->v;
+        template <typename... A>
+        inline T* insertKeyed(A&&... a) {
+            auto value = ol.make(forward<A>(a)...);
+
+            return (value->key = value->t.key(), insertNode(value));
         }
 
         inline T& operator[](K key) {
@@ -69,7 +73,7 @@ namespace Std {
         template <typename F>
         inline void visit(F f) {
             st.visit([f](auto el) {
-                f(((Node*)el)->v);
+                f(((Node*)el)->t);
             });
         }
     };

@@ -132,11 +132,15 @@ namespace {
             IntrusiveList tasks_;
             Thread thread_;
 
-            inline Worker(WorkStealingThreadPool* pool) noexcept
+            inline Worker(WorkStealingThreadPool* pool)
                 : pool_(pool)
                 , rng_(this)
                 , thread_(*this)
             {
+            }
+
+            inline auto key() const noexcept {
+                return thread_.threadId();
             }
 
             inline Task* popNoLock() noexcept {
@@ -175,11 +179,10 @@ namespace {
             void run() noexcept override;
         };
 
-        ObjPool::Ref pool_;
         int shutdown_;
         Vector<Worker*> workers_;
         unsigned int nextWorker_;
-        IntMap<Worker*> workerIndex_;
+        IntMap<Worker> workerIndex_;
 
         Task* tryStealTask(PCG32& rng) noexcept;
 
@@ -196,24 +199,21 @@ namespace {
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
-    : pool_(ObjPool::fromMemory())
-    , shutdown_(0)
+    : shutdown_(0)
     , nextWorker_(0)
 {
     for (size_t i = 0; i < numThreads; ++i) {
-        auto* w = pool_->make<Worker>(this);
-
-        workers_.pushBack(w);
-        workerIndex_.insert(w->thread_.threadId(), w);
+        workers_.pushBack(workerIndex_.insertKeyed(this));
     }
 }
 
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
     if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
-        return (*w)->push(task);
+        return w->push(task);
     }
 
-    size_t idx = stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed);
+    const size_t idx = stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed);
+
     workers_[idx % workers_.length()]->push(task);
 }
 

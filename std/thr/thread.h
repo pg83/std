@@ -18,6 +18,7 @@ namespace Std {
         void detach() noexcept;
 
         u64 threadId() const noexcept;
+
         static u64 currentThreadId() noexcept;
     };
 
