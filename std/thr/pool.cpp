@@ -9,8 +9,10 @@
 #include <std/lib/list.h>
 #include <std/sym/i_map.h>
 #include <std/alg/range.h>
+#include <std/alg/defer.h>
 #include <std/lib/vector.h>
 #include <std/sys/atomic.h>
+#include <std/dbg/insist.h>
 #include <std/ptr/scoped.h>
 #include <std/mem/obj_pool.h>
 
@@ -143,7 +145,7 @@ namespace {
             }
 
             inline Task* popNoLock() noexcept {
-                return (Task*)tasks_.popBackOrNull();
+                return (Task*)tasks_.popFrontOrNull();
             }
 
             inline Task* pop() noexcept {
@@ -154,25 +156,34 @@ namespace {
 
             inline void push(Task& task) noexcept {
                 LockGuard lock(mutex_);
+
                 tasks_.pushBack(&task);
                 condVar_.signal();
             }
 
-            inline void signal() noexcept {
+            inline bool tryPush(Task& task) noexcept {
                 LockGuard lock(mutex_);
-                condVar_.signal();
+
+                if (pool_) {
+                    tasks_.pushBack(&task);
+                    condVar_.signal();
+
+                    return true;
+                } else {
+                    return false;
+                }
             }
 
             inline void join() noexcept {
                 thread_.join();
             }
 
+            void loop();
             void run() noexcept override;
         };
 
-        int shutdown_;
         Vector<Worker*> workers_;
-        unsigned int nextWorker_;
+        unsigned int nextWorker_ = 0;
         IntMap<Worker> workerIndex_;
 
         Task* tryStealTask(PCG32& rng) noexcept;
@@ -180,19 +191,12 @@ namespace {
     public:
         WorkStealingThreadPool(size_t numThreads);
 
-        inline bool shutdown() const noexcept {
-            return stdAtomicFetch(&shutdown_, MemoryOrder::Acquire);
-        }
-
         void submitTask(Task& task) noexcept override;
         void join() noexcept override;
     };
 }
 
-WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
-    : shutdown_(0)
-    , nextWorker_(0)
-{
+WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads) {
     for (size_t i = 0; i < numThreads; ++i) {
         workers_.pushBack(workerIndex_.insertKeyed(this));
     }
@@ -209,35 +213,61 @@ void WorkStealingThreadPool::submitTask(Task& task) noexcept {
 }
 
 void WorkStealingThreadPool::join() noexcept {
-    stdAtomicStore(&shutdown_, 1, MemoryOrder::Release);
+    ShutDown task;
 
-    for (auto w : mutRange(workers_)) {
-        w->signal();
-    }
+    submitTask(task);
 
     for (auto w : mutRange(workers_)) {
         w->join();
     }
+
+    for (auto w : mutRange(workers_)) {
+        while (auto task = w->popNoLock()) {
+            task->run();
+        }
+    }
 }
 
 void WorkStealingThreadPool::Worker::run() noexcept {
+    auto pool = pool_;
+
+    try {
+        loop();
+    } catch (ShutDown* sh) {
+        for (auto w : mutRange(pool->workers_)) {
+            if (w->tryPush(*sh)) {
+                return;
+            }
+        }
+    }
+}
+
+void WorkStealingThreadPool::Worker::loop() {
     LockGuard lock(mutex_);
 
-    do {
+    STD_DEFER {
+        pool_ = nullptr;
+    };
+
+    while (true) {
         while (auto task = popNoLock()) {
-            do {
-                UnlockGuard unlock(mutex_);
+            UnlockGuard unlock(mutex_);
 
-                task->run();
-            } while (task = popNoLock());
+            task->run();
+        }
 
+        {
             UnlockGuard unlock(mutex_);
 
             if (auto task = pool_->tryStealTask(rng_); task) {
                 task->run();
             }
         }
-    } while (!pool_->shutdown() && (condVar_.wait(mutex_), true));
+
+        if (tasks_.empty()) {
+            condVar_.wait(mutex_);
+        }
+    }
 }
 
 Task* WorkStealingThreadPool::tryStealTask(PCG32& rng) noexcept {
