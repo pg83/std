@@ -45,6 +45,15 @@ void Thread::detach() noexcept {
     STD_INSIST(pthread_detach(impl->thread) == 0);
 }
 
+u64 Thread::threadId() const noexcept {
+    static_assert(sizeof(pthread_t) <= sizeof(u64));
+    return (u64)impl->thread;
+}
+
+u64 Thread::currentThreadId() noexcept {
+    return (u64)pthread_self();
+}
+
 void Std::detach(Runable& runable) {
     struct Helper: public Runable {
         Runable* slave;

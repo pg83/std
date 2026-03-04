@@ -5,13 +5,14 @@
 #include "runable.h"
 #include "cond_var.h"
 
+#include <std/rng/pcg.h>
 #include <std/lib/list.h>
+#include <std/sym/i_map.h>
 #include <std/alg/range.h>
 #include <std/lib/vector.h>
 #include <std/sys/atomic.h>
 #include <std/ptr/scoped.h>
 #include <std/mem/obj_pool.h>
-#include <std/rng/pcg.h>
 
 using namespace Std;
 
@@ -178,6 +179,7 @@ namespace {
         int shutdown_;
         Vector<Worker*> workers_;
         unsigned int nextWorker_;
+        IntMap<Worker*> workerIndex_;
 
         Task* tryStealTask(PCG32& rng) noexcept;
 
@@ -199,11 +201,18 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     , nextWorker_(0)
 {
     for (size_t i = 0; i < numThreads; ++i) {
-        workers_.pushBack(pool_->make<Worker>(this));
+        auto* w = pool_->make<Worker>(this);
+
+        workers_.pushBack(w);
+        workerIndex_.insert(w->thread_.threadId(), w);
     }
 }
 
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
+    if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
+        return (*w)->push(task);
+    }
+
     size_t idx = stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed);
     workers_[idx % workers_.length()]->push(task);
 }

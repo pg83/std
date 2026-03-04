@@ -1,5 +1,7 @@
 #pragma once
 
+#include <std/sys/types.h>
+
 namespace Std {
     struct Runable;
 
@@ -14,6 +16,9 @@ namespace Std {
 
         void join() noexcept;
         void detach() noexcept;
+
+        u64 threadId() const noexcept;
+        static u64 currentThreadId() noexcept;
     };
 
     class ScopedThread {
