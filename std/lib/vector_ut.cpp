@@ -383,8 +383,6 @@ STD_TEST_SUITE(Vector) {
         v.grow(1);
         auto cap = v.left();
 
-        ctx.output() << cap << endL << flsH;
-
         for (size_t i = 0; i < cap; i++) {
             S7 elem{};
             elem.x[0] = (u8)(i & 0xFF);
