@@ -94,16 +94,18 @@ void ThreadPoolImpl::join() noexcept {
 void ThreadPoolImpl::workerLoop() noexcept {
     LockGuard lock(mutex_);
 
-    while (!shutdown_) {
+    while (true) {
         while (auto t = (Task*)queue_.popFrontOrNull()) {
             UnlockGuard unlock(mutex_);
 
             t->run();
         }
 
-        if (!shutdown_) {
-            condVar_.wait(mutex_);
+        if (shutdown_) {
+            break;
         }
+
+        condVar_.wait(mutex_);
     }
 }
 
@@ -234,7 +236,7 @@ void WorkStealingThreadPool::join() noexcept {
 void WorkStealingThreadPool::Worker::run() noexcept {
     LockGuard lock(mutex_);
 
-    while (!pool_->shutdown()) {
+    while (true) {
         while (auto task = popNoLock()) {
             do {
                 UnlockGuard unlock(mutex_);
@@ -249,9 +251,11 @@ void WorkStealingThreadPool::Worker::run() noexcept {
             }
         }
 
-        if (!pool_->shutdown()) {
-            condVar_.wait(mutex_);
+        if (pool_->shutdown()) {
+            break;
         }
+
+        condVar_.wait(mutex_);
     }
 }
 
