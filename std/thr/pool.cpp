@@ -11,6 +11,7 @@
 #include <std/sys/atomic.h>
 #include <std/ptr/scoped.h>
 #include <std/mem/obj_pool.h>
+#include <std/rng/pcg.h>
 
 using namespace Std;
 
@@ -124,15 +125,15 @@ namespace {
     class WorkStealingThreadPool: public ThreadPool {
         struct Worker: public Runable {
             WorkStealingThreadPool* pool_;
-            size_t workerId_;
+            PCG32 rng_;
             Mutex mutex_;
             CondVar condVar_;
             IntrusiveList tasks_;
             Thread thread_;
 
-            inline Worker(WorkStealingThreadPool* pool, size_t id) noexcept
+            inline Worker(WorkStealingThreadPool* pool) noexcept
                 : pool_(pool)
-                , workerId_(id)
+                , rng_(this)
                 , thread_(*this)
             {
             }
@@ -178,7 +179,7 @@ namespace {
         Vector<Worker*> workers_;
         unsigned int nextWorker_;
 
-        Task* tryStealTask(size_t myId) noexcept;
+        Task* tryStealTask(PCG32& rng) noexcept;
 
     public:
         WorkStealingThreadPool(size_t numThreads);
@@ -198,7 +199,7 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     , nextWorker_(0)
 {
     for (size_t i = 0; i < numThreads; ++i) {
-        workers_.pushBack(pool_->make<Worker>(this, i));
+        workers_.pushBack(pool_->make<Worker>(this));
     }
 }
 
@@ -228,7 +229,7 @@ Task* WorkStealingThreadPool::Worker::next() noexcept {
         return task;
     }
 
-    return pool_->tryStealTask(workerId_);
+    return pool_->tryStealTask(rng_);
 }
 
 void WorkStealingThreadPool::Worker::run() noexcept {
@@ -249,11 +250,9 @@ void WorkStealingThreadPool::Worker::run() noexcept {
     }
 }
 
-Task* WorkStealingThreadPool::tryStealTask(size_t myId) noexcept {
-    size_t numWorkers = workers_.length();
-
-    for (size_t i = 1; i < numWorkers; ++i) {
-        if (auto task = workers_[(myId + i) % numWorkers]->pop(); task) {
+Task* WorkStealingThreadPool::tryStealTask(PCG32& rng) noexcept {
+    for (size_t numWorkers = workers_.length(), i = 0; i < numWorkers; ++i) {
+        if (auto task = workers_[rng.uniformBiased(numWorkers)]->pop(); task) {
             return task;
         }
     }
