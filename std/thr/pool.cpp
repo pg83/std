@@ -220,12 +220,6 @@ void WorkStealingThreadPool::join() noexcept {
     for (auto w : mutRange(workers_)) {
         w->join();
     }
-
-    for (auto w : mutRange(workers_)) {
-        while (auto task = w->popNoLock()) {
-            task->run();
-        }
-    }
 }
 
 void WorkStealingThreadPool::Worker::run() noexcept {
@@ -234,6 +228,12 @@ void WorkStealingThreadPool::Worker::run() noexcept {
     try {
         loop();
     } catch (ShutDown* sh) {
+        STD_DEFER {
+            while (auto task = popNoLock()) {
+                task->run();
+            }
+        };
+
         for (auto w : mutRange(pool->workers_)) {
             if (w->tryPush(*sh)) {
                 return;
