@@ -17,6 +17,16 @@
 using namespace Std;
 
 namespace {
+    struct ShutDown: public Task {
+        inline ~ShutDown() noexcept {
+            unlink();
+        }
+
+        void run() override {
+            throw this;
+        }
+    };
+
     struct SyncThreadPool: public ThreadPool {
         void submitTask(Task& task) noexcept override {
             task.run();
@@ -38,19 +48,21 @@ namespace {
             }
 
             void run() noexcept override {
-                pool_->workerLoop();
+                try {
+                    pool_->workerLoop();
+                } catch (ShutDown* sh) {
+                    pool_->submitTask(*sh);
+                }
             }
         };
 
+        ObjPool::Ref pool_ = ObjPool::fromMemory();
         Mutex mutex_;
         CondVar condVar_;
         IntrusiveList queue_;
-        bool shutdown_;
-
-        ObjPool::Ref pool_;
         IntrusiveList workers_;
 
-        void workerLoop() noexcept;
+        void workerLoop();
 
     public:
         ThreadPoolImpl(size_t numThreads);
@@ -60,10 +72,7 @@ namespace {
     };
 }
 
-ThreadPoolImpl::ThreadPoolImpl(size_t numThreads)
-    : shutdown_(false)
-    , pool_(ObjPool::fromMemory())
-{
+ThreadPoolImpl::ThreadPoolImpl(size_t numThreads) {
     for (size_t i = 0; i < numThreads; ++i) {
         workers_.pushBack(pool_->make<Worker>(this));
     }
@@ -76,27 +85,25 @@ void ThreadPoolImpl::submitTask(Task& task) noexcept {
 }
 
 void ThreadPoolImpl::join() noexcept {
-    {
-        LockGuard lock(mutex_);
-        shutdown_ = true;
-        condVar_.broadcast();
-    }
+    ShutDown task;
+
+    submitTask(task);
 
     for (auto node = workers_.mutFront(), end = workers_.mutEnd(); node != end; node = node->next) {
         static_cast<Worker*>(node)->thread_.join();
     }
 }
 
-void ThreadPoolImpl::workerLoop() noexcept {
+void ThreadPoolImpl::workerLoop() {
     LockGuard lock(mutex_);
 
-    do {
+    for (;; condVar_.wait(mutex_)) {
         while (auto t = (Task*)queue_.popFrontOrNull()) {
             UnlockGuard unlock(mutex_);
 
             t->run();
         }
-    } while (!shutdown_ && (condVar_.wait(mutex_), true));
+    }
 }
 
 ThreadPool::~ThreadPool() noexcept {

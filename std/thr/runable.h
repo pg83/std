@@ -2,6 +2,6 @@
 
 namespace Std {
     struct Runable {
-        virtual void run() noexcept = 0;
+        virtual void run() = 0;
     };
 }
