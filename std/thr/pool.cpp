@@ -174,8 +174,6 @@ namespace {
                 }
             }
 
-            Task* next() noexcept;
-
             void run() noexcept override;
         };
 
@@ -233,27 +231,25 @@ void WorkStealingThreadPool::join() noexcept {
     }
 }
 
-Task* WorkStealingThreadPool::Worker::next() noexcept {
-    if (auto task = pop(); task) {
-        return task;
-    }
-
-    return pool_->tryStealTask(rng_);
-}
-
 void WorkStealingThreadPool::Worker::run() noexcept {
-    while (true) {
-        while (auto task = next()) {
-            task->run();
+    LockGuard lock(mutex_);
+
+    while (!pool_->shutdown()) {
+        while (auto task = popNoLock()) {
+            do {
+                UnlockGuard unlock(mutex_);
+
+                task->run();
+            } while (task = popNoLock());
+
+            UnlockGuard unlock(mutex_);
+
+            if (auto task = pool_->tryStealTask(rng_); task) {
+                task->run();
+            }
         }
 
-        LockGuard lock(mutex_);
-
-        if (pool_->shutdown()) {
-            return processPending();
-        }
-
-        if (tasks_.empty()) {
+        if (!pool_->shutdown()) {
             condVar_.wait(mutex_);
         }
     }
