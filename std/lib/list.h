@@ -95,5 +95,7 @@ namespace Std {
                 return (*(F*)ctx)(l, r);
             }, (void*)&f);
         }
+
+        void splitHalf(IntrusiveList& l, IntrusiveList& r) noexcept;
     };
 }

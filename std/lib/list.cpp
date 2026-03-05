@@ -46,8 +46,8 @@ void IntrusiveList::xchgWithEmptyList(IntrusiveList& r) noexcept {
 
 namespace {
     static inline void split(IntrusiveList& s, IntrusiveList* l, IntrusiveList* r) noexcept {
-        while (!s.empty()) {
-            l->pushBack(s.popFront());
+        while (auto el = s.popFrontOrNull()) {
+            l->pushBack(el);
             xchg(l, r);
         }
     }
@@ -88,6 +88,10 @@ namespace {
 
         merge(d, l, r, cmp);
     }
+}
+
+void IntrusiveList::splitHalf(IntrusiveList& l, IntrusiveList& r) noexcept {
+    ::split(*this, &l, &r);
 }
 
 void IntrusiveList::sort(Compare1 cmp) noexcept {

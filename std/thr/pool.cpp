@@ -191,14 +191,14 @@ namespace {
 
             void loop();
             void run() noexcept override;
-            void stealInto(IntrusiveList* stolen, size_t toSteal) noexcept;
+            void stealInto(IntrusiveList* stolen) noexcept;
         };
 
         Vector<Worker*> workers_;
         unsigned int nextWorker_ = 0;
         IntMap<Worker> workerIndex_;
 
-        void trySteal(PCG32& rng, IntrusiveList* stolen, size_t toSteal) noexcept;
+        void trySteal(PCG32& rng, IntrusiveList* stolen) noexcept;
 
         inline auto nextWorker() noexcept {
             return workers_[stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed) % workers_.length()];
@@ -273,8 +273,6 @@ void WorkStealingThreadPool::Worker::loop() {
         pool_ = nullptr;
     };
 
-    size_t toSteal = 1;
-
     do {
         while (auto task = popNoLock()) {
             UnlockGuard unlock(mutex_);
@@ -287,35 +285,22 @@ void WorkStealingThreadPool::Worker::loop() {
         {
             UnlockGuard unlock(mutex_);
 
-            pool_->trySteal(rng_, &stolen, toSteal * 2);
+            pool_->trySteal(rng_, &stolen);
         }
 
-        if (stolen.empty()) {
-            toSteal = toSteal - 1;
-        } else {
-            toSteal = 1 + toSteal * 1.5;
-            tasks_.pushBack(stolen);
-        }
-
-        toSteal = max(min(toSteal, (size_t)32), (size_t)1);
+        tasks_.pushBack(stolen);
     } while (!tasks_.empty() || (condVar_.wait(mutex_), true));
 }
 
-void WorkStealingThreadPool::Worker::stealInto(IntrusiveList* stolen, size_t i) noexcept {
+void WorkStealingThreadPool::Worker::stealInto(IntrusiveList* stolen) noexcept {
     LockGuard lock(mutex_);
 
-    for (auto b = tasks_.mutFront(), e = tasks_.mutEnd(); i && b != e; --i) {
-        if (i % 2 == 0) {
-            stolen->pushBack(exchange(b, b->next));
-        } else {
-            b = b->next;
-        }
-    }
+    IntrusiveList(move(tasks_)).splitHalf(tasks_, *stolen);
 }
 
-void WorkStealingThreadPool::trySteal(PCG32& rng, IntrusiveList* stolen, size_t toSteal) noexcept {
+void WorkStealingThreadPool::trySteal(PCG32& rng, IntrusiveList* stolen) noexcept {
     for (size_t numWorkers = workers_.length(), i = 0; stolen->empty() && i < numWorkers; ++i) {
-        workers_[rng.uniformBiased(numWorkers)]->stealInto(stolen, toSteal);
+        workers_[rng.uniformBiased(numWorkers)]->stealInto(stolen);
     }
 }
 
