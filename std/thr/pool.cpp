@@ -330,7 +330,7 @@ void WorkStealingThreadPool::Worker::loop() {
         {
             UnlockGuard unlock(mutex_);
 
-            pool_->trySteal(so_.mutData(), rng_.uniformUnbiased(so_.length()), &stolen);
+            pool_->trySteal(so_.data(), rng_.uniformUnbiased(so_.length()), &stolen);
         }
 
         tasks_.pushBack(stolen);
