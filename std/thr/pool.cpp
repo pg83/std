@@ -14,6 +14,7 @@
 #include <std/sys/atomic.h>
 #include <std/dbg/insist.h>
 #include <std/ptr/scoped.h>
+#include <std/alg/exchange.h>
 #include <std/mem/obj_pool.h>
 
 using namespace Std;
@@ -183,6 +184,7 @@ namespace {
                 thread_.join();
             }
 
+            void stealInto(IntrusiveList* stolen) noexcept;
             void loop();
             void run() noexcept override;
         };
@@ -281,25 +283,25 @@ void WorkStealingThreadPool::Worker::loop() {
     } while (!tasks_.empty() || (condVar_.wait(mutex_), true));
 }
 
-void WorkStealingThreadPool::trySteal(PCG32& rng, IntrusiveList* stolen) noexcept {
-    for (size_t numWorkers = workers_.length(), i = 0; i < numWorkers; ++i) {
-        auto* victim = workers_[rng.uniformBiased(numWorkers)];
-        LockGuard lock(victim->mutex_);
+void WorkStealingThreadPool::Worker::stealInto(IntrusiveList* stolen) noexcept {
+    LockGuard lock(mutex_);
 
-        size_t index = 0;
-        size_t count = 0;
-        auto* node = victim->tasks_.mutFront();
-        auto* end = victim->tasks_.mutEnd();
+    size_t index = 0;
 
-        while (node != end && count < 25) {
-            auto* next = node->next;
-            if (index % 2 == 0) {
-                stolen->pushBack(node);
-                ++count;
-            }
-            node = next;
-            ++index;
+    auto* node = tasks_.mutFront();
+    auto* end = tasks_.mutEnd();
+
+    while (node != end && index < 32) {
+        if (index % 2 == 0) {
+            stolen->pushBack(exchange(node, node->next));
         }
+        ++index;
+    }
+}
+
+void WorkStealingThreadPool::trySteal(PCG32& rng, IntrusiveList* stolen) noexcept {
+    for (size_t numWorkers = workers_.length(), i = 0; stolen->empty() && i < numWorkers; ++i) {
+        workers_[rng.uniformBiased(numWorkers)]->stealInto(stolen);
     }
 }
 
