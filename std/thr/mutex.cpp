@@ -26,6 +26,14 @@ Mutex::Mutex()
 {
 }
 
+Mutex::Mutex(bool locked)
+    : Mutex()
+{
+    if (locked) {
+        lock();
+    }
+}
+
 Mutex::~Mutex() noexcept {
     delete impl;
 }

@@ -11,6 +11,7 @@ namespace Std {
 
     public:
         Mutex();
+        Mutex(bool lock);
         ~Mutex() noexcept;
 
         void lock() noexcept;

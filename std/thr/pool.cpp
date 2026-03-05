@@ -137,6 +137,7 @@ namespace {
             inline Worker(WorkStealingThreadPool* pool)
                 : pool_(pool)
                 , rng_(this)
+                , mutex_(true)
                 , thread_(*this)
             {
             }
@@ -215,6 +216,10 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads) {
     for (size_t i = 0; i < numThreads; ++i) {
         workers_.pushBack(workerIndex_.insertKeyed(this));
     }
+
+    for (auto w : mutRange(workers_)) {
+        w->mutex_.unlock();
+    }
 }
 
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
@@ -266,7 +271,7 @@ void WorkStealingThreadPool::Worker::loop() {
         pool_ = nullptr;
     };
 
-    size_t toSteal = 4;
+    size_t toSteal = 1;
 
     do {
         while (auto task = popNoLock()) {
@@ -280,13 +285,13 @@ void WorkStealingThreadPool::Worker::loop() {
         {
             UnlockGuard unlock(mutex_);
 
-            pool_->trySteal(rng_, &stolen, toSteal);
+            pool_->trySteal(rng_, &stolen, toSteal * 2);
         }
 
         if (stolen.empty()) {
-            toSteal = 4;
+            toSteal = 1;
         } else {
-            toSteal = min<size_t>(1 + toSteal * 1.5, 64);
+            toSteal = min<size_t>(1 + toSteal * 1.5, 32);
             tasks_.pushBack(stolen);
         }
     } while (!tasks_.empty() || (condVar_.wait(mutex_), true));
