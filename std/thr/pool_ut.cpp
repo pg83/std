@@ -455,7 +455,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
     }
 
     STD_TEST(_StressTest) {
-        const int depth = 20;
+        const int depth = 21;
         const int work = 1000;
 
         auto pool = ThreadPool::workStealing(8);

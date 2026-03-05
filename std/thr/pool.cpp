@@ -212,7 +212,9 @@ namespace {
     };
 }
 
-WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads) {
+WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
+    : workers_(numThreads)
+{
     for (size_t i = 0; i < numThreads; ++i) {
         workers_.pushBack(workerIndex_.insertKeyed(this));
     }
@@ -289,11 +291,13 @@ void WorkStealingThreadPool::Worker::loop() {
         }
 
         if (stolen.empty()) {
-            toSteal = 1;
+            toSteal = toSteal - 1;
         } else {
-            toSteal = min<size_t>(1 + toSteal * 1.5, 32);
+            toSteal = 1 + toSteal * 1.5;
             tasks_.pushBack(stolen);
         }
+
+        toSteal = max(min(toSteal, (size_t)32), (size_t)1);
     } while (!tasks_.empty() || (condVar_.wait(mutex_), true));
 }
 
