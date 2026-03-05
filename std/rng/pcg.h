@@ -18,5 +18,7 @@ namespace Std {
             // https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
             return ((u64)nextU32() * (u64)n) >> 32;
         }
+
+        u32 uniformUnbiased(u32 n) noexcept;
     };
 };
