@@ -205,25 +205,32 @@ namespace {
         struct WaitQueue {
             Mutex mutex;
             IntrusiveList lst;
+            int empty = true;
 
             inline void enqueue(Worker* w) noexcept {
                 LockGuard lock(mutex);
                 lst.pushBack(w);
+                empty = lst.empty();
             }
 
             inline Worker* dequeue() noexcept {
                 LockGuard lock(mutex);
-                return (Worker*)lst.popBackOrNull();
+                auto res = (Worker*)lst.popBackOrNull();
+                empty = lst.empty();
+                return res;
             }
 
             inline void unlink(Worker* w) noexcept {
                 LockGuard lock(mutex);
                 w->unlink();
+                empty = lst.empty();
             }
 
             inline void notifyOne() noexcept {
-                if (auto w = dequeue(); w) {
-                    w->signal();
+                if (!empty) {
+                    if (auto w = dequeue(); w) {
+                        w->signal();
+                    }
                 }
             }
 
@@ -263,14 +270,12 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
 
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
     if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
-        STD_DEFER {
-            wq.notifyOne();
-        };
-
-        return w->pushLocal(task);
+        return (w->pushLocal(task), wq.notifyOne());
+    } else if (auto w = wq.dequeue()) {
+        return w->push(task);
+    } else {
+        return workers_[stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed) % workers_.length()]->push(task);
     }
-
-    workers_[stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed) % workers_.length()]->push(task);
 }
 
 void WorkStealingThreadPool::join() noexcept {
