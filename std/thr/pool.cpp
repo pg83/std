@@ -10,9 +10,9 @@
 #include <std/sym/i_map.h>
 #include <std/alg/range.h>
 #include <std/alg/defer.h>
+#include <std/alg/minmax.h>
 #include <std/lib/vector.h>
 #include <std/sys/atomic.h>
-#include <std/dbg/insist.h>
 #include <std/ptr/scoped.h>
 #include <std/alg/exchange.h>
 #include <std/mem/obj_pool.h>
@@ -186,14 +186,14 @@ namespace {
 
             void loop();
             void run() noexcept override;
-            void stealInto(IntrusiveList* stolen) noexcept;
+            void stealInto(IntrusiveList* stolen, size_t toSteal) noexcept;
         };
 
         Vector<Worker*> workers_;
         unsigned int nextWorker_ = 0;
         IntMap<Worker> workerIndex_;
 
-        void trySteal(PCG32& rng, IntrusiveList* stolen) noexcept;
+        void trySteal(PCG32& rng, IntrusiveList* stolen, size_t toSteal) noexcept;
 
         inline auto nextWorker() noexcept {
             return workers_[stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed) % workers_.length()];
@@ -262,6 +262,8 @@ void WorkStealingThreadPool::Worker::loop() {
         pool_ = nullptr;
     };
 
+    size_t toSteal = 4;
+
     do {
         while (auto task = popNoLock()) {
             UnlockGuard unlock(mutex_);
@@ -274,30 +276,36 @@ void WorkStealingThreadPool::Worker::loop() {
         {
             UnlockGuard unlock(mutex_);
 
-            pool_->trySteal(rng_, &stolen);
+            pool_->trySteal(rng_, &stolen, toSteal);
         }
 
-        while (auto node = stolen.popFrontOrNull()) {
-            tasks_.pushBack(node);
+        if (stolen.empty()) {
+            toSteal = 4;
+        } else {
+            toSteal = min<size_t>(1 + toSteal * 1.5, 64);
+
+            while (auto node = stolen.popFrontOrNull()) {
+                tasks_.pushBack(node);
+            }
         }
     } while (!tasks_.empty() || (condVar_.wait(mutex_), true));
 }
 
-void WorkStealingThreadPool::Worker::stealInto(IntrusiveList* stolen) noexcept {
+void WorkStealingThreadPool::Worker::stealInto(IntrusiveList* stolen, size_t i) noexcept {
     LockGuard lock(mutex_);
 
-    size_t i = 0;
-
-    for (auto b = tasks_.mutFront(), e = tasks_.mutEnd(); b != e && i < 32; ++i) {
+    for (auto b = tasks_.mutFront(), e = tasks_.mutEnd(); i && b != e; --i) {
         if (i % 2 == 0) {
             stolen->pushBack(exchange(b, b->next));
+        } else {
+            b = b->next;
         }
     }
 }
 
-void WorkStealingThreadPool::trySteal(PCG32& rng, IntrusiveList* stolen) noexcept {
+void WorkStealingThreadPool::trySteal(PCG32& rng, IntrusiveList* stolen, size_t toSteal) noexcept {
     for (size_t numWorkers = workers_.length(), i = 0; stolen->empty() && i < numWorkers; ++i) {
-        workers_[rng.uniformBiased(numWorkers)]->stealInto(stolen);
+        workers_[rng.uniformBiased(numWorkers)]->stealInto(stolen, toSteal);
     }
 }
 
