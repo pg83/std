@@ -157,9 +157,13 @@ namespace {
 
             inline void push(Task& task) noexcept {
                 LockGuard lock(mutex_);
-
                 tasks_.pushBack(&task);
                 condVar_.signal();
+            }
+
+            inline void pushLocal(Task& task) noexcept {
+                LockGuard lock(mutex_);
+                tasks_.pushBack(&task);
             }
 
             inline void signal() noexcept {
@@ -219,7 +223,7 @@ void WorkStealingThreadPool::submitTask(Task& task) noexcept {
             nextWorker()->signal();
         };
 
-        return w->push(task);
+        return w->pushLocal(task);
     }
 
     nextWorker()->push(task);
