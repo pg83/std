@@ -196,7 +196,7 @@ namespace {
 
             void loop();
             void run() noexcept override;
-            void stealInto(IntrusiveList* stolen) noexcept;
+            void split(IntrusiveList* stolen) noexcept;
         };
 
         struct WaitQueue {
@@ -328,7 +328,7 @@ void WorkStealingThreadPool::Worker::loop() {
     } while (!tasks_.empty() || (sleep(), true));
 }
 
-void WorkStealingThreadPool::Worker::stealInto(IntrusiveList* stolen) noexcept {
+void WorkStealingThreadPool::Worker::split(IntrusiveList* stolen) noexcept {
     LockGuard lock(mutex_);
 
     tasks_.splitHalf(tasks_, *stolen);
@@ -340,7 +340,7 @@ void WorkStealingThreadPool::Worker::stealInto(IntrusiveList* stolen) noexcept {
 
 void WorkStealingThreadPool::trySteal(PCG32& rng, IntrusiveList* stolen) noexcept {
     for (size_t numWorkers = workers_.length(), i = 0; stolen->empty() && i < numWorkers; ++i) {
-        workers_[rng.uniformBiased(numWorkers)]->stealInto(stolen);
+        workers_[rng.uniformBiased(numWorkers)]->split(stolen);
     }
 }
 
