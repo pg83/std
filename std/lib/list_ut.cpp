@@ -1695,4 +1695,115 @@ STD_TEST_SUITE(IntrusiveList) {
         STD_INSIST(front->value == 10);
         STD_INSIST(back->value == 40);
     }
+
+    STD_TEST(pushBackListBothEmpty) {
+        IntrusiveList dst;
+        IntrusiveList src;
+
+        dst.pushBack(src);
+
+        STD_INSIST(dst.empty());
+        STD_INSIST(src.empty());
+    }
+
+    STD_TEST(pushBackListSrcEmpty) {
+        IntrusiveList dst;
+        IntrusiveList src;
+        TestData d1(1);
+        TestData d2(2);
+
+        dst.pushBack(&d1);
+        dst.pushBack(&d2);
+        dst.pushBack(src);
+
+        STD_INSIST(src.empty());
+        STD_INSIST(dst.length() == 2);
+        STD_INSIST(dst.mutFront() == &d1);
+        STD_INSIST(dst.mutBack() == &d2);
+    }
+
+    STD_TEST(pushBackListDstEmpty) {
+        IntrusiveList dst;
+        IntrusiveList src;
+        TestData s1(10);
+        TestData s2(20);
+        TestData s3(30);
+
+        src.pushBack(&s1);
+        src.pushBack(&s2);
+        src.pushBack(&s3);
+        dst.pushBack(src);
+
+        STD_INSIST(src.empty());
+        STD_INSIST(dst.length() == 3);
+        STD_INSIST(dst.mutFront() == &s1);
+        STD_INSIST(dst.mutBack() == &s3);
+    }
+
+    STD_TEST(pushBackListOrderPreserved) {
+        IntrusiveList dst;
+        IntrusiveList src;
+        TestData d1(1);
+        TestData d2(2);
+        TestData s1(3);
+        TestData s2(4);
+        TestData s3(5);
+
+        dst.pushBack(&d1);
+        dst.pushBack(&d2);
+        src.pushBack(&s1);
+        src.pushBack(&s2);
+        src.pushBack(&s3);
+        dst.pushBack(src);
+
+        STD_INSIST(src.empty());
+        STD_INSIST(dst.length() == 5);
+
+        IntrusiveNode* head = dst.mutEnd();
+        IntrusiveNode* cur = head->next;
+        int expected[] = {1, 2, 3, 4, 5};
+        int idx = 0;
+        while (cur != head) {
+            STD_INSIST(static_cast<TestData*>(cur)->value == expected[idx++]);
+            cur = cur->next;
+        }
+        STD_INSIST(idx == 5);
+    }
+
+    STD_TEST(pushBackListSrcDrained) {
+        IntrusiveList dst;
+        IntrusiveList src;
+        TestData s1(7);
+        TestData s2(8);
+
+        src.pushBack(&s1);
+        src.pushBack(&s2);
+        dst.pushBack(src);
+
+        STD_INSIST(src.empty());
+    }
+
+    STD_TEST(pushBackListTwice) {
+        IntrusiveList dst;
+        IntrusiveList src1;
+        IntrusiveList src2;
+        TestData a(1);
+        TestData b(2);
+        TestData c(3);
+        TestData d(4);
+
+        src1.pushBack(&a);
+        src1.pushBack(&b);
+        src2.pushBack(&c);
+        src2.pushBack(&d);
+
+        dst.pushBack(src1);
+        dst.pushBack(src2);
+
+        STD_INSIST(src1.empty());
+        STD_INSIST(src2.empty());
+        STD_INSIST(dst.length() == 4);
+        STD_INSIST(dst.mutFront() == &a);
+        STD_INSIST(dst.mutBack() == &d);
+    }
 }

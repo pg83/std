@@ -66,7 +66,6 @@ namespace {
         }
     };
 
-
     struct CounterTask: public Task {
         int* counter_;
 
@@ -460,7 +459,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         const int work = 1000;
 
         auto pool = ThreadPool::workStealing(8);
-        //auto pool = ThreadPool::simple(8);
+        // auto pool = ThreadPool::simple(8);
         StressState state(pool.mutPtr(), work);
 
         pool->submit(*new StressTask(&state, depth));
