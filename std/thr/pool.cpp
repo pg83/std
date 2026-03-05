@@ -298,6 +298,10 @@ void WorkStealingThreadPool::Worker::stealInto(IntrusiveList* stolen) noexcept {
     LockGuard lock(mutex_);
 
     tasks_.splitHalf(tasks_, *stolen);
+
+    if (!tasks_.empty()) {
+        pool_->nextWorker()->signal();
+    }
 }
 
 void WorkStealingThreadPool::trySteal(PCG32& rng, IntrusiveList* stolen) noexcept {
