@@ -330,11 +330,13 @@ void WorkStealingThreadPool::Worker::loop() {
 }
 
 void WorkStealingThreadPool::Worker::split(IntrusiveList* stolen) noexcept {
-    LockGuard lock(mutex_);
+    {
+        LockGuard lock(mutex_);
 
-    tasks_.splitHalf(tasks_, *stolen);
+        tasks_.splitHalf(tasks_, *stolen);
+    }
 
-    if (!tasks_.empty() && pool_) {
+    if (pool_) {
         pool_->wq.notifyOne();
     }
 }
