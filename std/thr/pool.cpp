@@ -241,7 +241,7 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
     if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
         return (w->pushLocal(task), wq.notifyOne());
-    } else if (auto w = static_cast<Worker*>(wq.dequeue())) {
+    } else if (auto w = (Worker*)wq.dequeue()) {
         return w->push(task);
     } else {
         return workers_[stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed) % workers_.length()]->push(task);
