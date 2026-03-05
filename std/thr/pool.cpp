@@ -191,7 +191,7 @@ namespace {
         unsigned int nextWorker_ = 0;
         IntMap<Worker> workerIndex_;
 
-        Task* tryStealTask(PCG32& rng) noexcept;
+        void trySteal(PCG32& rng, IntrusiveList* stolen) noexcept;
 
         inline auto nextWorker() noexcept {
             return workers_[stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed) % workers_.length()];
@@ -267,22 +267,40 @@ void WorkStealingThreadPool::Worker::loop() {
             task->run();
         }
 
-        UnlockGuard unlock(mutex_);
+        IntrusiveList stolen;
 
-        if (auto task = pool_->tryStealTask(rng_); task) {
-            task->run();
+        {
+            UnlockGuard unlock(mutex_);
+
+            pool_->trySteal(rng_, &stolen);
+        }
+
+        while (auto node = stolen.popFrontOrNull()) {
+            tasks_.pushBack(node);
         }
     } while (!tasks_.empty() || (condVar_.wait(mutex_), true));
 }
 
-Task* WorkStealingThreadPool::tryStealTask(PCG32& rng) noexcept {
+void WorkStealingThreadPool::trySteal(PCG32& rng, IntrusiveList* stolen) noexcept {
     for (size_t numWorkers = workers_.length(), i = 0; i < numWorkers; ++i) {
-        if (auto task = workers_[rng.uniformBiased(numWorkers)]->pop(); task) {
-            return task;
+        auto* victim = workers_[rng.uniformBiased(numWorkers)];
+        LockGuard lock(victim->mutex_);
+
+        size_t index = 0;
+        size_t count = 0;
+        auto* node = victim->tasks_.mutFront();
+        auto* end = victim->tasks_.mutEnd();
+
+        while (node != end && count < 25) {
+            auto* next = node->next;
+            if (index % 2 == 0) {
+                stolen->pushBack(node);
+                ++count;
+            }
+            node = next;
+            ++index;
         }
     }
-
-    return nullptr;
 }
 
 ThreadPool::Ref ThreadPool::workStealing(size_t threads) {
