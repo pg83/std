@@ -91,7 +91,9 @@ namespace {
 }
 
 void IntrusiveList::splitHalf(IntrusiveList& l, IntrusiveList& r) noexcept {
-    ::split(*this, &l, &r);
+    IntrusiveList tmp;
+    xchgWithEmptyList(tmp);
+    ::split(tmp, &l, &r);
 }
 
 void IntrusiveList::sort(Compare1 cmp) noexcept {

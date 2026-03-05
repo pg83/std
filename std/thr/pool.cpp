@@ -253,6 +253,8 @@ void WorkStealingThreadPool::Worker::run() noexcept {
         loop();
     } catch (ShutDown* sh) {
         STD_DEFER {
+            LockGuard lock(mutex_);
+
             while (auto task = popNoLock()) {
                 task->run();
             }
@@ -295,7 +297,7 @@ void WorkStealingThreadPool::Worker::loop() {
 void WorkStealingThreadPool::Worker::stealInto(IntrusiveList* stolen) noexcept {
     LockGuard lock(mutex_);
 
-    IntrusiveList(move(tasks_)).splitHalf(tasks_, *stolen);
+    tasks_.splitHalf(tasks_, *stolen);
 }
 
 void WorkStealingThreadPool::trySteal(PCG32& rng, IntrusiveList* stolen) noexcept {
