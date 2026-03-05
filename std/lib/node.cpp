@@ -12,6 +12,10 @@ void IntrusiveNode::xchg(IntrusiveNode& r) {
 void IntrusiveNode::unlink() noexcept {
     prev->next = next;
     next->prev = prev;
+    reset();
+}
+
+void IntrusiveNode::reset() noexcept {
     prev = this;
     next = this;
 }

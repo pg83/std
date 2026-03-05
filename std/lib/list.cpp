@@ -5,6 +5,11 @@
 using namespace Std;
 
 namespace {
+    static inline void link(IntrusiveNode* a, IntrusiveNode* b) noexcept {
+        a->next = b;
+        b->prev = a;
+    }
+
     static inline void xchgWithEmpty(IntrusiveNode& l, IntrusiveNode& r) noexcept {
         IntrusiveList::insertAfter(&l, &r);
         l.remove();
@@ -13,10 +18,8 @@ namespace {
 
 void IntrusiveList::insertAfter(IntrusiveNode* pos, IntrusiveNode* node) noexcept {
     node->remove();
-    node->next = pos->next;
-    node->prev = pos;
-    pos->next->prev = node;
-    pos->next = node;
+    link(node, pos->next);
+    link(pos, node);
 }
 
 unsigned IntrusiveList::length() const noexcept {
@@ -114,7 +117,13 @@ IntrusiveNode* IntrusiveList::popBackOrNull() noexcept {
 }
 
 void IntrusiveList::pushBack(IntrusiveList& lst) noexcept {
-    while (auto node = lst.popFrontOrNull()) {
-        pushBack(node);
+    if (lst.empty()) {
+        return;
+    } else if (empty()) {
+        lst.xchgWithEmptyList(*this);
+    } else {
+        link(mutBack(), lst.mutFront());
+        link(lst.mutBack(), mutEnd());
+        lst.head.reset();
     }
 }

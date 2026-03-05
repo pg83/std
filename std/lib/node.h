@@ -9,6 +9,7 @@ namespace Std {
             return (unlink(), this);
         }
 
+        void reset() noexcept;
         void unlink() noexcept;
         void xchg(IntrusiveNode& r);
     };
