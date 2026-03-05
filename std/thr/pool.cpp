@@ -214,6 +214,9 @@ namespace {
             }
 
             inline Worker* dequeue() noexcept {
+                if (empty) {
+                    return nullptr;
+                }
                 LockGuard lock(mutex);
                 auto res = (Worker*)lst.popBackOrNull();
                 empty = lst.empty();
@@ -227,10 +230,8 @@ namespace {
             }
 
             inline void notifyOne() noexcept {
-                if (!empty) {
-                    if (auto w = dequeue(); w) {
-                        w->signal();
-                    }
+                if (auto w = dequeue(); w) {
+                    w->signal();
                 }
             }
 
