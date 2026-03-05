@@ -193,6 +193,10 @@ namespace {
 
         Task* tryStealTask(PCG32& rng) noexcept;
 
+        inline auto nextWorker() noexcept {
+            return workers_[stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed) % workers_.length()];
+        }
+
     public:
         WorkStealingThreadPool(size_t numThreads);
 
@@ -208,17 +212,15 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads) {
 }
 
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
-    const size_t idx = stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed);
-
     if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
         STD_DEFER {
-            workers_[idx % workers_.length()]->signal();
+            nextWorker()->signal();
         };
 
         return w->push(task);
     }
 
-    workers_[idx % workers_.length()]->push(task);
+    nextWorker()->push(task);
 }
 
 void WorkStealingThreadPool::join() noexcept {
