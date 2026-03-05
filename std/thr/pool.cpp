@@ -340,7 +340,7 @@ void WorkStealingThreadPool::Worker::stealInto(IntrusiveList* stolen) noexcept {
 
     tasks_.splitHalf(tasks_, *stolen);
 
-    if (!tasks_.empty()) {
+    if (!tasks_.empty() && pool_) {
         pool_->wq.notifyOne();
     }
 }
