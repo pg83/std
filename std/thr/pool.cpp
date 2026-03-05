@@ -168,12 +168,7 @@ namespace {
             }
 
             inline void signal() noexcept {
-                // LockGuard lock(mutex_);
                 condVar_.signal();
-            }
-
-            inline void waitSignal() noexcept {
-                condVar_.wait(mutex_);
             }
 
             inline bool tryPush(Task& task) noexcept {
@@ -194,7 +189,9 @@ namespace {
             }
 
             inline void sleep() noexcept {
-                pool_->wq.waitFor(this);
+                pool_->wq.enqueue(this);
+                condVar_.wait(mutex_);
+                pool_->wq.unlink(this);
             }
 
             void loop();
@@ -233,12 +230,6 @@ namespace {
                 if (auto w = dequeue(); w) {
                     w->signal();
                 }
-            }
-
-            inline void waitFor(Worker* w) {
-                enqueue(w);
-                w->waitSignal();
-                unlink(w);
             }
         };
 
