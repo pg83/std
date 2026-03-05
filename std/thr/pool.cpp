@@ -184,9 +184,9 @@ namespace {
                 thread_.join();
             }
 
-            void stealInto(IntrusiveList* stolen) noexcept;
             void loop();
             void run() noexcept override;
+            void stealInto(IntrusiveList* stolen) noexcept;
         };
 
         Vector<Worker*> workers_;
@@ -286,16 +286,12 @@ void WorkStealingThreadPool::Worker::loop() {
 void WorkStealingThreadPool::Worker::stealInto(IntrusiveList* stolen) noexcept {
     LockGuard lock(mutex_);
 
-    size_t index = 0;
+    size_t i = 0;
 
-    auto* node = tasks_.mutFront();
-    auto* end = tasks_.mutEnd();
-
-    while (node != end && index < 32) {
-        if (index % 2 == 0) {
-            stolen->pushBack(exchange(node, node->next));
+    for (auto b = tasks_.mutFront(), e = tasks_.mutEnd(); b != e && i < 32; ++i) {
+        if (i % 2 == 0) {
+            stolen->pushBack(exchange(b, b->next));
         }
-        ++index;
     }
 }
 
