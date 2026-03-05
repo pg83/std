@@ -4,6 +4,7 @@
 #include "thread.h"
 #include "runable.h"
 #include "cond_var.h"
+#include "wait_queue.h"
 
 #include <std/rng/pcg.h>
 #include <std/lib/list.h>
@@ -127,7 +128,7 @@ ThreadPool::Ref ThreadPool::simple(size_t threads) {
 
 namespace {
     class WorkStealingThreadPool: public ThreadPool {
-        struct Worker: public Runable, public IntrusiveNode {
+        struct Worker: public Runable, public WaitQueue::Item {
             WorkStealingThreadPool* pool_;
             PCG32 rng_;
             Vector<u32> so_;
@@ -177,7 +178,7 @@ namespace {
                 tasks_.pushBack(&task);
             }
 
-            inline void signal() noexcept {
+            void notify() noexcept override {
                 LockGuard lock(mutex_);
                 condVar_.signal();
             }
@@ -210,40 +211,6 @@ namespace {
             void split(IntrusiveList* stolen) noexcept;
         };
 
-        struct WaitQueue {
-            Mutex mutex;
-            IntrusiveList lst;
-            int empty = true;
-
-            inline void enqueue(Worker* w) noexcept {
-                LockGuard lock(mutex);
-                lst.pushBack(w);
-                stdAtomicStore(&empty, (int)lst.empty(), MemoryOrder::Release);
-            }
-
-            inline Worker* dequeue() noexcept {
-                if (stdAtomicFetch(&empty, MemoryOrder::Acquire)) {
-                    return nullptr;
-                }
-                LockGuard lock(mutex);
-                auto res = (Worker*)lst.popBackOrNull();
-                stdAtomicStore(&empty, (int)lst.empty(), MemoryOrder::Release);
-                return res;
-            }
-
-            inline void unlink(Worker* w) noexcept {
-                LockGuard lock(mutex);
-                w->unlink();
-                stdAtomicStore(&empty, (int)lst.empty(), MemoryOrder::Release);
-            }
-
-            inline void notifyOne() noexcept {
-                if (auto w = dequeue(); w) {
-                    w->signal();
-                }
-            }
-        };
-
         Vector<Worker*> workers_;
         IntMap<Worker> workerIndex_;
         WaitQueue wq;
@@ -274,7 +241,7 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
     if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
         return (w->pushLocal(task), wq.notifyOne());
-    } else if (auto w = wq.dequeue()) {
+    } else if (auto w = static_cast<Worker*>(wq.dequeue())) {
         return w->push(task);
     } else {
         return workers_[stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed) % workers_.length()]->push(task);
