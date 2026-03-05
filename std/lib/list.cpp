@@ -112,3 +112,9 @@ IntrusiveNode* IntrusiveList::popBackOrNull() noexcept {
 
     return popBack();
 }
+
+void IntrusiveList::pushBack(IntrusiveList& lst) noexcept {
+    while (auto node = lst.popFrontOrNull()) {
+        pushBack(node);
+    }
+}

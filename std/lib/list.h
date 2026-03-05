@@ -26,6 +26,8 @@ namespace Std {
             insertAfter(head.prev, node);
         }
 
+        void pushBack(IntrusiveList& lst) noexcept;
+
         inline void pushFront(IntrusiveNode* node) noexcept {
             insertAfter(&head, node);
         }

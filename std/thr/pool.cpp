@@ -287,10 +287,7 @@ void WorkStealingThreadPool::Worker::loop() {
             toSteal = 4;
         } else {
             toSteal = min<size_t>(1 + toSteal * 1.5, 64);
-
-            while (auto node = stolen.popFrontOrNull()) {
-                tasks_.pushBack(node);
-            }
+            tasks_.pushBack(stolen);
         }
     } while (!tasks_.empty() || (condVar_.wait(mutex_), true));
 }
