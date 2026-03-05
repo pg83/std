@@ -216,23 +216,23 @@ namespace {
             inline void enqueue(Worker* w) noexcept {
                 LockGuard lock(mutex);
                 lst.pushBack(w);
-                empty = lst.empty();
+                stdAtomicStore(&empty, (int)lst.empty(), MemoryOrder::Release);
             }
 
             inline Worker* dequeue() noexcept {
-                if (empty) {
+                if (stdAtomicFetch(&empty, MemoryOrder::Acquire)) {
                     return nullptr;
                 }
                 LockGuard lock(mutex);
                 auto res = (Worker*)lst.popBackOrNull();
-                empty = lst.empty();
+                stdAtomicStore(&empty, (int)lst.empty(), MemoryOrder::Release);
                 return res;
             }
 
             inline void unlink(Worker* w) noexcept {
                 LockGuard lock(mutex);
                 w->unlink();
-                empty = lst.empty();
+                stdAtomicStore(&empty, (int)lst.empty(), MemoryOrder::Release);
             }
 
             inline void notifyOne() noexcept {
