@@ -235,15 +235,11 @@ namespace {
         };
 
         Vector<Worker*> workers_;
-        unsigned int nextWorker_ = 0;
         IntMap<Worker> workerIndex_;
         WaitQueue wq;
+        unsigned int nextWorker_ = 0;
 
         void trySteal(PCG32& rng, IntrusiveList* stolen) noexcept;
-
-        inline auto nextWorker() noexcept {
-            return workers_[stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed) % workers_.length()];
-        }
 
     public:
         WorkStealingThreadPool(size_t numThreads);
@@ -274,7 +270,7 @@ void WorkStealingThreadPool::submitTask(Task& task) noexcept {
         return w->pushLocal(task);
     }
 
-    nextWorker()->push(task);
+    workers_[stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed) % workers_.length()]->push(task);
 }
 
 void WorkStealingThreadPool::join() noexcept {
