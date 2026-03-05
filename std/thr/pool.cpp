@@ -162,7 +162,7 @@ namespace {
             }
 
             inline void signal() noexcept {
-                LockGuard lock(mutex_);
+                // LockGuard lock(mutex_);
                 condVar_.signal();
             }
 
