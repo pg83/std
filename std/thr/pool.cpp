@@ -126,7 +126,7 @@ ThreadPool::Ref ThreadPool::simple(size_t threads) {
 
 namespace {
     class WorkStealingThreadPool: public ThreadPool {
-        struct Worker: public Runable {
+        struct Worker: public Runable, public IntrusiveNode {
             WorkStealingThreadPool* pool_;
             PCG32 rng_;
             Mutex mutex_;
@@ -172,6 +172,10 @@ namespace {
                 condVar_.signal();
             }
 
+            inline void waitSignal() noexcept {
+                condVar_.wait(mutex_);
+            }
+
             inline bool tryPush(Task& task) noexcept {
                 LockGuard lock(mutex_);
 
@@ -189,14 +193,51 @@ namespace {
                 thread_.join();
             }
 
+            inline void sleep() noexcept {
+                pool_->wq.waitFor(this);
+            }
+
             void loop();
             void run() noexcept override;
             void stealInto(IntrusiveList* stolen) noexcept;
         };
 
+        struct WaitQueue {
+            Mutex mutex;
+            IntrusiveList lst;
+
+            inline void enqueue(Worker* w) noexcept {
+                LockGuard lock(mutex);
+                lst.pushBack(w);
+            }
+
+            inline Worker* dequeue() noexcept {
+                LockGuard lock(mutex);
+                return (Worker*)lst.popBackOrNull();
+            }
+
+            inline void unlink(Worker* w) noexcept {
+                LockGuard lock(mutex);
+                w->unlink();
+            }
+
+            inline void notifyOne() noexcept {
+                if (auto w = dequeue(); w) {
+                    w->signal();
+                }
+            }
+
+            inline void waitFor(Worker* w) {
+                enqueue(w);
+                w->waitSignal();
+                unlink(w);
+            }
+        };
+
         Vector<Worker*> workers_;
         unsigned int nextWorker_ = 0;
         IntMap<Worker> workerIndex_;
+        WaitQueue wq;
 
         void trySteal(PCG32& rng, IntrusiveList* stolen) noexcept;
 
@@ -227,7 +268,7 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
     if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
         STD_DEFER {
-            nextWorker()->signal();
+            wq.notifyOne();
         };
 
         return w->pushLocal(task);
@@ -291,7 +332,7 @@ void WorkStealingThreadPool::Worker::loop() {
         }
 
         tasks_.pushBack(stolen);
-    } while (!tasks_.empty() || (condVar_.wait(mutex_), true));
+    } while (!tasks_.empty() || (sleep(), true));
 }
 
 void WorkStealingThreadPool::Worker::stealInto(IntrusiveList* stolen) noexcept {
@@ -300,7 +341,7 @@ void WorkStealingThreadPool::Worker::stealInto(IntrusiveList* stolen) noexcept {
     tasks_.splitHalf(tasks_, *stolen);
 
     if (!tasks_.empty()) {
-        pool_->nextWorker()->signal();
+        pool_->wq.notifyOne();
     }
 }
 
