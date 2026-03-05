@@ -161,6 +161,11 @@ namespace {
                 condVar_.signal();
             }
 
+            inline void signal() noexcept {
+                LockGuard lock(mutex_);
+                condVar_.signal();
+            }
+
             inline bool tryPush(Task& task) noexcept {
                 LockGuard lock(mutex_);
 
@@ -203,11 +208,15 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads) {
 }
 
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
+    const size_t idx = stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed);
+
     if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
+        STD_DEFER {
+            workers_[idx % workers_.length()]->signal();
+        };
+
         return w->push(task);
     }
-
-    const size_t idx = stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed);
 
     workers_[idx % workers_.length()]->push(task);
 }

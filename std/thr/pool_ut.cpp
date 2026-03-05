@@ -1,6 +1,8 @@
 #include "pool.h"
 #include "task.h"
 #include "runable.h"
+#include "mutex.h"
+#include "cond_var.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/atomic.h>
@@ -8,6 +10,63 @@
 using namespace Std;
 
 namespace {
+    struct StressState {
+        ThreadPool* pool;
+        int work;
+        int counter;
+        Mutex mutex;
+        CondVar condVar;
+
+        StressState(ThreadPool* p, int w)
+            : pool(p)
+            , work(w)
+            , counter(1)
+        {
+        }
+    };
+
+    struct StressTask: public Runable {
+        StressState* state_;
+        int depth_;
+
+        StressTask(StressState* s, int d)
+            : state_(s)
+            , depth_(d)
+        {
+        }
+
+        void doWork() noexcept {
+            for (volatile int i = 0; i < state_->work; ++i) {
+            }
+        }
+
+        void schedule() {
+            stdAtomicAddAndFetch(&state_->counter, 1, MemoryOrder::Relaxed);
+            state_->pool->submit(*new StressTask(state_, depth_ - 1));
+        }
+
+        void run() override {
+            doWork();
+            if (depth_ > 0) {
+                schedule();
+            }
+            doWork();
+            if (depth_ > 0) {
+                schedule();
+            }
+            doWork();
+
+            auto* state = state_;
+            delete this;
+
+            if (stdAtomicSubAndFetch(&state->counter, 1, MemoryOrder::Release) == 0) {
+                LockGuard lock(state->mutex);
+                state->condVar.signal();
+            }
+        }
+    };
+
+
     struct CounterTask: public Task {
         int* counter_;
 
@@ -394,5 +453,26 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         pool->join();
 
         STD_INSIST(counter == 100);
+    }
+
+    STD_TEST(_StressTest) {
+        const int depth = 20;
+        const int work = 1000;
+
+        auto pool = ThreadPool::workStealing(8);
+        //auto pool = ThreadPool::simple(8);
+        StressState state(pool.mutPtr(), work);
+
+        pool->submit(*new StressTask(&state, depth));
+
+        {
+            LockGuard lock(state.mutex);
+
+            while (stdAtomicFetch(&state.counter, MemoryOrder::Acquire) > 0) {
+                state.condVar.wait(state.mutex);
+            }
+        }
+
+        pool->join();
     }
 }
