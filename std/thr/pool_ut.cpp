@@ -479,7 +479,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
     }
 
     STD_TEST(_SWD) {
-        for (size_t i = 0; i < 1000000; i++) {
+        for (volatile int i = 0; i < 1000000; i++) {
             doW(work);
         }
     }
