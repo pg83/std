@@ -147,12 +147,17 @@ namespace {
                 return thread_.threadId();
             }
 
+            inline void flush() noexcept {
+                tasks_.pushBack(local_);
+            }
+
             inline Task* popNoLock() noexcept {
                 return (Task*)tasks_.popFrontOrNull();
             }
 
             inline void push(Task& task) noexcept {
                 LockGuard lock(mutex_);
+                flush();
                 tasks_.pushBack(&task);
                 condVar_.signal();
             }
@@ -161,6 +166,7 @@ namespace {
                 {
                     LockGuard lock(mutex_);
 
+                    flush();
                     tasks_.pushBack(&task);
                 }
 
@@ -329,7 +335,7 @@ void WorkStealingThreadPool::Worker::loop() {
 
         if (!local_.empty() || !stolen.empty()) {
             tasks_.pushBack(stolen);
-            tasks_.pushBack(local_);
+            flush();
             pool_->notifyOne();
         }
     } while (!tasks_.empty() || (sleep(), true));
