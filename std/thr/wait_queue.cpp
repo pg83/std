@@ -8,7 +8,8 @@ using namespace Std;
 
 #if __SIZEOF_POINTER__ == 8
 struct WaitQueue::Impl {
-    u64 head_ = 0; // upper 16 bits: tag, lower 48 bits: pointer
+    // upper 16 bits: tag, lower 48 bits: pointer
+    u64 head_ = 0;
 
     static inline u64 pack(Item* ptr, u64 tag) noexcept {
         return ((tag & 0xFFFFu) << 48) | ((uintptr_t)(ptr) & 0x0000FFFFFFFFFFFFu);
