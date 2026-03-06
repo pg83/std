@@ -3,7 +3,7 @@
 #include <std/alg/exchange.h>
 #include <std/alg/destruct.h>
 
-using namespace Std;
+using namespace stl;
 
 void Disposer::dispose() noexcept {
     while (end) {

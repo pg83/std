@@ -2,7 +2,7 @@
 
 #include <std/sys/types.h>
 
-namespace Std {
+namespace stl {
     struct Newable {
         static void* operator new(size_t, void* ptr) noexcept {
             return ptr;

@@ -4,7 +4,7 @@
 #include <std/lib/buffer.h>
 #include <std/lib/visitor.h>
 
-namespace Std {
+namespace stl {
     class HashTable {
     public:
         struct Node {

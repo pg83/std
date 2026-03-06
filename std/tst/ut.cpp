@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     struct Exc {
@@ -223,7 +223,7 @@ namespace {
 }
 
 template <>
-void Std::output<ZeroCopyOutput, TestFunc>(ZeroCopyOutput& buf, const TestFunc& test) {
+void stl::output<ZeroCopyOutput, TestFunc>(ZeroCopyOutput& buf, const TestFunc& test) {
     buf << test.suite()
         << StringView(u8"::")
         << test.name();

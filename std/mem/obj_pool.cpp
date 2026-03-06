@@ -5,7 +5,7 @@
 #include <std/sys/crt.h>
 #include <std/str/view.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     struct alignas(max_align_t) Base: public ObjPool {

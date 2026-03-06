@@ -10,7 +10,7 @@
 #include <alloca.h>
 #include <sys/uio.h>
 
-using namespace Std;
+using namespace stl;
 
 Output::~Output() noexcept {
 }

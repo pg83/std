@@ -1,8 +1,8 @@
 #pragma once
 
-#define STD_DEFER ::Std::ScopedGuard _ = [&] mutable -> void
+#define STD_DEFER ::stl::ScopedGuard _ = [&] mutable -> void
 
-namespace Std {
+namespace stl {
     template <typename F>
     struct ScopedGuard {
         inline ScopedGuard(F&& ff) noexcept

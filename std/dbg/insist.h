@@ -13,7 +13,7 @@
 
 #define STD_INSIST(X)                      \
     if (!(X)) {                            \
-        ::Std::panic(                      \
+        ::stl::panic(                      \
             STD_CAT(u8, STD_STRINGIZE(X)), \
             __LINE__,                      \
             STD_CAT(u8, __FILE__));        \

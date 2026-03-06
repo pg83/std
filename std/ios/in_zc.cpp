@@ -7,7 +7,7 @@
 #include <std/lib/buffer.h>
 #include <std/alg/minmax.h>
 
-using namespace Std;
+using namespace stl;
 
 ZeroCopyInput::~ZeroCopyInput() noexcept {
 }

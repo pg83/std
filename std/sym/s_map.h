@@ -4,7 +4,7 @@
 
 #include <std/str/view.h>
 
-namespace Std {
+namespace stl {
     struct SymbolHasher {
         static inline u64 hash(StringView k) noexcept {
             return k.hash64();

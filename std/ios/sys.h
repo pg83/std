@@ -4,10 +4,10 @@
 #include "output.h"
 #include "out_buf.h"
 
-#define sysO ::Std::OutBuf(::Std::stdoutStream())
-#define sysE ::Std::OutBuf(::Std::stderrStream())
+#define sysO ::stl::OutBuf(::stl::stdoutStream())
+#define sysE ::stl::OutBuf(::stl::stderrStream())
 
-namespace Std {
+namespace stl {
     Output& stdoutStream() noexcept;
     Output& stderrStream() noexcept;
 }

@@ -7,7 +7,7 @@
 
 #include <pthread.h>
 
-using namespace Std;
+using namespace stl;
 
 struct Mutex::Impl: public pthread_mutex_t {
     inline Impl() {

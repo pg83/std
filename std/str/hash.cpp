@@ -2,7 +2,7 @@
 
 #include <rapidhash.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     static inline u32 xorShift(u64 v) noexcept {
@@ -13,10 +13,10 @@ namespace {
     }
 }
 
-u32 Std::shash32(const void* data, size_t len) noexcept {
+u32 stl::shash32(const void* data, size_t len) noexcept {
     return xorShift(shash64(data, len));
 }
 
-u64 Std::shash64(const void* data, size_t len) noexcept {
+u64 stl::shash64(const void* data, size_t len) noexcept {
     return rapidhash(data, len);
 }

@@ -3,7 +3,7 @@
 #include <std/tst/ut.h>
 #include <std/ios/sys.h>
 
-using namespace Std;
+using namespace stl;
 
 STD_TEST_SUITE(RNG) {
     STD_TEST(test32Stability) {

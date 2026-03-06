@@ -22,7 +22,7 @@
 
 #include <stdlib.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     struct ShutDown: public Task {

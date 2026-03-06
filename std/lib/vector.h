@@ -4,7 +4,7 @@
 
 #include <std/typ/intrin.h>
 
-namespace Std {
+namespace stl {
     template <typename T>
     class Vector {
         Buffer buf_;

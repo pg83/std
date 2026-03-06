@@ -4,7 +4,7 @@
 #include <std/tst/ut.h>
 #include <std/ios/sys.h>
 
-using namespace Std;
+using namespace stl;
 
 STD_TEST_SUITE(SharedPtr) {
     struct IntValue {

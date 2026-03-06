@@ -4,7 +4,7 @@
 #include <std/sys/crt.h>
 #include <std/typ/support.h>
 
-using namespace Std;
+using namespace stl;
 
 STD_TEST_SUITE(Buffer) {
     STD_TEST(reset1) {

@@ -9,7 +9,7 @@
 #define _GNU_SOURCE
 #include <string.h>
 
-using namespace Std;
+using namespace stl;
 
 static_assert(stdHasTrivialDestructor(StringView));
 static_assert(sizeof(StringView) == 2 * sizeof(void*));
@@ -30,15 +30,15 @@ namespace {
     }
 }
 
-bool Std::operator==(StringView l, StringView r) noexcept {
+bool stl::operator==(StringView l, StringView r) noexcept {
     return l.length() == r.length() && spaceship(l, r) == 0;
 }
 
-bool Std::operator!=(StringView l, StringView r) noexcept {
+bool stl::operator!=(StringView l, StringView r) noexcept {
     return !(l == r);
 }
 
-bool Std::operator<(StringView l, StringView r) noexcept {
+bool stl::operator<(StringView l, StringView r) noexcept {
     return spaceship(l, r) < 0;
 }
 
@@ -99,6 +99,6 @@ u64 StringView::stou() const noexcept {
 }
 
 template <>
-void Std::output<ZeroCopyOutput, StringView>(ZeroCopyOutput& out, StringView str) {
+void stl::output<ZeroCopyOutput, StringView>(ZeroCopyOutput& out, StringView str) {
     out.write(str.data(), str.length());
 }

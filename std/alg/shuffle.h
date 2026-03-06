@@ -4,7 +4,7 @@
 
 #include <std/sys/types.h>
 
-namespace Std {
+namespace stl {
     template <typename RNG, typename I>
     inline void shuffle(RNG& r, I b, I e) noexcept {
         for (auto n = e - b; n > 1; --n) {

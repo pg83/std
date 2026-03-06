@@ -8,7 +8,7 @@
 #include <std/alg/destruct.h>
 #include <std/mem/obj_list.h>
 
-namespace Std {
+namespace stl {
     template <typename K, typename V>
     class Map {
         static inline void* tov(const K& k) noexcept {

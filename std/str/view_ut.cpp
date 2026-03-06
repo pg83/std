@@ -3,7 +3,7 @@
 #include <std/tst/ut.h>
 #include <std/lib/buffer.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     static inline size_t xsearch(StringView h, StringView n) noexcept {

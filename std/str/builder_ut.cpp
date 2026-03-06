@@ -4,7 +4,7 @@
 #include <std/tst/ut.h>
 #include <std/ios/sys.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     // Helper function to normalize floating point representation

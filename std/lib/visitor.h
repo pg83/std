@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Std {
+namespace stl {
     struct VisitorFace {
         virtual void visit(void*) = 0;
     };

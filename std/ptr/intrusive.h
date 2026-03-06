@@ -2,7 +2,7 @@
 
 #include "refcount.h"
 
-namespace Std::IPP {
+namespace stl::IPP {
     template <typename T>
     struct Ops: public RefCountOps<T> {
         static inline auto ptr(const T* t) noexcept {
@@ -15,7 +15,7 @@ namespace Std::IPP {
     };
 }
 
-namespace Std {
+namespace stl {
     template <typename T>
     using IntrusivePtr = RefCountPtr<T, IPP::Ops<T>>;
 }

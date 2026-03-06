@@ -2,7 +2,7 @@
 
 #include "output.h"
 
-namespace Std {
+namespace stl {
     class FD;
 
     class FDOutput: public Output {

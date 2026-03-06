@@ -1,10 +1,10 @@
 #pragma once
 
-#define flsH (::Std::Manip::Flush())
-#define finI (::Std::Manip::Finish())
-#define endL (::Std::Manip::EndLine())
+#define flsH (::stl::Manip::Flush())
+#define finI (::stl::Manip::Finish())
+#define endL (::stl::Manip::EndLine())
 
-namespace Std::Manip {
+namespace stl::Manip {
     struct EndLine {
     };
 

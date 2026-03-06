@@ -9,7 +9,7 @@
 #include <cstring>
 #include <cstdlib>
 
-using namespace Std;
+using namespace stl;
 
 STD_TEST_SUITE(FD) {
     STD_TEST(ReadWriteMemFd) {

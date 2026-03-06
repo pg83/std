@@ -5,7 +5,7 @@
 #include <std/alg/minmax.h>
 #include <std/alg/exchange.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     static inline auto buckets(const Buffer& buf) noexcept {

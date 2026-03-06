@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Std {
+namespace stl {
     enum class AnsiColor {
         Reset = 0,
 

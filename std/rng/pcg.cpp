@@ -3,7 +3,7 @@
 
 #include <std/alg/exchange.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     static inline u32 xorShift(u64 v) noexcept {

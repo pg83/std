@@ -9,7 +9,7 @@
 
 #include <stdlib.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     static void emptyFunc() {
@@ -19,15 +19,15 @@ namespace {
     static PanicHandler panicHandler2 = (PanicHandler)abort;
 }
 
-PanicHandler Std::setPanicHandler1(PanicHandler hndl) noexcept {
+PanicHandler stl::setPanicHandler1(PanicHandler hndl) noexcept {
     return exchange(panicHandler1, hndl);
 }
 
-PanicHandler Std::setPanicHandler2(PanicHandler hndl) noexcept {
+PanicHandler stl::setPanicHandler2(PanicHandler hndl) noexcept {
     return exchange(panicHandler2, hndl);
 }
 
-void Std::panic(const u8* what, u32 line, const u8* file) {
+void stl::panic(const u8* what, u32 line, const u8* file) {
     panicHandler1();
 
     sysE << Color::bright(AnsiColor::Red)

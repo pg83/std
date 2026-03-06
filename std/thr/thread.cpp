@@ -9,7 +9,7 @@
 
 #include <pthread.h>
 
-using namespace Std;
+using namespace stl;
 
 struct Thread::Impl {
     pthread_t thread;
@@ -54,7 +54,7 @@ u64 Thread::currentThreadId() noexcept {
     return (u64)pthread_self();
 }
 
-void Std::detach(Runable& runable) {
+void stl::detach(Runable& runable) {
     struct Helper: public Runable {
         Runable* slave;
         ScopedPtr<Thread> thr;

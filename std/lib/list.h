@@ -2,7 +2,7 @@
 
 #include "node.h"
 
-namespace Std {
+namespace stl {
     class IntrusiveList {
         IntrusiveNode head;
 

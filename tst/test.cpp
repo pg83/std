@@ -3,7 +3,7 @@
 
 #include <cpptrace/cpptrace.hpp>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     struct MyCtx: public Ctx {

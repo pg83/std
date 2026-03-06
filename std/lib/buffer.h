@@ -4,7 +4,7 @@
 #include <std/sys/types.h>
 #include <std/alg/advance.h>
 
-namespace Std {
+namespace stl {
     class StringView;
 
     class Buffer {

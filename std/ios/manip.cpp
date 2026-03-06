@@ -1,21 +1,21 @@
 #include "manip.h"
 #include "out_zc.h"
 
-using namespace Std;
-using namespace Std::Manip;
+using namespace stl;
+using namespace stl::Manip;
 
 // modifiers
 template <>
-void Std::output<ZeroCopyOutput, Flush>(ZeroCopyOutput& out, Flush) {
+void stl::output<ZeroCopyOutput, Flush>(ZeroCopyOutput& out, Flush) {
     out.flush();
 }
 
 template <>
-void Std::output<ZeroCopyOutput, Finish>(ZeroCopyOutput& out, Finish) {
+void stl::output<ZeroCopyOutput, Finish>(ZeroCopyOutput& out, Finish) {
     out.finish();
 }
 
 template <>
-void Std::output<ZeroCopyOutput, EndLine>(ZeroCopyOutput& out, EndLine) {
+void stl::output<ZeroCopyOutput, EndLine>(ZeroCopyOutput& out, EndLine) {
     out.write(u8"\n", 1);
 }

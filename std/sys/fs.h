@@ -3,7 +3,7 @@
 #include <std/str/view.h>
 #include <std/lib/visitor.h>
 
-namespace Std {
+namespace stl {
     struct TPathInfo {
         StringView item;
         bool isDir;

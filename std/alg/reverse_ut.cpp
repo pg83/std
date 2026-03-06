@@ -4,7 +4,7 @@
 #include <std/tst/ut.h>
 #include <std/lib/vector.h>
 
-using namespace Std;
+using namespace stl;
 
 STD_TEST_SUITE(Reverse) {
     STD_TEST(testEmpty) {

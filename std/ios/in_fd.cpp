@@ -2,7 +2,7 @@
 
 #include <std/sys/fd.h>
 
-using namespace Std;
+using namespace stl;
 
 size_t FDInput::readImpl(void* data, size_t len) {
     return fd->read(data, len);

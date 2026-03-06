@@ -6,7 +6,7 @@
 
 #include <cstring>
 
-using namespace Std;
+using namespace stl;
 
 STD_TEST_SUITE(ZeroCopyInputReadLine) {
     STD_TEST(EmptyInput) {

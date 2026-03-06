@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Std {
+namespace stl {
     class CondVar;
 
     class Mutex {

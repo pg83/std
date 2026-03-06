@@ -3,7 +3,7 @@
 
 #include <std/alg/minmax.h>
 
-using namespace Std;
+using namespace stl;
 
 void* TreapNode::key() const noexcept {
     return (void*)this;

@@ -2,7 +2,7 @@
 
 #include <std/typ/intrin.h>
 
-namespace Std {
+namespace stl {
     template <typename T>
     concept PassByVal = sizeof(T) <= 2 * sizeof(long double) && stdIsTriviallyCopyable(T);
 

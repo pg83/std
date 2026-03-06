@@ -5,7 +5,7 @@
 #include <std/sys/types.h>
 #include <std/lib/vector.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     struct SimpleStruct {

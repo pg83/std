@@ -2,7 +2,7 @@
 
 #include <std/typ/support.h>
 
-namespace Std {
+namespace stl {
     template <typename T>
     struct Embed {
         T t;

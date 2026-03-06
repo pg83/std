@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Std {
+namespace stl {
     template <typename T>
     inline T min(T l, T r) {
         return l < r ? l : r;

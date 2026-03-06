@@ -4,7 +4,7 @@
 #include <std/sys/types.h>
 #include <std/ptr/intrusive.h>
 
-namespace Std {
+namespace stl {
     class FreeList: public ARC {
     public:
         using Ref = IntrusivePtr<FreeList>;

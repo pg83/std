@@ -6,7 +6,7 @@
 #include <std/lib/vector.h>
 #include <std/typ/support.h>
 
-namespace Std::QSP {
+namespace stl::QSP {
     template <typename I, typename C>
     struct Context {
         struct WorkItem {
@@ -107,7 +107,7 @@ namespace Std::QSP {
     };
 }
 
-namespace Std {
+namespace stl {
     template <typename I, typename C>
     inline void quickSort(I b, I e, C&& f) {
         if (b != e) {

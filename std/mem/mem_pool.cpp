@@ -7,7 +7,7 @@
 #include <std/dbg/assert.h>
 #include <std/alg/exchange.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     constexpr size_t initial = 128;

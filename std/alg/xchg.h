@@ -2,7 +2,7 @@
 
 #include <std/typ/support.h>
 
-namespace Std {
+namespace stl {
     template <typename T>
     inline void xchg(T& l, T& r) noexcept {
         if constexpr (requires { l.xchg(r); }) {

@@ -3,7 +3,7 @@
 
 #include <std/rng/split_mix_64.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     static inline u64 prio(const void* el) noexcept {

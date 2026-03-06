@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Std {
+namespace stl {
     template <typename T>
     inline T clp2(T value) noexcept {
         T ret = 1;

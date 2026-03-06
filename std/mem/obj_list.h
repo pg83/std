@@ -7,7 +7,7 @@
 #include <std/typ/support.h>
 #include <std/alg/destruct.h>
 
-namespace Std {
+namespace stl {
     template <typename T>
     class ObjList {
         struct TT: public Embed<T>, public Newable {

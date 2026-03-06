@@ -3,7 +3,7 @@
 #include <std/sys/types.h>
 #include <std/lib/visitor.h>
 
-namespace Std {
+namespace stl {
     struct TreapNode;
 
     class Treap {

@@ -9,7 +9,7 @@
 #include <cstring>
 #include <stdexcept>
 
-using namespace Std;
+using namespace stl;
 
 STD_TEST_SUITE(OutBufBasicWrite) {
     STD_TEST(EmptyWrite) {

@@ -8,8 +8,8 @@
 #include <std/alg/minmax.h>
 #include <std/alg/advance.h>
 
-using namespace Std;
-using namespace Std::Manip;
+using namespace stl;
+using namespace stl::Manip;
 
 namespace {
     struct U64 {
@@ -67,11 +67,11 @@ size_t ZeroCopyOutput::next(void** chunk) {
 // std types
 #define DEF_OUT(typ)                                                                       \
     template <>                                                                            \
-    void Std::output<ZeroCopyOutput, typ>(ZeroCopyOutput & out, typ v) {                   \
+    void stl::output<ZeroCopyOutput, typ>(ZeroCopyOutput & out, typ v) {                   \
         out << I64{v};                                                                     \
     }                                                                                      \
     template <>                                                                            \
-    void Std::output<ZeroCopyOutput, unsigned typ>(ZeroCopyOutput & out, unsigned typ v) { \
+    void stl::output<ZeroCopyOutput, unsigned typ>(ZeroCopyOutput & out, unsigned typ v) { \
         out << U64{v};                                                                     \
     }
 
@@ -82,7 +82,7 @@ DEF_OUT(long long)
 
 #define DEF_OUT_FLOAT(typ)                                               \
     template <>                                                          \
-    void Std::output<ZeroCopyOutput, typ>(ZeroCopyOutput & out, typ v) { \
+    void stl::output<ZeroCopyOutput, typ>(ZeroCopyOutput & out, typ v) { \
         auto buf = out.imbue(128);                                       \
         out.commit(buf.distance(buf << (long double)v));                 \
     }
@@ -92,20 +92,20 @@ DEF_OUT_FLOAT(double)
 DEF_OUT_FLOAT(long double)
 
 template <>
-void Std::output<ZeroCopyOutput, U64>(ZeroCopyOutput& out, U64 v) {
+void stl::output<ZeroCopyOutput, U64>(ZeroCopyOutput& out, U64 v) {
     auto buf = out.imbue(24);
 
     out.commit(buf.distance(buf << v.val));
 }
 
 template <>
-void Std::output<ZeroCopyOutput, I64>(ZeroCopyOutput& out, I64 v) {
+void stl::output<ZeroCopyOutput, I64>(ZeroCopyOutput& out, I64 v) {
     auto buf = out.imbue(24);
 
     out.commit(buf.distance(buf << v.val));
 }
 
 template <>
-void Std::output<ZeroCopyOutput, const char*>(ZeroCopyOutput& out, const char* v) {
+void stl::output<ZeroCopyOutput, const char*>(ZeroCopyOutput& out, const char* v) {
     out << StringView(v);
 }

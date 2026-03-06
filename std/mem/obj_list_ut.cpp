@@ -3,7 +3,7 @@
 #include <std/tst/ut.h>
 #include <std/sys/types.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     struct SimpleStruct {

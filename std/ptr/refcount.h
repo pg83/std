@@ -2,7 +2,7 @@
 
 #include <std/typ/support.h>
 
-namespace Std {
+namespace stl {
     void xchgPtr(void** l, void** r);
 
     template <typename T, typename O>

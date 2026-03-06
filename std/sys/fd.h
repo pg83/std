@@ -4,7 +4,7 @@
 
 struct iovec;
 
-namespace Std {
+namespace stl {
     class FD {
         // does not own fd
         int fd;

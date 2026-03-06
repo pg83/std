@@ -2,7 +2,7 @@
 
 #include <std/sys/types.h>
 
-namespace Std {
+namespace stl {
     class PCG32 {
         u64 state_;
         u64 seq_;

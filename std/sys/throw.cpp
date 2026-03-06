@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <string.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     struct ErrnoError: public Exception {

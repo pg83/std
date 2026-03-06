@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     struct TestNode: public HashTable::Node {

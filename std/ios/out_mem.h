@@ -2,7 +2,7 @@
 
 #include "out_zc.h"
 
-namespace Std {
+namespace stl {
     class MemoryOutput: public ZeroCopyOutput {
         void* imbueImpl(size_t* avail) override;
         void commitImpl(size_t len) noexcept override;

@@ -1,7 +1,7 @@
 #include "in_mem.h"
 #include "output.h"
 
-using namespace Std;
+using namespace stl;
 
 size_t MemoryInput::nextImpl(const void** chunk) {
     return (*chunk = b, e - b);

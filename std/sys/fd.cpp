@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <sys/uio.h>
 
-using namespace Std;
+using namespace stl;
 
 size_t FD::read(void* data, size_t len) {
     if (auto res = ::read(fd, data, min(len, (size_t)(0x7ffff000 - 1))); res >= 0) {
@@ -63,14 +63,14 @@ void FD::close() {
 }
 
 void FD::xchg(FD& other) noexcept {
-    ::Std::xchg(fd, other.fd);
+    ::stl::xchg(fd, other.fd);
 }
 
 ScopedFD::~ScopedFD() {
     close();
 }
 
-void Std::createPipeFD(ScopedFD& in, ScopedFD& out) {
+void stl::createPipeFD(ScopedFD& in, ScopedFD& out) {
     int fd[2];
 
     if (auto res = pipe(fd); res < 0) {

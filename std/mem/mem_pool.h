@@ -2,7 +2,7 @@
 
 #include <std/sys/types.h>
 
-namespace Std {
+namespace stl {
     class Disposer;
 
     class MemoryPool {

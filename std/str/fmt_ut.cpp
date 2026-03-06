@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-using namespace Std;
+using namespace stl;
 
 STD_TEST_SUITE(FormatU64Base10) {
     STD_TEST(Zero) {

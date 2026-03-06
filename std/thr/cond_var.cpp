@@ -8,7 +8,7 @@
 
 #include <pthread.h>
 
-using namespace Std;
+using namespace stl;
 
 struct CondVar::Impl: public pthread_cond_t {
     inline Impl() {

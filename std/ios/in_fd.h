@@ -2,7 +2,7 @@
 
 #include "input.h"
 
-namespace Std {
+namespace stl {
     class FD;
 
     class FDInput: public Input {

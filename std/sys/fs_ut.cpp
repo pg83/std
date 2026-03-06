@@ -3,7 +3,7 @@
 #include <std/tst/ut.h>
 #include <std/lib/vector.h>
 
-using namespace Std;
+using namespace stl;
 
 STD_TEST_SUITE(ListDir) {
     STD_TEST(CurrentDirectoryBasic) {

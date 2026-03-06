@@ -7,7 +7,7 @@
 #include <std/tst/ut.h>
 #include <std/sys/atomic.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     struct StressState {

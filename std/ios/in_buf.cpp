@@ -4,7 +4,7 @@
 
 #include <std/alg/xchg.h>
 
-using namespace Std;
+using namespace stl;
 
 InBuf::~InBuf() {
 }
@@ -46,7 +46,7 @@ void InBuf::commitImpl(size_t len) noexcept {
 }
 
 void InBuf::xchg(InBuf& r) noexcept {
-    ::Std::xchg(buf, r.buf);
-    ::Std::xchg(in_, r.in_);
-    ::Std::xchg(pos, r.pos);
+    ::stl::xchg(buf, r.buf);
+    ::stl::xchg(in_, r.in_);
+    ::stl::xchg(pos, r.pos);
 }

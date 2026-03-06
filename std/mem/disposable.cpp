@@ -1,6 +1,6 @@
 #include "disposable.h"
 
-using namespace Std;
+using namespace stl;
 
 Disposable::~Disposable() noexcept {
 }

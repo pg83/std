@@ -4,7 +4,7 @@
 #include <std/lib/buffer.h>
 #include <std/str/builder.h>
 
-using namespace Std;
+using namespace stl;
 
 Input::~Input() noexcept {
 }

@@ -3,7 +3,7 @@
 
 #include <std/tst/ut.h>
 
-using namespace Std;
+using namespace stl;
 
 STD_TEST_SUITE(IntrusivePtr) {
     struct Int: public ARC {

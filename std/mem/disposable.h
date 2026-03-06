@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Std {
+namespace stl {
     struct Disposable {
         Disposable* prev = 0;
 

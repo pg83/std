@@ -6,7 +6,7 @@
 #include <std/dbg/insist.h>
 #include <std/map/treap_node.h>
 
-namespace Std {
+namespace stl {
     class ZeroCopyOutput;
 
     struct ExecContext {
@@ -24,20 +24,20 @@ namespace Std {
 
 #define STD_TEST_SUITE(_name)                     \
     namespace Suite_##_name {                     \
-        using S_V = ::Std::StringView;            \
+        using S_V = ::stl::StringView;            \
         static const auto S_N = S_V(u8## #_name); \
     }                                             \
     namespace Suite_##_name
 
 #define STD_TEST(_name)                           \
-    static struct Test_##_name: ::Std::TestFunc { \
+    static struct Test_##_name: ::stl::TestFunc { \
         inline Test_##_name() {                   \
             registerMe();                         \
         }                                         \
-        ::Std::StringView suite() const {         \
+        ::stl::StringView suite() const {         \
             return S_N;                           \
         }                                         \
-        ::Std::StringView name() const {          \
+        ::stl::StringView name() const {          \
             return u8## #_name;                   \
         }                                         \
         void execute(ExecContext& ctx) const;     \

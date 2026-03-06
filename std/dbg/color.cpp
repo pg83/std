@@ -3,10 +3,10 @@
 #include <std/str/view.h>
 #include <std/ios/out_buf.h>
 
-using namespace Std;
+using namespace stl;
 
 template <>
-void Std::output<ZeroCopyOutput, Color>(ZeroCopyOutput& buf, Color color) {
+void stl::output<ZeroCopyOutput, Color>(ZeroCopyOutput& buf, Color color) {
     buf << StringView(u8"\033[");
 
     if (color.color == AnsiColor::Reset) {

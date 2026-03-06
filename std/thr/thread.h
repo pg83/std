@@ -2,7 +2,7 @@
 
 #include <std/sys/types.h>
 
-namespace Std {
+namespace stl {
     struct Runable;
 
     // should not be used directly, use ScopedThread or detach(Runable&)

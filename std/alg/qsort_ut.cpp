@@ -5,7 +5,7 @@
 #include <std/rng/pcg.h>
 #include <std/lib/vector.h>
 
-using namespace Std;
+using namespace stl;
 
 STD_TEST_SUITE(QuickSort) {
     STD_TEST(test0) {

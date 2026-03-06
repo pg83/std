@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void* Std::allocateMemory(size_t len) {
+void* stl::allocateMemory(size_t len) {
     if (auto ret = malloc(len); ret) {
         return ret;
     }
@@ -16,11 +16,11 @@ void* Std::allocateMemory(size_t len) {
     return 0;
 }
 
-void Std::freeMemory(void* ptr) noexcept {
+void stl::freeMemory(void* ptr) noexcept {
     free(ptr);
 }
 
-int Std::memCmp(const void* l, const void* r, size_t len) noexcept {
+int stl::memCmp(const void* l, const void* r, size_t len) noexcept {
     if (len == 0) {
         return 0;
     }
@@ -28,7 +28,7 @@ int Std::memCmp(const void* l, const void* r, size_t len) noexcept {
     return memcmp(l, r, len);
 }
 
-void* Std::memCpy(void* to, const void* from, size_t len) noexcept {
+void* stl::memCpy(void* to, const void* from, size_t len) noexcept {
     if (len) {
         memcpy(to, from, len);
     }
@@ -36,11 +36,11 @@ void* Std::memCpy(void* to, const void* from, size_t len) noexcept {
     return len + (u8*)to;
 }
 
-size_t Std::strLen(const u8* s) noexcept {
+size_t stl::strLen(const u8* s) noexcept {
     return s ? strlen((const char*)s) : 0;
 }
 
-void Std::memZero(void* from, void* to) noexcept {
+void stl::memZero(void* from, void* to) noexcept {
     const size_t len = (u8*)to - (u8*)from;
 
     if (len) {

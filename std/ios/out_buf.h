@@ -5,7 +5,7 @@
 #include <std/sys/types.h>
 #include <std/lib/buffer.h>
 
-namespace Std {
+namespace stl {
     class OutBuf: public ZeroCopyOutput {
         Output* out_;
         Buffer buf_;

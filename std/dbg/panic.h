@@ -2,7 +2,7 @@
 
 #include <std/sys/types.h>
 
-namespace Std {
+namespace stl {
     using PanicHandler = void (*)();
 
     PanicHandler setPanicHandler1(PanicHandler hndl) noexcept;

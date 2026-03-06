@@ -7,7 +7,7 @@
 #include <std/alg/destruct.h>
 #include <std/mem/obj_list.h>
 
-namespace Std {
+namespace stl {
     template <typename T, typename K, typename H>
     class HashMap {
         struct Node: public HashTable::Node, public Embed<T> {

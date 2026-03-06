@@ -9,7 +9,7 @@
 #include <errno.h>
 #include <string.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     static inline bool contains(StringView haystack, StringView needle) {

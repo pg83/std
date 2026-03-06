@@ -2,7 +2,7 @@
 
 #include <std/sys/fd.h>
 
-using namespace Std;
+using namespace stl;
 
 FDOutput::~FDOutput() noexcept {
 }

@@ -1,6 +1,6 @@
 #include "builder.h"
 
-using namespace Std;
+using namespace stl;
 
 size_t StringBuilder::writeImpl(const void* ptr, size_t len) {
     return (append(ptr, len), len);

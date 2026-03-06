@@ -6,7 +6,7 @@
 
 #include <std/sys/types.h>
 
-namespace Std {
+namespace stl {
     class StringView;
 
     class ZeroCopyOutput: public Output {

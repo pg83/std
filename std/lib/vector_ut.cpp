@@ -3,7 +3,7 @@
 #include <std/tst/ut.h>
 #include <std/typ/support.h>
 
-using namespace Std;
+using namespace stl;
 
 STD_TEST_SUITE(Vector) {
     STD_TEST(pushBack) {

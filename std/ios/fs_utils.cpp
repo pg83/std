@@ -11,9 +11,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-using namespace Std;
+using namespace stl;
 
-void Std::readFileContent(Buffer& path, Buffer& out) {
+void stl::readFileContent(Buffer& path, Buffer& out) {
     int rawFd = ::open(path.cStr(), O_RDONLY);
 
     if (rawFd < 0) {

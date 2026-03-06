@@ -2,7 +2,7 @@
 
 #include <std/alg/xchg.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     static inline void link(IntrusiveNode* a, IntrusiveNode* b) noexcept {

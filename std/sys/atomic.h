@@ -7,7 +7,7 @@
 #define stdAtomicCAS(ptr, expected, desired, success_order, fail_order) \
     __atomic_compare_exchange_n(ptr, expected, desired, false, success_order, fail_order)
 
-namespace Std {
+namespace stl {
     namespace MemoryOrder {
         constexpr int Acquire = __ATOMIC_ACQUIRE;
         constexpr int Release = __ATOMIC_RELEASE;

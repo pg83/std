@@ -5,7 +5,7 @@
 
 #include <std/tst/ut.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     struct CounterRunable: public Runable {

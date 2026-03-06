@@ -2,7 +2,7 @@
 
 #include <std/sys/types.h>
 
-namespace Std {
+namespace stl {
     u64 splitMix64(u64 x) noexcept;
     u64 nextSplitMix64(u64* x) noexcept;
 }

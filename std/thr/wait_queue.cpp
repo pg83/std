@@ -4,7 +4,7 @@
 #include <std/sys/types.h>
 #include <std/sys/atomic.h>
 
-using namespace Std;
+using namespace stl;
 
 #if __SIZEOF_POINTER__ == 8
 struct WaitQueue::Impl {

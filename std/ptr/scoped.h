@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Std {
+namespace stl {
     template <typename T>
     struct ScopedPtr {
         T* ptr;

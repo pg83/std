@@ -8,9 +8,9 @@
 #include <dirent.h>
 #include <sys/types.h>
 
-using namespace Std;
+using namespace stl;
 
-void Std::listDirImpl(StringView path, VisitorFace&& vis) {
+void stl::listDirImpl(StringView path, VisitorFace&& vis) {
     DIR* dir = opendir(Buffer(path).cStr());
 
     if (!dir) {

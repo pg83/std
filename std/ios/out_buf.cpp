@@ -13,7 +13,7 @@
 
 #include <sys/uio.h>
 
-using namespace Std;
+using namespace stl;
 
 OutBuf::~OutBuf() {
     if (out_) {
@@ -116,7 +116,7 @@ void OutBuf::finishImpl() {
 }
 
 void OutBuf::xchg(OutBuf& buf) noexcept {
-    ::Std::xchg(buf_, buf.buf_);
-    ::Std::xchg(out_, buf.out_);
-    ::Std::xchg(chunk, buf.chunk);
+    ::stl::xchg(buf_, buf.buf_);
+    ::stl::xchg(out_, buf.out_);
+    ::stl::xchg(chunk, buf.chunk);
 }

@@ -4,7 +4,7 @@
 
 #include <std/sys/types.h>
 
-namespace Std {
+namespace stl {
     class MemoryInput: public ZeroCopyInput {
         const u8* b;
         const u8* e;

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Std {
+namespace stl {
     template <typename B, typename E>
     struct Range {
         const B b;

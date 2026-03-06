@@ -2,7 +2,7 @@
 
 #include <std/sys/atomic.h>
 
-using namespace Std;
+using namespace stl;
 
 ARC::ARC() noexcept {
     stdAtomicStore(&counter_, 0, MemoryOrder::Relaxed);

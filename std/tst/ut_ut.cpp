@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-using namespace Std;
+using namespace stl;
 
 STD_TEST_SUITE(UT) {
     STD_TEST(_Test1) {

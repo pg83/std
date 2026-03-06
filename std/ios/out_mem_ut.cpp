@@ -7,7 +7,7 @@
 
 #include <cstring>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     static inline void copy(Input& in, Output& out) {

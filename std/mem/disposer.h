@@ -2,7 +2,7 @@
 
 #include "disposable.h"
 
-namespace Std {
+namespace stl {
     class Disposer {
         Disposable* end = 0;
 

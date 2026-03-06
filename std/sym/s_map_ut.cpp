@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 
-using namespace Std;
+using namespace stl;
 
 STD_TEST_SUITE(SymbolMap) {
     STD_TEST(test1) {

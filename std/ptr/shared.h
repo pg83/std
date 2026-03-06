@@ -5,7 +5,7 @@
 #include <std/mem/embed.h>
 #include <std/typ/support.h>
 
-namespace Std::SPP {
+namespace stl::SPP {
     template <typename T>
     struct Ops: public RefCountOps<T> {
         static inline auto ptr(const T* t) noexcept {
@@ -23,7 +23,7 @@ namespace Std::SPP {
     };
 }
 
-namespace Std {
+namespace stl {
     class ARC;
 
     template <typename T, typename R>

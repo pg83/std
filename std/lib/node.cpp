@@ -2,11 +2,11 @@
 
 #include <std/alg/xchg.h>
 
-using namespace Std;
+using namespace stl;
 
 void IntrusiveNode::xchg(IntrusiveNode& r) {
-    ::Std::xchg(next, r.next);
-    ::Std::xchg(prev, r.prev);
+    ::stl::xchg(next, r.next);
+    ::stl::xchg(prev, r.prev);
 }
 
 void IntrusiveNode::unlink() noexcept {

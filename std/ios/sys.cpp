@@ -6,7 +6,7 @@
 
 #include <sys/stat.h>
 
-using namespace Std;
+using namespace stl;
 
 namespace {
     template <typename T>
@@ -35,13 +35,13 @@ namespace {
     }
 }
 
-Output& Std::stdoutStream() noexcept {
+Output& stl::stdoutStream() noexcept {
     static auto fd = wrap(1);
 
     return *fd;
 }
 
-Output& Std::stderrStream() noexcept {
+Output& stl::stderrStream() noexcept {
     static auto fd = wrap(2);
 
     return *fd;

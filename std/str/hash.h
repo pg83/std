@@ -2,7 +2,7 @@
 
 #include <std/sys/types.h>
 
-namespace Std {
+namespace stl {
     u32 shash32(const void* data, size_t len) noexcept;
     u64 shash64(const void* data, size_t len) noexcept;
 }

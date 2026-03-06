@@ -8,7 +8,7 @@
 #include <std/dbg/assert.h>
 #include <std/ios/out_zc.h>
 
-using namespace Std;
+using namespace stl;
 
 static_assert(sizeof(Buffer) == sizeof(void*));
 
@@ -117,7 +117,7 @@ void Buffer::appendUnsafe(const void* ptr, size_t len) {
 }
 
 void Buffer::xchg(Buffer& buf) noexcept {
-    ::Std::xchg(data_, buf.data_);
+    ::stl::xchg(data_, buf.data_);
 }
 
 void* Buffer::imbueMe(size_t* len) {
@@ -144,6 +144,6 @@ void Buffer::zero(size_t len) {
 }
 
 template <>
-void Std::output<ZeroCopyOutput, Buffer>(ZeroCopyOutput& out, const Buffer& buf) {
+void stl::output<ZeroCopyOutput, Buffer>(ZeroCopyOutput& out, const Buffer& buf) {
     out.write(buf.data(), buf.used());
 }

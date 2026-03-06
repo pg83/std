@@ -2,7 +2,7 @@
 
 #include "xchg.h"
 
-namespace Std {
+namespace stl {
     template <typename B, typename E>
     inline void reverse(B b, E e) {
         for (; b < e; xchg(*b++, *--e)) {

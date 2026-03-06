@@ -5,7 +5,7 @@
 #include <std/sys/types.h>
 #include <std/lib/buffer.h>
 
-namespace Std {
+namespace stl {
     class InBuf: public ZeroCopyInput {
         Input* in_;
         Buffer buf;

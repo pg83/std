@@ -11,7 +11,7 @@
 #include <std/ptr/arc.h>
 #include <std/ptr/intrusive.h>
 
-namespace Std {
+namespace stl {
     class StringView;
 
     class ObjPool: public ARC {
