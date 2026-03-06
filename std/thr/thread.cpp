@@ -69,7 +69,7 @@ void Std::detach(Runable& runable) {
             (thr.ptr = new Thread(*this))->detach();
         }
 
-        void run() noexcept override {
+        void run() override {
             ScopedPtr<Helper> that(this);
             slave->run();
         }

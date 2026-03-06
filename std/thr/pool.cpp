@@ -357,7 +357,7 @@ void ThreadPool::submit(Runable& runable) {
         {
         }
 
-        void run() noexcept override {
+        void run() override {
             ScopedPtr<Helper> self(this);
             runable->run();
         }
