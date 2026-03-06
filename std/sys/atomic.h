@@ -4,6 +4,8 @@
 #define stdAtomicSubAndFetch __atomic_sub_fetch
 #define stdAtomicFetch __atomic_load_n
 #define stdAtomicStore __atomic_store_n
+#define stdAtomicCAS(ptr, expected, desired, success_order, fail_order) \
+    __atomic_compare_exchange_n(ptr, expected, desired, false, success_order, fail_order)
 
 namespace Std {
     namespace MemoryOrder {

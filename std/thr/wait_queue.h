@@ -1,14 +1,14 @@
 #pragma once
 
-#include <std/lib/node.h>
-
 namespace Std {
     class WaitQueue {
         struct Impl;
         Impl* impl;
 
     public:
-        struct Item: public IntrusiveNode {
+        struct Item {
+            Item* next = nullptr;
+
             virtual void notify() noexcept = 0;
         };
 
