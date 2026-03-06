@@ -13,7 +13,6 @@
 #include <std/alg/defer.h>
 #include <std/alg/minmax.h>
 #include <std/lib/vector.h>
-#include <std/sys/atomic.h>
 #include <std/ptr/scoped.h>
 #include <std/dbg/insist.h>
 #include <std/alg/shuffle.h>
@@ -255,7 +254,7 @@ void WorkStealingThreadPool::submitTask(Task& task) noexcept {
     } else if (auto w = (Worker*)wq.dequeue()) {
         return w->push(task);
     } else {
-        return workers_[rand() % workers_.length()]->pushLocal(task);
+        return workers_[PCG32(&task).uniformUnbiased(workers_.length())]->pushLocal(task);
     }
 }
 
