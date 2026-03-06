@@ -31,7 +31,7 @@ namespace {
 }
 
 bool Std::operator==(StringView l, StringView r) noexcept {
-    return spaceship(l, r) == 0;
+    return l.length() == r.length() && spaceship(l, r) == 0;
 }
 
 bool Std::operator!=(StringView l, StringView r) noexcept {
