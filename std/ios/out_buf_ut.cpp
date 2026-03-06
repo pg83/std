@@ -491,12 +491,17 @@ STD_TEST_SUITE(OutBufCommitImplNoexcept) {
         void* ptr = buf.imbue(&avail);
         memset(ptr, 'x', 4);
 
+        size_t excnt = 0;
+
         try {
             buf.commit(4);
             STD_INSIST(false);
         } catch (...) {
+            ++excnt;
             STD_INSIST(true);
         }
+
+        STD_INSIST(excnt == 1);
     }
 }
 
