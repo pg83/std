@@ -18,6 +18,7 @@
 #include <std/alg/shuffle.h>
 #include <std/alg/exchange.h>
 #include <std/mem/obj_pool.h>
+#include <std/rng/split_mix_64.h>
 
 #include <stdlib.h>
 
@@ -141,7 +142,7 @@ namespace {
 
             inline Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers)
                 : pool_(pool)
-                , rng_(this)
+                , rng_(splitMix64(myIndex))
                 , so_(numWorkers - 1)
                 , mutex_(true)
                 , thread_(*this)
