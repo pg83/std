@@ -454,12 +454,31 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         STD_INSIST(counter == 100);
     }
 
-    STD_TEST(_StressTest) {
+    STD_TEST(_SW) {
         const int depth = 23;
         const int work = 1000;
 
         auto pool = ThreadPool::workStealing(16);
-        // auto pool = ThreadPool::simple(8);
+        StressState state(pool.mutPtr(), work);
+
+        pool->submit(*new StressTask(&state, depth));
+
+        {
+            LockGuard lock(state.mutex);
+
+            while (stdAtomicFetch(&state.counter, MemoryOrder::Acquire) > 0) {
+                state.condVar.wait(state.mutex);
+            }
+        }
+
+        pool->join();
+    }
+
+    STD_TEST(_SS) {
+        const int depth = 23;
+        const int work = 1000;
+
+        auto pool = ThreadPool::simple(16);
         StressState state(pool.mutPtr(), work);
 
         pool->submit(*new StressTask(&state, depth));
