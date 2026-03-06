@@ -260,6 +260,16 @@ void WorkStealingThreadPool::trySteal(const u32* order, u32 n, u32 offset, Intru
     }
 }
 
+WorkStealingThreadPool::Worker* WorkStealingThreadPool::nextSleeping() noexcept {
+    while (running() > 1) {
+        if (auto w = (Worker*)wq.dequeue(); w) {
+            return w;
+        }
+    }
+
+    return nullptr;
+}
+
 WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers)
     : pool_(pool)
     , rng_(splitMix64(myIndex))
@@ -274,16 +284,6 @@ WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex
     }
 
     shuffle(rng_, so_.mutBegin(), so_.mutEnd());
-}
-
-WorkStealingThreadPool::Worker* WorkStealingThreadPool::nextSleeping() noexcept {
-    while (running() > 1) {
-        if (auto w = (Worker*)wq.dequeue(); w) {
-            return w;
-        }
-    }
-
-    return nullptr;
 }
 
 void WorkStealingThreadPool::Worker::run() noexcept {
