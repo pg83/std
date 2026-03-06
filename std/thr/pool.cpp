@@ -130,7 +130,7 @@ ThreadPool::Ref ThreadPool::simple(size_t threads) {
 }
 
 namespace {
-    class WorkStealingThreadPool: public ThreadPool {
+    struct WorkStealingThreadPool: public ThreadPool {
         struct Worker: public Runable, public WaitQueue::Item {
             WorkStealingThreadPool* pool_;
             PCG32 rng_;
@@ -140,21 +140,7 @@ namespace {
             IntrusiveList tasks_;
             Thread thread_;
 
-            inline Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers)
-                : pool_(pool)
-                , rng_(splitMix64(myIndex))
-                , so_(numWorkers - 1)
-                , mutex_(true)
-                , thread_(*this)
-            {
-                for (u32 i = 0; i < numWorkers; ++i) {
-                    if (i != myIndex) {
-                        so_.pushBack(i);
-                    }
-                }
-
-                shuffle(rng_, so_.mutBegin(), so_.mutEnd());
-            }
+            Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers);
 
             inline auto key() const noexcept {
                 return thread_.threadId();
@@ -203,15 +189,13 @@ namespace {
         IntMap<Worker> workerIndex_;
         WaitQueue wq;
 
-        bool notifyOne() noexcept;
-        size_t running() const noexcept;
-        void trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept;
-
-    public:
         WorkStealingThreadPool(size_t numThreads);
 
-        void submitTask(Task& task) noexcept override;
+        bool notifyOne() noexcept;
         void join() noexcept override;
+        size_t running() const noexcept;
+        void submitTask(Task& task) noexcept override;
+        void trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept;
     };
 }
 
@@ -219,7 +203,7 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     : workers_(numThreads)
 {
     for (size_t i = 0; i < numThreads; ++i) {
-        workers_.pushBack(workerIndex_.insertKeyed(this, (u32)i, (u32)numThreads));
+        workers_.pushBack(workerIndex_.insertKeyed(this, i, numThreads));
     }
 
     for (auto w : mutRange(workers_)) {
@@ -268,6 +252,22 @@ void WorkStealingThreadPool::join() noexcept {
         w->join();
     }
 }
+
+WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers)
+                : pool_(pool)
+                , rng_(splitMix64(myIndex))
+                , so_(numWorkers - 1)
+                , mutex_(true)
+                , thread_(*this)
+            {
+                for (u32 i = 0; i < numWorkers; ++i) {
+                    if (i != myIndex) {
+                        so_.pushBack(i);
+                    }
+                }
+
+                shuffle(rng_, so_.mutBegin(), so_.mutEnd());
+            }
 
 void WorkStealingThreadPool::Worker::run() noexcept {
     try {
