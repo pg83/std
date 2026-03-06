@@ -253,6 +253,12 @@ void WorkStealingThreadPool::join() noexcept {
     }
 }
 
+void WorkStealingThreadPool::trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept {
+    for (u32 i = 0; stolen->empty() && i < n; ++i) {
+        workers_[order[(offset + i) % n]]->split(stolen);
+    }
+}
+
 WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers)
     : pool_(pool)
     , rng_(splitMix64(myIndex))
@@ -330,12 +336,6 @@ void WorkStealingThreadPool::Worker::split(IntrusiveList* stolen) noexcept {
 
     if (stolen->empty()) {
         tasks_.xchgWithEmptyList(*stolen);
-    }
-}
-
-void WorkStealingThreadPool::trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept {
-    for (u32 i = 0; stolen->empty() && i < n; ++i) {
-        workers_[order[(offset + i) % n]]->split(stolen);
     }
 }
 
