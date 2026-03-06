@@ -54,23 +54,33 @@ struct WaitQueue::Impl {
 struct WaitQueue::Impl {
     Mutex mutex;
     Item* head = nullptr;
+    int empty = true;
 
     inline void enqueue(Item* item) noexcept {
         LockGuard lock(mutex);
 
         item->next = head;
         head = item;
+
+        stdAtomicStore(&empty, false, MemoryOrder::Release);
     }
 
     inline Item* dequeue() noexcept {
-        LockGuard lock(mutex);
-
-        if (!head) {
+        if (stdAtomicFetch(&empty, MemoryOrder::Acquire)) {
             return nullptr;
         }
 
+        LockGuard lock(mutex);
+
         Item* item = head;
+
+        if (!item) {
+            return nullptr;
+        }
+
         head = item->next;
+
+        stdAtomicStore(&empty, head == nullptr, MemoryOrder::Release);
 
         return item;
     }
