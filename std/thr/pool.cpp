@@ -235,13 +235,12 @@ size_t WorkStealingThreadPool::running() const noexcept {
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
     if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
         return (w->pushLocal(task), (void)wq.notifyOne());
+    } else if (auto w = (Worker*)wq.dequeue()) {
+        return w->push(task);
     }
 
-    while (true) {
-        if (auto w = (Worker*)wq.dequeue()) {
-            return w->push(task);
-        }
-    }
+    workers_[0]->pushLocal(task);
+    wq.notifyOne();
 }
 
 void WorkStealingThreadPool::join() noexcept {
@@ -311,7 +310,7 @@ void WorkStealingThreadPool::Worker::loop() {
 void WorkStealingThreadPool::Worker::split(IntrusiveList* stolen) noexcept {
     LockGuard lock(mutex_);
 
-    tasks_.splitHalf(tasks_, *stolen);
+    tasks_.splitHalf(*stolen, tasks_);
 }
 
 void WorkStealingThreadPool::trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept {

@@ -62,5 +62,5 @@ WaitQueue::Item* WaitQueue::dequeue() noexcept {
 }
 
 bool WaitQueue::notifyOne() noexcept {
-    impl->notifyOne();
+    return impl->notifyOne();
 }
