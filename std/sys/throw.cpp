@@ -53,9 +53,9 @@ StringView Exception::current() {
         throw;
     } catch (Exception& e) {
         return e.description();
+    } catch (...) {
+        return StringView(u8"unknown exception");
     }
-
-    return StringView(u8"unknown exception");
 }
 
 Errno::Errno() noexcept
