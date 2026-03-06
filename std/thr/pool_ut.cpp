@@ -454,10 +454,10 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         STD_INSIST(counter == 100);
     }
 
-    STD_TEST(_SW) {
-        const int depth = 23;
-        const int work = 1000;
+    const int depth = 23;
+    const int work = 1000;
 
+    STD_TEST(_SW) {
         auto pool = ThreadPool::workStealing(16);
         StressState state(pool.mutPtr(), work);
 
@@ -475,9 +475,6 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
     }
 
     STD_TEST(_SS) {
-        const int depth = 23;
-        const int work = 1000;
-
         auto pool = ThreadPool::simple(16);
         StressState state(pool.mutPtr(), work);
 
