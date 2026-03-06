@@ -10,6 +10,11 @@
 using namespace stl;
 
 namespace {
+    static inline void doW(int work) {
+        for (volatile int i = 0; i < work; ++i) {
+        }
+    }
+
     struct StressState {
         ThreadPool* pool;
         int work;
@@ -36,8 +41,7 @@ namespace {
         }
 
         void doWork() noexcept {
-            for (volatile int i = 0; i < state_->work; ++i) {
-            }
+            doW(state_->work);
         }
 
         void schedule() {
@@ -472,6 +476,12 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         }
 
         pool->join();
+    }
+
+    STD_TEST(_SWD) {
+        for (size_t i = 0; i < 1000000; i++) {
+            doW(work);
+        }
     }
 
     STD_TEST(_SS) {
