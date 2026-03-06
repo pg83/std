@@ -12,5 +12,7 @@ namespace Std {
         void reset() noexcept;
         void unlink() noexcept;
         void xchg(IntrusiveNode& r);
+
+        bool singular() const noexcept;
     };
 }

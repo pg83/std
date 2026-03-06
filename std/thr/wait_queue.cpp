@@ -33,18 +33,14 @@ struct WaitQueue::Impl {
         return res;
     }
 
-    void unlink(Item* item) noexcept {
-        LockGuard lock(mutex);
-
-        item->unlink();
-
-        stdAtomicStore(&empty, (int)lst.empty(), MemoryOrder::Release);
-    }
-
-    void notifyOne() noexcept {
+    bool notifyOne() noexcept {
         if (auto item = dequeue()) {
             item->notify();
+
+            return true;
         }
+
+        return false;
     }
 };
 
@@ -65,10 +61,6 @@ WaitQueue::Item* WaitQueue::dequeue() noexcept {
     return impl->dequeue();
 }
 
-void WaitQueue::unlink(Item* item) noexcept {
-    impl->unlink(item);
-}
-
-void WaitQueue::notifyOne() noexcept {
+bool WaitQueue::notifyOne() noexcept {
     impl->notifyOne();
 }

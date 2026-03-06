@@ -19,3 +19,7 @@ void IntrusiveNode::reset() noexcept {
     prev = this;
     next = this;
 }
+
+bool IntrusiveNode::singular() const noexcept {
+    return prev == this && next == this;
+}

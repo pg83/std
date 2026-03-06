@@ -8,7 +8,6 @@
 
 #include <std/rng/pcg.h>
 #include <std/lib/list.h>
-#include <std/alg/shuffle.h>
 #include <std/sym/i_map.h>
 #include <std/alg/range.h>
 #include <std/alg/defer.h>
@@ -16,6 +15,8 @@
 #include <std/lib/vector.h>
 #include <std/sys/atomic.h>
 #include <std/ptr/scoped.h>
+#include <std/dbg/insist.h>
+#include <std/alg/shuffle.h>
 #include <std/alg/exchange.h>
 #include <std/mem/obj_pool.h>
 
@@ -161,12 +162,6 @@ namespace {
                 return (Task*)tasks_.popFrontOrNull();
             }
 
-            inline Task* pop() noexcept {
-                LockGuard lock(mutex_);
-
-                return popNoLock();
-            }
-
             inline void push(Task& task) noexcept {
                 LockGuard lock(mutex_);
                 tasks_.pushBack(&task);
@@ -183,19 +178,6 @@ namespace {
                 condVar_.signal();
             }
 
-            inline bool tryPush(Task& task) noexcept {
-                LockGuard lock(mutex_);
-
-                if (pool_) {
-                    tasks_.pushBack(&task);
-                    condVar_.signal();
-
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-
             inline void join() noexcept {
                 thread_.join();
             }
@@ -203,7 +185,6 @@ namespace {
             inline void sleep() noexcept {
                 pool_->wq.enqueue(this);
                 condVar_.wait(mutex_);
-                pool_->wq.unlink(this);
             }
 
             void loop();
@@ -216,6 +197,7 @@ namespace {
         WaitQueue wq;
         unsigned int nextWorker_ = 0;
 
+        size_t running() const noexcept;
         void trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept;
 
     public:
@@ -238,13 +220,27 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     }
 }
 
+size_t WorkStealingThreadPool::running() const noexcept {
+    size_t res = 0;
+
+    for (auto w : range(workers_)) {
+        if (w->pool_) {
+            ++res;
+        }
+    }
+
+    return res;
+}
+
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
     if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
-        return (w->pushLocal(task), wq.notifyOne());
-    } else if (auto w = (Worker*)wq.dequeue()) {
-        return w->push(task);
-    } else {
-        return workers_[stdAtomicAddAndFetch(&nextWorker_, 1, MemoryOrder::Relaxed) % workers_.length()]->push(task);
+        return (w->pushLocal(task), (void)wq.notifyOne());
+    }
+
+    while (true) {
+        if (auto w = (Worker*)wq.dequeue()) {
+            return w->push(task);
+        }
     }
 }
 
@@ -259,33 +255,35 @@ void WorkStealingThreadPool::join() noexcept {
 }
 
 void WorkStealingThreadPool::Worker::run() noexcept {
-    auto pool = pool_;
-
     try {
         loop();
     } catch (ShutDown* sh) {
-        STD_DEFER {
-            LockGuard lock(mutex_);
+        Worker* w = nullptr;
 
-            while (auto task = popNoLock()) {
-                task->run();
-            }
-        };
+        while (!w) {
+            w = (Worker*)pool_->wq.dequeue();
 
-        for (auto w : mutRange(pool->workers_)) {
-            if (w->tryPush(*sh)) {
-                return;
+            if (pool_->running() <= 1) {
+                break;
             }
         }
+
+        if (w) {
+            w->push(*sh);
+        }
+
+        LockGuard lock(mutex_);
+
+        while (auto task = popNoLock()) {
+            task->run();
+        }
+
+        pool_ = nullptr;
     }
 }
 
 void WorkStealingThreadPool::Worker::loop() {
     LockGuard lock(mutex_);
-
-    STD_DEFER {
-        pool_ = nullptr;
-    };
 
     do {
         while (auto task = popNoLock()) {
@@ -300,6 +298,10 @@ void WorkStealingThreadPool::Worker::loop() {
             UnlockGuard unlock(mutex_);
 
             pool_->trySteal(so_.data(), (u32)so_.length(), rng_.uniformUnbiased(so_.length()), &stolen);
+
+            if (!stolen.empty()) {
+                pool_->wq.notifyOne();
+            }
         }
 
         tasks_.pushBack(stolen);
@@ -307,15 +309,9 @@ void WorkStealingThreadPool::Worker::loop() {
 }
 
 void WorkStealingThreadPool::Worker::split(IntrusiveList* stolen) noexcept {
-    {
-        LockGuard lock(mutex_);
+    LockGuard lock(mutex_);
 
-        tasks_.splitHalf(tasks_, *stolen);
-    }
-
-    if (pool_) {
-        pool_->wq.notifyOne();
-    }
+    tasks_.splitHalf(tasks_, *stolen);
 }
 
 void WorkStealingThreadPool::trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept {

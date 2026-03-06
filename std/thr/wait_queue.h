@@ -17,7 +17,6 @@ namespace Std {
 
         void enqueue(Item* item) noexcept;
         Item* dequeue() noexcept;
-        void unlink(Item* item) noexcept;
-        void notifyOne() noexcept;
+        bool notifyOne() noexcept;
     };
 }
