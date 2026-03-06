@@ -194,6 +194,7 @@ namespace {
         bool notifyOne() noexcept;
         void join() noexcept override;
         size_t running() const noexcept;
+        Worker* nextSleeping() noexcept;
         void submitTask(Task& task) noexcept override;
         void trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept;
     };
@@ -275,21 +276,21 @@ WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex
     shuffle(rng_, so_.mutBegin(), so_.mutEnd());
 }
 
+WorkStealingThreadPool::Worker* WorkStealingThreadPool::nextSleeping() noexcept {
+    while (running() > 1) {
+        if (auto w = (Worker*)wq.dequeue(); w) {
+            return w;
+        }
+    }
+
+    return nullptr;
+}
+
 void WorkStealingThreadPool::Worker::run() noexcept {
     try {
         loop();
     } catch (ShutDown* sh) {
-        Worker* w = nullptr;
-
-        while (!w) {
-            w = (Worker*)pool_->wq.dequeue();
-
-            if (pool_->running() <= 1) {
-                break;
-            }
-        }
-
-        if (w) {
+        if (auto w = pool_->nextSleeping(); w) {
             w->push(*sh);
         }
 
