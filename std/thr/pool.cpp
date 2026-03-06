@@ -163,14 +163,19 @@ namespace {
             }
 
             inline void pushLocal(Task& task) noexcept {
+                WorkStealingThreadPool* p = nullptr;
+
                 {
                     LockGuard lock(mutex_);
 
                     flush();
                     tasks_.pushBack(&task);
+                    p = pool_;
                 }
 
-                pool_->notifyOne();
+                if (p) {
+                    p->notifyOne();
+                }
             }
 
             inline void pushThrLocal(Task& task) noexcept {
