@@ -104,13 +104,3 @@ void WaitQueue::enqueue(Item* item) noexcept {
 WaitQueue::Item* WaitQueue::dequeue() noexcept {
     return impl->dequeue();
 }
-
-bool WaitQueue::notifyOne() noexcept {
-    if (auto item = dequeue()) {
-        item->notify();
-
-        return true;
-    }
-
-    return false;
-}

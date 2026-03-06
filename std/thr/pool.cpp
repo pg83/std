@@ -177,10 +177,10 @@ namespace {
                     tasks_.pushBack(&task);
                 }
 
-                pool_->wq.notifyOne();
+                pool_->notifyOne();
             }
 
-            void notify() noexcept override {
+            inline void notify() noexcept {
                 LockGuard lock(mutex_);
                 condVar_.signal();
             }
@@ -203,6 +203,7 @@ namespace {
         IntMap<Worker> workerIndex_;
         WaitQueue wq;
 
+        bool notifyOne() noexcept;
         size_t running() const noexcept;
         void trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept;
 
@@ -236,6 +237,16 @@ size_t WorkStealingThreadPool::running() const noexcept {
     }
 
     return res;
+}
+
+bool WorkStealingThreadPool::notifyOne() noexcept {
+    if (auto item = (Worker*)wq.dequeue()) {
+        item->notify();
+
+        return true;
+    }
+
+    return false;
 }
 
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
@@ -304,7 +315,7 @@ void WorkStealingThreadPool::Worker::loop() {
             pool_->trySteal(so_.data(), (u32)so_.length(), rng_.uniformUnbiased(so_.length()), &stolen);
 
             if (!stolen.empty()) {
-                pool_->wq.notifyOne();
+                pool_->notifyOne();
             }
         }
 
