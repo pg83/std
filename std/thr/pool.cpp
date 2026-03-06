@@ -325,15 +325,10 @@ void WorkStealingThreadPool::Worker::loop() {
             UnlockGuard unlock(mutex_);
 
             pool_->trySteal(so_.data(), (u32)so_.length(), rng_.uniformUnbiased(so_.length()), &stolen);
-
-            if (!stolen.empty()) {
-                pool_->notifyOne();
-            }
         }
 
-        tasks_.pushBack(stolen);
-
-        if (!local_.empty()) {
+        if (!local_.empty() || !stolen.empty()) {
+            tasks_.pushBack(stolen);
             tasks_.pushBack(local_);
             pool_->notifyOne();
         }
