@@ -20,6 +20,8 @@
 #include <std/alg/exchange.h>
 #include <std/mem/obj_pool.h>
 
+#include <stdlib.h>
+
 using namespace Std;
 
 namespace {
@@ -169,8 +171,13 @@ namespace {
             }
 
             inline void pushLocal(Task& task) noexcept {
-                LockGuard lock(mutex_);
-                tasks_.pushBack(&task);
+                {
+                    LockGuard lock(mutex_);
+
+                    tasks_.pushBack(&task);
+                }
+
+                pool_->wq.notifyOne();
             }
 
             void notify() noexcept override {
@@ -195,7 +202,6 @@ namespace {
         Vector<Worker*> workers_;
         IntMap<Worker> workerIndex_;
         WaitQueue wq;
-        unsigned int nextWorker_ = 0;
 
         size_t running() const noexcept;
         void trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept;
@@ -234,13 +240,12 @@ size_t WorkStealingThreadPool::running() const noexcept {
 
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
     if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
-        return (w->pushLocal(task), (void)wq.notifyOne());
+        return w->pushLocal(task);
     } else if (auto w = (Worker*)wq.dequeue()) {
         return w->push(task);
+    } else {
+        return workers_[rand() % workers_.length()]->pushLocal(task);
     }
-
-    workers_[0]->pushLocal(task);
-    wq.notifyOne();
 }
 
 void WorkStealingThreadPool::join() noexcept {
