@@ -7,6 +7,7 @@
 #include <std/lib/buffer.h>
 
 #include <cstring>
+#include <stdexcept>
 
 using namespace Std;
 
@@ -472,6 +473,30 @@ STD_TEST_SUITE(OutBufWithMemoryOutput) {
         buf.commit(6);
         buf.finish();
         STD_INSIST(StringView(buffer, 6) == StringView(u8"imbued"));
+    }
+}
+
+STD_TEST_SUITE(OutBufCommitImplNoexcept) {
+    STD_TEST(CommitCallsThrowingOutput) {
+        struct ThrowingOutput: public Output {
+            size_t writeImpl(const void*, size_t) override {
+                throw std::runtime_error("write failed");
+            }
+        };
+
+        ThrowingOutput out;
+        OutBuf buf(out, 4);
+
+        size_t avail = 4;
+        void* ptr = buf.imbue(&avail);
+        memset(ptr, 'x', 4);
+
+        try {
+            buf.commit(4);
+            STD_INSIST(false);
+        } catch (...) {
+            STD_INSIST(true);
+        }
     }
 }
 

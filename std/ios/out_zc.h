@@ -13,7 +13,7 @@ namespace Std {
         size_t writeImpl(const void* data, size_t len) override;
 
         virtual void* imbueImpl(size_t* len) = 0;
-        virtual void commitImpl(size_t len) noexcept = 0;
+        virtual void commitImpl(size_t len) = 0;
 
     public:
         ~ZeroCopyOutput() noexcept override;
@@ -33,7 +33,7 @@ namespace Std {
             *len = next(chunk);
         }
 
-        inline void commit(size_t len) noexcept {
+        inline void commit(size_t len) {
             commitImpl(len);
         }
 

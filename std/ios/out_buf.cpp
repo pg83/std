@@ -42,7 +42,7 @@ void* OutBuf::imbueImpl(size_t* len) {
     return buf_.imbueMe(len);
 }
 
-void OutBuf::commitImpl(size_t len) noexcept {
+void OutBuf::commitImpl(size_t len) {
     buf_.seekRelative(len);
 
     if (buf_.used() >= chunk) {
