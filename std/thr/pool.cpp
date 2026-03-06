@@ -254,20 +254,20 @@ void WorkStealingThreadPool::join() noexcept {
 }
 
 WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers)
-                : pool_(pool)
-                , rng_(splitMix64(myIndex))
-                , so_(numWorkers - 1)
-                , mutex_(true)
-                , thread_(*this)
-            {
-                for (u32 i = 0; i < numWorkers; ++i) {
-                    if (i != myIndex) {
-                        so_.pushBack(i);
-                    }
-                }
+    : pool_(pool)
+    , rng_(splitMix64(myIndex))
+    , so_(numWorkers - 1)
+    , mutex_(true)
+    , thread_(*this)
+{
+    for (u32 i = 0; i < numWorkers; ++i) {
+        if (i != myIndex) {
+            so_.pushBack(i);
+        }
+    }
 
-                shuffle(rng_, so_.mutBegin(), so_.mutEnd());
-            }
+    shuffle(rng_, so_.mutBegin(), so_.mutEnd());
+}
 
 void WorkStealingThreadPool::Worker::run() noexcept {
     try {
