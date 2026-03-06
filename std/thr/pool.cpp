@@ -138,6 +138,7 @@ namespace {
             Mutex mutex_;
             CondVar condVar_;
             IntrusiveList tasks_;
+            IntrusiveList local_;
             Thread thread_;
 
             Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers);
@@ -164,6 +165,10 @@ namespace {
                 }
 
                 pool_->notifyOne();
+            }
+
+            inline void pushThrLocal(Task& task) noexcept {
+                local_.pushBack(&task);
             }
 
             inline void notify() noexcept {
@@ -236,7 +241,7 @@ bool WorkStealingThreadPool::notifyOne() noexcept {
 
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
     if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
-        return w->pushLocal(task);
+        return w->pushThrLocal(task);
     } else if (auto w = (Worker*)wq.dequeue()) {
         return w->push(task);
     } else {
@@ -327,6 +332,11 @@ void WorkStealingThreadPool::Worker::loop() {
         }
 
         tasks_.pushBack(stolen);
+
+        if (!local_.empty()) {
+            tasks_.pushBack(local_);
+            pool_->notifyOne();
+        }
     } while (!tasks_.empty() || (sleep(), true));
 }
 
