@@ -310,7 +310,11 @@ void WorkStealingThreadPool::Worker::loop() {
 void WorkStealingThreadPool::Worker::split(IntrusiveList* stolen) noexcept {
     LockGuard lock(mutex_);
 
-    tasks_.splitHalf(*stolen, tasks_);
+    tasks_.splitHalf(tasks_, *stolen);
+
+    if (stolen->empty()) {
+        tasks_.xchgWithEmptyList(*stolen);
+    }
 }
 
 void WorkStealingThreadPool::trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept {
