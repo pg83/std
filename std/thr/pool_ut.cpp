@@ -478,7 +478,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         pool->join();
     }
 
-    STD_TEST(_SWD) {
+    STD_TEST(_SD) {
         for (volatile int i = 0; i < 1000000; i++) {
             doW(work);
         }

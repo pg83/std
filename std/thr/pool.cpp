@@ -134,6 +134,7 @@ namespace {
     struct WorkStealingThreadPool: public ThreadPool {
         struct Worker: public Runable, public WaitQueue::Item {
             WorkStealingThreadPool* pool_;
+            u32 myIndex_;
             PCG32 rng_;
             Vector<u32> so_;
             Mutex mutex_;
@@ -143,6 +144,10 @@ namespace {
             Thread thread_;
 
             Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers);
+
+            u8 index() const noexcept override {
+                return (u8)myIndex_;
+            }
 
             inline auto key() const noexcept {
                 return thread_.threadId();
@@ -273,6 +278,7 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::nextSleeping() noexcept 
 
 WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers)
     : pool_(pool)
+    , myIndex_(myIndex)
     , rng_(splitMix64(myIndex))
     , so_(numWorkers - 1)
     , mutex_(true)

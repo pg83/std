@@ -4,9 +4,43 @@
 #include <std/sys/types.h>
 #include <std/sys/atomic.h>
 
+#include <assert.h>
+
 using namespace stl;
 
-#if __SIZEOF_POINTER__ == 8
+#define STL_WAIT_QUEUE_BITMASK
+
+#ifdef STL_WAIT_QUEUE_BITMASK
+struct WaitQueue::Impl {
+    u64 bits_ = 0;
+    Item* items_[64] = {};
+
+    inline void enqueue(Item* item) noexcept {
+        u8 idx = item->index();
+        assert(idx < 64);
+
+        items_[idx] = item;
+        __atomic_fetch_or(&bits_, u64(1) << idx, __ATOMIC_RELEASE);
+    }
+
+    inline Item* dequeue() noexcept {
+        u64 old = stdAtomicFetch(&bits_, MemoryOrder::Acquire);
+
+        for (;;) {
+            if (!old) {
+                return nullptr;
+            }
+
+            int idx = __builtin_ctzll(old);
+            u64 desired = old & ~(u64(1) << idx);
+
+            if (stdAtomicCAS(&bits_, &old, desired, MemoryOrder::Acquire, MemoryOrder::Acquire)) {
+                return items_[idx];
+            }
+        }
+    }
+};
+#elif __SIZEOF_POINTER__ == 8
 struct WaitQueue::Impl {
     // upper 16 bits: tag, lower 48 bits: pointer
     u64 head_ = 0;
@@ -51,7 +85,7 @@ struct WaitQueue::Impl {
         }
     }
 };
-#else
+#else /* __SIZEOF_POINTER__ != 8 */
 struct WaitQueue::Impl {
     Mutex mutex;
     Item* head = nullptr;
@@ -86,7 +120,7 @@ struct WaitQueue::Impl {
         return item;
     }
 };
-#endif
+#endif /* STL_WAIT_QUEUE_BITMASK / pointer size */
 
 WaitQueue::WaitQueue()
     : impl(new Impl())

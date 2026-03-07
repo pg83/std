@@ -1,5 +1,7 @@
 #pragma once
 
+#include <std/sys/types.h>
+
 namespace stl {
     class WaitQueue {
         struct Impl;
@@ -8,6 +10,8 @@ namespace stl {
     public:
         struct Item {
             Item* next = nullptr;
+
+            virtual u8 index() const noexcept = 0;
         };
 
         WaitQueue();
