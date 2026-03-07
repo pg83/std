@@ -66,7 +66,7 @@ void FD::xchg(FD& other) noexcept {
     ::stl::xchg(fd, other.fd);
 }
 
-ScopedFD::~ScopedFD() {
+ScopedFD::~ScopedFD() noexcept(false) {
     close();
 }
 

@@ -13,7 +13,7 @@ i32 ARC::ref() noexcept {
 }
 
 i32 ARC::refCount() const noexcept {
-    return stdAtomicFetch(&counter_, MemoryOrder::Relaxed);
+    return stdAtomicFetch(&counter_, MemoryOrder::Acquire);
 }
 
 i32 ARC::unref() noexcept {
