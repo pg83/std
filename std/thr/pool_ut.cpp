@@ -459,8 +459,8 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         STD_INSIST(counter == 100);
     }
 
-    const int depth = 23;
-    const int work = 1000;
+    const int depth = 25;
+    const int work = 250;
 
     STD_TEST(_SW) {
         auto pool = ThreadPool::workStealing(16);
