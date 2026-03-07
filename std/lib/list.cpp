@@ -54,12 +54,11 @@ namespace {
 
         a->next = nullptr;
         b->next = nullptr;
-
-        s.mutEnd()->reset();
     }
 
     static void splitImpl2(IntrusiveList& s, IntrusiveNode* a, IntrusiveNode* b) noexcept {
         splitImpl1(s, a, b);
+        s.mutEnd()->reset();
         a->fixPrev();
         b->fixPrev();
     }
