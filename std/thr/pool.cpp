@@ -6,6 +6,7 @@
 #include "cond_var.h"
 #include "wait_queue.h"
 
+#include <std/sys/atomic.h>
 #include <std/rng/pcg.h>
 #include <std/lib/list.h>
 #include <std/sym/i_map.h>
@@ -133,6 +134,7 @@ namespace {
     struct WorkStealingThreadPool: public ThreadPool {
         struct Worker: public Runable, public WaitQueue::Item {
             WorkStealingThreadPool* pool_;
+            bool running_ = true;
             PCG32 rng_;
             Vector<u32> so_;
             Mutex mutex_;
@@ -163,19 +165,14 @@ namespace {
             }
 
             inline void pushLocal(Task& task) noexcept {
-                WorkStealingThreadPool* p;
-
                 {
                     LockGuard lock(mutex_);
 
                     flush();
                     tasks_.pushBack(&task);
-                    p = pool_;
                 }
 
-                if (p) {
-                    p->notifyOne();
-                }
+                pool_->notifyOne();
             }
 
             inline void pushThrLocal(Task& task) noexcept {
@@ -232,7 +229,7 @@ size_t WorkStealingThreadPool::running() const noexcept {
     size_t res = 0;
 
     for (auto w : range(workers_)) {
-        if (w->pool_) {
+        if (stdAtomicFetch(&w->running_, MemoryOrder::Relaxed)) {
             ++res;
         }
     }
@@ -316,7 +313,7 @@ void WorkStealingThreadPool::Worker::run() noexcept {
             task->run();
         }
 
-        pool_ = nullptr;
+        stdAtomicStore(&running_, false, MemoryOrder::Relaxed);
     }
 }
 
