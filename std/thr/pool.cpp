@@ -231,8 +231,8 @@ namespace {
 
         bool notifyOne() noexcept;
         void join() noexcept override;
-        void** tls(u64 key) noexcept override;
         Worker* nextSleeping() noexcept;
+        void** tls(u64 key) noexcept override;
         void submitTask(Task& task) noexcept override;
         void trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept;
     };
