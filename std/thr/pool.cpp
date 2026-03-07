@@ -334,6 +334,8 @@ void WorkStealingThreadPool::Worker::run() noexcept {
 
         LockGuard lock(mutex_);
 
+        flush();
+
         while (auto task = popNoLock()) {
             task->run();
         }
