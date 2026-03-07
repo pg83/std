@@ -45,7 +45,7 @@ void IntrusiveList::xchgWithEmptyList(IntrusiveList& r) noexcept {
 }
 
 namespace {
-    static void splitImpl(IntrusiveList& s, IntrusiveNode* a, IntrusiveNode* b) noexcept {
+    static void splitImpl1(IntrusiveList& s, IntrusiveNode* a, IntrusiveNode* b) noexcept {
         for (auto c = s.mutFront(), end = s.mutEnd(); c != end; c = c->next) {
             a->next = c;
             a = b;
@@ -58,6 +58,12 @@ namespace {
         s.mutEnd()->reset();
     }
 
+    static void splitImpl2(IntrusiveList& s, IntrusiveNode* a, IntrusiveNode* b) noexcept {
+        splitImpl1(s, a, b);
+        a->fixPrev();
+        b->fixPrev();
+    }
+
     static void split(IntrusiveList& s, IntrusiveList* l, IntrusiveList* r) noexcept {
         if (s.almostEmpty()) {
             return s.xchg(*l);
@@ -66,10 +72,7 @@ namespace {
         IntrusiveList a;
         IntrusiveList b;
 
-        splitImpl(s, a.mutEnd(), b.mutEnd());
-
-        a.mutEnd()->fixPrev();
-        b.mutEnd()->fixPrev();
+        splitImpl2(s, a.mutEnd(), b.mutEnd());
 
         l->pushBack(a);
         r->pushBack(b);
