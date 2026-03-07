@@ -743,7 +743,6 @@ STD_TEST_SUITE(SimplePoolTls) {
     }
 }
 
-/*
 STD_TEST_SUITE(WorkStealingPoolTls) {
     STD_TEST(NullFromOutside) {
         u64 key = registerTlsKey();
@@ -773,7 +772,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         STD_INSIST(notNull);
     }
 
-    STD_TEST(StoreAndRetrieve) {
+    STD_TEST(_StoreAndRetrieve) {
         u64 key = registerTlsKey();
         int sentinel = 456;
         void* result = nullptr;
@@ -839,7 +838,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         STD_INSIST(correct);
     }
 
-    STD_TEST(WorkerIsolation) {
+    STD_TEST(_WorkerIsolation) {
         const int N = 2;
         u64 key = registerTlsKey();
 
@@ -890,4 +889,3 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         STD_INSIST(correct);
     }
 }
-*/
