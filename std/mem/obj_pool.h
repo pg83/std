@@ -4,11 +4,9 @@
 #include "embed.h"
 #include "disposable.h"
 
-#include <std/sys/types.h>
-
-#include <std/typ/intrin.h>
-
 #include <std/ptr/arc.h>
+#include <std/sys/types.h>
+#include <std/typ/intrin.h>
 #include <std/ptr/intrusive.h>
 
 namespace stl {
