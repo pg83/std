@@ -6,24 +6,28 @@
 #include "cond_var.h"
 #include "wait_queue.h"
 
-#include <std/sys/atomic.h>
 #include <std/rng/pcg.h>
 #include <std/lib/list.h>
 #include <std/sym/i_map.h>
 #include <std/alg/range.h>
-#include <std/alg/defer.h>
 #include <std/alg/minmax.h>
 #include <std/lib/vector.h>
 #include <std/ptr/scoped.h>
 #include <std/dbg/insist.h>
+#include <std/sys/atomic.h>
 #include <std/alg/shuffle.h>
 #include <std/alg/exchange.h>
-#include <std/mem/obj_pool.h>
 #include <std/rng/split_mix_64.h>
 
 #include <stdlib.h>
 
 using namespace stl;
+
+static u64 g_tlsKeyCounter = 0;
+
+u64 stl::registerTlsKey() noexcept {
+    return stdAtomicAddAndFetch(&g_tlsKeyCounter, 1, MemoryOrder::Relaxed);
+}
 
 namespace {
     struct ShutDown: public Task {
@@ -37,23 +41,34 @@ namespace {
     };
 
     struct SyncThreadPool: public ThreadPool {
+        IntMap<void*> tls_;
+
         void submitTask(Task& task) noexcept override {
             task.run();
         }
 
         void join() noexcept override {
         }
+
+        void** tls(u64 key) noexcept override {
+            return &tls_[key];
+        }
     };
 
     class ThreadPoolImpl: public ThreadPool {
-        struct Worker: public Runable, public IntrusiveNode {
+        struct Worker: public Runable {
             ThreadPoolImpl* pool_;
+            IntMap<void*> tls_;
             Thread thread_;
 
             inline explicit Worker(ThreadPoolImpl* p) noexcept
                 : pool_(p)
                 , thread_(*this)
             {
+            }
+
+            inline auto key() const noexcept {
+                return thread_.threadId();
             }
 
             void run() noexcept override {
@@ -65,11 +80,10 @@ namespace {
             }
         };
 
-        ObjPool::Ref pool_ = ObjPool::fromMemory();
         Mutex mutex_;
         CondVar condVar_;
         IntrusiveList queue_;
-        IntrusiveList workers_;
+        IntMap<Worker> workerIndex_;
 
         void workerLoop();
 
@@ -78,12 +92,13 @@ namespace {
 
         void submitTask(Task& task) noexcept override;
         void join() noexcept override;
+        void** tls(u64 key) noexcept override;
     };
 }
 
 ThreadPoolImpl::ThreadPoolImpl(size_t numThreads) {
     for (size_t i = 0; i < numThreads; ++i) {
-        workers_.pushBack(pool_->make<Worker>(this));
+        workerIndex_.insertKeyed(this);
     }
 }
 
@@ -98,9 +113,17 @@ void ThreadPoolImpl::join() noexcept {
 
     submitTask(task);
 
-    for (auto node = workers_.mutFront(), end = workers_.mutEnd(); node != end; node = node->next) {
-        static_cast<Worker*>(node)->thread_.join();
+    workerIndex_.visit([](Worker& w) {
+        w.thread_.join();
+    });
+}
+
+void** ThreadPoolImpl::tls(u64 key) noexcept {
+    if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
+        return &w->tls_[key];
     }
+
+    return nullptr;
 }
 
 void ThreadPoolImpl::workerLoop() {
@@ -141,6 +164,7 @@ namespace {
             CondVar condVar_;
             IntrusiveList tasks_;
             IntrusiveList local_;
+            IntMap<void*> tls_;
             Thread thread_;
 
             Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers);
@@ -207,6 +231,7 @@ namespace {
 
         bool notifyOne() noexcept;
         void join() noexcept override;
+        void** tls(u64 key) noexcept override;
         Worker* nextSleeping() noexcept;
         void submitTask(Task& task) noexcept override;
         void trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept;
@@ -245,6 +270,14 @@ void WorkStealingThreadPool::submitTask(Task& task) noexcept {
     } else {
         return workers_[PCG32(&task).uniformUnbiased(workers_.length())]->pushLocal(task);
     }
+}
+
+void** WorkStealingThreadPool::tls(u64 key) noexcept {
+    if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
+        return &w->tls_[key];
+    }
+
+    return nullptr;
 }
 
 void WorkStealingThreadPool::join() noexcept {
