@@ -4,7 +4,7 @@
 
 namespace stl {
     inline u16 clp2(u16 v) noexcept {
-        return v <= 1 ? 1 : (u16)(1u << (32 - __builtin_clz((unsigned)(v - 1))));
+        return clp2((u32)v);
     }
 
     inline u32 clp2(u32 v) noexcept {
