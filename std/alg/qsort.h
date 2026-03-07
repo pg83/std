@@ -36,6 +36,9 @@ namespace stl::QSP {
             return b + r.uniformBiased(e - b);
         }
 
+        // called as partitionHoare(b, l) where l = e-1 (pivot is at *l).
+        // p captures l; the second while pre-decrements e, so e never reaches p.
+        // *p is never swapped — pivot stays in place throughout.
         inline auto partitionHoare(I b, I e) {
             for (auto p = e;; ++b) {
                 while (b != e && f(*b, *p)) {

@@ -35,6 +35,8 @@ void stl::listDirImpl(StringView path, VisitorFace&& vis) {
             .isDir = entry->d_type == DT_DIR,
         };
 
+        // name points into entry->d_name, which is valid until the next readdir call —
+        // vis.visit() completes before that, so no dangling reference here.
         vis.visit(&pi);
     }
 }

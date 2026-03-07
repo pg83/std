@@ -49,6 +49,9 @@ namespace {
     };
 
 #if __SIZEOF_POINTER__ == 8
+    // No ABA here: each Item is a Worker that re-enqueues itself only after being
+    // dequeued and completing a full condvar sleep/wake cycle. The tag would need
+    // to wrap 65536 times while a competing CAS spins — impossible in practice.
     struct PointerImpl: public WaitQueue {
         // upper 16 bits: tag, lower 48 bits: pointer
         u64 head_ = 0;
