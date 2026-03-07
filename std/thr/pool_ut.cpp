@@ -879,18 +879,21 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         };
 
         Barrier barrier(N);
+        Barrier done(N + 1);
         bool correct = true;
 
         struct IsoTask: Task {
             ThreadPool* pool;
             u64 key;
             Barrier* barrier;
+            Barrier* done;
             int myId;
             bool* correct;
-            IsoTask(ThreadPool* p, u64 k, Barrier* b, int id, bool* c)
+            IsoTask(ThreadPool* p, u64 k, Barrier* b, Barrier* d, int id, bool* c)
                 : pool(p)
                 , key(k)
                 , barrier(b)
+                , done(d)
                 , myId(id)
                 , correct(c)
             {
@@ -901,14 +904,16 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
                 if ((uintptr_t)*pool->tls(key) != (uintptr_t)myId) {
                     *correct = false;
                 }
+                done->wait();
                 delete this;
             }
         };
 
         auto pool = ThreadPool::workStealing(N);
         for (int i = 0; i < N; ++i) {
-            pool->submitTask(*new IsoTask(pool.mutPtr(), key, &barrier, i + 1, &correct));
+            pool->submitTask(*new IsoTask(pool.mutPtr(), key, &barrier, &done, i + 1, &correct));
         }
+        done.wait();
         pool->join();
         STD_INSIST(correct);
     }
