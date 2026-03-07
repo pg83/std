@@ -23,9 +23,9 @@
 
 using namespace stl;
 
-static u64 g_tlsKeyCounter = 0;
-
 u64 stl::registerTlsKey() noexcept {
+    static u64 g_tlsKeyCounter = 0;
+
     return stdAtomicAddAndFetch(&g_tlsKeyCounter, 1, MemoryOrder::Relaxed);
 }
 

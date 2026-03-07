@@ -905,7 +905,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
             }
         };
 
-        auto pool = ThreadPool::simple(N);
+        auto pool = ThreadPool::workStealing(N);
         for (int i = 0; i < N; ++i) {
             pool->submitTask(*new IsoTask(pool.mutPtr(), key, &barrier, i + 1, &correct));
         }
