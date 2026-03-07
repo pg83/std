@@ -134,7 +134,6 @@ namespace {
     struct WorkStealingThreadPool: public ThreadPool {
         struct Worker: public Runable, public WaitQueue::Item {
             WorkStealingThreadPool* pool_;
-            bool running_ = true;
             PCG32 rng_;
             Vector<u32> so_;
             Mutex mutex_;
@@ -201,12 +200,12 @@ namespace {
         Vector<Worker*> workers_;
         IntMap<Worker> workerIndex_;
         WaitQueue wq;
+        size_t running_;
 
         WorkStealingThreadPool(size_t numThreads);
 
         bool notifyOne() noexcept;
         void join() noexcept override;
-        size_t running() const noexcept;
         Worker* nextSleeping() noexcept;
         void submitTask(Task& task) noexcept override;
         void trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept;
@@ -215,6 +214,7 @@ namespace {
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     : workers_(numThreads)
+    , running_(numThreads)
 {
     for (size_t i = 0; i < numThreads; ++i) {
         workers_.pushBack(workerIndex_.insertKeyed(this, i, numThreads));
@@ -223,18 +223,6 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     for (auto w : mutRange(workers_)) {
         w->mutex_.unlock();
     }
-}
-
-size_t WorkStealingThreadPool::running() const noexcept {
-    size_t res = 0;
-
-    for (auto w : range(workers_)) {
-        if (stdAtomicFetch(&w->running_, MemoryOrder::Relaxed)) {
-            ++res;
-        }
-    }
-
-    return res;
 }
 
 bool WorkStealingThreadPool::notifyOne() noexcept {
@@ -274,7 +262,7 @@ void WorkStealingThreadPool::trySteal(const u32* order, u32 n, u32 offset, Intru
 }
 
 WorkStealingThreadPool::Worker* WorkStealingThreadPool::nextSleeping() noexcept {
-    while (running() > 1) {
+    while (stdAtomicFetch(&running_, MemoryOrder::Relaxed) > 1) {
         if (auto w = (Worker*)wq.dequeue(); w) {
             return w;
         }
@@ -313,7 +301,7 @@ void WorkStealingThreadPool::Worker::run() noexcept {
             task->run();
         }
 
-        stdAtomicStore(&running_, false, MemoryOrder::Relaxed);
+        stdAtomicSubAndFetch(&pool_->running_, 1, MemoryOrder::Relaxed);
     }
 }
 
