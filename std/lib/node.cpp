@@ -35,3 +35,7 @@ void IntrusiveNode::fixPrev() noexcept {
     c->next = this;
     prev = c;
 }
+
+bool IntrusiveNode::almostEmpty() const noexcept {
+    return next->next == this;
+}

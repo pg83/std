@@ -72,6 +72,10 @@ namespace stl {
             return &head;
         }
 
+        bool almostEmpty() const noexcept {
+            return head.almostEmpty();
+        }
+
         unsigned length() const noexcept;
 
         static void insertAfter(IntrusiveNode* pos, IntrusiveNode* node) noexcept;

@@ -11,9 +11,10 @@ namespace stl {
 
         void reset() noexcept;
         void unlink() noexcept;
+        void fixPrev() noexcept;
         void xchg(IntrusiveNode& r);
 
         bool singular() const noexcept;
-        void fixPrev() noexcept;
+        bool almostEmpty() const noexcept;
     };
 }

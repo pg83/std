@@ -59,6 +59,10 @@ namespace {
     }
 
     static void split(IntrusiveList& s, IntrusiveList* l, IntrusiveList* r) noexcept {
+        if (s.almostEmpty()) {
+            return s.xchg(*l);
+        }
+
         IntrusiveList a;
         IntrusiveList b;
 
@@ -92,8 +96,7 @@ namespace {
 
     template <typename Compare>
     static void sort(IntrusiveList& d, Compare&& cmp) noexcept {
-        // length <= 1
-        if (auto end = d.end(); end->next->next == end) {
+        if (d.almostEmpty()) {
             return;
         }
 
