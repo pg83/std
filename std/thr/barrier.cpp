@@ -10,10 +10,22 @@ struct Barrier::Impl {
     int count;
     int total;
 
-    explicit Impl(int n)
+    Impl(int n)
         : count(0)
         , total(n)
     {
+    }
+
+    void wait() noexcept {
+        LockGuard lock(mutex);
+
+        if (++count >= total) {
+            cv.broadcast();
+        } else {
+            while (count < total) {
+                cv.wait(mutex);
+            }
+        }
     }
 };
 
@@ -27,13 +39,5 @@ Barrier::~Barrier() noexcept {
 }
 
 void Barrier::wait() noexcept {
-    LockGuard lock(impl->mutex);
-
-    if (++impl->count >= impl->total) {
-        impl->cv.broadcast();
-    } else {
-        while (impl->count < impl->total) {
-            impl->cv.wait(impl->mutex);
-        }
-    }
+    impl->wait();
 }
