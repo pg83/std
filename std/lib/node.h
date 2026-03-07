@@ -14,5 +14,6 @@ namespace stl {
         void xchg(IntrusiveNode& r);
 
         bool singular() const noexcept;
+        void fixPrev() noexcept;
     };
 }

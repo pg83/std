@@ -59,13 +59,16 @@ namespace {
     }
 
     static void split(IntrusiveList& s, IntrusiveList* l, IntrusiveList* r) noexcept {
-        IntrusiveNode a;
-        IntrusiveNode b;
+        IntrusiveList a;
+        IntrusiveList b;
 
-        splitImpl(s, &a, &b);
+        splitImpl(s, a.mutEnd(), b.mutEnd());
 
-        l->appendChain(a);
-        r->appendChain(b);
+        a.mutEnd()->fixPrev();
+        b.mutEnd()->fixPrev();
+
+        l->pushBack(a);
+        r->pushBack(b);
     }
 
     template <typename Compare>
@@ -104,23 +107,6 @@ namespace {
 
         merge(d, l, r, cmp);
     }
-}
-
-void IntrusiveList::appendChain(IntrusiveNode& node) noexcept {
-    if (!node.next || node.next == &node) {
-        return;
-    }
-
-    auto* tail = &node;
-
-    while (tail->next) {
-        tail->next->prev = tail;
-        tail = tail->next;
-    }
-
-    link(mutBack(), node.next);
-    link(tail, mutEnd());
-    node.reset();
 }
 
 void IntrusiveList::splitHalf(IntrusiveList& l, IntrusiveList& r) noexcept {

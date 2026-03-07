@@ -23,3 +23,15 @@ void IntrusiveNode::reset() noexcept {
 bool IntrusiveNode::singular() const noexcept {
     return prev == this && next == this;
 }
+
+void IntrusiveNode::fixPrev() noexcept {
+    auto c = this;
+
+    while (c->next) {
+        c->next->prev = c;
+        c = c->next;
+    }
+
+    c->next = this;
+    prev = c;
+}
