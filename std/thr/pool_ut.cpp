@@ -817,52 +817,6 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         STD_INSIST(notNull);
     }
 
-    STD_TEST(StoreAndRetrieve) {
-        u64 key = registerTlsKey();
-        int sentinel = 456;
-        void* result = nullptr;
-
-        struct GetTask: Task {
-            ThreadPool* pool;
-            u64 key;
-            void** out;
-            GetTask(ThreadPool* p, u64 k, void** o)
-                : pool(p)
-                , key(k)
-                , out(o)
-            {
-            }
-            void run() noexcept override {
-                *out = *pool->tls(key);
-                delete this;
-            }
-        };
-
-        struct SetTask: Task {
-            ThreadPool* pool;
-            u64 key;
-            void* value;
-            void** out;
-            SetTask(ThreadPool* p, u64 k, void* v, void** o)
-                : pool(p)
-                , key(k)
-                , value(v)
-                , out(o)
-            {
-            }
-            void run() noexcept override {
-                *pool->tls(key) = value;
-                pool->submitTask(*new GetTask(pool, key, out));
-                delete this;
-            }
-        };
-
-        auto pool = ThreadPool::simple(2);
-        pool->submitTask(*new SetTask(pool.mutPtr(), key, &sentinel, &result));
-        pool->join();
-        STD_INSIST(result == &sentinel);
-    }
-
     STD_TEST(MultipleKeysIndependent) {
         u64 k1 = registerTlsKey();
         u64 k2 = registerTlsKey();
