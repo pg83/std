@@ -501,3 +501,393 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         pool->join();
     }
 }
+
+STD_TEST_SUITE(TlsKeys) {
+    STD_TEST(Unique) {
+        u64 k1 = registerTlsKey();
+        u64 k2 = registerTlsKey();
+        u64 k3 = registerTlsKey();
+        STD_INSIST(k1 != k2);
+        STD_INSIST(k2 != k3);
+        STD_INSIST(k1 != k3);
+    }
+
+    STD_TEST(Monotone) {
+        u64 k1 = registerTlsKey();
+        u64 k2 = registerTlsKey();
+        STD_INSIST(k2 > k1);
+    }
+
+    STD_TEST(ConcurrentUnique) {
+        const int N = 8;
+        u64 keys[N] = {};
+        int idx = 0;
+
+        struct RegTask: Task {
+            u64* keys;
+            int* idx;
+            RegTask(u64* k, int* i) : keys(k), idx(i) {}
+            void run() noexcept override {
+                int i = stdAtomicAddAndFetch(idx, 1, MemoryOrder::Relaxed) - 1;
+                keys[i] = registerTlsKey();
+                delete this;
+            }
+        };
+
+        auto pool = ThreadPool::simple(4);
+        for (int i = 0; i < N; ++i) {
+            pool->submitTask(*new RegTask(keys, &idx));
+        }
+        pool->join();
+
+        for (int i = 0; i < N; ++i) {
+            for (int j = i + 1; j < N; ++j) {
+                STD_INSIST(keys[i] != keys[j]);
+            }
+        }
+    }
+}
+
+STD_TEST_SUITE(SyncPoolTls) {
+    STD_TEST(NotNull) {
+        auto pool = ThreadPool::sync();
+        u64 key = registerTlsKey();
+        STD_INSIST(pool->tls(key) != nullptr);
+    }
+
+    STD_TEST(StoreAndRetrieve) {
+        auto pool = ThreadPool::sync();
+        u64 key = registerTlsKey();
+        int sentinel = 42;
+        *pool->tls(key) = &sentinel;
+        STD_INSIST(*pool->tls(key) == &sentinel);
+    }
+
+    STD_TEST(MultipleKeysIndependent) {
+        auto pool = ThreadPool::sync();
+        u64 k1 = registerTlsKey();
+        u64 k2 = registerTlsKey();
+        int v1 = 1, v2 = 2;
+        *pool->tls(k1) = &v1;
+        *pool->tls(k2) = &v2;
+        STD_INSIST(*pool->tls(k1) == &v1);
+        STD_INSIST(*pool->tls(k2) == &v2);
+    }
+
+    STD_TEST(PersistAcrossTasks) {
+        auto pool = ThreadPool::sync();
+        u64 key = registerTlsKey();
+        int sentinel = 77;
+        void* result = nullptr;
+
+        struct ReadTask: Task {
+            ThreadPool* pool;
+            u64 key;
+            void** out;
+            ReadTask(ThreadPool* p, u64 k, void** o) : pool(p), key(k), out(o) {}
+            void run() noexcept override {
+                *out = *pool->tls(key);
+            }
+        };
+
+        *pool->tls(key) = &sentinel;
+        ReadTask task(pool.mutPtr(), key, &result);
+        pool->submitTask(task);
+
+        STD_INSIST(result == &sentinel);
+    }
+}
+
+STD_TEST_SUITE(SimplePoolTls) {
+    STD_TEST(NullFromOutside) {
+        u64 key = registerTlsKey();
+        auto pool = ThreadPool::simple(2);
+        STD_INSIST(pool->tls(key) == nullptr);
+        pool->join();
+    }
+
+    STD_TEST(NotNullFromTask) {
+        u64 key = registerTlsKey();
+        bool notNull = false;
+
+        struct CheckTask: Task {
+            ThreadPool* pool;
+            u64 key;
+            bool* out;
+            CheckTask(ThreadPool* p, u64 k, bool* o) : pool(p), key(k), out(o) {}
+            void run() noexcept override {
+                *out = (pool->tls(key) != nullptr);
+                delete this;
+            }
+        };
+
+        auto pool = ThreadPool::simple(1);
+        pool->submitTask(*new CheckTask(pool.mutPtr(), key, &notNull));
+        pool->join();
+        STD_INSIST(notNull);
+    }
+
+    STD_TEST(StoreAndRetrieve) {
+        u64 key = registerTlsKey();
+        int sentinel = 123;
+        void* result = nullptr;
+
+        struct SetTask: Task {
+            ThreadPool* pool;
+            u64 key;
+            void* value;
+            SetTask(ThreadPool* p, u64 k, void* v) : pool(p), key(k), value(v) {}
+            void run() noexcept override {
+                *pool->tls(key) = value;
+                delete this;
+            }
+        };
+
+        struct GetTask: Task {
+            ThreadPool* pool;
+            u64 key;
+            void** out;
+            GetTask(ThreadPool* p, u64 k, void** o) : pool(p), key(k), out(o) {}
+            void run() noexcept override {
+                *out = *pool->tls(key);
+                delete this;
+            }
+        };
+
+        // 1 thread => оба таска на одном воркере, TLS персистится
+        auto pool = ThreadPool::simple(1);
+        pool->submitTask(*new SetTask(pool.mutPtr(), key, &sentinel));
+        pool->submitTask(*new GetTask(pool.mutPtr(), key, &result));
+        pool->join();
+        STD_INSIST(result == &sentinel);
+    }
+
+    STD_TEST(MultipleKeysIndependent) {
+        u64 k1 = registerTlsKey();
+        u64 k2 = registerTlsKey();
+        int v1 = 1, v2 = 2;
+        bool correct = true;
+
+        struct CheckTask: Task {
+            ThreadPool* pool;
+            u64 k1, k2;
+            void *val1, *val2;
+            bool* correct;
+            CheckTask(ThreadPool* p, u64 a, u64 b, void* va, void* vb, bool* c)
+                : pool(p), k1(a), k2(b), val1(va), val2(vb), correct(c) {}
+            void run() noexcept override {
+                *pool->tls(k1) = val1;
+                *pool->tls(k2) = val2;
+                if (*pool->tls(k1) != val1 || *pool->tls(k2) != val2) {
+                    *correct = false;
+                }
+                delete this;
+            }
+        };
+
+        auto pool = ThreadPool::simple(1);
+        pool->submitTask(*new CheckTask(pool.mutPtr(), k1, k2, &v1, &v2, &correct));
+        pool->join();
+        STD_INSIST(correct);
+    }
+
+    STD_TEST(WorkerIsolation) {
+        const int N = 2;
+        u64 key = registerTlsKey();
+
+        struct Barrier {
+            Mutex mutex;
+            CondVar cv;
+            int count = 0;
+            int total;
+            explicit Barrier(int n) : total(n) {}
+            void wait() noexcept {
+                LockGuard lock(mutex);
+                if (++count >= total) {
+                    cv.broadcast();
+                } else {
+                    while (count < total) {
+                        cv.wait(mutex);
+                    }
+                }
+            }
+        };
+
+        Barrier barrier(N);
+        bool correct = true;
+
+        struct IsoTask: Task {
+            ThreadPool* pool;
+            u64 key;
+            Barrier* barrier;
+            int myId;
+            bool* correct;
+            IsoTask(ThreadPool* p, u64 k, Barrier* b, int id, bool* c)
+                : pool(p), key(k), barrier(b), myId(id), correct(c) {}
+            void run() noexcept override {
+                *pool->tls(key) = (void*)(uintptr_t)myId;
+                barrier->wait();
+                if ((uintptr_t)*pool->tls(key) != (uintptr_t)myId) {
+                    *correct = false;
+                }
+                delete this;
+            }
+        };
+
+        auto pool = ThreadPool::simple(N);
+        for (int i = 0; i < N; ++i) {
+            pool->submitTask(*new IsoTask(pool.mutPtr(), key, &barrier, i + 1, &correct));
+        }
+        pool->join();
+        STD_INSIST(correct);
+    }
+}
+
+/*
+STD_TEST_SUITE(WorkStealingPoolTls) {
+    STD_TEST(NullFromOutside) {
+        u64 key = registerTlsKey();
+        auto pool = ThreadPool::workStealing(2);
+        STD_INSIST(pool->tls(key) == nullptr);
+        pool->join();
+    }
+
+    STD_TEST(NotNullFromTask) {
+        u64 key = registerTlsKey();
+        bool notNull = false;
+
+        struct CheckTask: Task {
+            ThreadPool* pool;
+            u64 key;
+            bool* out;
+            CheckTask(ThreadPool* p, u64 k, bool* o) : pool(p), key(k), out(o) {}
+            void run() noexcept override {
+                *out = (pool->tls(key) != nullptr);
+                delete this;
+            }
+        };
+
+        auto pool = ThreadPool::workStealing(2);
+        pool->submitTask(*new CheckTask(pool.mutPtr(), key, &notNull));
+        pool->join();
+        STD_INSIST(notNull);
+    }
+
+    STD_TEST(StoreAndRetrieve) {
+        u64 key = registerTlsKey();
+        int sentinel = 456;
+        void* result = nullptr;
+
+        struct GetTask: Task {
+            ThreadPool* pool;
+            u64 key;
+            void** out;
+            GetTask(ThreadPool* p, u64 k, void** o) : pool(p), key(k), out(o) {}
+            void run() noexcept override {
+                *out = *pool->tls(key);
+                delete this;
+            }
+        };
+
+        struct SetTask: Task {
+            ThreadPool* pool;
+            u64 key;
+            void* value;
+            void** out;
+            SetTask(ThreadPool* p, u64 k, void* v, void** o)
+                : pool(p), key(k), value(v), out(o) {}
+            void run() noexcept override {
+                *pool->tls(key) = value;
+                // submitTask из воркера => pushThrLocal => тот же воркер
+                pool->submitTask(*new GetTask(pool, key, out));
+                delete this;
+            }
+        };
+
+        auto pool = ThreadPool::workStealing(2);
+        pool->submitTask(*new SetTask(pool.mutPtr(), key, &sentinel, &result));
+        pool->join();
+        STD_INSIST(result == &sentinel);
+    }
+
+    STD_TEST(MultipleKeysIndependent) {
+        u64 k1 = registerTlsKey();
+        u64 k2 = registerTlsKey();
+        int v1 = 10, v2 = 20;
+        bool correct = true;
+
+        struct CheckTask: Task {
+            ThreadPool* pool;
+            u64 k1, k2;
+            void *val1, *val2;
+            bool* correct;
+            CheckTask(ThreadPool* p, u64 a, u64 b, void* va, void* vb, bool* c)
+                : pool(p), k1(a), k2(b), val1(va), val2(vb), correct(c) {}
+            void run() noexcept override {
+                *pool->tls(k1) = val1;
+                *pool->tls(k2) = val2;
+                if (*pool->tls(k1) != val1 || *pool->tls(k2) != val2) {
+                    *correct = false;
+                }
+                delete this;
+            }
+        };
+
+        auto pool = ThreadPool::workStealing(2);
+        pool->submitTask(*new CheckTask(pool.mutPtr(), k1, k2, &v1, &v2, &correct));
+        pool->join();
+        STD_INSIST(correct);
+    }
+
+    STD_TEST(WorkerIsolation) {
+        const int N = 2;
+        u64 key = registerTlsKey();
+
+        struct Barrier {
+            Mutex mutex;
+            CondVar cv;
+            int count = 0;
+            int total;
+            explicit Barrier(int n) : total(n) {}
+            void wait() noexcept {
+                LockGuard lock(mutex);
+                if (++count >= total) {
+                    cv.broadcast();
+                } else {
+                    while (count < total) {
+                        cv.wait(mutex);
+                    }
+                }
+            }
+        };
+
+        Barrier barrier(N);
+        bool correct = true;
+
+        struct IsoTask: Task {
+            ThreadPool* pool;
+            u64 key;
+            Barrier* barrier;
+            int myId;
+            bool* correct;
+            IsoTask(ThreadPool* p, u64 k, Barrier* b, int id, bool* c)
+                : pool(p), key(k), barrier(b), myId(id), correct(c) {}
+            void run() noexcept override {
+                *pool->tls(key) = (void*)(uintptr_t)myId;
+                barrier->wait();
+                if ((uintptr_t)*pool->tls(key) != (uintptr_t)myId) {
+                    *correct = false;
+                }
+                delete this;
+            }
+        };
+
+        auto pool = ThreadPool::workStealing(N);
+        for (int i = 0; i < N; ++i) {
+            pool->submitTask(*new IsoTask(pool.mutPtr(), key, &barrier, i + 1, &correct));
+        }
+        pool->join();
+        STD_INSIST(correct);
+    }
+}
+*/
