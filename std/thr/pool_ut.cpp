@@ -817,7 +817,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         STD_INSIST(notNull);
     }
 
-    STD_TEST(_StoreAndRetrieve) {
+    STD_TEST(StoreAndRetrieve) {
         u64 key = registerTlsKey();
         int sentinel = 456;
         void* result = nullptr;
@@ -852,13 +852,12 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
             }
             void run() noexcept override {
                 *pool->tls(key) = value;
-                // submitTask из воркера => pushThrLocal => тот же воркер
                 pool->submitTask(*new GetTask(pool, key, out));
                 delete this;
             }
         };
 
-        auto pool = ThreadPool::workStealing(2);
+        auto pool = ThreadPool::simple(2);
         pool->submitTask(*new SetTask(pool.mutPtr(), key, &sentinel, &result));
         pool->join();
         STD_INSIST(result == &sentinel);
@@ -952,7 +951,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
             }
         };
 
-        auto pool = ThreadPool::workStealing(N);
+        auto pool = ThreadPool::simple(N);
         for (int i = 0; i < N; ++i) {
             pool->submitTask(*new IsoTask(pool.mutPtr(), key, &barrier, i + 1, &correct));
         }
