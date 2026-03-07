@@ -526,7 +526,11 @@ STD_TEST_SUITE(TlsKeys) {
         struct RegTask: Task {
             u64* keys;
             int* idx;
-            RegTask(u64* k, int* i) : keys(k), idx(i) {}
+            RegTask(u64* k, int* i)
+                : keys(k)
+                , idx(i)
+            {
+            }
             void run() noexcept override {
                 int i = stdAtomicAddAndFetch(idx, 1, MemoryOrder::Relaxed) - 1;
                 keys[i] = registerTlsKey();
@@ -584,7 +588,12 @@ STD_TEST_SUITE(SyncPoolTls) {
             ThreadPool* pool;
             u64 key;
             void** out;
-            ReadTask(ThreadPool* p, u64 k, void** o) : pool(p), key(k), out(o) {}
+            ReadTask(ThreadPool* p, u64 k, void** o)
+                : pool(p)
+                , key(k)
+                , out(o)
+            {
+            }
             void run() noexcept override {
                 *out = *pool->tls(key);
             }
@@ -614,7 +623,12 @@ STD_TEST_SUITE(SimplePoolTls) {
             ThreadPool* pool;
             u64 key;
             bool* out;
-            CheckTask(ThreadPool* p, u64 k, bool* o) : pool(p), key(k), out(o) {}
+            CheckTask(ThreadPool* p, u64 k, bool* o)
+                : pool(p)
+                , key(k)
+                , out(o)
+            {
+            }
             void run() noexcept override {
                 *out = (pool->tls(key) != nullptr);
                 delete this;
@@ -636,7 +650,12 @@ STD_TEST_SUITE(SimplePoolTls) {
             ThreadPool* pool;
             u64 key;
             void* value;
-            SetTask(ThreadPool* p, u64 k, void* v) : pool(p), key(k), value(v) {}
+            SetTask(ThreadPool* p, u64 k, void* v)
+                : pool(p)
+                , key(k)
+                , value(v)
+            {
+            }
             void run() noexcept override {
                 *pool->tls(key) = value;
                 delete this;
@@ -647,7 +666,12 @@ STD_TEST_SUITE(SimplePoolTls) {
             ThreadPool* pool;
             u64 key;
             void** out;
-            GetTask(ThreadPool* p, u64 k, void** o) : pool(p), key(k), out(o) {}
+            GetTask(ThreadPool* p, u64 k, void** o)
+                : pool(p)
+                , key(k)
+                , out(o)
+            {
+            }
             void run() noexcept override {
                 *out = *pool->tls(key);
                 delete this;
@@ -674,7 +698,14 @@ STD_TEST_SUITE(SimplePoolTls) {
             void *val1, *val2;
             bool* correct;
             CheckTask(ThreadPool* p, u64 a, u64 b, void* va, void* vb, bool* c)
-                : pool(p), k1(a), k2(b), val1(va), val2(vb), correct(c) {}
+                : pool(p)
+                , k1(a)
+                , k2(b)
+                , val1(va)
+                , val2(vb)
+                , correct(c)
+            {
+            }
             void run() noexcept override {
                 *pool->tls(k1) = val1;
                 *pool->tls(k2) = val2;
@@ -700,7 +731,10 @@ STD_TEST_SUITE(SimplePoolTls) {
             CondVar cv;
             int count = 0;
             int total;
-            explicit Barrier(int n) : total(n) {}
+            explicit Barrier(int n)
+                : total(n)
+            {
+            }
             void wait() noexcept {
                 LockGuard lock(mutex);
                 if (++count >= total) {
@@ -723,7 +757,13 @@ STD_TEST_SUITE(SimplePoolTls) {
             int myId;
             bool* correct;
             IsoTask(ThreadPool* p, u64 k, Barrier* b, int id, bool* c)
-                : pool(p), key(k), barrier(b), myId(id), correct(c) {}
+                : pool(p)
+                , key(k)
+                , barrier(b)
+                , myId(id)
+                , correct(c)
+            {
+            }
             void run() noexcept override {
                 *pool->tls(key) = (void*)(uintptr_t)myId;
                 barrier->wait();
@@ -759,7 +799,12 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
             ThreadPool* pool;
             u64 key;
             bool* out;
-            CheckTask(ThreadPool* p, u64 k, bool* o) : pool(p), key(k), out(o) {}
+            CheckTask(ThreadPool* p, u64 k, bool* o)
+                : pool(p)
+                , key(k)
+                , out(o)
+            {
+            }
             void run() noexcept override {
                 *out = (pool->tls(key) != nullptr);
                 delete this;
@@ -781,7 +826,12 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
             ThreadPool* pool;
             u64 key;
             void** out;
-            GetTask(ThreadPool* p, u64 k, void** o) : pool(p), key(k), out(o) {}
+            GetTask(ThreadPool* p, u64 k, void** o)
+                : pool(p)
+                , key(k)
+                , out(o)
+            {
+            }
             void run() noexcept override {
                 *out = *pool->tls(key);
                 delete this;
@@ -794,7 +844,12 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
             void* value;
             void** out;
             SetTask(ThreadPool* p, u64 k, void* v, void** o)
-                : pool(p), key(k), value(v), out(o) {}
+                : pool(p)
+                , key(k)
+                , value(v)
+                , out(o)
+            {
+            }
             void run() noexcept override {
                 *pool->tls(key) = value;
                 // submitTask из воркера => pushThrLocal => тот же воркер
@@ -821,7 +876,14 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
             void *val1, *val2;
             bool* correct;
             CheckTask(ThreadPool* p, u64 a, u64 b, void* va, void* vb, bool* c)
-                : pool(p), k1(a), k2(b), val1(va), val2(vb), correct(c) {}
+                : pool(p)
+                , k1(a)
+                , k2(b)
+                , val1(va)
+                , val2(vb)
+                , correct(c)
+            {
+            }
             void run() noexcept override {
                 *pool->tls(k1) = val1;
                 *pool->tls(k2) = val2;
@@ -838,7 +900,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         STD_INSIST(correct);
     }
 
-    STD_TEST(_WorkerIsolation) {
+    STD_TEST(WorkerIsolation) {
         const int N = 2;
         u64 key = registerTlsKey();
 
@@ -847,7 +909,10 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
             CondVar cv;
             int count = 0;
             int total;
-            explicit Barrier(int n) : total(n) {}
+            explicit Barrier(int n)
+                : total(n)
+            {
+            }
             void wait() noexcept {
                 LockGuard lock(mutex);
                 if (++count >= total) {
@@ -870,7 +935,13 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
             int myId;
             bool* correct;
             IsoTask(ThreadPool* p, u64 k, Barrier* b, int id, bool* c)
-                : pool(p), key(k), barrier(b), myId(id), correct(c) {}
+                : pool(p)
+                , key(k)
+                , barrier(b)
+                , myId(id)
+                , correct(c)
+            {
+            }
             void run() noexcept override {
                 *pool->tls(key) = (void*)(uintptr_t)myId;
                 barrier->wait();
