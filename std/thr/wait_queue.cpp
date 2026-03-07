@@ -2,9 +2,8 @@
 #include "mutex.h"
 
 #include <std/sys/types.h>
+#include <std/dbg/assert.h>
 #include <std/sys/atomic.h>
-
-#include <assert.h>
 
 using namespace stl;
 
@@ -16,7 +15,7 @@ namespace {
 
         void enqueue(Item* item) noexcept override {
             u8 idx = item->index;
-            assert(idx < 64);
+            STD_ASSERT(idx < 64);
 
             items_[idx] = item;
             __atomic_fetch_or(&bits_, u64(1) << idx, __ATOMIC_RELEASE);
