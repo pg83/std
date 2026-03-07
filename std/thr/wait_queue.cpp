@@ -8,29 +8,38 @@
 using namespace stl;
 
 namespace {
-#if __SIZEOF_POINTER__ == 8
+    template <typename T>
     struct BitmaskImpl: public WaitQueue {
-        u64 bits_ = 0;
-        Item* items_[64] = {};
+        static constexpr u8 N = sizeof(T) * 8;
+
+        T bits_ = 0;
+        Item* items_[N] = {};
 
         void enqueue(Item* item) noexcept override {
             u8 idx = item->index;
-            STD_ASSERT(idx < 64);
+            STD_ASSERT(idx < N);
 
             items_[idx] = item;
-            __atomic_fetch_or(&bits_, u64(1) << idx, __ATOMIC_RELEASE);
+            __atomic_fetch_or(&bits_, T(1) << idx, __ATOMIC_RELEASE);
         }
 
         Item* dequeue() noexcept override {
-            u64 old = stdAtomicFetch(&bits_, MemoryOrder::Acquire);
+            T old = stdAtomicFetch(&bits_, MemoryOrder::Acquire);
 
             for (;;) {
                 if (!old) {
                     return nullptr;
                 }
 
-                int idx = __builtin_ctzll(old);
-                u64 desired = old & ~(u64(1) << idx);
+                int idx;
+
+                if constexpr (sizeof(T) == 8) {
+                    idx = __builtin_ctzll(old);
+                } else {
+                    idx = __builtin_ctz(old);
+                }
+
+                T desired = old & ~(T(1) << idx);
 
                 if (stdAtomicCAS(&bits_, &old, desired, MemoryOrder::Acquire, MemoryOrder::Acquire)) {
                     return items_[idx];
@@ -39,6 +48,7 @@ namespace {
         }
     };
 
+#if __SIZEOF_POINTER__ == 8
     struct PointerImpl: public WaitQueue {
         // upper 16 bits: tag, lower 48 bits: pointer
         u64 head_ = 0;
@@ -127,11 +137,15 @@ WaitQueue::~WaitQueue() noexcept {
 WaitQueue::Ref WaitQueue::construct(size_t maxWaiters) {
 #if __SIZEOF_POINTER__ == 8
     if (maxWaiters <= 64) {
-        return new BitmaskImpl();
+        return new BitmaskImpl<u64>();
     }
 
     return new PointerImpl();
 #else
+    if (maxWaiters <= 32) {
+        return new BitmaskImpl<u32>();
+    }
+
     return new MutexImpl();
 #endif
 }
