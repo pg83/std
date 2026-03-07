@@ -10,12 +10,12 @@ namespace stl {
         int fd;
 
     public:
-        inline FD() noexcept
+        FD() noexcept
             : fd(-1)
         {
         }
 
-        inline FD(int _fd) noexcept
+        FD(int _fd) noexcept
             : fd(_fd)
         {
         }

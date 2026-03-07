@@ -14,15 +14,15 @@ namespace stl {
     public:
         virtual ~Input() noexcept;
 
-        inline size_t read(void* data, size_t len) {
+        size_t read(void* data, size_t len) {
             return readImpl(data, len);
         }
 
-        inline size_t hint() const noexcept {
+        size_t hint() const noexcept {
             return hintImpl();
         }
 
-        inline size_t hint(size_t def) const noexcept {
+        size_t hint(size_t def) const noexcept {
             if (auto h = hint(); h) {
                 return h;
             }

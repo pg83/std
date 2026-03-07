@@ -12,95 +12,95 @@ namespace stl {
     public:
         static_assert(stdHasTrivialDestructor(T));
 
-        inline Vector(size_t reserve) {
+        Vector(size_t reserve) {
             grow(reserve);
         }
 
-        inline Vector() = default;
-        inline Vector(Vector&&) = default;
-        inline Vector(const Vector&) = default;
+        Vector() = default;
+        Vector(Vector&&) = default;
+        Vector(const Vector&) = default;
 
-        inline auto data() const noexcept {
+        auto data() const noexcept {
             return (const T*)buf_.data();
         }
 
-        inline auto begin() const noexcept {
+        auto begin() const noexcept {
             return data();
         }
 
-        inline auto end() const noexcept {
+        auto end() const noexcept {
             return (const T*)buf_.current();
         }
 
-        inline auto storageEnd() const noexcept {
+        auto storageEnd() const noexcept {
             return begin() + capacity();
         }
 
-        inline auto mutData() noexcept {
+        auto mutData() noexcept {
             return const_cast<T*>(data());
         }
 
-        inline auto mutBegin() noexcept {
+        auto mutBegin() noexcept {
             return const_cast<T*>(begin());
         }
 
-        inline auto mutEnd() noexcept {
+        auto mutEnd() noexcept {
             return const_cast<T*>(end());
         }
 
-        inline auto mutStorageEnd() noexcept {
+        auto mutStorageEnd() noexcept {
             return const_cast<T*>(storageEnd());
         }
 
-        inline size_t left() const noexcept {
+        size_t left() const noexcept {
             return capacity() - length();
         }
 
-        inline size_t capacity() const noexcept {
+        size_t capacity() const noexcept {
             return buf_.capacity() / sizeof(T);
         }
 
-        inline size_t length() const noexcept {
+        size_t length() const noexcept {
             return end() - begin();
         }
 
-        inline bool empty() const noexcept {
+        bool empty() const noexcept {
             return buf_.empty();
         }
 
-        inline auto& mut(size_t i) noexcept {
+        auto& mut(size_t i) noexcept {
             return *(mutBegin() + i);
         }
 
-        inline const auto& operator[](size_t i) const noexcept {
+        const auto& operator[](size_t i) const noexcept {
             return *(begin() + i);
         }
 
-        inline const auto& back() const noexcept {
+        const auto& back() const noexcept {
             return *(end() - 1);
         }
 
-        inline auto& mutBack() noexcept {
+        auto& mutBack() noexcept {
             return *(mutEnd() - 1);
         }
 
-        inline void clear() noexcept {
+        void clear() noexcept {
             buf_.reset();
         }
 
-        inline void grow(size_t len) {
+        void grow(size_t len) {
             buf_.grow(len * sizeof(T));
         }
 
-        inline void growDelta(size_t delta) {
+        void growDelta(size_t delta) {
             grow(length() + delta);
         }
 
-        inline void pushBack(const T& t) {
+        void pushBack(const T& t) {
             buf_.append(&t, sizeof(t));
         }
 
-        inline auto popBack() noexcept {
+        auto popBack() noexcept {
             auto res = back();
 
             buf_.seekAbsolute(end() - 1);
@@ -108,19 +108,19 @@ namespace stl {
             return res;
         }
 
-        inline void append(const T* b, const T* e) {
+        void append(const T* b, const T* e) {
             buf_.append((const u8*)b, (const u8*)e - (const u8*)b);
         }
 
-        inline void append(const T* b, size_t len) {
+        void append(const T* b, size_t len) {
             append(b, b + len);
         }
 
-        inline void xchg(Vector& v) noexcept {
+        void xchg(Vector& v) noexcept {
             buf_.xchg(v.buf_);
         }
 
-        inline void zero(size_t cnt) {
+        void zero(size_t cnt) {
             buf_.zero(cnt * sizeof(T));
         }
     };

@@ -16,7 +16,7 @@ namespace {
         size_t objSize;
         Node* freeList;
 
-        inline Base(void* buf, size_t len, size_t os)
+        Base(void* buf, size_t len, size_t os)
             : mp(buf, len)
             , objSize(max(os, sizeof(Node)))
             , freeList(nullptr)
@@ -27,7 +27,7 @@ namespace {
     struct Impl: public Base {
         alignas(max_align_t) u8 buf[256 - sizeof(Base)];
 
-        inline Impl(size_t os) noexcept
+        Impl(size_t os) noexcept
             : Base(buf, sizeof(buf), os)
         {
         }

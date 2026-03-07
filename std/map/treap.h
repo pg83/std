@@ -16,7 +16,7 @@ namespace stl {
 
     public:
         template <typename V>
-        inline void visit(V v) {
+        void visit(V v) {
             visitImpl(makeVisitor([v](void* ptr) {
                 v((TreapNode*)ptr);
             }));

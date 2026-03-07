@@ -12,7 +12,7 @@ namespace stl {
     public:
         FD* fd;
 
-        inline FDInput(FD& _fd) noexcept
+        FDInput(FD& _fd) noexcept
             : fd(&_fd)
         {
         }

@@ -20,11 +20,11 @@ namespace stl {
         bool readLine(Buffer& buf);
         bool readTo(Buffer& buf, u8 delim);
 
-        inline size_t next(const void** chunk) {
+        size_t next(const void** chunk) {
             return nextImpl(chunk);
         }
 
-        inline void commit(size_t len) noexcept {
+        void commit(size_t len) noexcept {
             commitImpl(len);
         }
     };

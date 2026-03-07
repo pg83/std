@@ -10,7 +10,7 @@ namespace stl {
     public:
         void* ptr;
 
-        inline MemoryOutput(void* _ptr) noexcept
+        MemoryOutput(void* _ptr) noexcept
             : ptr(_ptr)
         {
         }

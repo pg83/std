@@ -11,7 +11,7 @@
 using namespace stl;
 
 namespace {
-    static inline void doW(int work) {
+    static void doW(int work) {
         for (volatile int i = 0; i < work; ++i) {
         }
     }

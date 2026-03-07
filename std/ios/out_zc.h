@@ -19,21 +19,21 @@ namespace stl {
         ~ZeroCopyOutput() noexcept override;
 
         // zero-copy interface
-        inline UnboundBuffer imbue(size_t len) {
+        UnboundBuffer imbue(size_t len) {
             return {imbueImpl(&len)};
         }
 
-        inline void* imbue(size_t* avail) {
+        void* imbue(size_t* avail) {
             return imbueImpl(avail);
         }
 
         size_t next(void** chunk);
 
-        inline void next(void** chunk, size_t* len) {
+        void next(void** chunk, size_t* len) {
             *len = next(chunk);
         }
 
-        inline void commit(size_t len) {
+        void commit(size_t len) {
             commitImpl(len);
         }
 
@@ -45,7 +45,7 @@ namespace stl {
         requires requires(O o) {
             static_cast<ZeroCopyOutput*>(&o);
         }
-    inline O&& operator<<(O&& out, const T& t) {
+    O&& operator<<(O&& out, const T& t) {
         output<ZeroCopyOutput, T>(out, t);
 
         return static_cast<O&&>(out);

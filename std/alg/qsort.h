@@ -18,13 +18,13 @@ namespace stl::QSP {
         Vector<WorkItem> w;
         PCG32 r;
 
-        inline Context(C& _f, void* seed) noexcept
+        Context(C& _f, void* seed) noexcept
             : f(_f)
             , r(seed)
         {
         }
 
-        inline void insertionSort(I b, I e) {
+        void insertionSort(I b, I e) {
             for (auto i = b + 1; i != e; ++i) {
                 for (auto j = i; j != b && f(*j, *(j - 1)); --j) {
                     xchg(*j, *(j - 1));
@@ -32,14 +32,14 @@ namespace stl::QSP {
             }
         }
 
-        inline auto chooseRandom(I b, I e) noexcept {
+        auto chooseRandom(I b, I e) noexcept {
             return b + r.uniformBiased(e - b);
         }
 
         // called as partitionHoare(b, l) where l = e-1 (pivot is at *l).
         // p captures l; the second while pre-decrements e, so e never reaches p.
         // *p is never swapped — pivot stays in place throughout.
-        inline auto partitionHoare(I b, I e) {
+        auto partitionHoare(I b, I e) {
             for (auto p = e;; ++b) {
                 while (b != e && f(*b, *p)) {
                     ++b;
@@ -57,7 +57,7 @@ namespace stl::QSP {
         }
 
         // assume b < e
-        inline bool alreadySorted(I b, I e) {
+        bool alreadySorted(I b, I e) {
             for (++b; b != e; ++b) {
                 if (f(*b, *(b - 1))) {
                     return false;
@@ -67,7 +67,7 @@ namespace stl::QSP {
             return true;
         }
 
-        inline void qSortStep(I b, I e) {
+        void qSortStep(I b, I e) {
             if (e - b < 16) {
                 return;
             }
@@ -92,7 +92,7 @@ namespace stl::QSP {
             w.pushBack(WorkItem{b, p});
         }
 
-        inline void qSortLoop() {
+        void qSortLoop() {
             while (!w.empty()) {
                 auto item = w.popBack();
 
@@ -100,7 +100,7 @@ namespace stl::QSP {
             }
         }
 
-        inline void qSort(I b, I e) {
+        void qSort(I b, I e) {
             if (b != e) {
                 qSortStep(b, e);
                 qSortLoop();
@@ -112,26 +112,26 @@ namespace stl::QSP {
 
 namespace stl {
     template <typename I, typename C>
-    inline void quickSort(I b, I e, C&& f) {
+    void quickSort(I b, I e, C&& f) {
         if (b != e) {
             QSP::Context<I, C>(f, (void*)&*b).qSort(b, e);
         }
     }
 
     template <typename I>
-    inline void quickSort(I b, I e) {
+    void quickSort(I b, I e) {
         return quickSort(b, e, [](const auto& x, const auto& y) {
             return x < y;
         });
     }
 
     template <typename R, typename C>
-    inline void quickSort(R&& r, C&& f) {
+    void quickSort(R&& r, C&& f) {
         return quickSort(r.begin(), r.end(), forward<C>(f));
     }
 
     template <typename R>
-    inline void quickSort(R&& r) {
+    void quickSort(R&& r) {
         return quickSort(r.begin(), r.end());
     }
 }

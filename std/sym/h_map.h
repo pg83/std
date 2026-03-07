@@ -17,7 +17,7 @@ namespace stl {
         ObjList<Node> ol;
         HashTable st;
 
-        inline T* insertNode(Node* value) {
+        T* insertNode(Node* value) {
             if (auto prev = (Node*)st.insert(value); prev) {
                 ol.release(prev);
             }
@@ -26,7 +26,7 @@ namespace stl {
         }
 
     public:
-        inline ~HashMap() {
+        ~HashMap() {
             if constexpr (!stdHasTrivialDestructor(Node)) {
                 st.visit([](auto node) {
                     destruct((Node*)node);
@@ -34,7 +34,7 @@ namespace stl {
             }
         }
 
-        inline T* find(K key) const noexcept {
+        T* find(K key) const noexcept {
             if (auto n = (Node*)st.find(H::hash(key)); n) {
                 return &n->t;
             }
@@ -43,20 +43,20 @@ namespace stl {
         }
 
         template <typename... A>
-        inline T* insert(K key, A&&... a) {
+        T* insert(K key, A&&... a) {
             auto value = ol.make(forward<A>(a)...);
 
             return (value->key = H::hash(key), insertNode(value));
         }
 
         template <typename... A>
-        inline T* insertKeyed(A&&... a) {
+        T* insertKeyed(A&&... a) {
             auto value = ol.make(forward<A>(a)...);
 
             return (value->key = value->t.key(), insertNode(value));
         }
 
-        inline T& operator[](K key) {
+        T& operator[](K key) {
             if (auto res = find(key); res) {
                 return *res;
             }
@@ -64,14 +64,14 @@ namespace stl {
             return *insert(key);
         }
 
-        inline void erase(K key) noexcept {
+        void erase(K key) noexcept {
             if (auto prev = (Node*)st.erase(H::hash(key)); prev) {
                 ol.release(prev);
             }
         }
 
         template <typename F>
-        inline void visit(F f) {
+        void visit(F f) {
             st.visit([f](auto el) {
                 f(((Node*)el)->t);
             });

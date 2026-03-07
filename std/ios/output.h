@@ -30,22 +30,22 @@ namespace stl {
         size_t writeV(const StringView* parts, size_t count);
 
         // zero == no hint
-        inline size_t hint() const noexcept {
+        size_t hint() const noexcept {
             return hintImpl();
         }
 
         bool hint(size_t* res) const noexcept;
         size_t hint(size_t def) const noexcept;
 
-        inline size_t write(const void* data, size_t len) {
+        size_t write(const void* data, size_t len) {
             return (writeC(data, len), len);
         }
 
-        inline void flush() {
+        void flush() {
             flushImpl();
         }
 
-        inline void finish() {
+        void finish() {
             finishImpl();
         }
 

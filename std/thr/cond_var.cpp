@@ -11,13 +11,13 @@
 using namespace stl;
 
 struct CondVar::Impl: public pthread_cond_t {
-    inline Impl() {
+    Impl() {
         if (pthread_cond_init(this, nullptr) != 0) {
             Errno().raise(StringBuilder() << StringView(u8"pthread_cond_init failed"));
         }
     }
 
-    inline ~Impl() noexcept {
+    ~Impl() noexcept {
         STD_INSIST(pthread_cond_destroy(this) == 0);
     }
 };

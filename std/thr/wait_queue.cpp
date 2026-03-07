@@ -56,15 +56,15 @@ namespace {
         // upper 16 bits: tag, lower 48 bits: pointer
         u64 head_ = 0;
 
-        static inline u64 pack(Item* ptr, u64 tag) noexcept {
+        static u64 pack(Item* ptr, u64 tag) noexcept {
             return ((tag & 0xFFFFu) << 48) | ((uintptr_t)(ptr) & 0x0000FFFFFFFFFFFFu);
         }
 
-        static inline Item* unpackPtr(u64 val) noexcept {
+        static Item* unpackPtr(u64 val) noexcept {
             return (Item*)(val & 0x0000FFFFFFFFFFFFu);
         }
 
-        static inline u64 unpackTag(u64 val) noexcept {
+        static u64 unpackTag(u64 val) noexcept {
             return val >> 48;
         }
 

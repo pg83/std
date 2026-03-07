@@ -15,17 +15,17 @@ static_assert(stdHasTrivialDestructor(StringView));
 static_assert(sizeof(StringView) == 2 * sizeof(void*));
 
 namespace {
-    static inline int spaceship(const u8* l, size_t ll, const u8* r, size_t rl) noexcept {
+    static int spaceship(const u8* l, size_t ll, const u8* r, size_t rl) noexcept {
         const auto rr = memCmp(l, r, ll < rl ? ll : rl);
 
         return rr ? rr : (ll < rl ? -1 : (ll == rl ? 0 : 1));
     }
 
-    static inline int spaceship(StringView l, StringView r) noexcept {
+    static int spaceship(StringView l, StringView r) noexcept {
         return spaceship(l.data(), l.length(), r.data(), r.length());
     }
 
-    static inline const u8* fix(const u8* ptr) noexcept {
+    static const u8* fix(const u8* ptr) noexcept {
         return ptr ? ptr : u8"";
     }
 }

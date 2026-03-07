@@ -10,24 +10,24 @@ namespace stl {
         size_t len_;
 
     public:
-        inline StringView() noexcept
+        StringView() noexcept
             : StringView(nullptr, (size_t)0)
         {
         }
 
         template <size_t N>
-        inline StringView(const u8 (&str)[N]) noexcept
+        StringView(const u8 (&str)[N]) noexcept
             : StringView(str, N - 1)
         {
         }
 
-        inline StringView(const u8* ptr, size_t len) noexcept
+        StringView(const u8* ptr, size_t len) noexcept
             : ptr_(ptr)
             , len_(len)
         {
         }
 
-        inline StringView(const u8* b, const u8* e) noexcept
+        StringView(const u8* b, const u8* e) noexcept
             : StringView(b, e - b)
         {
         }
@@ -35,32 +35,32 @@ namespace stl {
         StringView(const char* s) noexcept;
         StringView(const Buffer& b) noexcept;
 
-        inline auto data() const noexcept {
+        auto data() const noexcept {
             return ptr_;
         }
 
-        inline auto length() const noexcept {
+        auto length() const noexcept {
             return len_;
         }
 
         // iterator ops
-        inline auto begin() const noexcept {
+        auto begin() const noexcept {
             return data();
         }
 
-        inline auto end() const noexcept {
+        auto end() const noexcept {
             return begin() + length();
         }
 
-        inline const auto& operator[](size_t i) const noexcept {
+        const auto& operator[](size_t i) const noexcept {
             return *(begin() + i);
         }
 
-        inline bool empty() const noexcept {
+        bool empty() const noexcept {
             return length() == 0;
         }
 
-        inline const auto& back() const noexcept {
+        const auto& back() const noexcept {
             return *(end() - 1);
         }
 

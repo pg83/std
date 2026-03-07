@@ -6,7 +6,7 @@ using namespace stl;
 
 STD_TEST_SUITE(IntrusiveList) {
     struct TestData: public IntrusiveNode {
-        inline TestData(int v)
+        TestData(int v)
             : value(v)
         {
         }

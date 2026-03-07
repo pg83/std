@@ -20,7 +20,7 @@ namespace {
     struct Exc {
     };
 
-    static inline bool execute(TestFunc* func, ExecContext& ctx) {
+    static bool execute(TestFunc* func, ExecContext& ctx) {
         auto& outb = ctx.output();
 
         try {
@@ -58,7 +58,7 @@ namespace {
         Vector<StringView> includes;
         Vector<StringView> excludes;
 
-        inline GetOpt(Ctx& ctx) noexcept {
+        GetOpt(Ctx& ctx) noexcept {
             for (int i = 1; i < ctx.argc; ++i) {
                 StringView arg(ctx.argv[i]);
 
@@ -70,7 +70,7 @@ namespace {
             }
         }
 
-        inline bool matchesFilter(StringView testName) const noexcept {
+        bool matchesFilter(StringView testName) const noexcept {
             if (matchesExclude(testName)) {
                 return false;
             }
@@ -82,7 +82,7 @@ namespace {
             return matchesFilterStrong(testName);
         }
 
-        inline bool matchesFilterStrong(StringView testName) const noexcept {
+        bool matchesFilterStrong(StringView testName) const noexcept {
             if (matchesExclude(testName)) {
                 return false;
             }
@@ -96,7 +96,7 @@ namespace {
             return false;
         }
 
-        inline bool matchesExclude(StringView testName) const noexcept {
+        bool matchesExclude(StringView testName) const noexcept {
             for (auto prefix : range(excludes)) {
                 if (testName.startsWith(prefix)) {
                     return true;
@@ -124,17 +124,17 @@ namespace {
             return compare(*(const TestFunc*)(l), *(const TestFunc*)(r));
         }
 
-        static inline bool compare(const TestFunc& l, const TestFunc& r) noexcept {
+        static bool compare(const TestFunc& l, const TestFunc& r) noexcept {
             return l.suite() < r.suite() || (l.suite() == r.suite() && l.name() < r.name());
         }
 
-        inline void run(Ctx& ctx_) {
+        void run(Ctx& ctx_) {
             ctx = &ctx_;
             opt = new GetOpt(ctx_);
             execute(sysO);
         }
 
-        inline void execute(OutBuf&& outb) {
+        void execute(OutBuf&& outb) {
             outbuf = &outb;
 
             setPanicHandler1(panicHandler1);
@@ -195,18 +195,18 @@ namespace {
             exit(err);
         }
 
-        inline void handlePanic1() {
+        void handlePanic1() {
             outbuf->flush();
         }
 
-        inline void handlePanic2() {
+        void handlePanic2() {
             ctx->printTB();
             fflush(stdout);
             fflush(stderr);
             throw Exc();
         }
 
-        static inline auto& instance() noexcept {
+        static auto& instance() noexcept {
             static auto res = new Tests();
 
             return *res;

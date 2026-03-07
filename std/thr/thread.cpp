@@ -15,7 +15,7 @@ struct Thread::Impl {
     pthread_t thread;
     Runable* runable;
 
-    inline explicit Impl(Runable& r)
+    explicit Impl(Runable& r)
         : runable(&r)
     {
         if (pthread_create(&thread, nullptr, threadFunc, this)) {
@@ -59,7 +59,7 @@ void stl::detach(Runable& runable) {
         Runable* slave;
         ScopedPtr<Thread> thr;
 
-        inline Helper(Runable* r) noexcept
+        Helper(Runable* r) noexcept
             : slave(r)
             , thr(nullptr)
         {

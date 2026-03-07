@@ -7,13 +7,13 @@ namespace stl {
         Disposable* end = 0;
 
     public:
-        inline ~Disposer() noexcept {
+        ~Disposer() noexcept {
             dispose();
         }
 
         void dispose() noexcept;
 
-        inline void submit(Disposable* d) noexcept {
+        void submit(Disposable* d) noexcept {
             d->prev = end;
             end = d;
         }

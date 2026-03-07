@@ -23,7 +23,7 @@ namespace stl {
         InBuf(Input& in) noexcept;
         InBuf(Input& in, size_t chunkSize) noexcept;
 
-        inline InBuf(InBuf&& buf) noexcept
+        InBuf(InBuf&& buf) noexcept
             : InBuf()
         {
             buf.xchg(*this);
@@ -33,7 +33,7 @@ namespace stl {
 
         void xchg(InBuf& buf) noexcept;
 
-        inline Input& stream() noexcept {
+        Input& stream() noexcept {
             return *in_;
         }
     };

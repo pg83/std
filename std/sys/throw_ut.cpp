@@ -12,11 +12,11 @@
 using namespace stl;
 
 namespace {
-    static inline bool contains(StringView haystack, StringView needle) {
+    static bool contains(StringView haystack, StringView needle) {
         return haystack.search(needle);
     }
 
-    static inline void throwErrno(int err, Buffer&& buf) {
+    static void throwErrno(int err, Buffer&& buf) {
         errno = err;
         Errno().raise(move(buf));
     }

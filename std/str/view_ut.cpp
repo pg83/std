@@ -6,7 +6,7 @@
 using namespace stl;
 
 namespace {
-    static inline size_t xsearch(StringView h, StringView n) noexcept {
+    static size_t xsearch(StringView h, StringView n) noexcept {
         if (auto res = h.search(n); res) {
             return res - h.data();
         }

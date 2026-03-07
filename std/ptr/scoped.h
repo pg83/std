@@ -5,11 +5,11 @@ namespace stl {
     struct ScopedPtr {
         T* ptr;
 
-        inline void drop() noexcept {
+        void drop() noexcept {
             ptr = 0;
         }
 
-        inline ~ScopedPtr() {
+        ~ScopedPtr() {
             delete ptr;
         }
     };

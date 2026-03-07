@@ -14,7 +14,7 @@ namespace stl {
         void commitImpl(size_t len) noexcept override;
 
     public:
-        inline MemoryInput(const void* data, size_t len) noexcept
+        MemoryInput(const void* data, size_t len) noexcept
             : b((const u8*)data)
             , e(b + len)
         {

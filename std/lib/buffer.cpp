@@ -15,11 +15,11 @@ static_assert(sizeof(Buffer) == sizeof(void*));
 namespace {
     alignas(max_align_t) static const char EMPTY[sizeof(Buffer::Header)] = {};
 
-    static inline auto nullHeader() noexcept {
+    static auto nullHeader() noexcept {
         return (Buffer::Header*)EMPTY;
     }
 
-    static inline auto allocHeader(size_t len) {
+    static auto allocHeader(size_t len) {
         if (len) {
             auto flen = max<size_t>(clp2(len + sizeof(Buffer::Header)), 256);
             auto blen = flen - sizeof(Buffer::Header);
@@ -33,7 +33,7 @@ namespace {
         return nullHeader();
     }
 
-    static inline void freeHeader(Buffer::Header* ptr) noexcept {
+    static void freeHeader(Buffer::Header* ptr) noexcept {
         if (ptr == nullHeader()) {
         } else {
             freeMemory(ptr);

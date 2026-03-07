@@ -29,7 +29,7 @@ namespace {
     static_assert(sizeof(ChunkDisposer) % alignment == 0);
     static_assert(sizeof(ChunkDestructor) % alignment == 0);
 
-    static inline void* chk(void* buf) noexcept {
+    static void* chk(void* buf) noexcept {
         STD_ASSERT((size_t)buf % alignof(max_align_t) == 0);
 
         return buf;

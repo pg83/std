@@ -5,12 +5,12 @@
 namespace stl {
     template <typename F>
     struct ScopedGuard {
-        inline ScopedGuard(F&& ff) noexcept
+        ScopedGuard(F&& ff) noexcept
             : f(ff)
         {
         }
 
-        inline ~ScopedGuard() {
+        ~ScopedGuard() {
             f();
         }
 

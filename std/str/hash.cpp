@@ -5,7 +5,7 @@
 using namespace stl;
 
 namespace {
-    static inline u32 xorShift(u64 v) noexcept {
+    static u32 xorShift(u64 v) noexcept {
         const u32 xorshifted = ((v >> 18u) ^ v) >> 27u;
         const u32 rot = v >> 59u;
 

@@ -11,14 +11,14 @@ using namespace stl;
 namespace {
     template <typename T>
     struct Scoped: public FD, public T {
-        inline Scoped(int fd) noexcept
+        Scoped(int fd) noexcept
             : FD(fd)
             , T(*(FD*)this)
         {
         }
     };
 
-    static inline FDOutput* wrap(int fd) {
+    static FDOutput* wrap(int fd) {
         struct stat st;
 
         if (fstat(fd, &st) == 0) {

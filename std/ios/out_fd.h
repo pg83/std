@@ -15,7 +15,7 @@ namespace stl {
         // does not own fd
         FD* fd;
 
-        inline FDOutput(FD& _fd) noexcept
+        FDOutput(FD& _fd) noexcept
             : fd(&_fd)
         {
         }

@@ -5,12 +5,12 @@
 using namespace stl;
 
 namespace {
-    static inline void link(IntrusiveNode* a, IntrusiveNode* b) noexcept {
+    static void link(IntrusiveNode* a, IntrusiveNode* b) noexcept {
         a->next = b;
         b->prev = a;
     }
 
-    static inline void xchgWithEmpty(IntrusiveNode& l, IntrusiveNode& r) noexcept {
+    static void xchgWithEmpty(IntrusiveNode& l, IntrusiveNode& r) noexcept {
         IntrusiveList::insertAfter(&l, &r);
         l.remove();
     }
@@ -45,7 +45,7 @@ void IntrusiveList::xchgWithEmptyList(IntrusiveList& r) noexcept {
 }
 
 namespace {
-    static inline void split(IntrusiveList& s, IntrusiveList* l, IntrusiveList* r) noexcept {
+    static void split(IntrusiveList& s, IntrusiveList* l, IntrusiveList* r) noexcept {
         while (auto el = s.popFrontOrNull()) {
             l->pushBack(el);
             xchg(l, r);
@@ -53,7 +53,7 @@ namespace {
     }
 
     template <typename Compare>
-    static inline void merge(IntrusiveList& d, IntrusiveList& l, IntrusiveList& r, Compare&& cmp) noexcept {
+    static void merge(IntrusiveList& d, IntrusiveList& l, IntrusiveList& r, Compare&& cmp) noexcept {
         while (!l.empty() && !r.empty()) {
             if (cmp(r.front(), l.front())) {
                 d.pushBack(r.popFront());
@@ -72,7 +72,7 @@ namespace {
     }
 
     template <typename Compare>
-    static inline void sort(IntrusiveList& d, Compare&& cmp) noexcept {
+    static void sort(IntrusiveList& d, Compare&& cmp) noexcept {
         // length <= 1
         if (auto end = d.end(); end->next->next == end) {
             return;

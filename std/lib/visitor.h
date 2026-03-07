@@ -9,7 +9,7 @@ namespace stl {
     struct Visitor: public VisitorFace {
         V v;
 
-        inline Visitor(V vv)
+        Visitor(V vv)
             : v(vv)
         {
         }
@@ -20,7 +20,7 @@ namespace stl {
     };
 
     template <typename T>
-    inline Visitor<T> makeVisitor(T t) {
+    Visitor<T> makeVisitor(T t) {
         return {t};
     }
 }

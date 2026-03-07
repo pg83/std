@@ -10,13 +10,13 @@
 using namespace stl;
 
 struct Mutex::Impl: public pthread_mutex_t {
-    inline Impl() {
+    Impl() {
         if (pthread_mutex_init(this, nullptr) != 0) {
             Errno().raise(StringBuilder() << StringView(u8"pthread_mutex_init failed"));
         }
     }
 
-    inline ~Impl() noexcept {
+    ~Impl() noexcept {
         STD_INSIST(pthread_mutex_destroy(this) == 0);
     }
 };

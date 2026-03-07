@@ -34,7 +34,7 @@ namespace stl {
         OutBuf(Output& out) noexcept;
         OutBuf(Output& out, size_t chunkSize) noexcept;
 
-        inline OutBuf(OutBuf&& buf) noexcept
+        OutBuf(OutBuf&& buf) noexcept
             : OutBuf()
         {
             buf.xchg(*this);
@@ -44,7 +44,7 @@ namespace stl {
 
         void xchg(OutBuf& buf) noexcept;
 
-        inline Output& stream() noexcept {
+        Output& stream() noexcept {
             return *out_;
         }
     };

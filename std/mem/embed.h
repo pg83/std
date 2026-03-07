@@ -8,7 +8,7 @@ namespace stl {
         T t;
 
         template <typename... A>
-        inline Embed(A&&... a)
+        Embed(A&&... a)
             : t(forward<A>(a)...)
         {
         }

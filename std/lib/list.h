@@ -7,68 +7,68 @@ namespace stl {
         IntrusiveNode head;
 
     public:
-        inline ~IntrusiveList() noexcept {
+        ~IntrusiveList() noexcept {
             clear();
         }
 
-        inline IntrusiveList() noexcept {
+        IntrusiveList() noexcept {
         }
 
-        inline IntrusiveList(IntrusiveList&& r) noexcept {
+        IntrusiveList(IntrusiveList&& r) noexcept {
             r.xchgWithEmptyList(*this);
         }
 
-        inline bool empty() const noexcept {
+        bool empty() const noexcept {
             return head.next == &head;
         }
 
-        inline void pushBack(IntrusiveNode* node) noexcept {
+        void pushBack(IntrusiveNode* node) noexcept {
             insertAfter(head.prev, node);
         }
 
         void pushBack(IntrusiveList& lst) noexcept;
 
-        inline void pushFront(IntrusiveNode* node) noexcept {
+        void pushFront(IntrusiveNode* node) noexcept {
             insertAfter(&head, node);
         }
 
-        inline IntrusiveNode* popFront() noexcept {
+        IntrusiveNode* popFront() noexcept {
             return head.next->remove();
         }
 
         IntrusiveNode* popFrontOrNull() noexcept;
 
-        inline IntrusiveNode* popBack() noexcept {
+        IntrusiveNode* popBack() noexcept {
             return head.prev->remove();
         }
 
         IntrusiveNode* popBackOrNull() noexcept;
 
-        inline void clear() noexcept {
+        void clear() noexcept {
             head.remove();
         }
 
-        inline IntrusiveNode* mutFront() noexcept {
+        IntrusiveNode* mutFront() noexcept {
             return head.next;
         }
 
-        inline const IntrusiveNode* front() const noexcept {
+        const IntrusiveNode* front() const noexcept {
             return head.next;
         }
 
-        inline IntrusiveNode* mutBack() noexcept {
+        IntrusiveNode* mutBack() noexcept {
             return head.prev;
         }
 
-        inline const IntrusiveNode* back() const noexcept {
+        const IntrusiveNode* back() const noexcept {
             return head.prev;
         }
 
-        inline IntrusiveNode* mutEnd() noexcept {
+        IntrusiveNode* mutEnd() noexcept {
             return &head;
         }
 
-        inline const IntrusiveNode* end() const noexcept {
+        const IntrusiveNode* end() const noexcept {
             return &head;
         }
 
@@ -76,7 +76,7 @@ namespace stl {
 
         static void insertAfter(IntrusiveNode* pos, IntrusiveNode* node) noexcept;
 
-        static inline void insertBefore(IntrusiveNode* pos, IntrusiveNode* node) noexcept {
+        static void insertBefore(IntrusiveNode* pos, IntrusiveNode* node) noexcept {
             insertAfter(pos->prev, node);
         }
 
@@ -90,7 +90,7 @@ namespace stl {
         void sort(Compare2 cmp, void* ctx) noexcept;
 
         template <typename F>
-        inline void sort(const F& f) noexcept {
+        void sort(const F& f) noexcept {
             sort([](void* ctx, const IntrusiveNode* l, const IntrusiveNode* r) -> bool {
                 return (*(F*)ctx)(l, r);
             }, (void*)&f);

@@ -9,7 +9,7 @@ using namespace stl;
 namespace {
     // Helper function to normalize floating point representation
     // Truncates to 4 significant digits after decimal point
-    static inline StringView normalizeFloat(StringView sv) {
+    static StringView normalizeFloat(StringView sv) {
         // Find decimal point
         size_t dotPos = 0;
         for (; dotPos < sv.length(); ++dotPos) {

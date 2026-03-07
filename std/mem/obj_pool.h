@@ -18,7 +18,7 @@ namespace stl {
         virtual void submit(Disposable* d) noexcept = 0;
 
         template <typename T, typename... A>
-        inline T* makeImpl(A&&... a) {
+        T* makeImpl(A&&... a) {
             return new (allocate(sizeof(T))) T(forward<A>(a)...);
         }
 
@@ -33,7 +33,7 @@ namespace stl {
 
         // king of ownership
         template <typename T, typename... A>
-        inline T* make(A&&... a) {
+        T* make(A&&... a) {
             struct Wrapper1: public Embed<T>, public Newable {
                 using Embed<T>::Embed;
             };
@@ -55,7 +55,7 @@ namespace stl {
             }
         }
 
-        static inline Ref fromMemory() {
+        static Ref fromMemory() {
             return fromMemoryRaw();
         }
 

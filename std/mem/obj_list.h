@@ -20,11 +20,11 @@ namespace stl {
 
     public:
         template <typename... A>
-        inline T* make(A&&... a) {
+        T* make(A&&... a) {
             return &(new (fl->allocate()) TT(forward<A>(a)...))->t;
         }
 
-        inline void release(T* t) {
+        void release(T* t) {
             fl->release(destruct((TT*)(void*)t));
         }
     };

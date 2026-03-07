@@ -11,7 +11,7 @@
 namespace stl {
     template <typename K, typename V>
     class Map {
-        static inline void* tov(const K& k) noexcept {
+        static void* tov(const K& k) noexcept {
             return (void*)&k;
         }
 
@@ -26,7 +26,7 @@ namespace stl {
             V v;
 
             template <typename... A>
-            inline Node(K key, A&&... a)
+            Node(K key, A&&... a)
                 : k(key)
                 , v(forward<A>(a)...)
             {
@@ -41,14 +41,14 @@ namespace stl {
         Impl map;
 
         template <typename... A>
-        inline V* insertNew(K key, A&&... a) {
+        V* insertNew(K key, A&&... a) {
             auto node = ol.make(key, forward<A>(a)...);
             map.insert(node);
             return &node->v;
         }
 
     public:
-        inline ~Map() noexcept {
+        ~Map() noexcept {
             if constexpr (!stdHasTrivialDestructor(Node)) {
                 map.visit([](auto ptr) {
                     destruct((Node*)ptr);
@@ -56,7 +56,7 @@ namespace stl {
             }
         }
 
-        inline V* find(K k) const noexcept {
+        V* find(K k) const noexcept {
             if (auto res = (Node*)map.find(tov(k)); res) {
                 return &res->v;
             }
@@ -65,11 +65,11 @@ namespace stl {
         }
 
         template <typename... A>
-        inline V* insert(K key, A&&... a) {
+        V* insert(K key, A&&... a) {
             return (erase(key), insertNew(key, forward<A>(a)...));
         }
 
-        inline V& operator[](K key) {
+        V& operator[](K key) {
             if (auto res = find(key); res) {
                 return *res;
             }
@@ -77,14 +77,14 @@ namespace stl {
             return *insertNew(key);
         }
 
-        inline void erase(K key) noexcept {
+        void erase(K key) noexcept {
             if (auto res = (Node*)map.erase(tov(key)); res) {
                 ol.release(res);
             }
         }
 
         template <typename F>
-        inline void visit(F v) {
+        void visit(F v) {
             map.visit([v](TreapNode* ptr) {
                 v(((const Node*)ptr)->k, ((Node*)ptr)->v);
             });

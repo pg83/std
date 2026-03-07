@@ -23,13 +23,13 @@ namespace stl {
         Mutex& mutex_;
 
     public:
-        inline explicit LockGuard(Mutex& mutex)
+        explicit LockGuard(Mutex& mutex)
             : mutex_(mutex)
         {
             mutex_.lock();
         }
 
-        inline ~LockGuard() noexcept {
+        ~LockGuard() noexcept {
             mutex_.unlock();
         }
     };
@@ -38,13 +38,13 @@ namespace stl {
         Mutex& mutex_;
 
     public:
-        inline explicit UnlockGuard(Mutex& mutex)
+        explicit UnlockGuard(Mutex& mutex)
             : mutex_(mutex)
         {
             mutex_.unlock();
         }
 
-        inline ~UnlockGuard() noexcept {
+        ~UnlockGuard() noexcept {
             mutex_.lock();
         }
     };

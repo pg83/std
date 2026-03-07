@@ -12,7 +12,7 @@ namespace {
         MemoryPool mp;
         Disposer ds;
 
-        inline Base(void* buf, size_t len)
+        Base(void* buf, size_t len)
             : mp(buf, len)
         {
         }
@@ -21,7 +21,7 @@ namespace {
     struct Pool: public Base {
         alignas(max_align_t) u8 buf[256 - sizeof(Base)];
 
-        inline Pool() noexcept
+        Pool() noexcept
             : Base(buf, sizeof(buf))
         {
         }

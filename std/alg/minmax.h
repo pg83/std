@@ -2,12 +2,12 @@
 
 namespace stl {
     template <typename T>
-    inline T min(T l, T r) {
+    T min(T l, T r) {
         return l < r ? l : r;
     }
 
     template <typename T>
-    inline T max(T l, T r) {
+    T max(T l, T r) {
         return l < r ? r : l;
     }
 }

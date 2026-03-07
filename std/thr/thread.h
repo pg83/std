@@ -26,12 +26,12 @@ namespace stl {
         Thread thr;
 
     public:
-        inline ScopedThread(Runable& runable)
+        ScopedThread(Runable& runable)
             : thr(runable)
         {
         }
 
-        inline ~ScopedThread() noexcept {
+        ~ScopedThread() noexcept {
             thr.join();
         }
     };

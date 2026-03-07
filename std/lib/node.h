@@ -5,7 +5,7 @@ namespace stl {
         IntrusiveNode* prev = this;
         IntrusiveNode* next = this;
 
-        inline auto remove() noexcept {
+        auto remove() noexcept {
             return (unlink(), this);
         }
 

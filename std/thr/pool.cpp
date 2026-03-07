@@ -31,7 +31,7 @@ u64 stl::registerTlsKey() noexcept {
 
 namespace {
     struct ShutDown: public Task {
-        inline ~ShutDown() noexcept {
+        ~ShutDown() noexcept {
             unlink();
         }
 
@@ -61,13 +61,13 @@ namespace {
             IntMap<void*> tls_;
             Thread thread_;
 
-            inline explicit Worker(ThreadPoolImpl* p) noexcept
+            explicit Worker(ThreadPoolImpl* p) noexcept
                 : pool_(p)
                 , thread_(*this)
             {
             }
 
-            inline auto key() const noexcept {
+            auto key() const noexcept {
                 return thread_.threadId();
             }
 
@@ -169,26 +169,26 @@ namespace {
 
             Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers);
 
-            inline auto key() const noexcept {
+            auto key() const noexcept {
                 return thread_.threadId();
             }
 
-            inline void flush() noexcept {
+            void flush() noexcept {
                 tasks_.pushBack(local_);
             }
 
-            inline Task* popNoLock() noexcept {
+            Task* popNoLock() noexcept {
                 return (Task*)tasks_.popFrontOrNull();
             }
 
-            inline void push(Task& task) noexcept {
+            void push(Task& task) noexcept {
                 LockGuard lock(mutex_);
                 flush();
                 tasks_.pushBack(&task);
                 condVar_.signal();
             }
 
-            inline void pushLocal(Task& task) noexcept {
+            void pushLocal(Task& task) noexcept {
                 {
                     LockGuard lock(mutex_);
 
@@ -199,20 +199,20 @@ namespace {
                 pool_->notifyOne();
             }
 
-            inline void pushThrLocal(Task& task) noexcept {
+            void pushThrLocal(Task& task) noexcept {
                 local_.pushBack(&task);
             }
 
-            inline void notify() noexcept {
+            void notify() noexcept {
                 LockGuard lock(mutex_);
                 condVar_.signal();
             }
 
-            inline void join() noexcept {
+            void join() noexcept {
                 thread_.join();
             }
 
-            inline void sleep() noexcept {
+            void sleep() noexcept {
                 pool_->wq->enqueue(this);
                 condVar_.wait(mutex_);
             }
@@ -392,7 +392,7 @@ void ThreadPool::submit(Runable& runable) {
     struct Helper: public Task {
         Runable* runable;
 
-        inline Helper(Runable* r) noexcept
+        Helper(Runable* r) noexcept
             : runable(r)
         {
         }

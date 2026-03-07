@@ -16,7 +16,7 @@ namespace {
         Buffer text;
         int error;
 
-        inline ErrnoError(int e, Buffer&& t) noexcept
+        ErrnoError(int e, Buffer&& t) noexcept
             : text(move(t))
             , error(e)
         {

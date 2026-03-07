@@ -23,7 +23,7 @@ namespace stl {
     public:
         HashTable(size_t initial);
 
-        inline HashTable()
+        HashTable()
             : HashTable(8)
         {
         }
@@ -38,7 +38,7 @@ namespace stl {
         Node* insert(Node* node);
 
         template <typename V>
-        inline void visit(V v) {
+        void visit(V v) {
             visitImpl(makeVisitor([v](void* ptr) {
                 v((Node*)ptr);
             }));

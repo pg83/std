@@ -10,7 +10,7 @@
 using namespace stl;
 
 namespace {
-    static inline void copy(Input& in, Output& out) {
+    static void copy(Input& in, Output& out) {
         in.sendTo(out);
     }
 }

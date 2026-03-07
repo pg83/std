@@ -6,11 +6,11 @@
 using namespace stl;
 
 namespace {
-    static inline u64 prio(const void* el) noexcept {
+    static u64 prio(const void* el) noexcept {
         return splitMix64((size_t)el);
     }
 
-    static inline TreapNode* merge(TreapNode* l, TreapNode* r) noexcept {
+    static TreapNode* merge(TreapNode* l, TreapNode* r) noexcept {
         if (!l) {
             return r;
         } else if (!r) {

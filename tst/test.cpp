@@ -7,7 +7,7 @@ using namespace stl;
 
 namespace {
     struct MyCtx: public Ctx {
-        inline MyCtx(int c, char** v) {
+        MyCtx(int c, char** v) {
             argc = c;
             argv = v;
         }
