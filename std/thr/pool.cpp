@@ -145,10 +145,6 @@ namespace {
 
             Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers);
 
-            u8 index() const noexcept override {
-                return (u8)myIndex_;
-            }
-
             inline auto key() const noexcept {
                 return thread_.threadId();
             }
@@ -193,7 +189,7 @@ namespace {
             }
 
             inline void sleep() noexcept {
-                pool_->wq.enqueue(this);
+                pool_->wq->enqueue(this);
                 condVar_.wait(mutex_);
             }
 
@@ -204,7 +200,7 @@ namespace {
 
         Vector<Worker*> workers_;
         IntMap<Worker> workerIndex_;
-        WaitQueue wq;
+        WaitQueue::Ref wq;
         size_t running_;
 
         WorkStealingThreadPool(size_t numThreads);
@@ -219,6 +215,7 @@ namespace {
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     : workers_(numThreads)
+    , wq(WaitQueue::construct(numThreads))
     , running_(numThreads)
 {
     for (size_t i = 0; i < numThreads; ++i) {
@@ -231,7 +228,7 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
 }
 
 bool WorkStealingThreadPool::notifyOne() noexcept {
-    if (auto item = (Worker*)wq.dequeue()) {
+    if (auto item = (Worker*)wq->dequeue()) {
         item->notify();
 
         return true;
@@ -243,7 +240,7 @@ bool WorkStealingThreadPool::notifyOne() noexcept {
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
     if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
         return w->pushThrLocal(task);
-    } else if (auto w = (Worker*)wq.dequeue()) {
+    } else if (auto w = (Worker*)wq->dequeue()) {
         return w->push(task);
     } else {
         return workers_[PCG32(&task).uniformUnbiased(workers_.length())]->pushLocal(task);
@@ -268,7 +265,7 @@ void WorkStealingThreadPool::trySteal(const u32* order, u32 n, u32 offset, Intru
 
 WorkStealingThreadPool::Worker* WorkStealingThreadPool::nextSleeping() noexcept {
     while (stdAtomicFetch(&running_, MemoryOrder::Relaxed) > 1) {
-        if (auto w = (Worker*)wq.dequeue(); w) {
+        if (auto w = (Worker*)wq->dequeue(); w) {
             return w;
         }
     }
@@ -277,7 +274,8 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::nextSleeping() noexcept 
 }
 
 WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers)
-    : pool_(pool)
+    : WaitQueue::Item{nullptr, (u8)myIndex}
+    , pool_(pool)
     , myIndex_(myIndex)
     , rng_(splitMix64(myIndex))
     , so_(numWorkers - 1)

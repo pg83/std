@@ -1,23 +1,24 @@
 #pragma once
 
+#include <std/ptr/arc.h>
 #include <std/sys/types.h>
+#include <std/ptr/intrusive.h>
 
 namespace stl {
-    class WaitQueue {
-        struct Impl;
-        Impl* impl;
-
+    class WaitQueue: public ARC {
     public:
+        using Ref = IntrusivePtr<WaitQueue>;
+
         struct Item {
             Item* next = nullptr;
-
-            virtual u8 index() const noexcept = 0;
+            u8 index = 0;
         };
 
-        WaitQueue();
-        ~WaitQueue() noexcept;
+        virtual ~WaitQueue() noexcept;
 
-        void enqueue(Item* item) noexcept;
-        Item* dequeue() noexcept;
+        virtual void enqueue(Item* item) noexcept = 0;
+        virtual Item* dequeue() noexcept = 0;
+
+        static Ref construct(size_t maxWaiters);
     };
 }
