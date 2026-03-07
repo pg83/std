@@ -96,6 +96,7 @@ namespace stl {
             }, (void*)&f);
         }
 
+        void appendChain(IntrusiveNode& node) noexcept;
         void splitHalf(IntrusiveList& l, IntrusiveList& r) noexcept;
     };
 }

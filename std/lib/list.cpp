@@ -45,11 +45,33 @@ void IntrusiveList::xchgWithEmptyList(IntrusiveList& r) noexcept {
 }
 
 namespace {
-    static void split(IntrusiveList& s, IntrusiveList* l, IntrusiveList* r) noexcept {
-        while (auto el = s.popFrontOrNull()) {
-            l->pushBack(el);
-            xchg(l, r);
+    static void splitImpl(IntrusiveList& s, IntrusiveNode& a, IntrusiveNode& b) noexcept {
+        a.next = nullptr;
+        b.next = nullptr;
+        auto* pa = &a;
+        auto* pb = &b;
+
+        for (auto* cur = s.mutFront(); cur != s.mutEnd(); ) {
+            auto* nxt = cur->next;
+            pa->next = cur;
+            pa = cur;
+            xchg(pa, pb);
+            cur = nxt;
         }
+
+        pa->next = nullptr;
+        pb->next = nullptr;
+
+        s.mutEnd()->reset();
+    }
+
+    static void split(IntrusiveList& s, IntrusiveList* l, IntrusiveList* r) noexcept {
+        IntrusiveNode a, b;
+
+        splitImpl(s, a, b);
+
+        l->appendChain(a);
+        r->appendChain(b);
     }
 
     template <typename Compare>
@@ -88,6 +110,23 @@ namespace {
 
         merge(d, l, r, cmp);
     }
+}
+
+void IntrusiveList::appendChain(IntrusiveNode& node) noexcept {
+    if (!node.next) {
+        return;
+    }
+
+    auto* tail = &node;
+
+    while (tail->next) {
+        tail->next->prev = tail;
+        tail = tail->next;
+    }
+
+    link(mutBack(), node.next);
+    link(tail, mutEnd());
+    node.reset();
 }
 
 void IntrusiveList::splitHalf(IntrusiveList& l, IntrusiveList& r) noexcept {
