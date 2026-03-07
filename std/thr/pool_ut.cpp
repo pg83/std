@@ -3,6 +3,7 @@
 #include "runable.h"
 #include "mutex.h"
 #include "cond_var.h"
+#include "barrier.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/atomic.h>
@@ -726,27 +727,6 @@ STD_TEST_SUITE(SimplePoolTls) {
         const int N = 2;
         u64 key = registerTlsKey();
 
-        struct Barrier {
-            Mutex mutex;
-            CondVar cv;
-            int count = 0;
-            int total;
-            explicit Barrier(int n)
-                : total(n)
-            {
-            }
-            void wait() noexcept {
-                LockGuard lock(mutex);
-                if (++count >= total) {
-                    cv.broadcast();
-                } else {
-                    while (count < total) {
-                        cv.wait(mutex);
-                    }
-                }
-            }
-        };
-
         Barrier barrier(N);
         bool correct = true;
 
@@ -856,27 +836,6 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
     STD_TEST(WorkerIsolation) {
         const int N = 2;
         u64 key = registerTlsKey();
-
-        struct Barrier {
-            Mutex mutex;
-            CondVar cv;
-            int count = 0;
-            int total;
-            explicit Barrier(int n)
-                : total(n)
-            {
-            }
-            void wait() noexcept {
-                LockGuard lock(mutex);
-                if (++count >= total) {
-                    cv.broadcast();
-                } else {
-                    while (count < total) {
-                        cv.wait(mutex);
-                    }
-                }
-            }
-        };
 
         Barrier barrier(N);
         Barrier done(N + 1);
