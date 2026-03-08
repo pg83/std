@@ -2,27 +2,27 @@
 #include "mutex.h"
 #include "cond_var.h"
 
+#include <std/sys/types.h>
+
 using namespace stl;
 
 struct Barrier::Impl {
     Mutex mutex;
     CondVar cv;
-    int count;
-    int total;
+    size_t remaining;
 
     Impl(int n)
-        : count(0)
-        , total(n)
+        : remaining(n)
     {
     }
 
     void wait() noexcept {
         LockGuard lock(mutex);
 
-        if (++count >= total) {
+        if (--remaining == 0) {
             cv.broadcast();
         } else {
-            while (count < total) {
+            while (remaining > 0) {
                 cv.wait(mutex);
             }
         }
