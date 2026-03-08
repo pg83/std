@@ -199,6 +199,7 @@ namespace {
             }
 
             void pushThrLocal(Task* task) noexcept {
+                //pushLocal(task);
                 local_.pushBack(task);
             }
 
@@ -352,9 +353,13 @@ void WorkStealingThreadPool::Worker::loop() {
 
     do {
         while (auto task = popNoLock()) {
-            UnlockGuard unlock(mutex_);
+            {
+                UnlockGuard unlock(mutex_);
 
-            task->run();
+                task->run();
+            }
+
+            flush();
         }
 
         IntrusiveList stolen;
@@ -375,6 +380,8 @@ void WorkStealingThreadPool::Worker::loop() {
 
 void WorkStealingThreadPool::Worker::split(IntrusiveList* stolen) noexcept {
     LockGuard lock(mutex_);
+
+    flush();
 
     tasks_.splitHalf(tasks_, *stolen);
 
