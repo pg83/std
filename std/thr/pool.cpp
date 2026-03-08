@@ -228,6 +228,7 @@ namespace {
 
         bool notifyOne() noexcept;
         void join() noexcept override;
+        Worker* localWorker() noexcept;
         Worker* nextSleeping() noexcept;
         void** tls(u64 key) noexcept override;
         void submitTask(Task* task) noexcept override;
@@ -259,13 +260,21 @@ bool WorkStealingThreadPool::notifyOne() noexcept {
     return false;
 }
 
-void WorkStealingThreadPool::submitTask(Task* task) noexcept {
+WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
     static thread_local Worker* curw = nullptr;
 
     if (curw) {
-        return curw->pushThrLocal(task);
+        return curw;
     } else if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
-        return (curw = w, w->pushThrLocal(task));
+        return curw = w;
+    }
+
+    return nullptr;
+}
+
+void WorkStealingThreadPool::submitTask(Task* task) noexcept {
+    if (auto w = localWorker(); w) {
+        return w->pushThrLocal(task);
     } else if (auto w = (Worker*)wq->dequeue()) {
         return w->push(task);
     } else {
@@ -274,7 +283,7 @@ void WorkStealingThreadPool::submitTask(Task* task) noexcept {
 }
 
 void** WorkStealingThreadPool::tls(u64 key) noexcept {
-    if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
+    if (auto w = localWorker(); w) {
         return &w->tls_[key];
     }
 
