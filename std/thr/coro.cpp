@@ -87,6 +87,7 @@ CoroExecutor* ContImpl::executor() noexcept {
 
 void ContImpl::entryX() noexcept {
     runable_->run();
+    delete runable_;
     runable_ = nullptr;
     swapcontext(&ctx_, workerCtx_);
 }
