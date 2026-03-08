@@ -35,7 +35,7 @@ STD_TEST_SUITE(UT) {
             }
         };
 
-        H h(ctx.output());
+        H h(_ctx.output());
         OutBuf ob(h, 100);
 
         for (size_t i = 0; i < 1000; ++i) {

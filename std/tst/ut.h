@@ -42,4 +42,4 @@ namespace stl {
         }                                         \
         void execute(ExecContext& ctx) const;     \
     } REG_##_name;                                \
-    void Test_##_name::execute([[maybe_unused]] ExecContext& ctx) const
+    void Test_##_name::execute([[maybe_unused]] ExecContext& _ctx) const
