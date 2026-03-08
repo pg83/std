@@ -16,7 +16,7 @@ namespace {
 
     struct CoroExecutorImpl;
 
-    struct ContImpl: public Cont, public Task, public Newable {
+    struct alignas(max_align_t) ContImpl: public Cont, public Task, public Newable {
         CoroExecutorImpl* exec_;
         ucontext_t ctx_;
         ucontext_t* workerCtx_;
@@ -61,6 +61,10 @@ namespace {
             auto* c = currentCont();
 
             swapcontext(&c->ctx_, c->workerCtx_);
+        }
+
+        ThreadPool* pool() const noexcept {
+            return (ThreadPool*)pool_.ptr();
         }
     };
 }

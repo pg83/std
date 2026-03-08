@@ -72,8 +72,7 @@ STD_TEST_SUITE(CoroExecutor) {
     }
 
     STD_TEST(ManyCoros) {
-        auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool.mutPtr());
+        auto exec = CoroExecutor::create(4);
         Latch done(100);
         int counter = 0;
 
@@ -86,7 +85,7 @@ STD_TEST_SUITE(CoroExecutor) {
         }
 
         done.wait();
-        pool->join();
+        exec->pool()->join();
         STD_INSIST(counter == 100);
     }
 

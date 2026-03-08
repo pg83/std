@@ -18,9 +18,10 @@ namespace stl {
 
         virtual ~CoroExecutor() noexcept;
 
-        virtual Cont* me() const noexcept = 0;
         virtual void yield() noexcept = 0;
+        virtual Cont* me() const noexcept = 0;
         virtual void spawnRun(Runable* runable) = 0;
+        virtual ThreadPool* pool() const noexcept = 0;
 
         template <typename F>
         void spawn(F f) {
