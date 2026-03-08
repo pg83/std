@@ -19,7 +19,6 @@ namespace {
         CoroExecutorImpl* exec_;
         ucontext_t ctx_;
         ucontext_t* workerCtx_;
-        bool done_;
         coro* fn_;
         void* fnCtx_;
 
@@ -65,7 +64,6 @@ namespace {
 ContImpl::ContImpl(CoroExecutorImpl* exec, coro* fn, void* fnCtx) noexcept
     : exec_(exec)
     , workerCtx_(nullptr)
-    , done_(false)
     , fn_(fn)
     , fnCtx_(fnCtx)
 {
@@ -86,7 +84,7 @@ CoroExecutor* ContImpl::executor() noexcept {
 
 void ContImpl::entryX() noexcept {
     fn_(this, fnCtx_);
-    done_ = true;
+    fn_ = nullptr;
     swapcontext(&ctx_, workerCtx_);
 }
 
@@ -105,7 +103,7 @@ void ContImpl::run() noexcept {
 
     *exec_->tls() = nullptr;
 
-    if (done_) {
+    if (!fn_) {
         freeMemory(destruct(this));
     } else {
         exec_->pool_->submitTask(this);
