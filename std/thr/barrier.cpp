@@ -16,7 +16,7 @@ struct Barrier::Impl {
     {
     }
 
-    void wait() {
+    void wait() noexcept {
         LockGuard lock(mutex);
 
         if (--remaining == 0) {
@@ -34,10 +34,10 @@ Barrier::Barrier(int n)
 {
 }
 
-Barrier::~Barrier() {
+Barrier::~Barrier() noexcept {
     delete impl;
 }
 
-void Barrier::wait() {
+void Barrier::wait() noexcept {
     impl->wait();
 }

@@ -477,7 +477,7 @@ STD_TEST_SUITE(ObjPool) {
         struct T {
             u64* ptr;
 
-            T(u64* _ptr)
+            T(u64* _ptr) noexcept
                 : ptr(_ptr)
             {
             }

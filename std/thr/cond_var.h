@@ -9,10 +9,10 @@ namespace stl {
 
     public:
         CondVar();
-        ~CondVar();
+        ~CondVar() noexcept;
 
-        void wait(Mutex& mutex);
-        void signal();
-        void broadcast();
+        void wait(Mutex& mutex) noexcept;
+        void signal() noexcept;
+        void broadcast() noexcept;
     };
 }

@@ -12,10 +12,10 @@ namespace stl {
         size_t readImpl(void* data, size_t len) override;
 
         virtual size_t nextImpl(const void** chunk) = 0;
-        virtual void commitImpl(size_t len) = 0;
+        virtual void commitImpl(size_t len) noexcept = 0;
 
     public:
-        ~ZeroCopyInput() override;
+        ~ZeroCopyInput() noexcept override;
 
         bool readLine(Buffer& buf);
         bool readTo(Buffer& buf, u8 delim);
@@ -24,7 +24,7 @@ namespace stl {
             return nextImpl(chunk);
         }
 
-        void commit(size_t len) {
+        void commit(size_t len) noexcept {
             commitImpl(len);
         }
     };

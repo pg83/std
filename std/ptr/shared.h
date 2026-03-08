@@ -8,11 +8,11 @@
 namespace stl::SPP {
     template <typename T>
     struct Ops: public RefCountOps<T> {
-        static auto ptr(const T* t) {
+        static auto ptr(const T* t) noexcept {
             return &t->t;
         }
 
-        static auto mutPtr(T* t) {
+        static auto mutPtr(T* t) noexcept {
             return &t->t;
         }
     };

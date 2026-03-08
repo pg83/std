@@ -9,12 +9,12 @@ using namespace stl;
 InBuf::~InBuf() {
 }
 
-InBuf::InBuf(Input& in)
+InBuf::InBuf(Input& in) noexcept
     : InBuf(in, in.hint(1 << 14))
 {
 }
 
-InBuf::InBuf(Input& in, size_t chunkSize)
+InBuf::InBuf(Input& in, size_t chunkSize) noexcept
     : in_(&in)
     , buf(chunkSize)
     , pos(0)
@@ -22,13 +22,13 @@ InBuf::InBuf(Input& in, size_t chunkSize)
     // buf.setCapacity(chunkSize);
 }
 
-InBuf::InBuf()
+InBuf::InBuf() noexcept
     : in_(nullptr)
     , pos(0)
 {
 }
 
-size_t InBuf::hintImpl() const {
+size_t InBuf::hintImpl() const noexcept {
     return buf.capacity();
 }
 
@@ -41,11 +41,11 @@ size_t InBuf::nextImpl(const void** ptr) {
     return (*ptr = (const u8*)buf.data() + pos, buf.used() - pos);
 }
 
-void InBuf::commitImpl(size_t len) {
+void InBuf::commitImpl(size_t len) noexcept {
     pos += len;
 }
 
-void InBuf::xchg(InBuf& r) {
+void InBuf::xchg(InBuf& r) noexcept {
     ::stl::xchg(buf, r.buf);
     ::stl::xchg(in_, r.in_);
     ::stl::xchg(pos, r.pos);

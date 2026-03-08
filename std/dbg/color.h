@@ -18,15 +18,15 @@ namespace stl {
         AnsiColor color;
         bool brightKind;
 
-        static auto dark(AnsiColor c) {
+        static auto dark(AnsiColor c) noexcept {
             return Color{c, false};
         }
 
-        static auto bright(AnsiColor c) {
+        static auto bright(AnsiColor c) noexcept {
             return Color{c, true};
         }
 
-        static auto reset() {
+        static auto reset() noexcept {
             return Color{AnsiColor::Reset, false};
         }
     };

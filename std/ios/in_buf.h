@@ -11,19 +11,19 @@ namespace stl {
         Buffer buf;
         size_t pos;
 
-        InBuf();
+        InBuf() noexcept;
 
-        size_t hintImpl() const override;
+        size_t hintImpl() const noexcept override;
         size_t nextImpl(const void** chunk) override;
-        void commitImpl(size_t len) override;
+        void commitImpl(size_t len) noexcept override;
 
     public:
         ~InBuf() override;
 
-        InBuf(Input& in);
-        InBuf(Input& in, size_t chunkSize);
+        InBuf(Input& in) noexcept;
+        InBuf(Input& in, size_t chunkSize) noexcept;
 
-        InBuf(InBuf&& buf)
+        InBuf(InBuf&& buf) noexcept
             : InBuf()
         {
             buf.xchg(*this);
@@ -31,9 +31,9 @@ namespace stl {
 
         InBuf(const InBuf&) = delete;
 
-        void xchg(InBuf& buf);
+        void xchg(InBuf& buf) noexcept;
 
-        Input& stream() {
+        Input& stream() noexcept {
             return *in_;
         }
     };

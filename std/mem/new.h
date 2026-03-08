@@ -4,7 +4,7 @@
 
 namespace stl {
     struct Newable {
-        static void* operator new(size_t, void* ptr) {
+        static void* operator new(size_t, void* ptr) noexcept {
             return ptr;
         }
     };

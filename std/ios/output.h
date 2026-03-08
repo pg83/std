@@ -12,7 +12,7 @@ namespace stl {
 
     class Output {
         virtual size_t writeImpl(const void* data, size_t len) = 0;
-        virtual size_t hintImpl() const;
+        virtual size_t hintImpl() const noexcept;
 
         // have sensible defaults
         virtual void flushImpl();
@@ -20,7 +20,7 @@ namespace stl {
         virtual size_t writeVImpl(iovec* parts, size_t count);
 
     public:
-        virtual ~Output();
+        virtual ~Output() noexcept;
 
         void writeC(const void* data, size_t len);
 
@@ -30,12 +30,12 @@ namespace stl {
         size_t writeV(const StringView* parts, size_t count);
 
         // zero == no hint
-        size_t hint() const {
+        size_t hint() const noexcept {
             return hintImpl();
         }
 
-        bool hint(size_t* res) const;
-        size_t hint(size_t def) const;
+        bool hint(size_t* res) const noexcept;
+        size_t hint(size_t def) const noexcept;
 
         size_t write(const void* data, size_t len) {
             return (writeC(data, len), len);

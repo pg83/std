@@ -12,11 +12,11 @@ namespace stl {
     public:
         Mutex();
         Mutex(bool lock);
-        ~Mutex();
+        ~Mutex() noexcept;
 
-        void lock();
-        void unlock();
-        bool tryLock();
+        void lock() noexcept;
+        void unlock() noexcept;
+        bool tryLock() noexcept;
     };
 
     class LockGuard {
@@ -29,7 +29,7 @@ namespace stl {
             mutex_.lock();
         }
 
-        ~LockGuard() {
+        ~LockGuard() noexcept {
             mutex_.unlock();
         }
     };
@@ -44,7 +44,7 @@ namespace stl {
             mutex_.unlock();
         }
 
-        ~UnlockGuard() {
+        ~UnlockGuard() noexcept {
             mutex_.lock();
         }
     };

@@ -21,7 +21,7 @@ namespace {
     };
 }
 
-ZeroCopyOutput::~ZeroCopyOutput() {
+ZeroCopyOutput::~ZeroCopyOutput() noexcept {
 }
 
 void ZeroCopyOutput::recvFromI(Input& in) {

@@ -7,17 +7,17 @@ namespace stl {
         Disposable* end = 0;
 
     public:
-        ~Disposer() {
+        ~Disposer() noexcept {
             dispose();
         }
 
-        void dispose();
+        void dispose() noexcept;
 
-        void submit(Disposable* d) {
+        void submit(Disposable* d) noexcept {
             d->prev = end;
             end = d;
         }
 
-        unsigned length() const;
+        unsigned length() const noexcept;
     };
 }

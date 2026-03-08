@@ -14,9 +14,9 @@ namespace stl {
 
     public:
         MemoryPool();
-        MemoryPool(void* buf, size_t len);
+        MemoryPool(void* buf, size_t len) noexcept;
 
-        ~MemoryPool();
+        ~MemoryPool() noexcept;
 
         void* allocate(size_t len);
     };

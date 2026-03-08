@@ -8,21 +8,21 @@ namespace stl {
     class ZeroCopyInput;
 
     class Input {
-        virtual size_t hintImpl() const;
+        virtual size_t hintImpl() const noexcept;
         virtual size_t readImpl(void* data, size_t len) = 0;
 
     public:
-        virtual ~Input();
+        virtual ~Input() noexcept;
 
         size_t read(void* data, size_t len) {
             return readImpl(data, len);
         }
 
-        size_t hint() const {
+        size_t hint() const noexcept {
             return hintImpl();
         }
 
-        size_t hint(size_t def) const {
+        size_t hint(size_t def) const noexcept {
             if (auto h = hint(); h) {
                 return h;
             }

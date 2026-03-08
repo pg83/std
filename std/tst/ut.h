@@ -31,7 +31,7 @@ namespace stl {
 
 #define STD_TEST(_name)                           \
     static struct Test_##_name: ::stl::TestFunc { \
-        Test_##_name() {                          \
+        Test_##_name() {                   \
             registerMe();                         \
         }                                         \
         ::stl::StringView suite() const {         \

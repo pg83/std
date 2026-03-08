@@ -17,7 +17,7 @@ namespace {
     };
 
     struct alignas(alignment) Chunk: public Disposable, public Newable {
-        ~Chunk() override {
+        ~Chunk() noexcept override {
             freeMemory(this);
         }
     };
@@ -29,7 +29,7 @@ namespace {
     static_assert(sizeof(ChunkDisposer) % alignment == 0);
     static_assert(sizeof(ChunkDestructor) % alignment == 0);
 
-    static void* chk(void* buf) {
+    static void* chk(void* buf) noexcept {
         STD_ASSERT((size_t)buf % alignof(max_align_t) == 0);
 
         return buf;
@@ -45,7 +45,7 @@ MemoryPool::MemoryPool()
     ds->submit((ChunkDisposer*)ds);
 }
 
-MemoryPool::MemoryPool(void* buf, size_t len)
+MemoryPool::MemoryPool(void* buf, size_t len) noexcept
     : currentChunk((u8*)chk(buf))
     , currentChunkEnd(currentChunk + len)
     , ds(new (allocate(sizeof(ChunkDestructor))) ChunkDestructor())
@@ -55,7 +55,7 @@ MemoryPool::MemoryPool(void* buf, size_t len)
     ds->submit((ChunkDestructor*)ds);
 }
 
-MemoryPool::~MemoryPool() {
+MemoryPool::~MemoryPool() noexcept {
     ds->dispose();
 }
 

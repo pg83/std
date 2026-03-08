@@ -27,7 +27,7 @@ namespace {
     struct Impl: public Base {
         alignas(max_align_t) u8 buf[256 - sizeof(Base)];
 
-        Impl(size_t os)
+        Impl(size_t os) noexcept
             : Base(buf, sizeof(buf), os)
         {
         }
@@ -40,7 +40,7 @@ namespace {
             return mp.allocate(objSize);
         }
 
-        void release(void* ptr) override {
+        void release(void* ptr) noexcept override {
             auto node = (Node*)ptr;
             node->next = freeList;
             freeList = node;
@@ -51,7 +51,7 @@ namespace {
     static_assert(sizeof(Base) % sizeof(max_align_t) == 0);
 }
 
-FreeList::~FreeList() {
+FreeList::~FreeList() noexcept {
 }
 
 FreeList::Ref FreeList::fromMemory(size_t objSize) {

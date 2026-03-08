@@ -7,8 +7,8 @@ namespace stl {
 
     public:
         explicit Barrier(int n);
-        ~Barrier();
+        ~Barrier() noexcept;
 
-        void wait();
+        void wait() noexcept;
     };
 }

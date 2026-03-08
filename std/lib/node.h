@@ -5,16 +5,16 @@ namespace stl {
         IntrusiveNode* prev = this;
         IntrusiveNode* next = this;
 
-        auto remove() {
+        auto remove() noexcept {
             return (unlink(), this);
         }
 
-        void reset();
-        void unlink();
-        void fixPrev();
+        void reset() noexcept;
+        void unlink() noexcept;
+        void fixPrev() noexcept;
         void xchg(IntrusiveNode& r);
 
-        bool singular() const;
-        bool almostEmpty() const;
+        bool singular() const noexcept;
+        bool almostEmpty() const noexcept;
     };
 }

@@ -6,11 +6,11 @@
 using namespace stl;
 
 namespace {
-    static u64 prio(const void* el) {
+    static u64 prio(const void* el) noexcept {
         return splitMix64((size_t)el);
     }
 
-    static TreapNode* merge(TreapNode* l, TreapNode* r) {
+    static TreapNode* merge(TreapNode* l, TreapNode* r) noexcept {
         if (!l) {
             return r;
         } else if (!r) {
@@ -23,7 +23,7 @@ namespace {
     }
 }
 
-void Treap::split(TreapNode* t, void* k, TreapNode** l, TreapNode** r) {
+void Treap::split(TreapNode* t, void* k, TreapNode** l, TreapNode** r) noexcept {
     if (!t) {
         *l = nullptr;
         *r = nullptr;
@@ -36,7 +36,7 @@ void Treap::split(TreapNode* t, void* k, TreapNode** l, TreapNode** r) {
     }
 }
 
-void Treap::insert(TreapNode* node) {
+void Treap::insert(TreapNode* node) noexcept {
     TreapNode* l;
     TreapNode* r;
 
@@ -44,7 +44,7 @@ void Treap::insert(TreapNode* node) {
     root = merge(merge(l, node), r);
 }
 
-TreapNode* Treap::find(void* key) const {
+TreapNode* Treap::find(void* key) const noexcept {
     auto t = root;
 
     while (t) {
@@ -60,7 +60,7 @@ TreapNode* Treap::find(void* key) const {
     return nullptr;
 }
 
-TreapNode* Treap::erase(void* key) {
+TreapNode* Treap::erase(void* key) noexcept {
     auto ptr = &root;
 
     while (auto current = *ptr) {
@@ -76,7 +76,7 @@ TreapNode* Treap::erase(void* key) {
     return nullptr;
 }
 
-TreapNode* Treap::remove(TreapNode* node) {
+TreapNode* Treap::remove(TreapNode* node) noexcept {
     return erase(node->key());
 }
 
@@ -86,7 +86,7 @@ void Treap::visitImpl(VisitorFace&& vis) {
     }
 }
 
-size_t Treap::length() const {
+size_t Treap::length() const noexcept {
     size_t res = 0;
 
     ((Treap*)this)->visit([&res](void*) {
@@ -96,7 +96,7 @@ size_t Treap::length() const {
     return res;
 }
 
-size_t Treap::height() const {
+size_t Treap::height() const noexcept {
     if (root) {
         return root->height();
     }

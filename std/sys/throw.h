@@ -9,9 +9,9 @@ namespace stl {
     };
 
     struct Exception {
-        virtual ~Exception();
+        virtual ~Exception() noexcept;
 
-        virtual ExceptionKind kind() const = 0;
+        virtual ExceptionKind kind() const noexcept = 0;
         virtual StringView description() = 0;
 
         static StringView current();
@@ -20,7 +20,7 @@ namespace stl {
     struct Errno {
         int error;
 
-        Errno();
+        Errno() noexcept;
 
         [[noreturn]]
         void raise(Buffer&& text);

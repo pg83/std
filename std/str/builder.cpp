@@ -10,14 +10,14 @@ void* StringBuilder::imbueImpl(size_t* len) {
     return imbueMe(len);
 }
 
-void StringBuilder::commitImpl(size_t len) {
+void StringBuilder::commitImpl(size_t len) noexcept {
     seekRelative(len);
 }
 
-StringBuilder::StringBuilder() {
+StringBuilder::StringBuilder() noexcept {
 }
 
-StringBuilder::StringBuilder(Buffer&& buf) {
+StringBuilder::StringBuilder(Buffer&& buf) noexcept {
     buf.xchg(*this);
 }
 
@@ -26,5 +26,5 @@ StringBuilder::StringBuilder(size_t reserve)
 {
 }
 
-StringBuilder::~StringBuilder() {
+StringBuilder::~StringBuilder() noexcept {
 }

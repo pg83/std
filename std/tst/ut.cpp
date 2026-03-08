@@ -58,7 +58,7 @@ namespace {
         Vector<StringView> includes;
         Vector<StringView> excludes;
 
-        GetOpt(Ctx& ctx) {
+        GetOpt(Ctx& ctx) noexcept {
             for (int i = 1; i < ctx.argc; ++i) {
                 StringView arg(ctx.argv[i]);
 
@@ -70,7 +70,7 @@ namespace {
             }
         }
 
-        bool matchesFilter(StringView testName) const {
+        bool matchesFilter(StringView testName) const noexcept {
             if (matchesExclude(testName)) {
                 return false;
             }
@@ -82,7 +82,7 @@ namespace {
             return matchesFilterStrong(testName);
         }
 
-        bool matchesFilterStrong(StringView testName) const {
+        bool matchesFilterStrong(StringView testName) const noexcept {
             if (matchesExclude(testName)) {
                 return false;
             }
@@ -96,7 +96,7 @@ namespace {
             return false;
         }
 
-        bool matchesExclude(StringView testName) const {
+        bool matchesExclude(StringView testName) const noexcept {
             for (auto prefix : range(excludes)) {
                 if (testName.startsWith(prefix)) {
                     return true;
@@ -120,11 +120,11 @@ namespace {
             return *outbuf;
         }
 
-        bool cmp(void* l, void* r) const override {
+        bool cmp(void* l, void* r) const noexcept override {
             return compare(*(const TestFunc*)(l), *(const TestFunc*)(r));
         }
 
-        static bool compare(const TestFunc& l, const TestFunc& r) {
+        static bool compare(const TestFunc& l, const TestFunc& r) noexcept {
             return l.suite() < r.suite() || (l.suite() == r.suite() && l.name() < r.name());
         }
 
@@ -206,7 +206,7 @@ namespace {
             throw Exc();
         }
 
-        static auto& instance() {
+        static auto& instance() noexcept {
             static auto res = new Tests();
 
             return *res;

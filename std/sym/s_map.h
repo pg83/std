@@ -6,7 +6,7 @@
 
 namespace stl {
     struct SymbolHasher {
-        static u64 hash(StringView k) {
+        static u64 hash(StringView k) noexcept {
             return k.hash64();
         }
     };

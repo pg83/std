@@ -16,7 +16,7 @@ STD_TEST_SUITE(Xchg) {
         T1& operator=(const T1&) = delete;
         T1& operator=(T1&&) = delete;
 
-        void xchg(T1&) {
+        void xchg(T1&) noexcept {
             x1Called = true;
         }
     };
@@ -40,7 +40,7 @@ STD_TEST_SUITE(Xchg) {
         T2& operator=(const T2&) = delete;
         T2& operator=(T2&&) = delete;
 
-        void swap(T2&) {
+        void swap(T2&) noexcept {
             x2Called = true;
         }
     };

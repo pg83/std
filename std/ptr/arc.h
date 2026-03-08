@@ -7,10 +7,10 @@ namespace stl {
         i32 counter_;
 
     public:
-        ARC();
+        ARC() noexcept;
 
-        i32 ref();
-        i32 refCount() const;
-        i32 unref();
+        i32 ref() noexcept;
+        i32 refCount() const noexcept;
+        i32 unref() noexcept;
     };
 }

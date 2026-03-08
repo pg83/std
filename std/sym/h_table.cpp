@@ -8,7 +8,7 @@
 using namespace stl;
 
 namespace {
-    static auto buckets(const Buffer& buf) {
+    static auto buckets(const Buffer& buf) noexcept {
         return range((HashTable::Node**)buf.data(), (HashTable::Node**)buf.storageEnd());
     }
 }
@@ -20,18 +20,18 @@ HashTable::HashTable(size_t initialCapacity)
     memZero(buf.mutData(), buf.mutStorageEnd());
 }
 
-HashTable::~HashTable() {
+HashTable::~HashTable() noexcept {
 }
 
-void HashTable::xchg(HashTable& t) {
+void HashTable::xchg(HashTable& t) noexcept {
     buf.xchg(t.buf);
 }
 
-size_t HashTable::size() const {
+size_t HashTable::size() const noexcept {
     return buf.used();
 }
 
-HashTable::Node* HashTable::find(u64 key) const {
+HashTable::Node* HashTable::find(u64 key) const noexcept {
     for (auto node = *bucketFor(key); node; node = node->next) {
         if (node->key == key) {
             return node;
@@ -41,7 +41,7 @@ HashTable::Node* HashTable::find(u64 key) const {
     return nullptr;
 }
 
-size_t HashTable::capacity() const {
+size_t HashTable::capacity() const noexcept {
     return buckets(buf).length();
 }
 
@@ -65,7 +65,7 @@ HashTable::Node* HashTable::insert(Node* nn) {
     return (addNoRehash(nn), res);
 }
 
-HashTable::Node* HashTable::erase(u64 key) {
+HashTable::Node* HashTable::erase(u64 key) noexcept {
     for (auto ptr = bucketFor(key); *ptr; ptr = &(*ptr)->next) {
         if (auto node = *ptr; node->key == key) {
             *ptr = node->next;
@@ -78,7 +78,7 @@ HashTable::Node* HashTable::erase(u64 key) {
     return nullptr;
 }
 
-HashTable::Node** HashTable::bucketFor(u64 key) const {
+HashTable::Node** HashTable::bucketFor(u64 key) const noexcept {
     auto bb = buckets(buf);
 
     return &bb.b[key % bb.length()];

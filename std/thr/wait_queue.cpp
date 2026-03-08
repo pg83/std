@@ -15,7 +15,7 @@ namespace {
         T bits_ = 0;
         Item* items_[N] = {};
 
-        void enqueue(Item* item) override {
+        void enqueue(Item* item) noexcept override {
             u8 idx = item->index;
             STD_ASSERT(idx < N);
 
@@ -23,7 +23,7 @@ namespace {
             __atomic_fetch_or(&bits_, T(1) << idx, __ATOMIC_RELEASE);
         }
 
-        Item* dequeue() override {
+        Item* dequeue() noexcept override {
             T old = stdAtomicFetch(&bits_, MemoryOrder::Acquire);
 
             for (;;) {
@@ -56,19 +56,19 @@ namespace {
         // upper 16 bits: tag, lower 48 bits: pointer
         u64 head_ = 0;
 
-        static u64 pack(Item* ptr, u64 tag) {
+        static u64 pack(Item* ptr, u64 tag) noexcept {
             return ((tag & 0xFFFFu) << 48) | ((uintptr_t)(ptr) & 0x0000FFFFFFFFFFFFu);
         }
 
-        static Item* unpackPtr(u64 val) {
+        static Item* unpackPtr(u64 val) noexcept {
             return (Item*)(val & 0x0000FFFFFFFFFFFFu);
         }
 
-        static u64 unpackTag(u64 val) {
+        static u64 unpackTag(u64 val) noexcept {
             return val >> 48;
         }
 
-        void enqueue(Item* item) override {
+        void enqueue(Item* item) noexcept override {
             u64 old = stdAtomicFetch(&head_, MemoryOrder::Relaxed);
             u64 desired;
 
@@ -78,7 +78,7 @@ namespace {
             } while (!stdAtomicCAS(&head_, &old, desired, MemoryOrder::Release, MemoryOrder::Relaxed));
         }
 
-        Item* dequeue() override {
+        Item* dequeue() noexcept override {
             u64 old = stdAtomicFetch(&head_, MemoryOrder::Acquire);
 
             for (;;) {
@@ -103,7 +103,7 @@ namespace {
         Item* head = nullptr;
         int empty = true;
 
-        void enqueue(Item* item) override {
+        void enqueue(Item* item) noexcept override {
             LockGuard lock(mutex);
 
             item->next = head;
@@ -112,7 +112,7 @@ namespace {
             stdAtomicStore(&empty, false, MemoryOrder::Release);
         }
 
-        Item* dequeue() override {
+        Item* dequeue() noexcept override {
             if (stdAtomicFetch(&empty, MemoryOrder::Acquire)) {
                 return nullptr;
             }
@@ -134,7 +134,7 @@ namespace {
     };
 }
 
-WaitQueue::~WaitQueue() {
+WaitQueue::~WaitQueue() noexcept {
 }
 
 WaitQueue::Ref WaitQueue::construct(size_t maxWaiters) {

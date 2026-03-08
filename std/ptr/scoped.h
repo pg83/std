@@ -5,7 +5,7 @@ namespace stl {
     struct ScopedPtr {
         T* ptr;
 
-        void drop() {
+        void drop() noexcept {
             ptr = 0;
         }
 

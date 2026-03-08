@@ -16,7 +16,7 @@ namespace stl {
         virtual void commitImpl(size_t len) = 0;
 
     public:
-        ~ZeroCopyOutput() override;
+        ~ZeroCopyOutput() noexcept override;
 
         // zero-copy interface
         UnboundBuffer imbue(size_t len) {

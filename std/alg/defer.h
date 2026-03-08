@@ -5,7 +5,7 @@
 namespace stl {
     template <typename F>
     struct ScopedGuard {
-        ScopedGuard(F&& ff)
+        ScopedGuard(F&& ff) noexcept
             : f(ff)
         {
         }

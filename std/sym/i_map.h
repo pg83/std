@@ -4,7 +4,7 @@
 
 namespace stl {
     struct IntHasher {
-        static u64 hash(u64 k) {
+        static u64 hash(u64 k) noexcept {
             return k;
         }
     };

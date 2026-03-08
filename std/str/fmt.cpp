@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 
-void* stl::formatU64Base10(u64 v, void* ptr) {
+void* stl::formatU64Base10(u64 v, void* ptr) noexcept {
     u8* b = (u8*)ptr;
     u8* e = b;
 
@@ -19,7 +19,7 @@ void* stl::formatU64Base10(u64 v, void* ptr) {
     return e;
 }
 
-void* stl::formatI64Base10(i64 v, void* ptr) {
+void* stl::formatI64Base10(i64 v, void* ptr) noexcept {
     u8* b = (u8*)ptr;
 
     if (v < 0) {
@@ -31,6 +31,6 @@ void* stl::formatI64Base10(i64 v, void* ptr) {
     return formatU64Base10(v, b);
 }
 
-void* stl::formatLongDouble(long double v, void* buf) {
+void* stl::formatLongDouble(long double v, void* buf) noexcept {
     return advancePtr(buf, sprintf((char*)buf, "%Lf", v));
 }

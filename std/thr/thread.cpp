@@ -33,24 +33,24 @@ Thread::Thread(Runable& runable)
 {
 }
 
-Thread::~Thread() {
+Thread::~Thread() noexcept {
     delete impl;
 }
 
-void Thread::join() {
+void Thread::join() noexcept {
     STD_INSIST(pthread_join(impl->thread, nullptr) == 0);
 }
 
-void Thread::detach() {
+void Thread::detach() noexcept {
     STD_INSIST(pthread_detach(impl->thread) == 0);
 }
 
-u64 Thread::threadId() const {
+u64 Thread::threadId() const noexcept {
     static_assert(sizeof(pthread_t) <= sizeof(u64));
     return (u64)impl->thread;
 }
 
-u64 Thread::currentThreadId() {
+u64 Thread::currentThreadId() noexcept {
     return (u64)pthread_self();
 }
 
@@ -59,7 +59,7 @@ void stl::detach(Runable& runable) {
         Runable* slave;
         ScopedPtr<Thread> thr;
 
-        Helper(Runable* r)
+        Helper(Runable* r) noexcept
             : slave(r)
             , thr(nullptr)
         {

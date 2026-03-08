@@ -13,7 +13,7 @@ namespace stl {
     class StringView;
 
     class ObjPool: public ARC {
-        virtual void submit(Disposable* d) = 0;
+        virtual void submit(Disposable* d) noexcept = 0;
 
         template <typename T, typename... A>
         T* makeImpl(A&&... a) {
@@ -23,7 +23,7 @@ namespace stl {
     public:
         using Ref = IntrusivePtr<ObjPool>;
 
-        virtual ~ObjPool();
+        virtual ~ObjPool() noexcept;
 
         virtual void* allocate(size_t len) = 0;
 

@@ -15,7 +15,7 @@ static_assert(sizeof(Buffer) == sizeof(void*));
 namespace {
     alignas(max_align_t) static const char EMPTY[sizeof(Buffer::Header)] = {};
 
-    static auto nullHeader() {
+    static auto nullHeader() noexcept {
         return (Buffer::Header*)EMPTY;
     }
 
@@ -33,7 +33,7 @@ namespace {
         return nullHeader();
     }
 
-    static void freeHeader(Buffer::Header* ptr) {
+    static void freeHeader(Buffer::Header* ptr) noexcept {
         if (ptr == nullHeader()) {
         } else {
             freeMemory(ptr);
@@ -41,11 +41,11 @@ namespace {
     }
 }
 
-Buffer::~Buffer() {
+Buffer::~Buffer() noexcept {
     freeHeader(header());
 }
 
-Buffer::Buffer()
+Buffer::Buffer() noexcept
     : Buffer(0)
 {
 }
@@ -71,7 +71,7 @@ Buffer::Buffer(StringView v)
 {
 }
 
-Buffer::Buffer(Buffer&& buf)
+Buffer::Buffer(Buffer&& buf) noexcept
     : Buffer()
 {
     buf.xchg(*this);
@@ -81,7 +81,7 @@ void Buffer::shrinkToFit() {
     Buffer(*this).xchg(*this);
 }
 
-void Buffer::seekAbsolute(size_t pos) {
+void Buffer::seekAbsolute(size_t pos) noexcept {
     if (header()->used != pos) {
         STD_ASSERT(pos <= capacity());
         header()->used = pos;
@@ -116,7 +116,7 @@ void Buffer::appendUnsafe(const void* ptr, size_t len) {
     }
 }
 
-void Buffer::xchg(Buffer& buf) {
+void Buffer::xchg(Buffer& buf) noexcept {
     ::stl::xchg(data_, buf.data_);
 }
 
@@ -124,7 +124,7 @@ void* Buffer::imbueMe(size_t* len) {
     return (growDelta(*len), *len = left(), (void*)mutCurrent());
 }
 
-void Buffer::setCapacity(size_t cap) {
+void Buffer::setCapacity(size_t cap) noexcept {
     if (header()->size) {
         STD_ASSERT(header()->size >= cap);
         header()->size = cap;

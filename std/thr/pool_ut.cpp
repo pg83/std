@@ -41,7 +41,7 @@ namespace {
         {
         }
 
-        void doWork() {
+        void doWork() noexcept {
             doW(state_->work);
         }
 
@@ -79,7 +79,7 @@ namespace {
         {
         }
 
-        void run() override {
+        void run() noexcept override {
             ++(*counter_);
         }
     };
@@ -92,14 +92,14 @@ namespace {
         {
         }
 
-        void run() override {
+        void run() noexcept override {
             stdAtomicAddAndFetch(counter_, 1, MemoryOrder::Relaxed);
             delete this;
         }
     };
 
     struct SleepTask: public Task {
-        void run() override {
+        void run() noexcept override {
             for (volatile int i = 0; i < 10000; ++i) {
             }
         }
@@ -532,7 +532,7 @@ STD_TEST_SUITE(TlsKeys) {
                 , idx(i)
             {
             }
-            void run() override {
+            void run() noexcept override {
                 int i = stdAtomicAddAndFetch(idx, 1, MemoryOrder::Relaxed) - 1;
                 keys[i] = registerTlsKey();
                 delete this;
@@ -595,7 +595,7 @@ STD_TEST_SUITE(SyncPoolTls) {
                 , out(o)
             {
             }
-            void run() override {
+            void run() noexcept override {
                 *out = *pool->tls(key);
             }
         };
@@ -630,7 +630,7 @@ STD_TEST_SUITE(SimplePoolTls) {
                 , out(o)
             {
             }
-            void run() override {
+            void run() noexcept override {
                 *out = (pool->tls(key) != nullptr);
                 delete this;
             }
@@ -657,7 +657,7 @@ STD_TEST_SUITE(SimplePoolTls) {
                 , value(v)
             {
             }
-            void run() override {
+            void run() noexcept override {
                 *pool->tls(key) = value;
                 delete this;
             }
@@ -673,7 +673,7 @@ STD_TEST_SUITE(SimplePoolTls) {
                 , out(o)
             {
             }
-            void run() override {
+            void run() noexcept override {
                 *out = *pool->tls(key);
                 delete this;
             }
@@ -707,7 +707,7 @@ STD_TEST_SUITE(SimplePoolTls) {
                 , correct(c)
             {
             }
-            void run() override {
+            void run() noexcept override {
                 *pool->tls(k1) = val1;
                 *pool->tls(k2) = val2;
                 if (*pool->tls(k1) != val1 || *pool->tls(k2) != val2) {
@@ -744,7 +744,7 @@ STD_TEST_SUITE(SimplePoolTls) {
                 , correct(c)
             {
             }
-            void run() override {
+            void run() noexcept override {
                 *pool->tls(key) = (void*)(uintptr_t)myId;
                 barrier->wait();
                 if ((uintptr_t)*pool->tls(key) != (uintptr_t)myId) {
@@ -785,7 +785,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
                 , out(o)
             {
             }
-            void run() override {
+            void run() noexcept override {
                 *out = (pool->tls(key) != nullptr);
                 delete this;
             }
@@ -817,7 +817,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
                 , correct(c)
             {
             }
-            void run() override {
+            void run() noexcept override {
                 *pool->tls(k1) = val1;
                 *pool->tls(k2) = val2;
                 if (*pool->tls(k1) != val1 || *pool->tls(k2) != val2) {
@@ -857,7 +857,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
                 , correct(c)
             {
             }
-            void run() override {
+            void run() noexcept override {
                 *pool->tls(key) = (void*)(uintptr_t)myId;
                 barrier->wait();
                 if ((uintptr_t)*pool->tls(key) != (uintptr_t)myId) {

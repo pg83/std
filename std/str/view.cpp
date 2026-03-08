@@ -15,76 +15,76 @@ static_assert(stdHasTrivialDestructor(StringView));
 static_assert(sizeof(StringView) == 2 * sizeof(void*));
 
 namespace {
-    static int spaceship(const u8* l, size_t ll, const u8* r, size_t rl) {
+    static int spaceship(const u8* l, size_t ll, const u8* r, size_t rl) noexcept {
         const auto rr = memCmp(l, r, ll < rl ? ll : rl);
 
         return rr ? rr : (ll < rl ? -1 : (ll == rl ? 0 : 1));
     }
 
-    static int spaceship(StringView l, StringView r) {
+    static int spaceship(StringView l, StringView r) noexcept {
         return spaceship(l.data(), l.length(), r.data(), r.length());
     }
 
-    static const u8* fix(const u8* ptr) {
+    static const u8* fix(const u8* ptr) noexcept {
         return ptr ? ptr : u8"";
     }
 }
 
-bool stl::operator==(StringView l, StringView r) {
+bool stl::operator==(StringView l, StringView r) noexcept {
     return l.length() == r.length() && spaceship(l, r) == 0;
 }
 
-bool stl::operator!=(StringView l, StringView r) {
+bool stl::operator!=(StringView l, StringView r) noexcept {
     return !(l == r);
 }
 
-bool stl::operator<(StringView l, StringView r) {
+bool stl::operator<(StringView l, StringView r) noexcept {
     return spaceship(l, r) < 0;
 }
 
-StringView::StringView(const char* s)
+StringView::StringView(const char* s) noexcept
     : StringView((const u8*)s, strLen((const u8*)s))
 {
 }
 
-StringView::StringView(const Buffer& b)
+StringView::StringView(const Buffer& b) noexcept
     : StringView((const u8*)b.data(), b.length())
 {
 }
 
-u32 StringView::hash32() const {
+u32 StringView::hash32() const noexcept {
     return shash32(data(), length());
 }
 
-u64 StringView::hash64() const {
+u64 StringView::hash64() const noexcept {
     return shash64(data(), length());
 }
 
-StringView StringView::prefix(size_t len) const {
+StringView StringView::prefix(size_t len) const noexcept {
     return StringView(ptr_, min(len, len_));
 }
 
-StringView StringView::suffix(size_t len) const {
+StringView StringView::suffix(size_t len) const noexcept {
     return StringView(end() - min(len, len_), end());
 }
 
-bool StringView::startsWith(StringView prefix) const {
+bool StringView::startsWith(StringView prefix) const noexcept {
     return this->prefix(prefix.length()) == prefix;
 }
 
-bool StringView::endsWith(StringView suffix) const {
+bool StringView::endsWith(StringView suffix) const noexcept {
     return this->suffix(suffix.length()) == suffix;
 }
 
-const u8* StringView::search(StringView substr) const {
+const u8* StringView::search(StringView substr) const noexcept {
     return (const u8*)memmem(fix(data()), length(), fix(substr.data()), substr.length());
 }
 
-const u8* StringView::memChr(u8 ch) const {
+const u8* StringView::memChr(u8 ch) const noexcept {
     return (const u8*)memchr(fix(data()), ch, length());
 }
 
-u64 StringView::stou() const {
+u64 StringView::stou() const noexcept {
     u64 result = 0;
 
     for (size_t i = 0; i < length(); ++i) {

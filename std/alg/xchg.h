@@ -4,7 +4,7 @@
 
 namespace stl {
     template <typename T>
-    void xchg(T& l, T& r) {
+    void xchg(T& l, T& r) noexcept {
         if constexpr (requires { l.xchg(r); }) {
             l.xchg(r);
         } else if constexpr (requires { l.swap(r); }) {

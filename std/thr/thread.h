@@ -12,14 +12,14 @@ namespace stl {
 
     public:
         explicit Thread(Runable& runable);
-        ~Thread();
+        ~Thread() noexcept;
 
-        void join();
-        void detach();
+        void join() noexcept;
+        void detach() noexcept;
 
-        u64 threadId() const;
+        u64 threadId() const noexcept;
 
-        static u64 currentThreadId();
+        static u64 currentThreadId() noexcept;
     };
 
     class ScopedThread {
@@ -31,7 +31,7 @@ namespace stl {
         {
         }
 
-        ~ScopedThread() {
+        ~ScopedThread() noexcept {
             thr.join();
         }
     };

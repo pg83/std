@@ -6,7 +6,7 @@
 
 using namespace stl;
 
-Input::~Input() {
+Input::~Input() noexcept {
 }
 
 void Input::readAll(Buffer& res) {
@@ -25,6 +25,6 @@ void Input::sendTo(Output& out) {
     out.recvFromI(*this);
 }
 
-size_t Input::hintImpl() const {
+size_t Input::hintImpl() const noexcept {
     return 0;
 }

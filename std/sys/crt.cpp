@@ -16,11 +16,11 @@ void* stl::allocateMemory(size_t len) {
     return 0;
 }
 
-void stl::freeMemory(void* ptr) {
+void stl::freeMemory(void* ptr) noexcept {
     free(ptr);
 }
 
-int stl::memCmp(const void* l, const void* r, size_t len) {
+int stl::memCmp(const void* l, const void* r, size_t len) noexcept {
     if (len == 0) {
         return 0;
     }
@@ -28,7 +28,7 @@ int stl::memCmp(const void* l, const void* r, size_t len) {
     return memcmp(l, r, len);
 }
 
-void* stl::memCpy(void* to, const void* from, size_t len) {
+void* stl::memCpy(void* to, const void* from, size_t len) noexcept {
     if (len) {
         memcpy(to, from, len);
     }
@@ -36,11 +36,11 @@ void* stl::memCpy(void* to, const void* from, size_t len) {
     return len + (u8*)to;
 }
 
-size_t stl::strLen(const u8* s) {
+size_t stl::strLen(const u8* s) noexcept {
     return s ? strlen((const char*)s) : 0;
 }
 
-void stl::memZero(void* from, void* to) {
+void stl::memZero(void* from, void* to) noexcept {
     const size_t len = (u8*)to - (u8*)from;
 
     if (len) {

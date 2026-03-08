@@ -8,6 +8,6 @@
 #define sysE ::stl::OutBuf(::stl::stderrStream())
 
 namespace stl {
-    Output& stdoutStream();
-    Output& stderrStream();
+    Output& stdoutStream() noexcept;
+    Output& stderrStream() noexcept;
 }
