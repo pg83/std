@@ -19,10 +19,10 @@ namespace {
         ucontext_t ctx_;
         ucontext_t* workerCtx_;
         bool done_;
-        void (*fn_)(Cont*, void*);
+        coro* fn_;
         void* fnCtx_;
 
-        ContImpl(CoroExecutorImpl* exec, void (*fn)(Cont*, void*), void* fnCtx) noexcept;
+        ContImpl(CoroExecutorImpl* exec, coro* fn, void* fnCtx) noexcept;
 
         CoroExecutor* executor() noexcept override;
         void run() noexcept override;
@@ -49,7 +49,7 @@ namespace {
             return (ContImpl*)*tls();
         }
 
-        void spawn(void (*fn)(Cont*, void*), void* ctx) noexcept override {
+        void spawn(coro* fn, void* ctx) noexcept override {
             pool_->submitTask(new (malloc(STACK_SIZE)) ContImpl(this, fn, ctx));
         }
 
@@ -61,7 +61,7 @@ namespace {
     };
 }
 
-ContImpl::ContImpl(CoroExecutorImpl* exec, void (*fn)(Cont*, void*), void* fnCtx) noexcept
+ContImpl::ContImpl(CoroExecutorImpl* exec, coro* fn, void* fnCtx) noexcept
     : exec_(exec)
     , workerCtx_(nullptr)
     , done_(false)
@@ -101,6 +101,8 @@ void ContImpl::run() noexcept {
     *exec_->tls() = this;
 
     swapcontext(&workerCtx, &ctx_);
+
+    *exec_->tls() = nullptr;
 
     if (done_) {
         destruct(this);
