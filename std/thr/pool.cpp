@@ -189,7 +189,6 @@ namespace {
                 {
                     LockGuard lock(mutex_);
 
-                    flush();
                     tasks_.pushBack(task);
                 }
 
@@ -383,8 +382,6 @@ void WorkStealingThreadPool::Worker::loop() {
 
 void WorkStealingThreadPool::Worker::split(IntrusiveList* stolen) noexcept {
     LockGuard lock(mutex_);
-
-    flush();
 
     tasks_.splitHalf(tasks_, *stolen);
 

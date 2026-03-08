@@ -134,7 +134,7 @@ STD_TEST_SUITE(CoroExecutor) {
     const int work = 250;
 
     STD_TEST(_SW) {
-        auto pool = ThreadPool::workStealing(16);
+        auto pool = ThreadPool::workStealing(4);
         auto exec = CoroExecutor::create(pool.mutPtr());
 
         int counter = 1;
