@@ -53,8 +53,8 @@ namespace {
             pool_->submitTask(new (allocateMemory(STACK_SIZE)) ContImpl(this, fn, ctx));
         }
 
-        Cont* me() override {
-            return currentCont();
+        Cont* me() const noexcept override {
+            return ((CoroExecutorImpl*)this)->currentCont();
         }
 
         void yield() noexcept override {

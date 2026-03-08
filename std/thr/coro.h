@@ -20,7 +20,7 @@ namespace stl {
 
         virtual ~CoroExecutor() noexcept;
 
-        virtual Cont* me() = 0;
+        virtual Cont* me() const noexcept = 0;
         virtual void yield() noexcept = 0;
         virtual void spawnCoro(coro* fn, void* ctx) = 0;
 
