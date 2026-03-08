@@ -16,7 +16,7 @@ struct Mutex::Impl: public pthread_mutex_t {
         }
     }
 
-    ~Impl() noexcept {
+    ~Impl() {
         STD_INSIST(pthread_mutex_destroy(this) == 0);
     }
 };
@@ -34,18 +34,18 @@ Mutex::Mutex(bool locked)
     }
 }
 
-Mutex::~Mutex() noexcept {
+Mutex::~Mutex() {
     delete impl;
 }
 
-void Mutex::lock() noexcept {
+void Mutex::lock() {
     STD_INSIST(pthread_mutex_lock(impl) == 0);
 }
 
-void Mutex::unlock() noexcept {
+void Mutex::unlock() {
     STD_INSIST(pthread_mutex_unlock(impl) == 0);
 }
 
-bool Mutex::tryLock() noexcept {
+bool Mutex::tryLock() {
     return pthread_mutex_trylock(impl) == 0;
 }

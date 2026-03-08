@@ -18,7 +18,7 @@ namespace {
         {
         }
 
-        void run() noexcept override {
+        void run() override {
             barrier->wait();
             stdAtomicAddAndFetch(counter, 1, MemoryOrder::Relaxed);
         }
@@ -38,7 +38,7 @@ namespace {
         {
         }
 
-        void run() noexcept override {
+        void run() override {
             stdAtomicAddAndFetch(arrived, 1, MemoryOrder::Release);
             barrier->wait();
             if (stdAtomicFetch(arrived, MemoryOrder::Acquire) != total) {
@@ -154,7 +154,7 @@ STD_TEST_SUITE(Barrier) {
             {
             }
 
-            void run() noexcept override {
+            void run() override {
                 b1->wait();
                 stdAtomicAddAndFetch(phase, 1, MemoryOrder::Relaxed);
                 b2->wait();

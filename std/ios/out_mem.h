@@ -5,12 +5,12 @@
 namespace stl {
     class MemoryOutput: public ZeroCopyOutput {
         void* imbueImpl(size_t* avail) override;
-        void commitImpl(size_t len) noexcept override;
+        void commitImpl(size_t len) override;
 
     public:
         void* ptr;
 
-        MemoryOutput(void* _ptr) noexcept
+        MemoryOutput(void* _ptr)
             : ptr(_ptr)
         {
         }

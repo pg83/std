@@ -11,7 +11,7 @@ using namespace stl;
 namespace {
     template <typename T>
     struct Scoped: public FD, public T {
-        Scoped(int fd) noexcept
+        Scoped(int fd)
             : FD(fd)
             , T(*(FD*)this)
         {
@@ -35,13 +35,13 @@ namespace {
     }
 }
 
-Output& stl::stdoutStream() noexcept {
+Output& stl::stdoutStream() {
     static auto fd = wrap(1);
 
     return *fd;
 }
 
-Output& stl::stderrStream() noexcept {
+Output& stl::stderrStream() {
     static auto fd = wrap(2);
 
     return *fd;

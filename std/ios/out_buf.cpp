@@ -21,18 +21,18 @@ OutBuf::~OutBuf() {
     }
 }
 
-OutBuf::OutBuf(Output& out) noexcept
+OutBuf::OutBuf(Output& out)
     : OutBuf(out, out.hint(1 << 14))
 {
 }
 
-OutBuf::OutBuf(Output& out, size_t chunkSize) noexcept
+OutBuf::OutBuf(Output& out, size_t chunkSize)
     : out_(&out)
     , chunk(chunkSize)
 {
 }
 
-OutBuf::OutBuf() noexcept
+OutBuf::OutBuf()
     : out_(nullptr)
     , chunk(0)
 {
@@ -90,7 +90,7 @@ size_t OutBuf::writeImpl(const void* ptr, size_t len) {
     }
 }
 
-size_t OutBuf::hintImpl() const noexcept {
+size_t OutBuf::hintImpl() const {
     return chunk;
 }
 
@@ -115,7 +115,7 @@ void OutBuf::finishImpl() {
     flush();
 }
 
-void OutBuf::xchg(OutBuf& buf) noexcept {
+void OutBuf::xchg(OutBuf& buf) {
     ::stl::xchg(buf_, buf.buf_);
     ::stl::xchg(out_, buf.out_);
     ::stl::xchg(chunk, buf.chunk);

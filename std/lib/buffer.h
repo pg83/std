@@ -17,22 +17,22 @@ namespace stl {
         };
 
     private:
-        Header* header() const noexcept {
+        Header* header() const {
             return (Header*)data_ - 1;
         }
 
         void appendUnsafe(const void* data, size_t len);
 
     public:
-        ~Buffer() noexcept;
+        ~Buffer();
 
         Buffer(size_t len);
         Buffer(StringView v);
         Buffer(const void* data, size_t len);
 
-        Buffer() noexcept;
+        Buffer();
         Buffer(const Buffer& buf);
-        Buffer(Buffer&& buf) noexcept;
+        Buffer(Buffer&& buf);
 
         Buffer& operator=(const Buffer& buf) {
             Buffer(buf).xchg(*this);
@@ -40,7 +40,7 @@ namespace stl {
             return *this;
         }
 
-        Buffer& operator=(Buffer&& buf) noexcept {
+        Buffer& operator=(Buffer&& buf) {
             Buffer tmp;
 
             tmp.xchg(buf);
@@ -49,77 +49,77 @@ namespace stl {
             return *this;
         }
 
-        auto data() const noexcept {
+        auto data() const {
             return data_;
         }
 
-        auto mutData() noexcept {
+        auto mutData() {
             return data_;
         }
 
-        auto current() const noexcept {
+        auto current() const {
             return advancePtr(data(), used());
         }
 
-        auto mutCurrent() noexcept {
+        auto mutCurrent() {
             return const_cast<void*>(current());
         }
 
-        auto storageEnd() const noexcept {
+        auto storageEnd() const {
             return advancePtr(data(), capacity());
         }
 
-        auto mutStorageEnd() noexcept {
+        auto mutStorageEnd() {
             return const_cast<void*>(storageEnd());
         }
 
-        size_t capacity() const noexcept {
+        size_t capacity() const {
             return header()->size;
         }
 
-        size_t used() const noexcept {
+        size_t used() const {
             return header()->used;
         }
 
-        size_t length() const noexcept {
+        size_t length() const {
             return used();
         }
 
-        bool empty() const noexcept {
+        bool empty() const {
             return used() == 0;
         }
 
-        size_t left() const noexcept {
+        size_t left() const {
             return capacity() - used();
         }
 
-        void xchg(Buffer& buf) noexcept;
+        void xchg(Buffer& buf);
 
-        void reset() noexcept {
+        void reset() {
             seekAbsolute((size_t)0);
         }
 
-        void seekRelative(size_t len) noexcept {
+        void seekRelative(size_t len) {
             seekAbsolute(used() + len);
         }
 
-        void seekNegative(size_t len) noexcept {
+        void seekNegative(size_t len) {
             seekAbsolute(used() - len);
         }
 
-        void seekAbsolute(size_t pos) noexcept;
+        void seekAbsolute(size_t pos);
 
-        void seekAbsolute(const void* ptr) noexcept {
+        void seekAbsolute(const void* ptr) {
             seekAbsolute(offsetOf(ptr));
         }
 
-        size_t offsetOf(const void* ptr) noexcept {
+        size_t offsetOf(const void* ptr) {
             return (const u8*)ptr - (const u8*)data();
         }
 
         void shrinkToFit();
         void grow(size_t size);
-        void setCapacity(size_t cap) noexcept;
+        void setCapacity(size_t cap);
         void append(const void* data, size_t len);
 
         void growDelta(size_t len) {

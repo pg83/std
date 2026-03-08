@@ -18,7 +18,7 @@ namespace stl::QSP {
         Vector<WorkItem> w;
         PCG32 r;
 
-        Context(C& _f, void* seed) noexcept
+        Context(C& _f, void* seed)
             : f(_f)
             , r(seed)
         {
@@ -32,7 +32,7 @@ namespace stl::QSP {
             }
         }
 
-        auto chooseRandom(I b, I e) noexcept {
+        auto chooseRandom(I b, I e) {
             return b + r.uniformBiased(e - b);
         }
 

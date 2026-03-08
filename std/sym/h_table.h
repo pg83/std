@@ -18,7 +18,7 @@ namespace stl {
         void rehash(size_t len);
         void addNoRehash(Node* node);
         void visitImpl(VisitorFace&& v);
-        Node** bucketFor(u64 key) const noexcept;
+        Node** bucketFor(u64 key) const;
 
     public:
         HashTable(size_t initial);
@@ -28,13 +28,13 @@ namespace stl {
         {
         }
 
-        ~HashTable() noexcept;
+        ~HashTable();
 
-        Node* find(u64 key) const noexcept;
-        void xchg(HashTable& t) noexcept;
-        size_t capacity() const noexcept;
-        Node* erase(u64 key) noexcept;
-        size_t size() const noexcept;
+        Node* find(u64 key) const;
+        void xchg(HashTable& t);
+        size_t capacity() const;
+        Node* erase(u64 key);
+        size_t size() const;
         Node* insert(Node* node);
 
         template <typename V>

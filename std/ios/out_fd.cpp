@@ -4,7 +4,7 @@
 
 using namespace stl;
 
-FDOutput::~FDOutput() noexcept {
+FDOutput::~FDOutput() {
 }
 
 size_t FDOutput::writeImpl(const void* data, size_t len) {
@@ -23,29 +23,29 @@ void FDRegular::flushImpl() {
     fd->fsync();
 }
 
-size_t FDRegular::hintImpl() const noexcept {
+size_t FDRegular::hintImpl() const {
     return 1 << 14;
 }
 
-FDRegular::FDRegular(FD& fd) noexcept
+FDRegular::FDRegular(FD& fd)
     : FDOutput(fd)
 {
 }
 
-size_t FDCharacter::hintImpl() const noexcept {
+size_t FDCharacter::hintImpl() const {
     return 1 << 10;
 }
 
-FDCharacter::FDCharacter(FD& fd) noexcept
+FDCharacter::FDCharacter(FD& fd)
     : FDOutput(fd)
 {
 }
 
-size_t FDPipe::hintImpl() const noexcept {
+size_t FDPipe::hintImpl() const {
     return 1 << 12;
 }
 
-FDPipe::FDPipe(FD& fd) noexcept
+FDPipe::FDPipe(FD& fd)
     : FDOutput(fd)
 {
 }

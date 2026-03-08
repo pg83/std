@@ -6,7 +6,7 @@
 using namespace stl;
 
 namespace {
-    static u32 xorShift(u64 v) noexcept {
+    static u32 xorShift(u64 v) {
         const u32 xorshifted = ((v >> 18u) ^ v) >> 27u;
         const u32 rot = v >> 59u;
 
@@ -14,17 +14,17 @@ namespace {
     }
 }
 
-PCG32::PCG32(u64 seq) noexcept
+PCG32::PCG32(u64 seq)
     : PCG32(splitMix64((size_t)this), seq)
 {
 }
 
-PCG32::PCG32(const void* seq) noexcept
+PCG32::PCG32(const void* seq)
     : PCG32(splitMix64((size_t)seq))
 {
 }
 
-PCG32::PCG32(u64 state, u64 seq) noexcept
+PCG32::PCG32(u64 state, u64 seq)
     : state_(0)
     , seq_(2ULL * seq + 1ULL)
 {
@@ -33,11 +33,11 @@ PCG32::PCG32(u64 state, u64 seq) noexcept
     nextU32();
 }
 
-u32 PCG32::nextU32() noexcept {
+u32 PCG32::nextU32() {
     return xorShift(exchange(state_, state_ * 6364136223846793005ULL + seq_));
 }
 
-u32 PCG32::uniformUnbiased(u32 n) noexcept {
+u32 PCG32::uniformUnbiased(u32 n) {
     const u32 limit = -n % n; // 2^32 % n — число «лишних» значений сверху
     u32 x;
 

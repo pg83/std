@@ -15,33 +15,33 @@ namespace stl {
         // does not own fd
         FD* fd;
 
-        FDOutput(FD& _fd) noexcept
+        FDOutput(FD& _fd)
             : fd(&_fd)
         {
         }
 
-        ~FDOutput() noexcept override;
+        ~FDOutput() override;
     };
 
     class FDRegular: public FDOutput {
         void flushImpl() override;
-        size_t hintImpl() const noexcept override;
+        size_t hintImpl() const override;
 
     public:
-        FDRegular(FD& fd) noexcept;
+        FDRegular(FD& fd);
     };
 
     class FDCharacter: public FDOutput {
-        size_t hintImpl() const noexcept override;
+        size_t hintImpl() const override;
 
     public:
-        FDCharacter(FD& fd) noexcept;
+        FDCharacter(FD& fd);
     };
 
     class FDPipe: public FDOutput {
-        size_t hintImpl() const noexcept override;
+        size_t hintImpl() const override;
 
     public:
-        FDPipe(FD& fd) noexcept;
+        FDPipe(FD& fd);
     };
 }

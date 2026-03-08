@@ -10,12 +10,12 @@ namespace stl {
         int fd;
 
     public:
-        FD() noexcept
+        FD()
             : fd(-1)
         {
         }
 
-        FD(int _fd) noexcept
+        FD(int _fd)
             : fd(_fd)
         {
         }
@@ -27,7 +27,7 @@ namespace stl {
         void close();
         void fsync();
 
-        void xchg(FD& fd) noexcept;
+        void xchg(FD& fd);
     };
 
     struct ScopedFD: public FD {

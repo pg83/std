@@ -10,22 +10,22 @@ namespace stl {
         T* t_;
 
     public:
-        RefCountPtr(T* t) noexcept
+        RefCountPtr(T* t)
             : t_(t)
         {
             O::ref(t_);
         }
 
-        RefCountPtr(const RefCountPtr& ptr) noexcept
+        RefCountPtr(const RefCountPtr& ptr)
             : RefCountPtr(ptr.t_)
         {
         }
 
-        ~RefCountPtr() noexcept {
+        ~RefCountPtr() {
             O::unref(t_);
         }
 
-        RefCountPtr& operator=(const RefCountPtr& r) noexcept {
+        RefCountPtr& operator=(const RefCountPtr& r) {
             RefCountPtr(r).xchg(*this);
 
             return *this;
@@ -36,47 +36,47 @@ namespace stl {
             return RefCountPtr(new T(forward<A>(a)...));
         }
 
-        auto ptr() const noexcept {
+        auto ptr() const {
             return O::ptr(t_);
         }
 
-        auto mutPtr() noexcept {
+        auto mutPtr() {
             return O::mutPtr(t_);
         }
 
-        auto refCount() const noexcept {
+        auto refCount() const {
             return t_->refCount();
         }
 
         // sugar
-        auto operator->() noexcept {
+        auto operator->() {
             return mutPtr();
         }
 
-        auto operator->() const noexcept {
+        auto operator->() const {
             return ptr();
         }
 
-        auto& operator*() noexcept {
+        auto& operator*() {
             return *mutPtr();
         }
 
-        auto& operator*() const noexcept {
+        auto& operator*() const {
             return *ptr();
         }
 
-        void xchg(RefCountPtr& r) noexcept {
+        void xchg(RefCountPtr& r) {
             xchgPtr((void**)&t_, (void**)&r.t_);
         }
     };
 
     template <typename T>
     struct RefCountOps {
-        static auto ref(T* t) noexcept {
+        static auto ref(T* t) {
             t->ref();
         }
 
-        static auto unref(T* t) noexcept {
+        static auto unref(T* t) {
             if (t->refCount() == 1 || t->unref() == 0) {
                 delete t;
             }

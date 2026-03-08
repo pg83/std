@@ -12,7 +12,7 @@
 
 using namespace stl;
 
-Output::~Output() noexcept {
+Output::~Output() {
 }
 
 void Output::flushImpl() {
@@ -76,11 +76,11 @@ void Output::writeC(const void* data, size_t len) {
     }
 }
 
-size_t Output::hintImpl() const noexcept {
+size_t Output::hintImpl() const {
     return 0;
 }
 
-bool Output::hint(size_t* res) const noexcept {
+bool Output::hint(size_t* res) const {
     if (const auto h = hintImpl(); h) {
         *res = h;
 
@@ -110,7 +110,7 @@ void Output::recvFromZ(ZeroCopyInput& in) {
     }
 }
 
-size_t Output::hint(size_t def) const noexcept {
+size_t Output::hint(size_t def) const {
     if (auto h = hint(); h) {
         return h;
     }

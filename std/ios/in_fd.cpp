@@ -8,9 +8,9 @@ size_t FDInput::readImpl(void* data, size_t len) {
     return fd->read(data, len);
 }
 
-FDInput::~FDInput() noexcept {
+FDInput::~FDInput() {
 }
 
-size_t FDInput::hintImpl() const noexcept {
+size_t FDInput::hintImpl() const {
     return 1 << 14;
 }

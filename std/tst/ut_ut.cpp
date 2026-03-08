@@ -23,7 +23,7 @@ STD_TEST_SUITE(UT) {
         struct H: public Output {
             ZeroCopyOutput& out;
 
-            H(ZeroCopyOutput& o) noexcept
+            H(ZeroCopyOutput& o)
                 : out(o)
             {
             }

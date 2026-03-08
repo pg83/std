@@ -2,5 +2,5 @@
 
 using namespace stl;
 
-Disposable::~Disposable() noexcept {
+Disposable::~Disposable() {
 }

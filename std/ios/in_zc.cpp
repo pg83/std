@@ -9,7 +9,7 @@
 
 using namespace stl;
 
-ZeroCopyInput::~ZeroCopyInput() noexcept {
+ZeroCopyInput::~ZeroCopyInput() {
 }
 
 size_t ZeroCopyInput::readImpl(void* data, size_t len) {

@@ -5,13 +5,13 @@
 
 using namespace stl;
 
-void Disposer::dispose() noexcept {
+void Disposer::dispose() {
     while (end) {
         destruct(exchange(end, end->prev));
     }
 }
 
-unsigned Disposer::length() const noexcept {
+unsigned Disposer::length() const {
     unsigned res = 0;
 
     for (auto cur = end; cur; cur = cur->prev) {

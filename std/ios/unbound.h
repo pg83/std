@@ -8,7 +8,7 @@ namespace stl {
     struct UnboundBuffer {
         void* ptr;
 
-        size_t distance(UnboundBuffer e) const noexcept {
+        size_t distance(UnboundBuffer e) const {
             return (const u8*)e.ptr - (const u8*)ptr;
         }
     };

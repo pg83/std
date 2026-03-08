@@ -7,9 +7,9 @@ namespace stl {
         TreapNode* left = nullptr;
         TreapNode* right = nullptr;
 
-        virtual void* key() const noexcept;
+        virtual void* key() const;
 
         void visit(VisitorFace& vis);
-        unsigned height() const noexcept;
+        unsigned height() const;
     };
 }

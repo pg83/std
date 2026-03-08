@@ -17,7 +17,7 @@ struct CondVar::Impl: public pthread_cond_t {
         }
     }
 
-    ~Impl() noexcept {
+    ~Impl() {
         STD_INSIST(pthread_cond_destroy(this) == 0);
     }
 };
@@ -27,18 +27,18 @@ CondVar::CondVar()
 {
 }
 
-CondVar::~CondVar() noexcept {
+CondVar::~CondVar() {
     delete impl;
 }
 
-void CondVar::wait(Mutex& mutex) noexcept {
+void CondVar::wait(Mutex& mutex) {
     STD_INSIST(pthread_cond_wait(impl, (pthread_mutex_t*)mutex.impl) == 0);
 }
 
-void CondVar::signal() noexcept {
+void CondVar::signal() {
     STD_INSIST(pthread_cond_signal(impl) == 0);
 }
 
-void CondVar::broadcast() noexcept {
+void CondVar::broadcast() {
     STD_INSIST(pthread_cond_broadcast(impl) == 0);
 }

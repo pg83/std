@@ -5,7 +5,7 @@
 using namespace stl;
 
 namespace {
-    static u32 xorShift(u64 v) noexcept {
+    static u32 xorShift(u64 v) {
         const u32 xorshifted = ((v >> 18u) ^ v) >> 27u;
         const u32 rot = v >> 59u;
 
@@ -13,10 +13,10 @@ namespace {
     }
 }
 
-u32 stl::shash32(const void* data, size_t len) noexcept {
+u32 stl::shash32(const void* data, size_t len) {
     return xorShift(shash64(data, len));
 }
 
-u64 stl::shash64(const void* data, size_t len) noexcept {
+u64 stl::shash64(const void* data, size_t len) {
     return rapidhash(data, len);
 }

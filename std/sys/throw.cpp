@@ -16,13 +16,13 @@ namespace {
         Buffer text;
         int error;
 
-        ErrnoError(int e, Buffer&& t) noexcept
+        ErrnoError(int e, Buffer&& t)
             : text(move(t))
             , error(e)
         {
         }
 
-        ExceptionKind kind() const noexcept override {
+        ExceptionKind kind() const override {
             return ExceptionKind::Errno;
         }
 
@@ -45,7 +45,7 @@ namespace {
     };
 }
 
-Exception::~Exception() noexcept {
+Exception::~Exception() {
 }
 
 StringView Exception::current() {
@@ -58,7 +58,7 @@ StringView Exception::current() {
     }
 }
 
-Errno::Errno() noexcept
+Errno::Errno()
     : error(errno)
 {
     errno = 0;

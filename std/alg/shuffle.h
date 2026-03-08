@@ -6,7 +6,7 @@
 
 namespace stl {
     template <typename RNG, typename I>
-    void shuffle(RNG& r, I b, I e) noexcept {
+    void shuffle(RNG& r, I b, I e) {
         for (auto n = e - b; n > 1; --n) {
             xchg(b[n - 1], b[r.uniformUnbiased((u32)n)]);
         }

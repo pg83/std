@@ -11,7 +11,7 @@ namespace stl {
         Buffer buf_;
         size_t chunk;
 
-        OutBuf() noexcept;
+        OutBuf();
 
         size_t writeDirect(const void* ptr, size_t len);
         size_t writeMultipart(const void* ptr, size_t len);
@@ -22,7 +22,7 @@ namespace stl {
 
         // classic
         size_t writeImpl(const void* ptr, size_t len) override;
-        size_t hintImpl() const noexcept override;
+        size_t hintImpl() const override;
 
         // zero-copy
         void* imbueImpl(size_t* len) override;
@@ -31,10 +31,10 @@ namespace stl {
     public:
         ~OutBuf() override;
 
-        OutBuf(Output& out) noexcept;
-        OutBuf(Output& out, size_t chunkSize) noexcept;
+        OutBuf(Output& out);
+        OutBuf(Output& out, size_t chunkSize);
 
-        OutBuf(OutBuf&& buf) noexcept
+        OutBuf(OutBuf&& buf)
             : OutBuf()
         {
             buf.xchg(*this);
@@ -42,9 +42,9 @@ namespace stl {
 
         OutBuf(const OutBuf&) = delete;
 
-        void xchg(OutBuf& buf) noexcept;
+        void xchg(OutBuf& buf);
 
-        Output& stream() noexcept {
+        Output& stream() {
             return *out_;
         }
     };

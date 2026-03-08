@@ -7,7 +7,7 @@ size_t MemoryInput::nextImpl(const void** chunk) {
     return (*chunk = b, e - b);
 }
 
-void MemoryInput::commitImpl(size_t len) noexcept {
+void MemoryInput::commitImpl(size_t len) {
     b += len;
 }
 

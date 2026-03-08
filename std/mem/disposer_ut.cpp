@@ -14,7 +14,7 @@ namespace {
             ++(*counter);
         }
 
-        ~TestDisposable() noexcept override {
+        ~TestDisposable() override {
             --(*counter);
         }
     };
@@ -29,7 +29,7 @@ namespace {
         {
         }
 
-        ~OrderTracker() noexcept override {
+        ~OrderTracker() override {
             *lastDestroyed = id;
         }
     };
@@ -42,7 +42,7 @@ namespace {
         {
         }
 
-        ~SimpleDisposable() noexcept override = default;
+        ~SimpleDisposable() override = default;
     };
 }
 
@@ -208,7 +208,7 @@ STD_TEST_SUITE(Disposer) {
                 ++(*counter);
             }
 
-            ~OtherDisposable() noexcept override {
+            ~OtherDisposable() override {
                 --(*counter);
             }
         };

@@ -7,13 +7,13 @@ namespace stl {
     class StringBuilder: public ZeroCopyOutput, public Buffer {
         size_t writeImpl(const void* ptr, size_t len) override;
         void* imbueImpl(size_t* len) override;
-        void commitImpl(size_t len) noexcept override;
+        void commitImpl(size_t len) override;
 
     public:
-        StringBuilder() noexcept;
+        StringBuilder();
         StringBuilder(size_t reserve);
-        StringBuilder(Buffer&& buf) noexcept;
+        StringBuilder(Buffer&& buf);
 
-        ~StringBuilder() noexcept override;
+        ~StringBuilder() override;
     };
 }

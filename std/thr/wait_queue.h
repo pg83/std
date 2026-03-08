@@ -14,10 +14,10 @@ namespace stl {
             u8 index = 0;
         };
 
-        virtual ~WaitQueue() noexcept;
+        virtual ~WaitQueue();
 
-        virtual void enqueue(Item* item) noexcept = 0;
-        virtual Item* dequeue() noexcept = 0;
+        virtual void enqueue(Item* item) = 0;
+        virtual Item* dequeue() = 0;
 
         static Ref construct(size_t maxWaiters);
     };

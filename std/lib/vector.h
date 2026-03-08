@@ -20,71 +20,71 @@ namespace stl {
         Vector(Vector&&) = default;
         Vector(const Vector&) = default;
 
-        auto data() const noexcept {
+        auto data() const {
             return (const T*)buf_.data();
         }
 
-        auto begin() const noexcept {
+        auto begin() const {
             return data();
         }
 
-        auto end() const noexcept {
+        auto end() const {
             return (const T*)buf_.current();
         }
 
-        auto storageEnd() const noexcept {
+        auto storageEnd() const {
             return begin() + capacity();
         }
 
-        auto mutData() noexcept {
+        auto mutData() {
             return const_cast<T*>(data());
         }
 
-        auto mutBegin() noexcept {
+        auto mutBegin() {
             return const_cast<T*>(begin());
         }
 
-        auto mutEnd() noexcept {
+        auto mutEnd() {
             return const_cast<T*>(end());
         }
 
-        auto mutStorageEnd() noexcept {
+        auto mutStorageEnd() {
             return const_cast<T*>(storageEnd());
         }
 
-        size_t left() const noexcept {
+        size_t left() const {
             return capacity() - length();
         }
 
-        size_t capacity() const noexcept {
+        size_t capacity() const {
             return buf_.capacity() / sizeof(T);
         }
 
-        size_t length() const noexcept {
+        size_t length() const {
             return end() - begin();
         }
 
-        bool empty() const noexcept {
+        bool empty() const {
             return buf_.empty();
         }
 
-        auto& mut(size_t i) noexcept {
+        auto& mut(size_t i) {
             return *(mutBegin() + i);
         }
 
-        const auto& operator[](size_t i) const noexcept {
+        const auto& operator[](size_t i) const {
             return *(begin() + i);
         }
 
-        const auto& back() const noexcept {
+        const auto& back() const {
             return *(end() - 1);
         }
 
-        auto& mutBack() noexcept {
+        auto& mutBack() {
             return *(mutEnd() - 1);
         }
 
-        void clear() noexcept {
+        void clear() {
             buf_.reset();
         }
 
@@ -100,7 +100,7 @@ namespace stl {
             buf_.append(&t, sizeof(t));
         }
 
-        auto popBack() noexcept {
+        auto popBack() {
             auto res = back();
 
             buf_.seekAbsolute(end() - 1);
@@ -116,7 +116,7 @@ namespace stl {
             append(b, b + len);
         }
 
-        void xchg(Vector& v) noexcept {
+        void xchg(Vector& v) {
             buf_.xchg(v.buf_);
         }
 

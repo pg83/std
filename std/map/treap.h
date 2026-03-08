@@ -10,9 +10,9 @@ namespace stl {
         TreapNode* root = nullptr;
 
         void visitImpl(VisitorFace&& vis);
-        void split(TreapNode* t, void* k, TreapNode** l, TreapNode** r) noexcept;
+        void split(TreapNode* t, void* k, TreapNode** l, TreapNode** r);
 
-        virtual bool cmp(void* a, void* b) const noexcept = 0;
+        virtual bool cmp(void* a, void* b) const = 0;
 
     public:
         template <typename V>
@@ -22,13 +22,13 @@ namespace stl {
             }));
         }
 
-        TreapNode* find(void* key) const noexcept;
-        TreapNode* erase(void* key) noexcept;
-        TreapNode* remove(TreapNode* node) noexcept;
+        TreapNode* find(void* key) const;
+        TreapNode* erase(void* key);
+        TreapNode* remove(TreapNode* node);
 
-        void insert(TreapNode* node) noexcept;
+        void insert(TreapNode* node);
 
-        size_t height() const noexcept;
-        size_t length() const noexcept;
+        size_t height() const;
+        size_t length() const;
     };
 }

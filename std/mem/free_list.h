@@ -9,10 +9,10 @@ namespace stl {
     public:
         using Ref = IntrusivePtr<FreeList>;
 
-        virtual ~FreeList() noexcept;
+        virtual ~FreeList();
 
         virtual void* allocate() = 0;
-        virtual void release(void* ptr) noexcept = 0;
+        virtual void release(void* ptr) = 0;
 
         static Ref fromMemory(size_t objSize);
     };

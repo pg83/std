@@ -22,7 +22,7 @@ namespace {
         {
         }
 
-        void run() noexcept override {
+        void run() override {
             LockGuard lock(*mutex);
             while (!*ready) {
                 cv->wait(*mutex);
@@ -45,7 +45,7 @@ namespace {
         {
         }
 
-        void run() noexcept override {
+        void run() override {
             LockGuard lock(*mutex);
             while (!*ready) {
                 cv->wait(*mutex);
@@ -70,7 +70,7 @@ namespace {
         {
         }
 
-        void run() noexcept override {
+        void run() override {
             LockGuard lock(*mutex);
             while (!*dataReady) {
                 cv->wait(*mutex);
@@ -286,7 +286,7 @@ STD_TEST_SUITE(CondVar) {
             {
             }
 
-            void run() noexcept override {
+            void run() override {
                 LockGuard lock(*mutex);
                 while (*value != targetValue) {
                     cv->wait(*mutex);
@@ -389,7 +389,7 @@ STD_TEST_SUITE(CondVar) {
             {
             }
 
-            void run() noexcept override {
+            void run() override {
                 LockGuard lock(*mutex);
                 while (!*predicate) {
                     cv->wait(*mutex);
@@ -431,7 +431,7 @@ STD_TEST_SUITE(CondVar) {
             {
             }
 
-            void run() noexcept override {
+            void run() override {
                 LockGuard lock(*mutex);
                 while (!*ready) {
                     cv->wait(*mutex);
@@ -475,7 +475,7 @@ STD_TEST_SUITE(CondVar) {
             {
             }
 
-            void run() noexcept override {
+            void run() override {
                 LockGuard lock(*mutex);
                 while (*phase != 1) {
                     cv->wait(*mutex);
@@ -497,7 +497,7 @@ STD_TEST_SUITE(CondVar) {
             {
             }
 
-            void run() noexcept override {
+            void run() override {
                 LockGuard lock(*mutex);
                 while (*phase != 2) {
                     cv->wait(*mutex);

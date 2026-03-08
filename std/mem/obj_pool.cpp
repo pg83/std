@@ -21,7 +21,7 @@ namespace {
     struct Pool: public Base {
         alignas(max_align_t) u8 buf[256 - sizeof(Base)];
 
-        Pool() noexcept
+        Pool()
             : Base(buf, sizeof(buf))
         {
         }
@@ -30,7 +30,7 @@ namespace {
             return mp.allocate(len);
         }
 
-        void submit(Disposable* d) noexcept override {
+        void submit(Disposable* d) override {
             ds.submit(d);
         }
     };
@@ -38,7 +38,7 @@ namespace {
     static_assert(sizeof(Pool) == 256);
 }
 
-ObjPool::~ObjPool() noexcept {
+ObjPool::~ObjPool() {
 }
 
 ObjPool* ObjPool::fromMemoryRaw() {

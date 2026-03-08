@@ -10,79 +10,79 @@ namespace stl {
         size_t len_;
 
     public:
-        StringView() noexcept
+        StringView()
             : StringView(nullptr, (size_t)0)
         {
         }
 
         template <size_t N>
-        StringView(const u8 (&str)[N]) noexcept
+        StringView(const u8 (&str)[N])
             : StringView(str, N - 1)
         {
         }
 
-        StringView(const u8* ptr, size_t len) noexcept
+        StringView(const u8* ptr, size_t len)
             : ptr_(ptr)
             , len_(len)
         {
         }
 
-        StringView(const u8* b, const u8* e) noexcept
+        StringView(const u8* b, const u8* e)
             : StringView(b, e - b)
         {
         }
 
-        StringView(const char* s) noexcept;
-        StringView(const Buffer& b) noexcept;
+        StringView(const char* s);
+        StringView(const Buffer& b);
 
-        auto data() const noexcept {
+        auto data() const {
             return ptr_;
         }
 
-        auto length() const noexcept {
+        auto length() const {
             return len_;
         }
 
         // iterator ops
-        auto begin() const noexcept {
+        auto begin() const {
             return data();
         }
 
-        auto end() const noexcept {
+        auto end() const {
             return begin() + length();
         }
 
-        const auto& operator[](size_t i) const noexcept {
+        const auto& operator[](size_t i) const {
             return *(begin() + i);
         }
 
-        bool empty() const noexcept {
+        bool empty() const {
             return length() == 0;
         }
 
-        const auto& back() const noexcept {
+        const auto& back() const {
             return *(end() - 1);
         }
 
         // string ops
-        StringView prefix(size_t len) const noexcept;
-        StringView suffix(size_t len) const noexcept;
+        StringView prefix(size_t len) const;
+        StringView suffix(size_t len) const;
 
-        bool endsWith(StringView suffix) const noexcept;
-        bool startsWith(StringView prefix) const noexcept;
+        bool endsWith(StringView suffix) const;
+        bool startsWith(StringView prefix) const;
 
-        const u8* memChr(u8 ch) const noexcept;
-        const u8* search(StringView substr) const noexcept;
+        const u8* memChr(u8 ch) const;
+        const u8* search(StringView substr) const;
 
         // hash ops
-        u32 hash32() const noexcept;
-        u64 hash64() const noexcept;
+        u32 hash32() const;
+        u64 hash64() const;
 
         // parse
-        u64 stou() const noexcept;
+        u64 stou() const;
     };
 
-    bool operator==(StringView l, StringView r) noexcept;
-    bool operator!=(StringView l, StringView r) noexcept;
-    bool operator<(StringView l, StringView r) noexcept;
+    bool operator==(StringView l, StringView r);
+    bool operator!=(StringView l, StringView r);
+    bool operator<(StringView l, StringView r);
 }

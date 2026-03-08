@@ -7,99 +7,99 @@ namespace stl {
         IntrusiveNode head;
 
     public:
-        ~IntrusiveList() noexcept {
+        ~IntrusiveList() {
             clear();
         }
 
-        IntrusiveList() noexcept {
+        IntrusiveList() {
         }
 
-        IntrusiveList(IntrusiveList&& r) noexcept {
+        IntrusiveList(IntrusiveList&& r) {
             r.xchgWithEmptyList(*this);
         }
 
-        bool empty() const noexcept {
+        bool empty() const {
             return head.next == &head;
         }
 
-        void pushBack(IntrusiveNode* node) noexcept {
+        void pushBack(IntrusiveNode* node) {
             insertAfter(head.prev, node);
         }
 
-        void pushBack(IntrusiveList& lst) noexcept;
+        void pushBack(IntrusiveList& lst);
 
-        void pushFront(IntrusiveNode* node) noexcept {
+        void pushFront(IntrusiveNode* node) {
             insertAfter(&head, node);
         }
 
-        IntrusiveNode* popFront() noexcept {
+        IntrusiveNode* popFront() {
             return head.next->remove();
         }
 
-        IntrusiveNode* popFrontOrNull() noexcept;
+        IntrusiveNode* popFrontOrNull();
 
-        IntrusiveNode* popBack() noexcept {
+        IntrusiveNode* popBack() {
             return head.prev->remove();
         }
 
-        IntrusiveNode* popBackOrNull() noexcept;
+        IntrusiveNode* popBackOrNull();
 
-        void clear() noexcept {
+        void clear() {
             head.remove();
         }
 
-        IntrusiveNode* mutFront() noexcept {
+        IntrusiveNode* mutFront() {
             return head.next;
         }
 
-        const IntrusiveNode* front() const noexcept {
+        const IntrusiveNode* front() const {
             return head.next;
         }
 
-        IntrusiveNode* mutBack() noexcept {
+        IntrusiveNode* mutBack() {
             return head.prev;
         }
 
-        const IntrusiveNode* back() const noexcept {
+        const IntrusiveNode* back() const {
             return head.prev;
         }
 
-        IntrusiveNode* mutEnd() noexcept {
+        IntrusiveNode* mutEnd() {
             return &head;
         }
 
-        const IntrusiveNode* end() const noexcept {
+        const IntrusiveNode* end() const {
             return &head;
         }
 
-        bool almostEmpty() const noexcept {
+        bool almostEmpty() const {
             return head.almostEmpty();
         }
 
-        unsigned length() const noexcept;
+        unsigned length() const;
 
-        static void insertAfter(IntrusiveNode* pos, IntrusiveNode* node) noexcept;
+        static void insertAfter(IntrusiveNode* pos, IntrusiveNode* node);
 
-        static void insertBefore(IntrusiveNode* pos, IntrusiveNode* node) noexcept {
+        static void insertBefore(IntrusiveNode* pos, IntrusiveNode* node) {
             insertAfter(pos->prev, node);
         }
 
-        void xchg(IntrusiveList& r) noexcept;
-        void xchgWithEmptyList(IntrusiveList& r) noexcept;
+        void xchg(IntrusiveList& r);
+        void xchgWithEmptyList(IntrusiveList& r);
 
         using Compare1 = bool (*)(const IntrusiveNode*, const IntrusiveNode*);
         using Compare2 = bool (*)(void*, const IntrusiveNode*, const IntrusiveNode*);
 
-        void sort(Compare1 cmp) noexcept;
-        void sort(Compare2 cmp, void* ctx) noexcept;
+        void sort(Compare1 cmp);
+        void sort(Compare2 cmp, void* ctx);
 
         template <typename F>
-        void sort(const F& f) noexcept {
+        void sort(const F& f) {
             sort([](void* ctx, const IntrusiveNode* l, const IntrusiveNode* r) -> bool {
                 return (*(F*)ctx)(l, r);
             }, (void*)&f);
         }
 
-        void splitHalf(IntrusiveList& l, IntrusiveList& r) noexcept;
+        void splitHalf(IntrusiveList& l, IntrusiveList& r);
     };
 }

@@ -5,7 +5,7 @@
 
 using namespace stl;
 
-void* TreapNode::key() const noexcept {
+void* TreapNode::key() const {
     return (void*)this;
 }
 
@@ -23,7 +23,7 @@ void TreapNode::visit(VisitorFace& vis) {
     }
 }
 
-unsigned TreapNode::height() const noexcept {
+unsigned TreapNode::height() const {
     const unsigned lh = left ? left->height() : 0;
     const unsigned rh = right ? right->height() : 0;
 

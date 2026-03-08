@@ -5,24 +5,24 @@
 using namespace stl;
 
 namespace {
-    static void link(IntrusiveNode* a, IntrusiveNode* b) noexcept {
+    static void link(IntrusiveNode* a, IntrusiveNode* b) {
         a->next = b;
         b->prev = a;
     }
 
-    static void xchgWithEmpty(IntrusiveNode& l, IntrusiveNode& r) noexcept {
+    static void xchgWithEmpty(IntrusiveNode& l, IntrusiveNode& r) {
         IntrusiveList::insertAfter(&l, &r);
         l.remove();
     }
 }
 
-void IntrusiveList::insertAfter(IntrusiveNode* pos, IntrusiveNode* node) noexcept {
+void IntrusiveList::insertAfter(IntrusiveNode* pos, IntrusiveNode* node) {
     node->remove();
     link(node, pos->next);
     link(pos, node);
 }
 
-unsigned IntrusiveList::length() const noexcept {
+unsigned IntrusiveList::length() const {
     unsigned res = 0;
 
     for (auto c = front(), e = end(); c != e; c = c->next) {
@@ -32,7 +32,7 @@ unsigned IntrusiveList::length() const noexcept {
     return res;
 }
 
-void IntrusiveList::xchg(IntrusiveList& r) noexcept {
+void IntrusiveList::xchg(IntrusiveList& r) {
     IntrusiveNode n;
 
     xchgWithEmpty(r.head, n);
@@ -40,12 +40,12 @@ void IntrusiveList::xchg(IntrusiveList& r) noexcept {
     xchgWithEmpty(n, head);
 }
 
-void IntrusiveList::xchgWithEmptyList(IntrusiveList& r) noexcept {
+void IntrusiveList::xchgWithEmptyList(IntrusiveList& r) {
     xchgWithEmpty(head, r.head);
 }
 
 namespace {
-    static void splitImpl1(IntrusiveList& s, IntrusiveNode* a, IntrusiveNode* b) noexcept {
+    static void splitImpl1(IntrusiveList& s, IntrusiveNode* a, IntrusiveNode* b) {
         for (auto c = s.mutFront(), end = s.mutEnd(); c != end; c = c->next) {
             a->next = c;
             a = b;
@@ -56,14 +56,14 @@ namespace {
         b->next = nullptr;
     }
 
-    static void splitImpl2(IntrusiveList& s, IntrusiveNode* a, IntrusiveNode* b) noexcept {
+    static void splitImpl2(IntrusiveList& s, IntrusiveNode* a, IntrusiveNode* b) {
         splitImpl1(s, a, b);
         s.mutEnd()->reset();
         a->fixPrev();
         b->fixPrev();
     }
 
-    static void split(IntrusiveList& s, IntrusiveList* l, IntrusiveList* r) noexcept {
+    static void split(IntrusiveList& s, IntrusiveList* l, IntrusiveList* r) {
         if (s.almostEmpty()) {
             return s.xchg(*l);
         }
@@ -78,7 +78,7 @@ namespace {
     }
 
     template <typename Compare>
-    static void merge(IntrusiveList& d, IntrusiveList& l, IntrusiveList& r, Compare&& cmp) noexcept {
+    static void merge(IntrusiveList& d, IntrusiveList& l, IntrusiveList& r, Compare&& cmp) {
         while (!l.empty() && !r.empty()) {
             if (cmp(r.front(), l.front())) {
                 d.pushBack(r.popFront());
@@ -97,7 +97,7 @@ namespace {
     }
 
     template <typename Compare>
-    static void sort(IntrusiveList& d, Compare&& cmp) noexcept {
+    static void sort(IntrusiveList& d, Compare&& cmp) {
         if (d.almostEmpty()) {
             return;
         }
@@ -114,23 +114,23 @@ namespace {
     }
 }
 
-void IntrusiveList::splitHalf(IntrusiveList& l, IntrusiveList& r) noexcept {
+void IntrusiveList::splitHalf(IntrusiveList& l, IntrusiveList& r) {
     IntrusiveList tmp;
     xchgWithEmptyList(tmp);
     ::split(tmp, &l, &r);
 }
 
-void IntrusiveList::sort(Compare1 cmp) noexcept {
+void IntrusiveList::sort(Compare1 cmp) {
     ::sort(*this, cmp);
 }
 
-void IntrusiveList::sort(Compare2 cmp, void* ctx) noexcept {
+void IntrusiveList::sort(Compare2 cmp, void* ctx) {
     ::sort(*this, [cmp, ctx](const IntrusiveNode* l, const IntrusiveNode* r) -> bool {
         return cmp(ctx, l, r);
     });
 }
 
-IntrusiveNode* IntrusiveList::popFrontOrNull() noexcept {
+IntrusiveNode* IntrusiveList::popFrontOrNull() {
     if (empty()) {
         return nullptr;
     }
@@ -138,7 +138,7 @@ IntrusiveNode* IntrusiveList::popFrontOrNull() noexcept {
     return popFront();
 }
 
-IntrusiveNode* IntrusiveList::popBackOrNull() noexcept {
+IntrusiveNode* IntrusiveList::popBackOrNull() {
     if (empty()) {
         return nullptr;
     }
@@ -146,7 +146,7 @@ IntrusiveNode* IntrusiveList::popBackOrNull() noexcept {
     return popBack();
 }
 
-void IntrusiveList::pushBack(IntrusiveList& lst) noexcept {
+void IntrusiveList::pushBack(IntrusiveList& lst) {
     if (lst.empty()) {
         // nothing to do
     } else if (empty()) {

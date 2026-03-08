@@ -62,7 +62,7 @@ void FD::close() {
     }
 }
 
-void FD::xchg(FD& other) noexcept {
+void FD::xchg(FD& other) {
     ::stl::xchg(fd, other.fd);
 }
 

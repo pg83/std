@@ -34,7 +34,7 @@ namespace stl {
             }
         }
 
-        T* find(K key) const noexcept {
+        T* find(K key) const {
             if (auto n = (Node*)st.find(H::hash(key)); n) {
                 return &n->t;
             }
@@ -64,7 +64,7 @@ namespace stl {
             return *insert(key);
         }
 
-        void erase(K key) noexcept {
+        void erase(K key) {
             if (auto prev = (Node*)st.erase(H::hash(key)); prev) {
                 ol.release(prev);
             }

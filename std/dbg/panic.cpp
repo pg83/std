@@ -19,11 +19,11 @@ namespace {
     static PanicHandler panicHandler2 = (PanicHandler)abort;
 }
 
-PanicHandler stl::setPanicHandler1(PanicHandler hndl) noexcept {
+PanicHandler stl::setPanicHandler1(PanicHandler hndl) {
     return exchange(panicHandler1, hndl);
 }
 
-PanicHandler stl::setPanicHandler2(PanicHandler hndl) noexcept {
+PanicHandler stl::setPanicHandler2(PanicHandler hndl) {
     return exchange(panicHandler2, hndl);
 }
 

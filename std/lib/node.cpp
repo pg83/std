@@ -9,22 +9,22 @@ void IntrusiveNode::xchg(IntrusiveNode& r) {
     ::stl::xchg(prev, r.prev);
 }
 
-void IntrusiveNode::unlink() noexcept {
+void IntrusiveNode::unlink() {
     prev->next = next;
     next->prev = prev;
     reset();
 }
 
-void IntrusiveNode::reset() noexcept {
+void IntrusiveNode::reset() {
     prev = this;
     next = this;
 }
 
-bool IntrusiveNode::singular() const noexcept {
+bool IntrusiveNode::singular() const {
     return prev == this && next == this;
 }
 
-void IntrusiveNode::fixPrev() noexcept {
+void IntrusiveNode::fixPrev() {
     auto c = this;
 
     while (c->next) {
@@ -36,6 +36,6 @@ void IntrusiveNode::fixPrev() noexcept {
     prev = c;
 }
 
-bool IntrusiveNode::almostEmpty() const noexcept {
+bool IntrusiveNode::almostEmpty() const {
     return next->next == this;
 }
