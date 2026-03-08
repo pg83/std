@@ -18,8 +18,8 @@ namespace stl {
 
         virtual ~CoroExecutor() noexcept;
 
-        virtual void spawn(coro* fn, void* ctx) noexcept = 0;
         virtual void yield() noexcept = 0;
+        virtual void spawn(coro* fn, void* ctx) = 0;
 
         static Ref create(size_t threads);
         static Ref create(ThreadPool* pool);

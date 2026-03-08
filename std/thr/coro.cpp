@@ -50,7 +50,7 @@ namespace {
             return (ContImpl*)*tls();
         }
 
-        void spawn(coro* fn, void* ctx) noexcept override {
+        void spawn(coro* fn, void* ctx) override {
             pool_->submitTask(new (malloc(STACK_SIZE)) ContImpl(this, fn, ctx));
         }
 
