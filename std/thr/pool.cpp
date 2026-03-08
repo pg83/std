@@ -172,9 +172,7 @@ namespace {
                 return thread_.threadId();
             }
 
-            void flush() noexcept {
-                tasks_.pushBack(local_);
-            }
+            void flush() noexcept;
 
             Task* popNoLock() noexcept {
                 return (Task*)tasks_.popFrontOrNull();
@@ -199,7 +197,7 @@ namespace {
             }
 
             void pushThrLocal(Task* task) noexcept {
-                //pushLocal(task);
+                // pushLocal(task);
                 local_.pushBack(task);
             }
 
@@ -328,6 +326,13 @@ WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex
     shuffle(rng_, so_.mutBegin(), so_.mutEnd());
 }
 
+void WorkStealingThreadPool::Worker::flush() noexcept {
+    if (!local_.empty()) {
+        tasks_.pushBack(local_);
+        pool_->notifyOne();
+    }
+}
+
 void WorkStealingThreadPool::Worker::run() noexcept {
     try {
         loop();
@@ -370,11 +375,9 @@ void WorkStealingThreadPool::Worker::loop() {
             pool_->trySteal(so_.data(), (u32)so_.length(), rng_.uniformUnbiased(so_.length()), &stolen);
         }
 
-        if (!local_.empty() || !stolen.empty()) {
-            tasks_.pushBack(stolen);
-            flush();
-            pool_->notifyOne();
-        }
+        local_.pushBack(stolen);
+
+        flush();
     } while (!tasks_.empty() || (sleep(), true));
 }
 
