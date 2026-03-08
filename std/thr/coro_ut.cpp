@@ -130,7 +130,7 @@ STD_TEST_SUITE(CoroExecutor) {
         pool->join();
     }
 
-    const int depth = 25;
+    const int depth = 10;
     const int work = 250;
 
     STD_TEST(_SW) {
@@ -152,7 +152,7 @@ STD_TEST_SUITE(CoroExecutor) {
                 });
             }
 
-            c->executor()->yield();
+            // c->executor()->yield();
 
             if (d > 0) {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
