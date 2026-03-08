@@ -46,26 +46,26 @@ void IntrusiveList::xchgWithEmptyList(IntrusiveList& r) noexcept {
 }
 
 namespace {
-    static void splitImpl(IntrusiveList& s, IntrusiveNode* a, IntrusiveNode* b) noexcept {
+    static void splitImpl(IntrusiveNode* end, IntrusiveNode* a, IntrusiveNode* b) noexcept {
         IntrusiveNode* p[] = {a, b};
 
         int x = 0;
 
-        for (auto c = s.mutFront(), end = s.mutEnd(); c != end; c = c->next, x ^=1) {
+        for (auto c = end->next; c != end; c = c->next, x ^= 1) {
             link(exchange(p[x], c), c);
         }
 
         link(p[0], a);
         link(p[1], b);
 
-        s.mutEnd()->reset();
+        end->reset();
     }
 
     static void split(IntrusiveList& s, IntrusiveList* l, IntrusiveList* r) noexcept {
         IntrusiveList a;
         IntrusiveList b;
 
-        splitImpl(s, a.mutEnd(), b.mutEnd());
+        splitImpl(s.mutEnd(), a.mutEnd(), b.mutEnd());
 
         l->pushBack(a);
         r->pushBack(b);
