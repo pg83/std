@@ -530,9 +530,14 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
     STD_TEST(NotNullFromTask) {
         u64 key = registerTlsKey();
         bool notNull = false;
+        Latch latch(1);
 
         auto pool = ThreadPool::workStealing(2);
-        pool->submit([p = pool.mutPtr(), key, &notNull]{ notNull = (p->tls(key) != nullptr); });
+        pool->submit([p = pool.mutPtr(), key, &notNull, &latch]{
+            notNull = (p->tls(key) != nullptr);
+            latch.arrive();
+        });
+        latch.wait();
         pool->join();
         STD_INSIST(notNull);
     }
@@ -542,15 +547,18 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         u64 k2 = registerTlsKey();
         int v1 = 10, v2 = 20;
         bool correct = true;
+        Latch latch(1);
 
         auto pool = ThreadPool::workStealing(2);
-        pool->submit([p = pool.mutPtr(), k1, k2, &v1, &v2, &correct]{
+        pool->submit([p = pool.mutPtr(), k1, k2, &v1, &v2, &correct, &latch]{
             *p->tls(k1) = &v1;
             *p->tls(k2) = &v2;
             if (*p->tls(k1) != &v1 || *p->tls(k2) != &v2) {
                 correct = false;
             }
+            latch.arrive();
         });
+        latch.wait();
         pool->join();
         STD_INSIST(correct);
     }
