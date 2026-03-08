@@ -1,11 +1,21 @@
 #include "coro.h"
 #include "pool.h"
 #include "latch.h"
+#include "mutex.h"
+#include "cond_var.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/atomic.h>
+#include <functional>
 
 using namespace stl;
+
+namespace {
+    static void doW(int work) {
+        for (volatile int i = 0; i < work; ++i) {
+        }
+    }
+}
 
 STD_TEST_SUITE(CoroExecutor) {
     STD_TEST(Basic) {
@@ -117,6 +127,61 @@ STD_TEST_SUITE(CoroExecutor) {
         exec->spawn(fn);
 
         done.wait();
+        pool->join();
+    }
+
+    const int depth = 25;
+    const int work = 250;
+
+    STD_TEST(_SW) {
+        auto pool = ThreadPool::workStealing(16);
+        auto exec = CoroExecutor::create(pool.mutPtr());
+
+        int counter = 1;
+        Mutex mutex;
+        CondVar condVar;
+
+        std::function<void(Cont*, int)> run = [&](Cont* c, int d) {
+            doW(work);
+
+            if (d > 0) {
+                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+
+                exec->spawn([&, d](Cont* c2) {
+                    run(c2, d - 1);
+                });
+            }
+
+            c->executor()->yield();
+
+            if (d > 0) {
+                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+
+                exec->spawn([&, d](Cont* c2) {
+                    run(c2, d - 1);
+                });
+            }
+
+            doW(work);
+
+            if (stdAtomicSubAndFetch(&counter, 1, MemoryOrder::Release) == 0) {
+                LockGuard lock(mutex);
+                condVar.signal();
+            }
+        };
+
+        exec->spawn([&](Cont* c) {
+            run(c, depth);
+        });
+
+        {
+            LockGuard lock(mutex);
+
+            while (stdAtomicFetch(&counter, MemoryOrder::Acquire) > 0) {
+                condVar.wait(mutex);
+            }
+        }
+
         pool->join();
     }
 }
