@@ -129,23 +129,26 @@ STD_TEST_SUITE(CoroExecutor) {
         pool->join();
     }
 
-    const int depth = 20;
+    const int depth = 22;
     const int work = 999;
 
     STD_TEST(_SW) {
         auto exec = CoroExecutor::create(16);
 
         int counter = 1;
+        int counter2 = 0;
         Mutex mutex;
         CondVar condVar;
 
         std::function<void(Cont*, int)> run = [&](Cont* c, int d) {
+            stdAtomicAddAndFetch(&counter2, 1, MemoryOrder::Relaxed);
+
             doW(work);
 
             if (d > 0) {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
 
-                exec->spawnRun(SpawnParams().setStackSize(4096).setRunable([&, d]() {
+                exec->spawnRun(SpawnParams().setStackSize(2000).setRunable([&, d]() {
                     run(exec->me(), d - 1);
                 }));
             }
@@ -155,7 +158,7 @@ STD_TEST_SUITE(CoroExecutor) {
             if (d > 0) {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
 
-                exec->spawnRun(SpawnParams().setStackSize(4096).setRunable([&, d]() {
+                exec->spawnRun(SpawnParams().setStackSize(2000).setRunable([&, d]() {
                     run(exec->me(), d - 1);
                 }));
             }
@@ -181,5 +184,7 @@ STD_TEST_SUITE(CoroExecutor) {
         }
 
         exec->pool()->join();
+
+        _ctx.output() << counter2 << endL << flsH;
     }
 }
