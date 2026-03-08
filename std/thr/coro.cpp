@@ -3,9 +3,9 @@
 #include "pool.h"
 
 #include <std/mem/new.h>
+#include <std/sys/crt.h>
 #include <std/alg/destruct.h>
 
-#include <stdlib.h>
 #include <ucontext.h>
 
 using namespace stl;
@@ -51,7 +51,7 @@ namespace {
         }
 
         void spawn(coro* fn, void* ctx) override {
-            pool_->submitTask(new (malloc(STACK_SIZE)) ContImpl(this, fn, ctx));
+            pool_->submitTask(new (allocateMemory(STACK_SIZE)) ContImpl(this, fn, ctx));
         }
 
         void yield() noexcept override {
@@ -106,7 +106,7 @@ void ContImpl::run() noexcept {
     *exec_->tls() = nullptr;
 
     if (done_) {
-        free(destruct(this));
+        freeMemory(destruct(this));
     } else {
         exec_->pool_->submitTask(this);
     }
