@@ -12,7 +12,7 @@
 using namespace stl;
 
 namespace {
-    static constexpr size_t STACK_SIZE = 64 * 1024;
+    static constexpr size_t STACK_SIZE = 16 * 1024;
 
     struct CoroExecutorImpl;
 
@@ -21,8 +21,9 @@ namespace {
         ucontext_t ctx_;
         ucontext_t* workerCtx_;
         Runable* runable_;
+        bool ownStack_;
 
-        ContImpl(CoroExecutorImpl* exec, Runable* runable) noexcept;
+        ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept;
 
         CoroExecutor* executor() noexcept override;
         void run() noexcept override;
@@ -49,8 +50,9 @@ namespace {
             return (ContImpl*)*tls();
         }
 
-        void spawnRun(Runable* runable) override {
-            pool_->submitTask(new (allocateMemory(STACK_SIZE)) ContImpl(this, runable));
+        void spawnRun(SpawnParams params) override {
+            void* mem = params.stackPtr ? params.stackPtr : allocateMemory(params.stackSize);
+            pool_->submitTask(new (mem) ContImpl(this, params));
         }
 
         Cont* me() const noexcept override {
@@ -69,20 +71,28 @@ namespace {
     };
 }
 
-ContImpl::ContImpl(CoroExecutorImpl* exec, Runable* runable) noexcept
+ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
     : exec_(exec)
     , workerCtx_(nullptr)
-    , runable_(runable)
+    , runable_(params.runable)
+    , ownStack_(!params.stackPtr)
 {
     getcontext(&ctx_);
 
     ctx_.uc_stack.ss_sp = (char*)(this + 1);
-    ctx_.uc_stack.ss_size = STACK_SIZE - sizeof(ContImpl);
+    ctx_.uc_stack.ss_size = params.stackSize - sizeof(ContImpl);
     ctx_.uc_link = nullptr;
 
     auto p = (uintptr_t)this;
 
     makecontext(&ctx_, (void (*)())ContImpl::entry, 2, (u32)p, (u32)(p >> 32));
+}
+
+SpawnParams::SpawnParams() noexcept
+    : stackSize(STACK_SIZE)
+    , stackPtr(nullptr)
+    , runable(nullptr)
+{
 }
 
 CoroExecutor* ContImpl::executor() noexcept {
@@ -91,7 +101,6 @@ CoroExecutor* ContImpl::executor() noexcept {
 
 void ContImpl::entryX() noexcept {
     runable_->run();
-    delete runable_;
     runable_ = nullptr;
     swapcontext(&ctx_, workerCtx_);
 }
@@ -112,7 +121,11 @@ void ContImpl::run() noexcept {
     *exec_->tls() = nullptr;
 
     if (!runable_) {
-        freeMemory(destruct(this));
+        if (ownStack_) {
+            freeMemory(destruct(this));
+        } else {
+            destruct(this);
+        }
     } else {
         exec_->pool_->submitTask(this);
     }

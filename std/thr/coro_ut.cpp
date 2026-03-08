@@ -129,12 +129,11 @@ STD_TEST_SUITE(CoroExecutor) {
         pool->join();
     }
 
-    const int depth = 10;
-    const int work = 250;
+    const int depth = 20;
+    const int work = 999;
 
     STD_TEST(_SW) {
-        auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool.mutPtr());
+        auto exec = CoroExecutor::create(16);
 
         int counter = 1;
         Mutex mutex;
@@ -151,7 +150,7 @@ STD_TEST_SUITE(CoroExecutor) {
                 });
             }
 
-            // c->executor()->yield();
+            c->executor()->yield();
 
             if (d > 0) {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
@@ -181,6 +180,6 @@ STD_TEST_SUITE(CoroExecutor) {
             }
         }
 
-        pool->join();
+        exec->pool()->join();
     }
 }

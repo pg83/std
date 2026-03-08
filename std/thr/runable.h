@@ -16,6 +16,7 @@ namespace stl {
 
         void run() override {
             v();
+            delete this;
         }
     };
 
