@@ -390,9 +390,3 @@ ThreadPool::Ref ThreadPool::workStealing(size_t threads) {
 
     return new WorkStealingThreadPool(threads);
 }
-
-void ThreadPool::submitRun(Runable& runable) {
-    submit([&runable]() {
-        runable.run();
-    });
-}

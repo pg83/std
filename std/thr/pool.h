@@ -17,8 +17,6 @@ namespace stl {
         virtual void join() noexcept = 0;
         virtual void** tls(u64 key) noexcept = 0;
 
-        void submitRun(Runable& runable);
-
         template <typename F>
         void submit(F f) {
             submitTask(makeTask(f));
