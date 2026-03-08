@@ -392,7 +392,7 @@ ThreadPool::Ref ThreadPool::workStealing(size_t threads) {
     return new WorkStealingThreadPool(threads);
 }
 
-void ThreadPool::submit(Runable& runable) {
+void ThreadPool::submitRun(Runable& runable) {
     struct Helper: public Task {
         Runable* runable;
 

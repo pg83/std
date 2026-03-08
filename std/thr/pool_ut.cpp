@@ -47,7 +47,7 @@ namespace {
 
         void schedule() {
             stdAtomicAddAndFetch(&state_->counter, 1, MemoryOrder::Relaxed);
-            state_->pool->submit(*new StressTask(state_, depth_ - 1));
+            state_->pool->submitRun(*new StressTask(state_, depth_ - 1));
         }
 
         void run() override {
@@ -117,7 +117,7 @@ STD_TEST_SUITE(ThreadPool) {
         int counter = 0;
 
         CounterTask task(&counter);
-        pool->submit(task);
+        pool->submitRun(task);
         pool->join();
 
         STD_INSIST(counter == 1);
@@ -131,9 +131,9 @@ STD_TEST_SUITE(ThreadPool) {
         CounterTask task2(&counter);
         CounterTask task3(&counter);
 
-        pool->submit(task1);
-        pool->submit(task2);
-        pool->submit(task3);
+        pool->submitRun(task1);
+        pool->submitRun(task2);
+        pool->submitRun(task3);
         pool->join();
 
         STD_INSIST(counter == 3);
@@ -248,7 +248,7 @@ STD_TEST_SUITE(ThreadPool) {
         };
 
         for (int i = 0; i < numTasks; ++i) {
-            pool->submit(tasks[i]);
+            pool->submitRun(tasks[i]);
         }
         pool->join();
 
@@ -260,7 +260,7 @@ STD_TEST_SUITE(ThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool->submit(*new AtomicCounterTask(&counter));
+            pool->submitRun(*new AtomicCounterTask(&counter));
         }
         pool->join();
 
@@ -299,7 +299,7 @@ STD_TEST_SUITE(ThreadPool) {
         };
 
         for (int i = 0; i < 20; ++i) {
-            pool->submit(tasks[i]);
+            pool->submitRun(tasks[i]);
         }
         pool->join();
     }
@@ -309,7 +309,7 @@ STD_TEST_SUITE(ThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 10; ++i) {
-            pool->submit(*new AtomicCounterTask(&counter));
+            pool->submitRun(*new AtomicCounterTask(&counter));
         }
         pool->join();
 
@@ -321,7 +321,7 @@ STD_TEST_SUITE(ThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool->submit(*new AtomicCounterTask(&counter));
+            pool->submitRun(*new AtomicCounterTask(&counter));
         }
         pool->join();
 
@@ -340,7 +340,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         CounterTask task(&counter);
-        pool->submit(task);
+        pool->submitRun(task);
         pool->join();
 
         STD_INSIST(counter == 1);
@@ -351,7 +351,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 10; ++i) {
-            pool->submit(*new AtomicCounterTask(&counter));
+            pool->submitRun(*new AtomicCounterTask(&counter));
         }
         pool->join();
 
@@ -363,7 +363,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool->submit(*new AtomicCounterTask(&counter));
+            pool->submitRun(*new AtomicCounterTask(&counter));
         }
         pool->join();
 
@@ -375,7 +375,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool->submit(*new AtomicCounterTask(&counter));
+            pool->submitRun(*new AtomicCounterTask(&counter));
         }
         pool->join();
 
@@ -392,7 +392,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 20; ++i) {
-            pool->submit(*new AtomicCounterTask(&counter));
+            pool->submitRun(*new AtomicCounterTask(&counter));
         }
 
         for (volatile int i = 0; i < 10000; ++i) {
@@ -408,7 +408,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 50; ++i) {
-            pool->submit(*new AtomicCounterTask(&counter));
+            pool->submitRun(*new AtomicCounterTask(&counter));
         }
         pool->join();
 
@@ -420,7 +420,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 200; ++i) {
-            pool->submit(*new AtomicCounterTask(&counter));
+            pool->submitRun(*new AtomicCounterTask(&counter));
         }
         pool->join();
 
@@ -432,7 +432,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool->submit(*new AtomicCounterTask(&counter));
+            pool->submitRun(*new AtomicCounterTask(&counter));
         }
         pool->join();
 
@@ -444,14 +444,14 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 50; ++i) {
-            pool->submit(*new AtomicCounterTask(&counter));
+            pool->submitRun(*new AtomicCounterTask(&counter));
         }
 
         for (volatile int i = 0; i < 5000; ++i) {
         }
 
         for (int i = 0; i < 50; ++i) {
-            pool->submit(*new AtomicCounterTask(&counter));
+            pool->submitRun(*new AtomicCounterTask(&counter));
         }
 
         pool->join();
@@ -466,7 +466,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         auto pool = ThreadPool::workStealing(16);
         StressState state(pool.mutPtr(), work);
 
-        pool->submit(*new StressTask(&state, depth));
+        pool->submitRun(*new StressTask(&state, depth));
 
         {
             LockGuard lock(state.mutex);
@@ -489,7 +489,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         auto pool = ThreadPool::simple(16);
         StressState state(pool.mutPtr(), work);
 
-        pool->submit(*new StressTask(&state, depth));
+        pool->submitRun(*new StressTask(&state, depth));
 
         {
             LockGuard lock(state.mutex);

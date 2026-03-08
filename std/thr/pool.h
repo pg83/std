@@ -1,12 +1,13 @@
 #pragma once
 
+#include "runable.h"
+
 #include <std/ptr/arc.h>
 #include <std/sys/types.h>
 #include <std/ptr/intrusive.h>
 
 namespace stl {
     struct Task;
-    struct Runable;
 
     u64 registerTlsKey() noexcept;
 
@@ -17,7 +18,16 @@ namespace stl {
         virtual void join() noexcept = 0;
         virtual void** tls(u64 key) noexcept = 0;
 
-        void submit(Runable& runable);
+        void submitRun(Runable& runable);
+
+        void submitTmp(Runable&& runable) {
+            submitRun(runable);
+        }
+
+        template <typename F>
+        void submit(F f) {
+            submitTmp(makeRunable(f));
+        }
 
         using Ref = IntrusivePtr<ThreadPool>;
 
