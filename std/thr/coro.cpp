@@ -124,11 +124,8 @@ void ContImpl::run() noexcept {
     ucontext_t workerCtx;
 
     workerCtx_ = &workerCtx;
-
     *exec_->tls() = this;
-
     swapcontext(&workerCtx, &ctx_);
-
     *exec_->tls() = nullptr;
 
     if (!runable_) {
@@ -147,4 +144,19 @@ CoroExecutor::Ref CoroExecutor::create(ThreadPool* pool) {
 
 CoroExecutor::Ref CoroExecutor::create(size_t threads) {
     return create(ThreadPool::workStealing(threads).mutPtr());
+}
+
+SpawnParams& SpawnParams::setStackSize(size_t v) noexcept {
+    stackSize = v;
+    return *this;
+}
+
+SpawnParams& SpawnParams::setStackPtr(void* v) noexcept {
+    stackPtr = v;
+    return *this;
+}
+
+SpawnParams& SpawnParams::setRunablePtr(Runable* v) noexcept {
+    runable = v;
+    return *this;
 }

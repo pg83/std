@@ -20,20 +20,9 @@ namespace stl {
 
         SpawnParams() noexcept;
 
-        SpawnParams& setStackSize(size_t v) noexcept {
-            stackSize = v;
-            return *this;
-        }
-
-        SpawnParams& setStackPtr(void* v) noexcept {
-            stackPtr = v;
-            return *this;
-        }
-
-        SpawnParams& setRunablePtr(Runable* v) noexcept {
-            runable = v;
-            return *this;
-        }
+        SpawnParams& setStackPtr(void* v) noexcept;
+        SpawnParams& setStackSize(size_t v) noexcept;
+        SpawnParams& setRunablePtr(Runable* v) noexcept;
 
         template <typename F>
         SpawnParams& setRunable(F f) {
