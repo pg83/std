@@ -16,12 +16,11 @@ namespace stl {
 
         void run() override {
             v();
-            delete this;
         }
     };
 
     template <typename T>
-    auto makeRunable(T t) {
+    auto makeRunablePtr(T t) {
         return new RunableImpl<T>(t);
     }
 }

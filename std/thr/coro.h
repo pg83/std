@@ -28,7 +28,7 @@ namespace stl {
 
         template <typename F>
         void spawn(F f) {
-            spawnRun(makeRunable([this, f]() {
+            spawnRun(makeRunablePtr([this, f]() {
                 f(this->me());
             }));
         }

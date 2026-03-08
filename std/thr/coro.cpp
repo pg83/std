@@ -124,3 +124,9 @@ CoroExecutor::Ref CoroExecutor::create(ThreadPool* pool) {
 CoroExecutor::Ref CoroExecutor::create(size_t threads) {
     return create(ThreadPool::workStealing(threads).mutPtr());
 }
+
+void CoroExecutor::spawnRun(Runable* runable) {
+    spawnCoro([](Cont* c, void* ctx) {
+        ((Runable*)ctx)->run();
+    }, runable);
+}
