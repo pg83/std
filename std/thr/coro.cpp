@@ -2,7 +2,6 @@
 #include "task.h"
 #include "pool.h"
 
-#include <std/mem/new.h>
 #include <std/sys/crt.h>
 #include <std/ptr/scoped.h>
 #include <std/alg/destruct.h>
@@ -16,14 +15,14 @@ namespace {
 
     struct CoroExecutorImpl;
 
-    struct alignas(max_align_t) ContImpl: public Cont, public Task, public Newable {
+    struct alignas(max_align_t) ContImpl: public Cont, public Task {
         CoroExecutorImpl* exec_;
         ucontext_t ctx_;
         ucontext_t* workerCtx_;
         Runable* runable_;
-        bool ownStack_;
 
-        ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept;
+        ContImpl(CoroExecutorImpl* exec, SpawnParams params, void* stackBase) noexcept;
+        virtual ~ContImpl() = default;
 
         CoroExecutor* executor() noexcept override;
         void run() noexcept override;
@@ -31,6 +30,25 @@ namespace {
 
         static void entry(u32 lo, u32 hi) noexcept;
     };
+
+    struct HeapContImpl: public ContImpl {
+        HeapContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
+            : ContImpl(exec, params, allocateMemory(params.stackSize))
+        {
+        }
+
+        ~HeapContImpl() override {
+            freeMemory(ctx_.uc_stack.ss_sp);
+        }
+    };
+
+    ContImpl* makeContImpl(CoroExecutorImpl* exec, SpawnParams params) {
+        if (params.stackPtr) {
+            return new ContImpl(exec, params, params.stackPtr);
+        } else {
+            return new HeapContImpl(exec, params);
+        }
+    }
 
     struct CoroExecutorImpl: public CoroExecutor {
         ThreadPool::Ref pool_;
@@ -51,8 +69,7 @@ namespace {
         }
 
         void spawnRun(SpawnParams params) override {
-            void* mem = params.stackPtr ? params.stackPtr : allocateMemory(params.stackSize);
-            pool_->submitTask(new (mem) ContImpl(this, params));
+            pool_->submitTask(makeContImpl(this, params));
         }
 
         Cont* me() const noexcept override {
@@ -65,22 +82,21 @@ namespace {
             swapcontext(&c->ctx_, c->workerCtx_);
         }
 
-        ThreadPool* pool() const noexcept {
+        ThreadPool* pool() const noexcept override {
             return (ThreadPool*)pool_.ptr();
         }
     };
 }
 
-ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
+ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params, void* stackBase) noexcept
     : exec_(exec)
     , workerCtx_(nullptr)
     , runable_(params.runable)
-    , ownStack_(!params.stackPtr)
 {
     getcontext(&ctx_);
 
-    ctx_.uc_stack.ss_sp = (char*)(this + 1);
-    ctx_.uc_stack.ss_size = params.stackSize - sizeof(ContImpl);
+    ctx_.uc_stack.ss_sp = stackBase;
+    ctx_.uc_stack.ss_size = params.stackSize;
     ctx_.uc_link = nullptr;
 
     auto p = (uintptr_t)this;
@@ -121,11 +137,7 @@ void ContImpl::run() noexcept {
     *exec_->tls() = nullptr;
 
     if (!runable_) {
-        if (ownStack_) {
-            freeMemory(destruct(this));
-        } else {
-            destruct(this);
-        }
+        delete this;
     } else {
         exec_->pool_->submitTask(this);
     }
