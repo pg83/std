@@ -298,7 +298,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         STD_INSIST(counter == 100);
     }
 
-    STD_TEST(_MixedWorkload) {
+    STD_TEST(MixedWorkload) {
         auto pool = ThreadPool::workStealing(4);
         int counter = 0;
         Latch latch(100);
