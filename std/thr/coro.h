@@ -13,8 +13,6 @@ namespace stl {
         virtual CoroExecutor* executor() noexcept = 0;
     };
 
-    using coro = void(Cont*, void*);
-
     struct CoroExecutor: public ARC {
         using Ref = IntrusivePtr<CoroExecutor>;
 
@@ -22,9 +20,7 @@ namespace stl {
 
         virtual Cont* me() const noexcept = 0;
         virtual void yield() noexcept = 0;
-        virtual void spawnCoro(coro* fn, void* ctx) = 0;
-
-        void spawnRun(Runable* runable);
+        virtual void spawnRun(Runable* runable) = 0;
 
         template <typename F>
         void spawn(F f) {

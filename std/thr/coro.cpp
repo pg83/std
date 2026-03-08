@@ -4,6 +4,7 @@
 
 #include <std/mem/new.h>
 #include <std/sys/crt.h>
+#include <std/ptr/scoped.h>
 #include <std/alg/destruct.h>
 
 #include <ucontext.h>
@@ -19,10 +20,9 @@ namespace {
         CoroExecutorImpl* exec_;
         ucontext_t ctx_;
         ucontext_t* workerCtx_;
-        coro* fn_;
-        void* fnCtx_;
+        Runable* runable_;
 
-        ContImpl(CoroExecutorImpl* exec, coro* fn, void* fnCtx) noexcept;
+        ContImpl(CoroExecutorImpl* exec, Runable* runable) noexcept;
 
         CoroExecutor* executor() noexcept override;
         void run() noexcept override;
@@ -49,8 +49,8 @@ namespace {
             return (ContImpl*)*tls();
         }
 
-        void spawnCoro(coro* fn, void* ctx) override {
-            pool_->submitTask(new (allocateMemory(STACK_SIZE)) ContImpl(this, fn, ctx));
+        void spawnRun(Runable* runable) override {
+            pool_->submitTask(new (allocateMemory(STACK_SIZE)) ContImpl(this, runable));
         }
 
         Cont* me() const noexcept override {
@@ -65,11 +65,10 @@ namespace {
     };
 }
 
-ContImpl::ContImpl(CoroExecutorImpl* exec, coro* fn, void* fnCtx) noexcept
+ContImpl::ContImpl(CoroExecutorImpl* exec, Runable* runable) noexcept
     : exec_(exec)
     , workerCtx_(nullptr)
-    , fn_(fn)
-    , fnCtx_(fnCtx)
+    , runable_(runable)
 {
     getcontext(&ctx_);
 
@@ -87,8 +86,8 @@ CoroExecutor* ContImpl::executor() noexcept {
 }
 
 void ContImpl::entryX() noexcept {
-    fn_(this, fnCtx_);
-    fn_ = nullptr;
+    runable_->run();
+    runable_ = nullptr;
     swapcontext(&ctx_, workerCtx_);
 }
 
@@ -107,7 +106,7 @@ void ContImpl::run() noexcept {
 
     *exec_->tls() = nullptr;
 
-    if (!fn_) {
+    if (!runable_) {
         freeMemory(destruct(this));
     } else {
         exec_->pool_->submitTask(this);
@@ -123,10 +122,4 @@ CoroExecutor::Ref CoroExecutor::create(ThreadPool* pool) {
 
 CoroExecutor::Ref CoroExecutor::create(size_t threads) {
     return create(ThreadPool::workStealing(threads).mutPtr());
-}
-
-void CoroExecutor::spawnRun(Runable* runable) {
-    spawnCoro([](Cont* c, void* ctx) {
-        ((Runable*)ctx)->run();
-    }, runable);
 }
