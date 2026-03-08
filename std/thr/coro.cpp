@@ -11,8 +11,6 @@
 using namespace stl;
 
 namespace {
-    static constexpr size_t STACK_SIZE = 16 * 1024;
-
     struct CoroExecutorImpl;
 
     struct alignas(max_align_t) ContImpl: public Cont, public Task {
@@ -21,7 +19,7 @@ namespace {
         ucontext_t* workerCtx_;
         Runable* runable_;
 
-        ContImpl(CoroExecutorImpl* exec, SpawnParams params, void* stackBase) noexcept;
+        ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept;
         virtual ~ContImpl() = default;
 
         CoroExecutor* executor() noexcept override;
@@ -32,10 +30,7 @@ namespace {
     };
 
     struct HeapContImpl: public ContImpl {
-        HeapContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
-            : ContImpl(exec, params, allocateMemory(params.stackSize))
-        {
-        }
+        using ContImpl::ContImpl;
 
         ~HeapContImpl() override {
             freeMemory(ctx_.uc_stack.ss_sp);
@@ -44,9 +39,9 @@ namespace {
 
     ContImpl* makeContImpl(CoroExecutorImpl* exec, SpawnParams params) {
         if (params.stackPtr) {
-            return new ContImpl(exec, params, params.stackPtr);
+            return new ContImpl(exec, params);
         } else {
-            return new HeapContImpl(exec, params);
+            return new HeapContImpl(exec, params.setStackPtr(allocateMemory(params.stackSize)));
         }
     }
 
@@ -88,14 +83,14 @@ namespace {
     };
 }
 
-ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params, void* stackBase) noexcept
+ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
     : exec_(exec)
     , workerCtx_(nullptr)
     , runable_(params.runable)
 {
     getcontext(&ctx_);
 
-    ctx_.uc_stack.ss_sp = stackBase;
+    ctx_.uc_stack.ss_sp = params.stackPtr;
     ctx_.uc_stack.ss_size = params.stackSize;
     ctx_.uc_link = nullptr;
 
@@ -105,7 +100,7 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params, void* stackBase) 
 }
 
 SpawnParams::SpawnParams() noexcept
-    : stackSize(STACK_SIZE)
+    : stackSize(16 * 1024)
     , stackPtr(nullptr)
     , runable(nullptr)
 {
