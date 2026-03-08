@@ -26,6 +26,7 @@ namespace {
 
         CoroExecutor* executor() noexcept override;
         void run() noexcept override;
+        void entryX() noexcept;
 
         static void entry(u32 lo, u32 hi) noexcept;
     };
@@ -82,13 +83,14 @@ CoroExecutor* ContImpl::executor() noexcept {
     return exec_;
 }
 
+void ContImpl::entryX() noexcept {
+    fn_(this, fnCtx_);
+    done_ = true;
+    swapcontext(&ctx_, workerCtx_);
+}
+
 void ContImpl::entry(u32 lo, u32 hi) noexcept {
-    auto* c = (ContImpl*)(((uintptr_t)hi << 32) | lo);
-
-    c->fn_(c, c->fnCtx_);
-    c->done_ = true;
-
-    swapcontext(&c->ctx_, c->workerCtx_);
+    ((ContImpl*)(((uintptr_t)hi << 32) | lo))->entryX();
 }
 
 void ContImpl::run() noexcept {
