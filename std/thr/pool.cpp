@@ -43,8 +43,8 @@ namespace {
     struct SyncThreadPool: public ThreadPool {
         IntMap<void*> tls_;
 
-        void submitTask(Task& task) noexcept override {
-            task.run();
+        void submitTask(Task* task) noexcept override {
+            task->run();
         }
 
         void join() noexcept override {
@@ -75,7 +75,7 @@ namespace {
                 try {
                     pool_->workerLoop();
                 } catch (ShutDown* sh) {
-                    pool_->submitTask(*sh);
+                    pool_->submitTask(sh);
                 }
             }
         };
@@ -90,7 +90,7 @@ namespace {
     public:
         ThreadPoolImpl(size_t numThreads);
 
-        void submitTask(Task& task) noexcept override;
+        void submitTask(Task* task) noexcept override;
         void join() noexcept override;
         void** tls(u64 key) noexcept override;
     };
@@ -102,16 +102,16 @@ ThreadPoolImpl::ThreadPoolImpl(size_t numThreads) {
     }
 }
 
-void ThreadPoolImpl::submitTask(Task& task) noexcept {
+void ThreadPoolImpl::submitTask(Task* task) noexcept {
     LockGuard lock(mutex_);
-    queue_.pushBack(&task);
+    queue_.pushBack(task);
     condVar_.signal();
 }
 
 void ThreadPoolImpl::join() noexcept {
     ShutDown task;
 
-    submitTask(task);
+    submitTask(&task);
 
     workerIndex_.visit([](Worker& w) {
         w.thread_.join();
@@ -233,7 +233,7 @@ namespace {
         void join() noexcept override;
         Worker* nextSleeping() noexcept;
         void** tls(u64 key) noexcept override;
-        void submitTask(Task& task) noexcept override;
+        void submitTask(Task* task) noexcept override;
         void trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept;
     };
 }
@@ -262,17 +262,17 @@ bool WorkStealingThreadPool::notifyOne() noexcept {
     return false;
 }
 
-void WorkStealingThreadPool::submitTask(Task& task) noexcept {
+void WorkStealingThreadPool::submitTask(Task* task) noexcept {
     static thread_local Worker* curw = nullptr;
 
     if (curw) {
-        return curw->pushThrLocal(task);
+        return curw->pushThrLocal(*task);
     } else if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
-        return (curw = w, w->pushThrLocal(task));
+        return (curw = w, w->pushThrLocal(*task));
     } else if (auto w = (Worker*)wq->dequeue()) {
-        return w->push(task);
+        return w->push(*task);
     } else {
-        return workers_[PCG32(&task).uniformUnbiased(workers_.length())]->pushLocal(task);
+        return workers_[PCG32(&task).uniformUnbiased(workers_.length())]->pushLocal(*task);
     }
 }
 
@@ -287,7 +287,7 @@ void** WorkStealingThreadPool::tls(u64 key) noexcept {
 void WorkStealingThreadPool::join() noexcept {
     ShutDown task;
 
-    submitTask(task);
+    submitTask(&task);
 
     for (auto w : mutRange(workers_)) {
         w->join();
@@ -409,6 +409,6 @@ void ThreadPool::submitRun(Runable& runable) {
 
     ScopedPtr<Helper> task(new Helper(&runable));
 
-    submitTask(*task.ptr);
+    submitTask(task.ptr);
     task.drop();
 }
