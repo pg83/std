@@ -47,7 +47,7 @@ namespace {
         void schedule() {
             stdAtomicAddAndFetch(&state_->counter, 1, MemoryOrder::Relaxed);
             auto* t = new StressTask(state_, depth_ - 1);
-            state_->pool->submit([t]{ t->run(); });
+            state_->pool->submit([t] { t->run(); });
         }
 
         void run() noexcept {
@@ -82,7 +82,7 @@ STD_TEST_SUITE(ThreadPool) {
         auto pool = ThreadPool::simple(1);
         int counter = 0;
 
-        pool->submit([&counter]{ ++counter; });
+        pool->submit([&counter] { ++counter; });
         pool->join();
 
         STD_INSIST(counter == 1);
@@ -92,9 +92,9 @@ STD_TEST_SUITE(ThreadPool) {
         auto pool = ThreadPool::simple(1);
         int counter = 0;
 
-        pool->submit([&counter]{ ++counter; });
-        pool->submit([&counter]{ ++counter; });
-        pool->submit([&counter]{ ++counter; });
+        pool->submit([&counter] { ++counter; });
+        pool->submit([&counter] { ++counter; });
+        pool->submit([&counter] { ++counter; });
         pool->join();
 
         STD_INSIST(counter == 3);
@@ -106,7 +106,7 @@ STD_TEST_SUITE(ThreadPool) {
         const int numTasks = 100;
 
         for (int i = 0; i < numTasks; ++i) {
-            pool->submit([&counter]{ ++counter; });
+            pool->submit([&counter] { ++counter; });
         }
         pool->join();
 
@@ -118,7 +118,7 @@ STD_TEST_SUITE(ThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
+            pool->submit([&counter] { stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
         pool->join();
 
@@ -134,7 +134,7 @@ STD_TEST_SUITE(ThreadPool) {
         auto pool = ThreadPool::simple(4);
 
         for (int i = 0; i < 20; ++i) {
-            pool->submit([]{ for (volatile int i = 0; i < 10000; ++i) {} });
+            pool->submit([] { for (volatile int i = 0; i < 10000; ++i) {} });
         }
         pool->join();
     }
@@ -144,7 +144,7 @@ STD_TEST_SUITE(ThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 10; ++i) {
-            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
+            pool->submit([&counter] { stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
         pool->join();
 
@@ -156,7 +156,7 @@ STD_TEST_SUITE(ThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
+            pool->submit([&counter] { stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
         pool->join();
 
@@ -174,7 +174,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         auto pool = ThreadPool::workStealing(1);
         int counter = 0;
 
-        pool->submit([&counter]{ ++counter; });
+        pool->submit([&counter] { ++counter; });
         pool->join();
 
         STD_INSIST(counter == 1);
@@ -186,7 +186,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         Latch latch(10);
 
         for (int i = 0; i < 10; ++i) {
-            pool->submit([&counter, &latch]{
+            pool->submit([&counter, &latch] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
                 latch.arrive();
             });
@@ -202,7 +202,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
+            pool->submit([&counter] { stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
         pool->join();
 
@@ -215,7 +215,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         Latch latch(100);
 
         for (int i = 0; i < 100; ++i) {
-            pool->submit([&counter, &latch]{
+            pool->submit([&counter, &latch] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
                 latch.arrive();
             });
@@ -237,7 +237,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         Latch latch(20);
 
         for (int i = 0; i < 20; ++i) {
-            pool->submit([&counter, &latch]{
+            pool->submit([&counter, &latch] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
                 latch.arrive();
             });
@@ -257,7 +257,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 50; ++i) {
-            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
+            pool->submit([&counter] { stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
         pool->join();
 
@@ -270,7 +270,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         Latch latch(200);
 
         for (int i = 0; i < 200; ++i) {
-            pool->submit([&counter, &latch]{
+            pool->submit([&counter, &latch] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
                 latch.arrive();
             });
@@ -287,7 +287,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         Latch latch(100);
 
         for (int i = 0; i < 100; ++i) {
-            pool->submit([&counter, &latch]{
+            pool->submit([&counter, &latch] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
                 latch.arrive();
             });
@@ -304,7 +304,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         Latch latch(100);
 
         for (int i = 0; i < 50; ++i) {
-            pool->submit([&counter, &latch]{
+            pool->submit([&counter, &latch] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
                 latch.arrive();
             });
@@ -314,7 +314,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         }
 
         for (int i = 0; i < 50; ++i) {
-            pool->submit([&counter, &latch]{
+            pool->submit([&counter, &latch] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
                 latch.arrive();
             });
@@ -334,7 +334,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         StressState state(pool.mutPtr(), work);
 
         auto* task = new StressTask(&state, depth);
-        pool->submit([task]{ task->run(); });
+        pool->submit([task] { task->run(); });
 
         {
             LockGuard lock(state.mutex);
@@ -358,7 +358,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         StressState state(pool.mutPtr(), work);
 
         auto* task = new StressTask(&state, depth);
-        pool->submit([task]{ task->run(); });
+        pool->submit([task] { task->run(); });
 
         {
             LockGuard lock(state.mutex);
@@ -395,7 +395,7 @@ STD_TEST_SUITE(TlsKeys) {
 
         auto pool = ThreadPool::simple(4);
         for (int i = 0; i < N; ++i) {
-            pool->submit([&keys, &idx]{
+            pool->submit([&keys, &idx] {
                 int i = stdAtomicAddAndFetch(&idx, 1, MemoryOrder::Relaxed) - 1;
                 keys[i] = registerTlsKey();
             });
@@ -443,7 +443,7 @@ STD_TEST_SUITE(SyncPoolTls) {
         void* result = nullptr;
 
         *pool->tls(key) = &sentinel;
-        pool->submit([p = pool.mutPtr(), key, &result]{ result = *p->tls(key); });
+        pool->submit([p = pool.mutPtr(), key, &result] { result = *p->tls(key); });
 
         STD_INSIST(result == &sentinel);
     }
@@ -462,7 +462,7 @@ STD_TEST_SUITE(SimplePoolTls) {
         bool notNull = false;
 
         auto pool = ThreadPool::simple(1);
-        pool->submit([p = pool.mutPtr(), key, &notNull]{ notNull = (p->tls(key) != nullptr); });
+        pool->submit([p = pool.mutPtr(), key, &notNull] { notNull = (p->tls(key) != nullptr); });
         pool->join();
         STD_INSIST(notNull);
     }
@@ -474,8 +474,8 @@ STD_TEST_SUITE(SimplePoolTls) {
 
         // 1 thread => оба таска на одном воркере, TLS персистится
         auto pool = ThreadPool::simple(1);
-        pool->submit([p = pool.mutPtr(), key, &sentinel]{ *p->tls(key) = &sentinel; });
-        pool->submit([p = pool.mutPtr(), key, &result]{ result = *p->tls(key); });
+        pool->submit([p = pool.mutPtr(), key, &sentinel] { *p->tls(key) = &sentinel; });
+        pool->submit([p = pool.mutPtr(), key, &result] { result = *p->tls(key); });
         pool->join();
         STD_INSIST(result == &sentinel);
     }
@@ -487,7 +487,7 @@ STD_TEST_SUITE(SimplePoolTls) {
         bool correct = true;
 
         auto pool = ThreadPool::simple(1);
-        pool->submit([p = pool.mutPtr(), k1, k2, &v1, &v2, &correct]{
+        pool->submit([p = pool.mutPtr(), k1, k2, &v1, &v2, &correct] {
             *p->tls(k1) = &v1;
             *p->tls(k2) = &v2;
             if (*p->tls(k1) != &v1 || *p->tls(k2) != &v2) {
@@ -506,7 +506,7 @@ STD_TEST_SUITE(SimplePoolTls) {
 
         auto pool = ThreadPool::simple(N);
         for (int i = 0; i < N; ++i) {
-            pool->submit([p = pool.mutPtr(), key, &barrier, id = i + 1, &correct]{
+            pool->submit([p = pool.mutPtr(), key, &barrier, id = i + 1, &correct] {
                 *p->tls(key) = (void*)(uintptr_t)id;
                 barrier.wait();
                 if ((uintptr_t)*p->tls(key) != (uintptr_t)id) {
@@ -533,7 +533,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         Latch latch(1);
 
         auto pool = ThreadPool::workStealing(2);
-        pool->submit([p = pool.mutPtr(), key, &notNull, &latch]{
+        pool->submit([p = pool.mutPtr(), key, &notNull, &latch] {
             notNull = (p->tls(key) != nullptr);
             latch.arrive();
         });
@@ -550,7 +550,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         Latch latch(1);
 
         auto pool = ThreadPool::workStealing(2);
-        pool->submit([p = pool.mutPtr(), k1, k2, &v1, &v2, &correct, &latch]{
+        pool->submit([p = pool.mutPtr(), k1, k2, &v1, &v2, &correct, &latch] {
             *p->tls(k1) = &v1;
             *p->tls(k2) = &v2;
             if (*p->tls(k1) != &v1 || *p->tls(k2) != &v2) {
@@ -572,7 +572,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
 
         auto pool = ThreadPool::workStealing(N);
         for (int i = 0; i < N; ++i) {
-            pool->submit([p = pool.mutPtr(), key, &barrier, &done, id = i + 1, &correct]{
+            pool->submit([p = pool.mutPtr(), key, &barrier, &done, id = i + 1, &correct] {
                 *p->tls(key) = (void*)(uintptr_t)id;
                 barrier.wait();
                 if ((uintptr_t)*p->tls(key) != (uintptr_t)id) {
