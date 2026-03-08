@@ -1,6 +1,4 @@
 #include "pool.h"
-#include "task.h"
-#include "runable.h"
 #include "mutex.h"
 #include "cond_var.h"
 #include "barrier.h"
@@ -31,7 +29,7 @@ namespace {
         }
     };
 
-    struct StressTask: public Runable {
+    struct StressTask {
         StressState* state_;
         int depth_;
 
@@ -47,10 +45,11 @@ namespace {
 
         void schedule() {
             stdAtomicAddAndFetch(&state_->counter, 1, MemoryOrder::Relaxed);
-            state_->pool->submitRun(*new StressTask(state_, depth_ - 1));
+            auto* t = new StressTask(state_, depth_ - 1);
+            state_->pool->submit([t]{ t->run(); });
         }
 
-        void run() override {
+        void run() noexcept {
             doWork();
             if (depth_ > 0) {
                 schedule();
@@ -70,40 +69,6 @@ namespace {
             }
         }
     };
-
-    struct CounterTask: public Task {
-        int* counter_;
-
-        explicit CounterTask(int* c)
-            : counter_(c)
-        {
-        }
-
-        void run() noexcept override {
-            ++(*counter_);
-        }
-    };
-
-    struct AtomicCounterTask: public Task {
-        int* counter_;
-
-        explicit AtomicCounterTask(int* c)
-            : counter_(c)
-        {
-        }
-
-        void run() noexcept override {
-            stdAtomicAddAndFetch(counter_, 1, MemoryOrder::Relaxed);
-            delete this;
-        }
-    };
-
-    struct SleepTask: public Task {
-        void run() noexcept override {
-            for (volatile int i = 0; i < 10000; ++i) {
-            }
-        }
-    };
 }
 
 STD_TEST_SUITE(ThreadPool) {
@@ -116,8 +81,7 @@ STD_TEST_SUITE(ThreadPool) {
         auto pool = ThreadPool::simple(1);
         int counter = 0;
 
-        CounterTask task(&counter);
-        pool->submitRun(task);
+        pool->submit([&counter]{ ++counter; });
         pool->join();
 
         STD_INSIST(counter == 1);
@@ -127,13 +91,9 @@ STD_TEST_SUITE(ThreadPool) {
         auto pool = ThreadPool::simple(1);
         int counter = 0;
 
-        CounterTask task1(&counter);
-        CounterTask task2(&counter);
-        CounterTask task3(&counter);
-
-        pool->submitRun(task1);
-        pool->submitRun(task2);
-        pool->submitRun(task3);
+        pool->submit([&counter]{ ++counter; });
+        pool->submit([&counter]{ ++counter; });
+        pool->submit([&counter]{ ++counter; });
         pool->join();
 
         STD_INSIST(counter == 3);
@@ -144,111 +104,8 @@ STD_TEST_SUITE(ThreadPool) {
         int counter = 0;
         const int numTasks = 100;
 
-        CounterTask tasks[numTasks] = {
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-            CounterTask(&counter),
-        };
-
         for (int i = 0; i < numTasks; ++i) {
-            pool->submitRun(tasks[i]);
+            pool->submit([&counter]{ ++counter; });
         }
         pool->join();
 
@@ -260,7 +117,7 @@ STD_TEST_SUITE(ThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool->submitRun(*new AtomicCounterTask(&counter));
+            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
         pool->join();
 
@@ -275,31 +132,8 @@ STD_TEST_SUITE(ThreadPool) {
     STD_TEST(TasksWithWork) {
         auto pool = ThreadPool::simple(4);
 
-        SleepTask tasks[20] = {
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-            SleepTask(),
-        };
-
         for (int i = 0; i < 20; ++i) {
-            pool->submitRun(tasks[i]);
+            pool->submit([]{ for (volatile int i = 0; i < 10000; ++i) {} });
         }
         pool->join();
     }
@@ -309,7 +143,7 @@ STD_TEST_SUITE(ThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 10; ++i) {
-            pool->submitRun(*new AtomicCounterTask(&counter));
+            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
         pool->join();
 
@@ -321,7 +155,7 @@ STD_TEST_SUITE(ThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool->submitRun(*new AtomicCounterTask(&counter));
+            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
         pool->join();
 
@@ -339,8 +173,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         auto pool = ThreadPool::workStealing(1);
         int counter = 0;
 
-        CounterTask task(&counter);
-        pool->submitRun(task);
+        pool->submit([&counter]{ ++counter; });
         pool->join();
 
         STD_INSIST(counter == 1);
@@ -351,7 +184,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 10; ++i) {
-            pool->submitRun(*new AtomicCounterTask(&counter));
+            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
         pool->join();
 
@@ -363,7 +196,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool->submitRun(*new AtomicCounterTask(&counter));
+            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
         pool->join();
 
@@ -375,7 +208,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool->submitRun(*new AtomicCounterTask(&counter));
+            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
         pool->join();
 
@@ -392,7 +225,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 20; ++i) {
-            pool->submitRun(*new AtomicCounterTask(&counter));
+            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
 
         for (volatile int i = 0; i < 10000; ++i) {
@@ -408,7 +241,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 50; ++i) {
-            pool->submitRun(*new AtomicCounterTask(&counter));
+            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
         pool->join();
 
@@ -420,7 +253,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 200; ++i) {
-            pool->submitRun(*new AtomicCounterTask(&counter));
+            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
         pool->join();
 
@@ -432,7 +265,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            pool->submitRun(*new AtomicCounterTask(&counter));
+            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
         pool->join();
 
@@ -444,14 +277,14 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         int counter = 0;
 
         for (int i = 0; i < 50; ++i) {
-            pool->submitRun(*new AtomicCounterTask(&counter));
+            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
 
         for (volatile int i = 0; i < 5000; ++i) {
         }
 
         for (int i = 0; i < 50; ++i) {
-            pool->submitRun(*new AtomicCounterTask(&counter));
+            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
         }
 
         pool->join();
@@ -466,7 +299,8 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         auto pool = ThreadPool::workStealing(16);
         StressState state(pool.mutPtr(), work);
 
-        pool->submitRun(*new StressTask(&state, depth));
+        auto* task = new StressTask(&state, depth);
+        pool->submit([task]{ task->run(); });
 
         {
             LockGuard lock(state.mutex);
@@ -489,7 +323,8 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         auto pool = ThreadPool::simple(16);
         StressState state(pool.mutPtr(), work);
 
-        pool->submitRun(*new StressTask(&state, depth));
+        auto* task = new StressTask(&state, depth);
+        pool->submit([task]{ task->run(); });
 
         {
             LockGuard lock(state.mutex);
@@ -524,24 +359,12 @@ STD_TEST_SUITE(TlsKeys) {
         u64 keys[N] = {};
         int idx = 0;
 
-        struct RegTask: Task {
-            u64* keys;
-            int* idx;
-            RegTask(u64* k, int* i)
-                : keys(k)
-                , idx(i)
-            {
-            }
-            void run() noexcept override {
-                int i = stdAtomicAddAndFetch(idx, 1, MemoryOrder::Relaxed) - 1;
-                keys[i] = registerTlsKey();
-                delete this;
-            }
-        };
-
         auto pool = ThreadPool::simple(4);
         for (int i = 0; i < N; ++i) {
-            pool->submitTask(*new RegTask(keys, &idx));
+            pool->submit([&keys, &idx]{
+                int i = stdAtomicAddAndFetch(&idx, 1, MemoryOrder::Relaxed) - 1;
+                keys[i] = registerTlsKey();
+            });
         }
         pool->join();
 
@@ -585,24 +408,8 @@ STD_TEST_SUITE(SyncPoolTls) {
         int sentinel = 77;
         void* result = nullptr;
 
-        struct ReadTask: Task {
-            ThreadPool* pool;
-            u64 key;
-            void** out;
-            ReadTask(ThreadPool* p, u64 k, void** o)
-                : pool(p)
-                , key(k)
-                , out(o)
-            {
-            }
-            void run() noexcept override {
-                *out = *pool->tls(key);
-            }
-        };
-
         *pool->tls(key) = &sentinel;
-        ReadTask task(pool.mutPtr(), key, &result);
-        pool->submitTask(task);
+        pool->submit([p = pool.mutPtr(), key, &result]{ result = *p->tls(key); });
 
         STD_INSIST(result == &sentinel);
     }
@@ -620,24 +427,8 @@ STD_TEST_SUITE(SimplePoolTls) {
         u64 key = registerTlsKey();
         bool notNull = false;
 
-        struct CheckTask: Task {
-            ThreadPool* pool;
-            u64 key;
-            bool* out;
-            CheckTask(ThreadPool* p, u64 k, bool* o)
-                : pool(p)
-                , key(k)
-                , out(o)
-            {
-            }
-            void run() noexcept override {
-                *out = (pool->tls(key) != nullptr);
-                delete this;
-            }
-        };
-
         auto pool = ThreadPool::simple(1);
-        pool->submitTask(*new CheckTask(pool.mutPtr(), key, &notNull));
+        pool->submit([p = pool.mutPtr(), key, &notNull]{ notNull = (p->tls(key) != nullptr); });
         pool->join();
         STD_INSIST(notNull);
     }
@@ -647,42 +438,10 @@ STD_TEST_SUITE(SimplePoolTls) {
         int sentinel = 123;
         void* result = nullptr;
 
-        struct SetTask: Task {
-            ThreadPool* pool;
-            u64 key;
-            void* value;
-            SetTask(ThreadPool* p, u64 k, void* v)
-                : pool(p)
-                , key(k)
-                , value(v)
-            {
-            }
-            void run() noexcept override {
-                *pool->tls(key) = value;
-                delete this;
-            }
-        };
-
-        struct GetTask: Task {
-            ThreadPool* pool;
-            u64 key;
-            void** out;
-            GetTask(ThreadPool* p, u64 k, void** o)
-                : pool(p)
-                , key(k)
-                , out(o)
-            {
-            }
-            void run() noexcept override {
-                *out = *pool->tls(key);
-                delete this;
-            }
-        };
-
         // 1 thread => оба таска на одном воркере, TLS персистится
         auto pool = ThreadPool::simple(1);
-        pool->submitTask(*new SetTask(pool.mutPtr(), key, &sentinel));
-        pool->submitTask(*new GetTask(pool.mutPtr(), key, &result));
+        pool->submit([p = pool.mutPtr(), key, &sentinel]{ *p->tls(key) = &sentinel; });
+        pool->submit([p = pool.mutPtr(), key, &result]{ result = *p->tls(key); });
         pool->join();
         STD_INSIST(result == &sentinel);
     }
@@ -693,32 +452,14 @@ STD_TEST_SUITE(SimplePoolTls) {
         int v1 = 1, v2 = 2;
         bool correct = true;
 
-        struct CheckTask: Task {
-            ThreadPool* pool;
-            u64 k1, k2;
-            void *val1, *val2;
-            bool* correct;
-            CheckTask(ThreadPool* p, u64 a, u64 b, void* va, void* vb, bool* c)
-                : pool(p)
-                , k1(a)
-                , k2(b)
-                , val1(va)
-                , val2(vb)
-                , correct(c)
-            {
-            }
-            void run() noexcept override {
-                *pool->tls(k1) = val1;
-                *pool->tls(k2) = val2;
-                if (*pool->tls(k1) != val1 || *pool->tls(k2) != val2) {
-                    *correct = false;
-                }
-                delete this;
-            }
-        };
-
         auto pool = ThreadPool::simple(1);
-        pool->submitTask(*new CheckTask(pool.mutPtr(), k1, k2, &v1, &v2, &correct));
+        pool->submit([p = pool.mutPtr(), k1, k2, &v1, &v2, &correct]{
+            *p->tls(k1) = &v1;
+            *p->tls(k2) = &v2;
+            if (*p->tls(k1) != &v1 || *p->tls(k2) != &v2) {
+                correct = false;
+            }
+        });
         pool->join();
         STD_INSIST(correct);
     }
@@ -726,37 +467,18 @@ STD_TEST_SUITE(SimplePoolTls) {
     STD_TEST(WorkerIsolation) {
         const int N = 2;
         u64 key = registerTlsKey();
-
         Barrier barrier(N);
         bool correct = true;
 
-        struct IsoTask: Task {
-            ThreadPool* pool;
-            u64 key;
-            Barrier* barrier;
-            int myId;
-            bool* correct;
-            IsoTask(ThreadPool* p, u64 k, Barrier* b, int id, bool* c)
-                : pool(p)
-                , key(k)
-                , barrier(b)
-                , myId(id)
-                , correct(c)
-            {
-            }
-            void run() noexcept override {
-                *pool->tls(key) = (void*)(uintptr_t)myId;
-                barrier->wait();
-                if ((uintptr_t)*pool->tls(key) != (uintptr_t)myId) {
-                    *correct = false;
-                }
-                delete this;
-            }
-        };
-
         auto pool = ThreadPool::simple(N);
         for (int i = 0; i < N; ++i) {
-            pool->submitTask(*new IsoTask(pool.mutPtr(), key, &barrier, i + 1, &correct));
+            pool->submit([p = pool.mutPtr(), key, &barrier, id = i + 1, &correct]{
+                *p->tls(key) = (void*)(uintptr_t)id;
+                barrier.wait();
+                if ((uintptr_t)*p->tls(key) != (uintptr_t)id) {
+                    correct = false;
+                }
+            });
         }
         pool->join();
         STD_INSIST(correct);
@@ -775,24 +497,8 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         u64 key = registerTlsKey();
         bool notNull = false;
 
-        struct CheckTask: Task {
-            ThreadPool* pool;
-            u64 key;
-            bool* out;
-            CheckTask(ThreadPool* p, u64 k, bool* o)
-                : pool(p)
-                , key(k)
-                , out(o)
-            {
-            }
-            void run() noexcept override {
-                *out = (pool->tls(key) != nullptr);
-                delete this;
-            }
-        };
-
         auto pool = ThreadPool::workStealing(2);
-        pool->submitTask(*new CheckTask(pool.mutPtr(), key, &notNull));
+        pool->submit([p = pool.mutPtr(), key, &notNull]{ notNull = (p->tls(key) != nullptr); });
         pool->join();
         STD_INSIST(notNull);
     }
@@ -803,32 +509,14 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         int v1 = 10, v2 = 20;
         bool correct = true;
 
-        struct CheckTask: Task {
-            ThreadPool* pool;
-            u64 k1, k2;
-            void *val1, *val2;
-            bool* correct;
-            CheckTask(ThreadPool* p, u64 a, u64 b, void* va, void* vb, bool* c)
-                : pool(p)
-                , k1(a)
-                , k2(b)
-                , val1(va)
-                , val2(vb)
-                , correct(c)
-            {
-            }
-            void run() noexcept override {
-                *pool->tls(k1) = val1;
-                *pool->tls(k2) = val2;
-                if (*pool->tls(k1) != val1 || *pool->tls(k2) != val2) {
-                    *correct = false;
-                }
-                delete this;
-            }
-        };
-
         auto pool = ThreadPool::workStealing(2);
-        pool->submitTask(*new CheckTask(pool.mutPtr(), k1, k2, &v1, &v2, &correct));
+        pool->submit([p = pool.mutPtr(), k1, k2, &v1, &v2, &correct]{
+            *p->tls(k1) = &v1;
+            *p->tls(k2) = &v2;
+            if (*p->tls(k1) != &v1 || *p->tls(k2) != &v2) {
+                correct = false;
+            }
+        });
         pool->join();
         STD_INSIST(correct);
     }
@@ -836,41 +524,20 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
     STD_TEST(WorkerIsolation) {
         const int N = 2;
         u64 key = registerTlsKey();
-
         Barrier barrier(N);
         Barrier done(N + 1);
         bool correct = true;
 
-        struct IsoTask: Task {
-            ThreadPool* pool;
-            u64 key;
-            Barrier* barrier;
-            Barrier* done;
-            int myId;
-            bool* correct;
-            IsoTask(ThreadPool* p, u64 k, Barrier* b, Barrier* d, int id, bool* c)
-                : pool(p)
-                , key(k)
-                , barrier(b)
-                , done(d)
-                , myId(id)
-                , correct(c)
-            {
-            }
-            void run() noexcept override {
-                *pool->tls(key) = (void*)(uintptr_t)myId;
-                barrier->wait();
-                if ((uintptr_t)*pool->tls(key) != (uintptr_t)myId) {
-                    *correct = false;
-                }
-                done->wait();
-                delete this;
-            }
-        };
-
         auto pool = ThreadPool::workStealing(N);
         for (int i = 0; i < N; ++i) {
-            pool->submitTask(*new IsoTask(pool.mutPtr(), key, &barrier, &done, i + 1, &correct));
+            pool->submit([p = pool.mutPtr(), key, &barrier, &done, id = i + 1, &correct]{
+                *p->tls(key) = (void*)(uintptr_t)id;
+                barrier.wait();
+                if ((uintptr_t)*p->tls(key) != (uintptr_t)id) {
+                    correct = false;
+                }
+                done.wait();
+            });
         }
         done.wait();
         pool->join();
