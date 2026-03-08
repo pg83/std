@@ -12,7 +12,6 @@
 #include <std/alg/range.h>
 #include <std/alg/minmax.h>
 #include <std/lib/vector.h>
-#include <std/ptr/scoped.h>
 #include <std/dbg/insist.h>
 #include <std/sys/atomic.h>
 #include <std/alg/shuffle.h>
@@ -393,22 +392,7 @@ ThreadPool::Ref ThreadPool::workStealing(size_t threads) {
 }
 
 void ThreadPool::submitRun(Runable& runable) {
-    struct Helper: public Task {
-        Runable* runable;
-
-        Helper(Runable* r) noexcept
-            : runable(r)
-        {
-        }
-
-        void run() override {
-            ScopedPtr<Helper> self(this);
-            runable->run();
-        }
-    };
-
-    ScopedPtr<Helper> task(new Helper(&runable));
-
-    submitTask(task.ptr);
-    task.drop();
+    submit([&runable]() {
+        runable.run();
+    });
 }
