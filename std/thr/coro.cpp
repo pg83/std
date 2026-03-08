@@ -49,7 +49,12 @@ namespace {
 
         void yield() noexcept override {
             auto* c = currentCont();
+
             swapcontext(&c->ctx_, c->workerCtx_);
+        }
+
+        auto tls() {
+            return pool_->tls(tlsKey_);
         }
     };
 }
@@ -63,11 +68,12 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, void (*fn)(Cont*, void*), void* fnCtx
 {
     getcontext(&ctx_);
 
-    ctx_.uc_stack.ss_sp = (char*)this + sizeof(ContImpl);
+    ctx_.uc_stack.ss_sp = (char*)(this + 1);
     ctx_.uc_stack.ss_size = STACK_SIZE - sizeof(ContImpl);
     ctx_.uc_link = nullptr;
 
     auto p = (uintptr_t)this;
+
     makecontext(&ctx_, (void (*)())ContImpl::entry, 2, (u32)p, (u32)(p >> 32));
 }
 
@@ -80,6 +86,7 @@ void ContImpl::entry(u32 lo, u32 hi) noexcept {
 
     c->fn_(c, c->fnCtx_);
     c->done_ = true;
+
     swapcontext(&c->ctx_, c->workerCtx_);
 }
 
@@ -87,7 +94,8 @@ void ContImpl::run() noexcept {
     ucontext_t workerCtx;
 
     workerCtx_ = &workerCtx;
-    *exec_->pool_->tls(exec_->tlsKey_) = this;
+
+    *exec_->tls() = this;
 
     swapcontext(&workerCtx, &ctx_);
 
