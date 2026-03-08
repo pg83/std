@@ -1,5 +1,6 @@
 #pragma once
 
+#include "task.h"
 #include "runable.h"
 
 #include <std/ptr/arc.h>
@@ -7,8 +8,6 @@
 #include <std/ptr/intrusive.h>
 
 namespace stl {
-    struct Task;
-
     u64 registerTlsKey() noexcept;
 
     struct ThreadPool: public ARC {
@@ -20,13 +19,13 @@ namespace stl {
 
         void submitRun(Runable& runable);
 
-        void submitTmp(Runable&& runable) {
-            submitRun(runable);
+        void submitTask(Task* task) noexcept {
+            submitTask(*task);
         }
 
         template <typename F>
         void submit(F f) {
-            submitTmp(makeRunable(f));
+            submitTask(makeTask(f));
         }
 
         using Ref = IntrusivePtr<ThreadPool>;
