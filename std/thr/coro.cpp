@@ -123,8 +123,8 @@ void ContImpl::entry(u32 lo, u32 hi) noexcept {
 void ContImpl::run() noexcept {
     ucontext_t workerCtx;
 
-    workerCtx_ = &workerCtx;
     *exec_->tls() = this;
+    workerCtx_ = &workerCtx;
     swapcontext(&workerCtx, &ctx_);
     *exec_->tls() = nullptr;
 
