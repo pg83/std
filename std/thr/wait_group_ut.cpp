@@ -1,6 +1,5 @@
 #include "wait_group.h"
 #include "thread.h"
-#include "runable.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/atomic.h>
@@ -24,31 +23,17 @@ STD_TEST_SUITE(WaitGroup) {
         WaitGroup wg;
         int counter = 0;
 
-        struct Worker: public Runable {
-            WaitGroup* wg;
-            int* counter;
-
-            Worker(WaitGroup* w, int* c)
-                : wg(w)
-                , counter(c)
-            {
-            }
-
-            void run() noexcept override {
-                stdAtomicAddAndFetch(counter, 1, MemoryOrder::Relaxed);
-                wg->done();
-            }
-        };
-
-        Worker w1(&wg, &counter);
-        Worker w2(&wg, &counter);
-
         wg.add(2);
-        ScopedThread t1(w1);
-        ScopedThread t2(w2);
+        ScopedThread t1([&] {
+            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            wg.done();
+        });
+        ScopedThread t2([&] {
+            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            wg.done();
+        });
 
         wg.wait();
-
         STD_INSIST(counter == 2);
     }
 
@@ -57,40 +42,41 @@ STD_TEST_SUITE(WaitGroup) {
         WaitGroup wg;
         int counter = 0;
 
-        struct Worker: public Runable {
-            WaitGroup* wg;
-            int* counter;
-
-            Worker(WaitGroup* w, int* c)
-                : wg(w)
-                , counter(c)
-            {
-            }
-
-            void run() noexcept override {
-                stdAtomicAddAndFetch(counter, 1, MemoryOrder::Relaxed);
-                wg->done();
-            }
-        };
-
-        Worker workers[N] = {
-            {&wg, &counter}, {&wg, &counter}, {&wg, &counter}, {&wg, &counter},
-            {&wg, &counter}, {&wg, &counter}, {&wg, &counter}, {&wg, &counter},
-        };
-
         wg.add(N);
-
-        ScopedThread t0(workers[0]);
-        ScopedThread t1(workers[1]);
-        ScopedThread t2(workers[2]);
-        ScopedThread t3(workers[3]);
-        ScopedThread t4(workers[4]);
-        ScopedThread t5(workers[5]);
-        ScopedThread t6(workers[6]);
-        ScopedThread t7(workers[7]);
+        ScopedThread t0([&] {
+            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            wg.done();
+        });
+        ScopedThread t1([&] {
+            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            wg.done();
+        });
+        ScopedThread t2([&] {
+            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            wg.done();
+        });
+        ScopedThread t3([&] {
+            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            wg.done();
+        });
+        ScopedThread t4([&] {
+            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            wg.done();
+        });
+        ScopedThread t5([&] {
+            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            wg.done();
+        });
+        ScopedThread t6([&] {
+            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            wg.done();
+        });
+        ScopedThread t7([&] {
+            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            wg.done();
+        });
 
         wg.wait();
-
         STD_INSIST(counter == N);
     }
 
@@ -98,37 +84,25 @@ STD_TEST_SUITE(WaitGroup) {
         WaitGroup wg;
         int counter = 0;
 
-        struct Worker: public Runable {
-            WaitGroup* wg;
-            int* counter;
-
-            Worker(WaitGroup* w, int* c)
-                : wg(w)
-                , counter(c)
-            {
-            }
-
-            void run() noexcept override {
-                stdAtomicAddAndFetch(counter, 1, MemoryOrder::Relaxed);
-                wg->done();
-            }
-        };
-
-        Worker w1(&wg, &counter);
-        Worker w2(&wg, &counter);
-        Worker w3(&wg, &counter);
+        wg.add(1);
+        ScopedThread t1([&] {
+            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            wg.done();
+        });
 
         wg.add(1);
-        ScopedThread t1(w1);
+        ScopedThread t2([&] {
+            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            wg.done();
+        });
 
         wg.add(1);
-        ScopedThread t2(w2);
-
-        wg.add(1);
-        ScopedThread t3(w3);
+        ScopedThread t3([&] {
+            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            wg.done();
+        });
 
         wg.wait();
-
         STD_INSIST(counter == 3);
     }
 
@@ -136,26 +110,12 @@ STD_TEST_SUITE(WaitGroup) {
         WaitGroup wg;
         int counter = 0;
 
-        struct Worker: public Runable {
-            WaitGroup* wg;
-            int* counter;
-
-            Worker(WaitGroup* w, int* c)
-                : wg(w)
-                , counter(c)
-            {
-            }
-
-            void run() noexcept override {
-                stdAtomicAddAndFetch(counter, 1, MemoryOrder::Relaxed);
-                wg->done();
-            }
-        };
-
         for (int round = 0; round < 3; ++round) {
-            Worker w(&wg, &counter);
             wg.add(1);
-            ScopedThread t(w);
+            ScopedThread t([&] {
+                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                wg.done();
+            });
             wg.wait();
         }
 

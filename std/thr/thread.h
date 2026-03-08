@@ -1,10 +1,10 @@
 #pragma once
 
+#include "runable.h"
+
 #include <std/sys/types.h>
 
 namespace stl {
-    struct Runable;
-
     // should not be used directly, use ScopedThread or detach(Runable&)
     class Thread {
         struct Impl;
@@ -12,6 +12,7 @@ namespace stl {
 
     public:
         explicit Thread(Runable& runable);
+
         ~Thread() noexcept;
 
         void join() noexcept;
@@ -26,8 +27,9 @@ namespace stl {
         Thread thr;
 
     public:
-        ScopedThread(Runable& runable)
-            : thr(runable)
+        template <typename T>
+        ScopedThread(T functor)
+            : thr(*makeRunablePtr(functor))
         {
         }
 
