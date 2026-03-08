@@ -6,7 +6,7 @@
 #include <std/ptr/intrusive.h>
 
 namespace stl {
-    class ThreadPool;
+    struct ThreadPool;
     struct CoroExecutor;
 
     struct Cont {

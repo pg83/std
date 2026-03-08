@@ -145,9 +145,9 @@ STD_TEST_SUITE(CoroExecutor) {
             if (d > 0) {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
 
-                exec->spawn([&, d](Cont* c2) {
-                    run(c2, d - 1);
-                });
+                exec->spawnRun(SpawnParams().setStackSize(4096).setRunable([&, d]() {
+                    run(exec->me(), d - 1);
+                }));
             }
 
             c->executor()->yield();
@@ -155,9 +155,9 @@ STD_TEST_SUITE(CoroExecutor) {
             if (d > 0) {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
 
-                exec->spawn([&, d](Cont* c2) {
-                    run(c2, d - 1);
-                });
+                exec->spawnRun(SpawnParams().setStackSize(4096).setRunable([&, d]() {
+                    run(exec->me(), d - 1);
+                }));
             }
 
             doW(work);
