@@ -263,8 +263,12 @@ bool WorkStealingThreadPool::notifyOne() noexcept {
 }
 
 void WorkStealingThreadPool::submitTask(Task& task) noexcept {
-    if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
-        return w->pushThrLocal(task);
+    static thread_local Worker* curw = nullptr;
+
+    if (curw) {
+        return curw->pushThrLocal(task);
+    } else if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
+        return (curw = w, w->pushThrLocal(task));
     } else if (auto w = (Worker*)wq->dequeue()) {
         return w->push(task);
     } else {
