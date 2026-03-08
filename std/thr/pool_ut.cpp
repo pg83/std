@@ -1,7 +1,8 @@
 #include "pool.h"
+#include "latch.h"
 #include "mutex.h"
-#include "cond_var.h"
 #include "barrier.h"
+#include "cond_var.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/atomic.h>
@@ -9,29 +10,6 @@
 using namespace stl;
 
 namespace {
-    struct Latch {
-        int target_;
-        int count_ = 0;
-        Mutex mutex_;
-        CondVar condVar_;
-
-        explicit Latch(int n) : target_(n) {}
-
-        void arrive() noexcept {
-            LockGuard lock(mutex_);
-            if (++count_ == target_) {
-                condVar_.signal();
-            }
-        }
-
-        void wait() noexcept {
-            LockGuard lock(mutex_);
-            while (count_ < target_) {
-                condVar_.wait(mutex_);
-            }
-        }
-    };
-
     static void doW(int work) {
         for (volatile int i = 0; i < work; ++i) {
         }
