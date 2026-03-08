@@ -2,6 +2,7 @@
 #include "task.h"
 
 #include <std/mem/new.h>
+#include <std/alg/destruct.h>
 
 #include <stdlib.h>
 #include <ucontext.h>
@@ -100,7 +101,7 @@ void ContImpl::run() noexcept {
     swapcontext(&workerCtx, &ctx_);
 
     if (done_) {
-        this->~ContImpl();
+        destruct(this);
         free(this);
     } else {
         exec_->pool_->submitTask(this);
