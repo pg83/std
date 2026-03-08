@@ -20,7 +20,7 @@ STD_TEST_SUITE(CoroExecutor) {
         };
         Ctx ctx{&counter, &done};
 
-        exec->spawn([](Cont* c, void* v) {
+        exec->spawnCoro([](Cont* c, void* v) {
             auto& ctx = *(Ctx*)v;
             ++*ctx.counter;
             ctx.done->arrive();
@@ -43,7 +43,7 @@ STD_TEST_SUITE(CoroExecutor) {
         };
         Ctx ctx{&counter, &done};
 
-        exec->spawn([](Cont* c, void* v) {
+        exec->spawnCoro([](Cont* c, void* v) {
             auto& ctx = *(Ctx*)v;
             ++*ctx.counter;
             c->executor()->yield();
@@ -68,7 +68,7 @@ STD_TEST_SUITE(CoroExecutor) {
         };
         Ctx ctx{&counter, &done};
 
-        exec->spawn([](Cont* c, void* v) {
+        exec->spawnCoro([](Cont* c, void* v) {
             auto& ctx = *(Ctx*)v;
             for (int i = 0; i < 10; ++i) {
                 ++*ctx.counter;
@@ -95,7 +95,7 @@ STD_TEST_SUITE(CoroExecutor) {
         Ctx ctx{&counter, &done};
 
         for (int i = 0; i < 100; ++i) {
-            exec->spawn([](Cont* c, void* v) {
+            exec->spawnCoro([](Cont* c, void* v) {
                 auto& ctx = *(Ctx*)v;
                 c->executor()->yield();
                 stdAtomicAddAndFetch(ctx.counter, 1, MemoryOrder::Relaxed);
@@ -121,10 +121,10 @@ STD_TEST_SUITE(CoroExecutor) {
         };
         Ctx ctx{exec.mutPtr(), &counter, &done};
 
-        exec->spawn([](Cont* c, void* v) {
+        exec->spawnCoro([](Cont* c, void* v) {
             auto& ctx = *(Ctx*)v;
 
-            ctx.exec->spawn([](Cont*, void* v2) {
+            ctx.exec->spawnCoro([](Cont*, void* v2) {
                 auto& ctx2 = *(Ctx*)v2;
                 stdAtomicAddAndFetch(ctx2.counter, 1, MemoryOrder::Relaxed);
                 ctx2.done->arrive();
@@ -157,8 +157,8 @@ STD_TEST_SUITE(CoroExecutor) {
             ctx.done->arrive();
         };
 
-        exec->spawn(fn, &ctx);
-        exec->spawn(fn, &ctx);
+        exec->spawnCoro(fn, &ctx);
+        exec->spawnCoro(fn, &ctx);
 
         done.wait();
         pool->join();

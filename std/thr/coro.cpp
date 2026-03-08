@@ -45,12 +45,16 @@ namespace {
             return pool_->tls(tlsKey_);
         }
 
-        ContImpl* currentCont() noexcept {
+        ContImpl* currentCont() {
             return (ContImpl*)*tls();
         }
 
-        void spawn(coro* fn, void* ctx) override {
+        void spawnCoro(coro* fn, void* ctx) override {
             pool_->submitTask(new (allocateMemory(STACK_SIZE)) ContImpl(this, fn, ctx));
+        }
+
+        Cont* me() override {
+            return currentCont();
         }
 
         void yield() noexcept override {
