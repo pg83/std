@@ -7,18 +7,17 @@ using namespace stl;
 struct Latch::Impl {
     Mutex mutex;
     CondVar cv;
-    int target;
-    int count = 0;
+    size_t remaining;
 
-    Impl(int n)
-        : target(n)
+    Impl(size_t n)
+        : remaining(n)
     {
     }
 
     void arrive() noexcept {
         LockGuard lock(mutex);
 
-        if (++count == target) {
+        if (--remaining == 0) {
             cv.signal();
         }
     }
@@ -26,13 +25,13 @@ struct Latch::Impl {
     void wait() noexcept {
         LockGuard lock(mutex);
 
-        while (count < target) {
+        while (remaining > 0) {
             cv.wait(mutex);
         }
     }
 };
 
-Latch::Latch(int n)
+Latch::Latch(size_t n)
     : impl(new Impl(n))
 {
 }
