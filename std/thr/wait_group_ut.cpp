@@ -44,13 +44,10 @@ STD_TEST_SUITE(WaitGroup) {
         Worker w2(&wg, &counter);
 
         wg.add(2);
-        Thread t1(w1);
-        Thread t2(w2);
+        ScopedThread t1(w1);
+        ScopedThread t2(w2);
 
         wg.wait();
-
-        t1.join();
-        t2.join();
 
         STD_INSIST(counter == 2);
     }
@@ -83,19 +80,16 @@ STD_TEST_SUITE(WaitGroup) {
 
         wg.add(N);
 
-        Thread t0(workers[0]);
-        Thread t1(workers[1]);
-        Thread t2(workers[2]);
-        Thread t3(workers[3]);
-        Thread t4(workers[4]);
-        Thread t5(workers[5]);
-        Thread t6(workers[6]);
-        Thread t7(workers[7]);
+        ScopedThread t0(workers[0]);
+        ScopedThread t1(workers[1]);
+        ScopedThread t2(workers[2]);
+        ScopedThread t3(workers[3]);
+        ScopedThread t4(workers[4]);
+        ScopedThread t5(workers[5]);
+        ScopedThread t6(workers[6]);
+        ScopedThread t7(workers[7]);
 
         wg.wait();
-
-        t0.join(); t1.join(); t2.join(); t3.join();
-        t4.join(); t5.join(); t6.join(); t7.join();
 
         STD_INSIST(counter == N);
     }
@@ -125,19 +119,15 @@ STD_TEST_SUITE(WaitGroup) {
         Worker w3(&wg, &counter);
 
         wg.add(1);
-        Thread t1(w1);
+        ScopedThread t1(w1);
 
         wg.add(1);
-        Thread t2(w2);
+        ScopedThread t2(w2);
 
         wg.add(1);
-        Thread t3(w3);
+        ScopedThread t3(w3);
 
         wg.wait();
-
-        t1.join();
-        t2.join();
-        t3.join();
 
         STD_INSIST(counter == 3);
     }
@@ -165,9 +155,8 @@ STD_TEST_SUITE(WaitGroup) {
         for (int round = 0; round < 3; ++round) {
             Worker w(&wg, &counter);
             wg.add(1);
-            Thread t(w);
+            ScopedThread t(w);
             wg.wait();
-            t.join();
         }
 
         STD_INSIST(counter == 3);
