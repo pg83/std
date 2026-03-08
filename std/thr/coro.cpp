@@ -148,15 +148,18 @@ CoroExecutor::Ref CoroExecutor::create(size_t threads) {
 
 SpawnParams& SpawnParams::setStackSize(size_t v) noexcept {
     stackSize = v;
+
     return *this;
 }
 
 SpawnParams& SpawnParams::setStackPtr(void* v) noexcept {
     stackPtr = v;
+
     return *this;
 }
 
 SpawnParams& SpawnParams::setRunablePtr(Runable* v) noexcept {
     runable = v;
+
     return *this;
 }
