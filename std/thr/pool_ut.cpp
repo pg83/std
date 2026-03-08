@@ -9,6 +9,29 @@
 using namespace stl;
 
 namespace {
+    struct Latch {
+        int target_;
+        int count_ = 0;
+        Mutex mutex_;
+        CondVar condVar_;
+
+        explicit Latch(int n) : target_(n) {}
+
+        void arrive() noexcept {
+            LockGuard lock(mutex_);
+            if (++count_ == target_) {
+                condVar_.signal();
+            }
+        }
+
+        void wait() noexcept {
+            LockGuard lock(mutex_);
+            while (count_ < target_) {
+                condVar_.wait(mutex_);
+            }
+        }
+    };
+
     static void doW(int work) {
         for (volatile int i = 0; i < work; ++i) {
         }
@@ -182,10 +205,15 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
     STD_TEST(MultipleTasks) {
         auto pool = ThreadPool::workStealing(2);
         int counter = 0;
+        Latch latch(10);
 
         for (int i = 0; i < 10; ++i) {
-            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
+            pool->submit([&counter, &latch]{
+                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                latch.arrive();
+            });
         }
+        latch.wait();
         pool->join();
 
         STD_INSIST(counter == 10);
@@ -206,10 +234,15 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
     STD_TEST(ManyTasksMultipleThreads) {
         auto pool = ThreadPool::workStealing(4);
         int counter = 0;
+        Latch latch(100);
 
         for (int i = 0; i < 100; ++i) {
-            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
+            pool->submit([&counter, &latch]{
+                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                latch.arrive();
+            });
         }
+        latch.wait();
         pool->join();
 
         STD_INSIST(counter == 100);
@@ -223,14 +256,19 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
     STD_TEST(TasksWithWork) {
         auto pool = ThreadPool::workStealing(4);
         int counter = 0;
+        Latch latch(20);
 
         for (int i = 0; i < 20; ++i) {
-            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
+            pool->submit([&counter, &latch]{
+                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                latch.arrive();
+            });
         }
 
         for (volatile int i = 0; i < 10000; ++i) {
         }
 
+        latch.wait();
         pool->join();
 
         STD_INSIST(counter == 20);
@@ -251,10 +289,15 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
     STD_TEST(ManyThreadsPool) {
         auto pool = ThreadPool::workStealing(8);
         int counter = 0;
+        Latch latch(200);
 
         for (int i = 0; i < 200; ++i) {
-            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
+            pool->submit([&counter, &latch]{
+                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                latch.arrive();
+            });
         }
+        latch.wait();
         pool->join();
 
         STD_INSIST(counter == 200);
@@ -263,10 +306,15 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
     STD_TEST(WorkStealing) {
         auto pool = ThreadPool::workStealing(4);
         int counter = 0;
+        Latch latch(100);
 
         for (int i = 0; i < 100; ++i) {
-            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
+            pool->submit([&counter, &latch]{
+                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                latch.arrive();
+            });
         }
+        latch.wait();
         pool->join();
 
         STD_INSIST(counter == 100);
@@ -275,18 +323,26 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
     STD_TEST(MixedWorkload) {
         auto pool = ThreadPool::workStealing(4);
         int counter = 0;
+        Latch latch(100);
 
         for (int i = 0; i < 50; ++i) {
-            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
+            pool->submit([&counter, &latch]{
+                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                latch.arrive();
+            });
         }
 
         for (volatile int i = 0; i < 5000; ++i) {
         }
 
         for (int i = 0; i < 50; ++i) {
-            pool->submit([&counter]{ stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed); });
+            pool->submit([&counter, &latch]{
+                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                latch.arrive();
+            });
         }
 
+        latch.wait();
         pool->join();
 
         STD_INSIST(counter == 100);
