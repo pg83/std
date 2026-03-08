@@ -180,26 +180,26 @@ namespace {
                 return (Task*)tasks_.popFrontOrNull();
             }
 
-            void push(Task& task) noexcept {
+            void push(Task* task) noexcept {
                 LockGuard lock(mutex_);
                 flush();
-                tasks_.pushBack(&task);
+                tasks_.pushBack(task);
                 condVar_.signal();
             }
 
-            void pushLocal(Task& task) noexcept {
+            void pushLocal(Task* task) noexcept {
                 {
                     LockGuard lock(mutex_);
 
                     flush();
-                    tasks_.pushBack(&task);
+                    tasks_.pushBack(task);
                 }
 
                 pool_->notifyOne();
             }
 
-            void pushThrLocal(Task& task) noexcept {
-                local_.pushBack(&task);
+            void pushThrLocal(Task* task) noexcept {
+                local_.pushBack(task);
             }
 
             void notify() noexcept {
@@ -265,13 +265,13 @@ void WorkStealingThreadPool::submitTask(Task* task) noexcept {
     static thread_local Worker* curw = nullptr;
 
     if (curw) {
-        return curw->pushThrLocal(*task);
+        return curw->pushThrLocal(task);
     } else if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
-        return (curw = w, w->pushThrLocal(*task));
+        return (curw = w, w->pushThrLocal(task));
     } else if (auto w = (Worker*)wq->dequeue()) {
-        return w->push(*task);
+        return w->push(task);
     } else {
-        return workers_[PCG32(&task).uniformUnbiased(workers_.length())]->pushLocal(*task);
+        return workers_[PCG32(&task).uniformUnbiased(workers_.length())]->pushLocal(task);
     }
 }
 
@@ -332,7 +332,7 @@ void WorkStealingThreadPool::Worker::run() noexcept {
         loop();
     } catch (ShutDown* sh) {
         if (auto w = pool_->nextSleeping(); w) {
-            w->push(*sh);
+            w->push(sh);
         }
 
         LockGuard lock(mutex_);
