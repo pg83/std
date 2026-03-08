@@ -1,5 +1,6 @@
 #include "coro.h"
 #include "task.h"
+#include "pool.h"
 
 #include <std/mem/new.h>
 #include <std/alg/destruct.h>
@@ -115,6 +116,10 @@ void ContImpl::run() noexcept {
 CoroExecutor::~CoroExecutor() noexcept {
 }
 
-CoroExecutor::Ref CoroExecutor::create(ThreadPool::Ref pool) {
+CoroExecutor::Ref CoroExecutor::create(ThreadPool* pool) {
     return new CoroExecutorImpl(pool);
+}
+
+CoroExecutor::Ref CoroExecutor::create(size_t threads) {
+    return create(ThreadPool::workStealing(threads).mutPtr());
 }

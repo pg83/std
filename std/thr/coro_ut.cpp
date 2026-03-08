@@ -1,4 +1,5 @@
 #include "coro.h"
+#include "pool.h"
 #include "latch.h"
 
 #include <std/tst/ut.h>
@@ -9,7 +10,7 @@ using namespace stl;
 STD_TEST_SUITE(CoroExecutor) {
     STD_TEST(Basic) {
         auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool);
+        auto exec = CoroExecutor::create(pool.mutPtr());
         Latch done(1);
         int counter = 0;
 
@@ -32,7 +33,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(SingleYield) {
         auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool);
+        auto exec = CoroExecutor::create(pool.mutPtr());
         Latch done(1);
         int counter = 0;
 
@@ -57,7 +58,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(MultipleYields) {
         auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool);
+        auto exec = CoroExecutor::create(pool.mutPtr());
         Latch done(1);
         int counter = 0;
 
@@ -83,7 +84,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(ManyCoros) {
         auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool);
+        auto exec = CoroExecutor::create(pool.mutPtr());
         Latch done(100);
         int counter = 0;
 
@@ -109,7 +110,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(NestedSpawn) {
         auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool);
+        auto exec = CoroExecutor::create(pool.mutPtr());
         Latch done(2);
         int counter = 0;
 
@@ -140,7 +141,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(YieldInterleave) {
         auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool);
+        auto exec = CoroExecutor::create(pool.mutPtr());
         Latch done(2);
 
         struct Ctx {

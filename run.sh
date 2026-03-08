@@ -3,4 +3,4 @@
 set -xue
 
 ~/ix/ix run set/dev/cc bld/make bld/sh bld/box lib/c++ lib/ucontext lib/rapidhash lib/cpp/trace -- ./build.sh
-#time timeout 10s ./tst/test
+time timeout 10s ./tst/test
