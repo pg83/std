@@ -106,8 +106,7 @@ void ContImpl::run() noexcept {
     *exec_->tls() = nullptr;
 
     if (done_) {
-        destruct(this);
-        free(this);
+        free(destruct(this));
     } else {
         exec_->pool_->submitTask(this);
     }
