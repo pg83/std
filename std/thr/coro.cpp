@@ -39,8 +39,12 @@ namespace {
         {
         }
 
+        auto tls() {
+            return pool_->tls(tlsKey_);
+        }
+
         ContImpl* currentCont() noexcept {
-            return (ContImpl*)*pool_->tls(tlsKey_);
+            return (ContImpl*)*tls();
         }
 
         void spawn(void (*fn)(Cont*, void*), void* ctx) noexcept override {
@@ -51,10 +55,6 @@ namespace {
             auto* c = currentCont();
 
             swapcontext(&c->ctx_, c->workerCtx_);
-        }
-
-        auto tls() {
-            return pool_->tls(tlsKey_);
         }
     };
 }
