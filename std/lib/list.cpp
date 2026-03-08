@@ -1,6 +1,7 @@
 #include "list.h"
 
 #include <std/alg/xchg.h>
+#include <std/alg/exchange.h>
 
 using namespace stl;
 
@@ -45,33 +46,26 @@ void IntrusiveList::xchgWithEmptyList(IntrusiveList& r) noexcept {
 }
 
 namespace {
-    static void splitImpl1(IntrusiveList& s, IntrusiveNode* a, IntrusiveNode* b) noexcept {
-        for (auto c = s.mutFront(), end = s.mutEnd(); c != end; c = c->next) {
-            a->next = c;
-            a = b;
-            b = c;
+    static void splitImpl(IntrusiveList& s, IntrusiveNode* a, IntrusiveNode* b) noexcept {
+        IntrusiveNode* p[] = {a, b};
+
+        int x = 0;
+
+        for (auto c = s.mutFront(), end = s.mutEnd(); c != end; c = c->next, x ^=1) {
+            link(exchange(p[x], c), c);
         }
 
-        a->next = nullptr;
-        b->next = nullptr;
-    }
+        link(p[0], a);
+        link(p[1], b);
 
-    static void splitImpl2(IntrusiveList& s, IntrusiveNode* a, IntrusiveNode* b) noexcept {
-        splitImpl1(s, a, b);
         s.mutEnd()->reset();
-        a->fixPrev();
-        b->fixPrev();
     }
 
     static void split(IntrusiveList& s, IntrusiveList* l, IntrusiveList* r) noexcept {
-        if (s.almostEmpty()) {
-            return s.xchg(*l);
-        }
-
         IntrusiveList a;
         IntrusiveList b;
 
-        splitImpl2(s, a.mutEnd(), b.mutEnd());
+        splitImpl(s, a.mutEnd(), b.mutEnd());
 
         l->pushBack(a);
         r->pushBack(b);
