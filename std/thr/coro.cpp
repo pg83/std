@@ -13,13 +13,14 @@ using namespace stl;
 namespace {
     struct CoroExecutorImpl;
 
-    struct alignas(max_align_t) ContImpl: public Cont, public Task {
+    struct ContImpl: public Cont, public Task {
         CoroExecutorImpl* exec_;
         ucontext_t ctx_;
         ucontext_t* workerCtx_;
         Runable* runable_;
 
         ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept;
+
         virtual ~ContImpl() = default;
 
         CoroExecutor* executor() noexcept override;
