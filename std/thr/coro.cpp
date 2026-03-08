@@ -52,50 +52,50 @@ namespace {
             swapcontext(&c->ctx_, c->workerCtx_);
         }
     };
+}
 
-    ContImpl::ContImpl(CoroExecutorImpl* exec, void (*fn)(Cont*, void*), void* fnCtx) noexcept
-        : exec_(exec)
-        , workerCtx_(nullptr)
-        , done_(false)
-        , fn_(fn)
-        , fnCtx_(fnCtx)
-    {
-        getcontext(&ctx_);
+ContImpl::ContImpl(CoroExecutorImpl* exec, void (*fn)(Cont*, void*), void* fnCtx) noexcept
+    : exec_(exec)
+    , workerCtx_(nullptr)
+    , done_(false)
+    , fn_(fn)
+    , fnCtx_(fnCtx)
+{
+    getcontext(&ctx_);
 
-        ctx_.uc_stack.ss_sp = (char*)this + sizeof(ContImpl);
-        ctx_.uc_stack.ss_size = STACK_SIZE - sizeof(ContImpl);
-        ctx_.uc_link = nullptr;
+    ctx_.uc_stack.ss_sp = (char*)this + sizeof(ContImpl);
+    ctx_.uc_stack.ss_size = STACK_SIZE - sizeof(ContImpl);
+    ctx_.uc_link = nullptr;
 
-        auto p = (uintptr_t)this;
-        makecontext(&ctx_, (void (*)())ContImpl::entry, 2, (u32)p, (u32)(p >> 32));
-    }
+    auto p = (uintptr_t)this;
+    makecontext(&ctx_, (void (*)())ContImpl::entry, 2, (u32)p, (u32)(p >> 32));
+}
 
-    CoroExecutor* ContImpl::executor() noexcept {
-        return exec_;
-    }
+CoroExecutor* ContImpl::executor() noexcept {
+    return exec_;
+}
 
-    void ContImpl::entry(u32 lo, u32 hi) noexcept {
-        auto* c = (ContImpl*)(((uintptr_t)hi << 32) | lo);
+void ContImpl::entry(u32 lo, u32 hi) noexcept {
+    auto* c = (ContImpl*)(((uintptr_t)hi << 32) | lo);
 
-        c->fn_(c, c->fnCtx_);
-        c->done_ = true;
-        swapcontext(&c->ctx_, c->workerCtx_);
-    }
+    c->fn_(c, c->fnCtx_);
+    c->done_ = true;
+    swapcontext(&c->ctx_, c->workerCtx_);
+}
 
-    void ContImpl::run() noexcept {
-        ucontext_t workerCtx;
+void ContImpl::run() noexcept {
+    ucontext_t workerCtx;
 
-        workerCtx_ = &workerCtx;
-        *exec_->pool_->tls(exec_->tlsKey_) = this;
+    workerCtx_ = &workerCtx;
+    *exec_->pool_->tls(exec_->tlsKey_) = this;
 
-        swapcontext(&workerCtx, &ctx_);
+    swapcontext(&workerCtx, &ctx_);
 
-        if (done_) {
-            this->~ContImpl();
-            free(this);
-        } else {
-            exec_->pool_->submitTask(this);
-        }
+    if (done_) {
+        this->~ContImpl();
+        free(this);
+    } else {
+        exec_->pool_->submitTask(this);
     }
 }
 
