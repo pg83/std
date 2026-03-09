@@ -13,6 +13,7 @@
 
 using namespace stl;
 
+namespace {
 struct PosixCondVarImpl: public CondVarIface, public pthread_cond_t {
     PosixCondVarImpl() {
         if (pthread_cond_init(this, nullptr) != 0) {
@@ -36,6 +37,7 @@ struct PosixCondVarImpl: public CondVarIface, public pthread_cond_t {
         STD_INSIST(pthread_cond_broadcast(this) == 0);
     }
 };
+}
 
 CondVar::CondVar()
     : CondVar(new PosixCondVarImpl())

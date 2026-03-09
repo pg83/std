@@ -11,6 +11,7 @@
 
 using namespace stl;
 
+namespace {
 struct PosixMutexImpl: public MutexIface, public pthread_mutex_t {
     PosixMutexImpl() {
         if (pthread_mutex_init(this, nullptr) != 0) {
@@ -38,6 +39,7 @@ struct PosixMutexImpl: public MutexIface, public pthread_mutex_t {
         return static_cast<pthread_mutex_t*>(this);
     }
 };
+}
 
 Mutex::Mutex()
     : Mutex(new PosixMutexImpl())
