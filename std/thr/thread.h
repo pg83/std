@@ -5,13 +5,17 @@
 #include <std/sys/types.h>
 
 namespace stl {
+    struct CoroExecutor;
+    struct ThreadIface;
+
     // should not be used directly, use ScopedThread or detach(Runable&)
     class Thread {
-        struct Impl;
-        Impl* impl;
+        ThreadIface* impl;
 
     public:
         explicit Thread(Runable& runable);
+        explicit Thread(ThreadIface* iface);
+        Thread(CoroExecutor* exec, Runable& runable);
 
         ~Thread() noexcept;
 

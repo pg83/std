@@ -1,5 +1,7 @@
 #include "thread.h"
+#include "thread_iface.h"
 #include "runable.h"
+#include "coro.h"
 
 #include <std/str/view.h>
 #include <std/sys/throw.h>
@@ -11,25 +13,50 @@
 
 using namespace stl;
 
-struct Thread::Impl {
-    pthread_t thread;
-    Runable* runable;
+namespace {
+    struct PosixThreadImpl: public ThreadIface {
+        pthread_t thread;
+        Runable* runable;
 
-    explicit Impl(Runable& r)
-        : runable(&r)
-    {
-        if (pthread_create(&thread, nullptr, threadFunc, this)) {
-            Errno().raise(StringBuilder() << StringView(u8"pthread_create failed"));
+        explicit PosixThreadImpl(Runable& r)
+            : runable(&r)
+        {
+            if (pthread_create(&thread, nullptr, threadFunc, this)) {
+                Errno().raise(StringBuilder() << StringView(u8"pthread_create failed"));
+            }
         }
-    }
 
-    static void* threadFunc(void* arg) {
-        return (((Impl*)arg)->runable->run(), nullptr);
-    }
-};
+        static void* threadFunc(void* arg) {
+            return (((PosixThreadImpl*)arg)->runable->run(), nullptr);
+        }
+
+        void join() noexcept override {
+            STD_INSIST(pthread_join(thread, nullptr) == 0);
+        }
+
+        void detach() noexcept override {
+            STD_INSIST(pthread_detach(thread) == 0);
+        }
+
+        u64 threadId() const noexcept override {
+            static_assert(sizeof(pthread_t) <= sizeof(u64));
+            return (u64)thread;
+        }
+    };
+}
 
 Thread::Thread(Runable& runable)
-    : impl(new Impl(runable))
+    : impl(new PosixThreadImpl(runable))
+{
+}
+
+Thread::Thread(ThreadIface* iface)
+    : impl(iface)
+{
+}
+
+Thread::Thread(CoroExecutor* exec, Runable& runable)
+    : impl(exec->createThread(runable))
 {
 }
 
@@ -38,16 +65,15 @@ Thread::~Thread() noexcept {
 }
 
 void Thread::join() noexcept {
-    STD_INSIST(pthread_join(impl->thread, nullptr) == 0);
+    impl->join();
 }
 
 void Thread::detach() noexcept {
-    STD_INSIST(pthread_detach(impl->thread) == 0);
+    impl->detach();
 }
 
 u64 Thread::threadId() const noexcept {
-    static_assert(sizeof(pthread_t) <= sizeof(u64));
-    return (u64)impl->thread;
+    return impl->threadId();
 }
 
 u64 Thread::currentThreadId() noexcept {

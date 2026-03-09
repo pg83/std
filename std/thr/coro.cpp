@@ -2,8 +2,10 @@
 #include "task.h"
 #include "pool.h"
 #include "mutex.h"
+#include "cond_var.h"
 #include "mutex_iface.h"
 #include "cond_var_iface.h"
+#include "thread_iface.h"
 
 #include <std/sys/crt.h>
 #include <std/ptr/scoped.h>
@@ -96,6 +98,20 @@ namespace {
 
         MutexIface* createMutex() override;
         CondVarIface* createCondVar() override;
+        ThreadIface* createThread(Runable& runable) override;
+    };
+
+    struct CoroThreadImpl: public ThreadIface {
+        Mutex mtx_;
+        CondVar cv_;
+        bool finished_ = false;
+
+        CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable);
+
+        void notifyDone() noexcept;
+        void join() noexcept override;
+        void detach() noexcept override;
+        u64 threadId() const noexcept override;
     };
 
     struct CoroCondVarImpl: public CondVarIface, public Runable {
@@ -289,6 +305,40 @@ void CoroCondVarImpl::broadcast() noexcept {
 
 CondVarIface* CoroExecutorImpl::createCondVar() {
     return new CoroCondVarImpl(this);
+}
+
+CoroThreadImpl::CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable)
+    : mtx_(exec)
+    , cv_(exec)
+{
+    exec->spawnRun(SpawnParams().setRunable([this, &runable]() {
+        runable.run();
+        notifyDone();
+    }));
+}
+
+void CoroThreadImpl::notifyDone() noexcept {
+    LockGuard guard(mtx_);
+    finished_ = true;
+    cv_.signal();
+}
+
+void CoroThreadImpl::join() noexcept {
+    LockGuard guard(mtx_);
+    while (!finished_) {
+        cv_.wait(mtx_);
+    }
+}
+
+void CoroThreadImpl::detach() noexcept {
+}
+
+u64 CoroThreadImpl::threadId() const noexcept {
+    return (size_t)this;
+}
+
+ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
+    return new CoroThreadImpl(this, runable);
 }
 
 CoroExecutor::~CoroExecutor() noexcept {
