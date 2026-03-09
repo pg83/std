@@ -2,13 +2,16 @@
 
 namespace stl {
     class Mutex;
+    struct CondVarIface;
+    struct CoroExecutor;
 
     class CondVar {
-        struct Impl;
-        Impl* impl;
+        CondVarIface* impl;
 
     public:
         CondVar();
+        CondVar(CondVarIface* iface);
+        CondVar(CoroExecutor* exec);
         ~CondVar() noexcept;
 
         void wait(Mutex& mutex) noexcept;

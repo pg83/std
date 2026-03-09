@@ -1,6 +1,7 @@
 #include "coro.h"
 #include "pool.h"
 #include "mutex.h"
+#include "cond_var.h"
 #include "latch.h"
 #include "wait_group.h"
 
@@ -194,6 +195,137 @@ STD_TEST_SUITE(CoroExecutor) {
         done.wait();
         pool->join();
         STD_INSIST(counter == nCoros * nIters);
+    }
+
+    STD_TEST(CondVarBasic) {
+        auto pool = ThreadPool::workStealing(4);
+        auto exec = CoroExecutor::create(pool.mutPtr());
+        Latch done(1);
+        int value = 0;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            LockGuard guard(mtx);
+            while (value == 0) {
+                cv.wait(mtx);
+            }
+            done.arrive();
+        });
+
+        exec->spawn([&](Cont*) {
+            LockGuard guard(mtx);
+            value = 1;
+            cv.signal();
+        });
+
+        done.wait();
+        pool->join();
+        STD_INSIST(value == 1);
+    }
+
+    STD_TEST(CondVarBroadcast) {
+        auto pool = ThreadPool::workStealing(4);
+        auto exec = CoroExecutor::create(pool.mutPtr());
+        const int N = 5;
+        Latch done(N);
+        int value = 0;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        for (int i = 0; i < N; ++i) {
+            exec->spawn([&](Cont*) {
+                LockGuard guard(mtx);
+                while (value == 0) {
+                    cv.wait(mtx);
+                }
+                done.arrive();
+            });
+        }
+
+        exec->spawn([&](Cont*) {
+            LockGuard guard(mtx);
+            value = 1;
+            cv.broadcast();
+        });
+
+        done.wait();
+        pool->join();
+        STD_INSIST(value == 1);
+    }
+
+    STD_TEST(CondVarProducerConsumer) {
+        auto pool = ThreadPool::workStealing(4);
+        auto exec = CoroExecutor::create(pool.mutPtr());
+        const int N = 10;
+        Latch done(1);
+        int produced = 0;
+        int consumed = 0;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        // consumer
+        exec->spawn([&](Cont*) {
+            for (int i = 0; i < N; ++i) {
+                LockGuard guard(mtx);
+                while (produced == consumed) {
+                    cv.wait(mtx);
+                }
+                ++consumed;
+            }
+            done.arrive();
+        });
+
+        // producer
+        exec->spawn([&](Cont*) {
+            for (int i = 0; i < N; ++i) {
+                LockGuard guard(mtx);
+                ++produced;
+                cv.signal();
+            }
+        });
+
+        done.wait();
+        pool->join();
+        STD_INSIST(consumed == N);
+    }
+
+    STD_TEST(CondVarStress) {
+        auto pool = ThreadPool::workStealing(4);
+        auto exec = CoroExecutor::create(pool.mutPtr());
+        const int nCoros = 8;
+        const int nIters = 200;
+        Latch done(nCoros);
+        int value = 0;
+        int woken = 0;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        for (int i = 0; i < nCoros; ++i) {
+            exec->spawn([&](Cont*) {
+                for (int j = 0; j < nIters; ++j) {
+                    LockGuard guard(mtx);
+                    int cur = value;
+                    while (value == cur) {
+                        cv.wait(mtx);
+                    }
+                    ++woken;
+                }
+                done.arrive();
+            });
+        }
+
+        exec->spawn([&](Cont*) {
+            for (int j = 0; j < nCoros * nIters; ++j) {
+                LockGuard guard(mtx);
+                ++value;
+                cv.broadcast();
+            }
+        });
+
+        done.wait();
+        pool->join();
+        STD_INSIST(woken == nCoros * nIters);
     }
 
     const int depth = 22;

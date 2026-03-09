@@ -1,6 +1,8 @@
 #include "mutex.h"
 #include "cond_var.h"
+#include "coro.h"
 #include "mutex_iface.h"
+#include "cond_var_iface.h"
 
 #include <std/str/view.h>
 #include <std/sys/throw.h>
@@ -11,20 +13,42 @@
 
 using namespace stl;
 
-struct CondVar::Impl: public pthread_cond_t {
-    Impl() {
+struct PosixCondVarImpl: public CondVarIface, public pthread_cond_t {
+    PosixCondVarImpl() {
         if (pthread_cond_init(this, nullptr) != 0) {
             Errno().raise(StringBuilder() << StringView(u8"pthread_cond_init failed"));
         }
     }
 
-    ~Impl() noexcept {
+    ~PosixCondVarImpl() noexcept override {
         STD_INSIST(pthread_cond_destroy(this) == 0);
+    }
+
+    void wait(MutexIface* mutex) noexcept override {
+        STD_INSIST(pthread_cond_wait(this, (pthread_mutex_t*)mutex->nativeHandle()) == 0);
+    }
+
+    void signal() noexcept override {
+        STD_INSIST(pthread_cond_signal(this) == 0);
+    }
+
+    void broadcast() noexcept override {
+        STD_INSIST(pthread_cond_broadcast(this) == 0);
     }
 };
 
 CondVar::CondVar()
-    : impl(new Impl())
+    : CondVar(new PosixCondVarImpl())
+{
+}
+
+CondVar::CondVar(CondVarIface* iface)
+    : impl(iface)
+{
+}
+
+CondVar::CondVar(CoroExecutor* exec)
+    : CondVar(exec->createCondVar())
 {
 }
 
@@ -33,13 +57,13 @@ CondVar::~CondVar() noexcept {
 }
 
 void CondVar::wait(Mutex& mutex) noexcept {
-    STD_INSIST(pthread_cond_wait(impl, (pthread_mutex_t*)mutex.impl->nativeHandle()) == 0);
+    impl->wait(mutex.impl);
 }
 
 void CondVar::signal() noexcept {
-    STD_INSIST(pthread_cond_signal(impl) == 0);
+    impl->signal();
 }
 
 void CondVar::broadcast() noexcept {
-    STD_INSIST(pthread_cond_broadcast(impl) == 0);
+    impl->broadcast();
 }

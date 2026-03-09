@@ -3,6 +3,7 @@
 #include "pool.h"
 #include "mutex.h"
 #include "mutex_iface.h"
+#include "cond_var_iface.h"
 
 #include <std/sys/crt.h>
 #include <std/ptr/scoped.h>
@@ -52,6 +53,7 @@ namespace {
     }
 
     struct CoroMutexImpl;
+    struct CoroCondVarImpl;
 
     struct CoroExecutorImpl: public CoroExecutor {
         ThreadPool::Ref pool_;
@@ -90,6 +92,20 @@ namespace {
         }
 
         MutexIface* createMutex() override;
+        CondVarIface* createCondVar() override;
+    };
+
+    struct CoroCondVarImpl: public CondVarIface, public Runable {
+        CoroExecutorImpl* exec_;
+        Mutex queueMutex_;
+        IntrusiveList waiters_;
+
+        CoroCondVarImpl(CoroExecutorImpl* exec) noexcept;
+
+        void run() override;
+        void wait(MutexIface* mutex) noexcept override;
+        void signal() noexcept override;
+        void broadcast() noexcept override;
     };
 
     struct CoroMutexImpl: public MutexIface, public Runable {
@@ -223,6 +239,53 @@ void ContImpl::run() noexcept {
 
 MutexIface* CoroExecutorImpl::createMutex() {
     return new CoroMutexImpl(this);
+}
+
+CoroCondVarImpl::CoroCondVarImpl(CoroExecutorImpl* exec) noexcept
+    : exec_(exec)
+{
+}
+
+void CoroCondVarImpl::run() {
+    queueMutex_.unlock();
+}
+
+void CoroCondVarImpl::wait(MutexIface* mutex) noexcept {
+    auto* cont = exec_->currentCont();
+
+    queueMutex_.lock();
+    waiters_.pushBack(cont);
+    cont->afterSuspend_ = this;
+    mutex->unlock();
+    swapcontext(&cont->ctx_, cont->workerCtx_);
+    // resumed — queueMutex_ was unlocked by run(), mutex is not held
+    mutex->lock();
+}
+
+void CoroCondVarImpl::signal() noexcept {
+    LockGuard guard(queueMutex_);
+
+    if (auto* node = waiters_.popFrontOrNull(); node) {
+        auto* cont = (ContImpl*)(Task*)node;
+
+        cont->afterSuspend_ = nullptr;
+        cont->reSchedule();
+    }
+}
+
+void CoroCondVarImpl::broadcast() noexcept {
+    LockGuard guard(queueMutex_);
+
+    while (auto* node = waiters_.popFrontOrNull()) {
+        auto* cont = (ContImpl*)(Task*)node;
+
+        cont->afterSuspend_ = nullptr;
+        cont->reSchedule();
+    }
+}
+
+CondVarIface* CoroExecutorImpl::createCondVar() {
+    return new CoroCondVarImpl(this);
 }
 
 CoroExecutor::~CoroExecutor() noexcept {
