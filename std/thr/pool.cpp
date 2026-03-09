@@ -181,28 +181,12 @@ namespace {
                 return (Task*)tasks_.popFrontOrNull();
             }
 
-            void push(Task* task) noexcept {
+            template <typename T>
+            void push(T& task) noexcept {
                 LockGuard lock(mutex_);
                 flushLocal();
                 tasks_.pushBack(task);
                 condVar_.signal();
-            }
-
-            void pushList(IntrusiveList& tasks) noexcept {
-                LockGuard lock(mutex_);
-                flushLocal();
-                tasks_.pushBack(tasks);
-                condVar_.signal();
-            }
-
-            void pushRemote(Task* task) noexcept {
-                {
-                    LockGuard lock(mutex_);
-
-                    tasks_.pushBack(task);
-                }
-
-                pool_->notifyOne();
             }
 
             void pushThrLocal(Task* task) noexcept {
@@ -287,7 +271,7 @@ void WorkStealingThreadPool::GlobalWorker::loop() {
         while (auto task = (Task*)chunk.popFrontOrNull()) {
             if (auto w = (Worker*)pool_->wq->dequeue()) {
                 chunk.pushFront(task);
-                w->pushList(chunk);
+                w->push(chunk);
                 break;
             }
 
