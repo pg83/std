@@ -233,6 +233,7 @@ namespace {
             Mutex mutex_;
             CondVar condVar_;
             IntrusiveList tasks_;
+            IntMap<void*> tls_;
             Thread thread_;
 
             explicit GlobalWorker(WorkStealingThreadPool* pool) noexcept;
@@ -357,6 +358,10 @@ void WorkStealingThreadPool::submitTask(Task* task) noexcept {
 void** WorkStealingThreadPool::tls(u64 key) noexcept {
     if (auto w = localWorker(); w) {
         return &w->tls_[key];
+    }
+
+    if (gw_->thread_.threadId() == Thread::currentThreadId()) {
+        return &gw_->tls_[key];
     }
 
     return nullptr;
