@@ -1,4 +1,7 @@
 #include "mutex.h"
+#include "coro.h"
+#include "pool.h"
+#include "latch.h"
 
 #include <std/tst/ut.h>
 
@@ -126,5 +129,181 @@ STD_TEST_SUITE(Mutex) {
 
         mutex.lock();
         mutex.unlock();
+    }
+}
+
+STD_TEST_SUITE(CoroMutex) {
+    STD_TEST(BasicLockUnlock) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        Mutex mtx(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            mtx.lock();
+            mtx.unlock();
+
+            mtx.lock();
+            mtx.unlock();
+
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+    }
+
+    STD_TEST(TryLockSuccess) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        bool result = false;
+        Mutex mtx(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            result = mtx.tryLock();
+            if (result) mtx.unlock();
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(result == true);
+    }
+
+    STD_TEST(TryLockFail) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        bool result = true;
+        Mutex mtx(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            mtx.lock();
+            result = mtx.tryLock();
+            mtx.unlock();
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(result == false);
+    }
+
+    STD_TEST(MultipleLockUnlock) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        Mutex mtx(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            for (int i = 0; i < 100; ++i) {
+                mtx.lock();
+                mtx.unlock();
+            }
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+    }
+
+    STD_TEST(TryLockMultiple) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        bool ok = true;
+        Mutex mtx(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            for (int i = 0; i < 100; ++i) {
+                if (!mtx.tryLock()) { ok = false; break; }
+                mtx.unlock();
+            }
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(ok == true);
+    }
+
+    STD_TEST(LockGuardBasic) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        bool result = false;
+        Mutex mtx(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            { LockGuard guard(mtx); }
+            result = mtx.tryLock();
+            if (result) mtx.unlock();
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(result == true);
+    }
+
+    STD_TEST(LockGuardNested) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        bool r1 = false, r2 = false;
+        Mutex mtx1(exec.mutPtr());
+        Mutex mtx2(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            {
+                LockGuard g1(mtx1);
+                { LockGuard g2(mtx2); }
+            }
+            r1 = mtx1.tryLock();
+            r2 = mtx2.tryLock();
+            if (r1) mtx1.unlock();
+            if (r2) mtx2.unlock();
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(r1 == true);
+        STD_INSIST(r2 == true);
+    }
+
+    STD_TEST(MutexConstruction) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        Mutex mtx1(exec.mutPtr());
+        Mutex mtx2(exec.mutPtr());
+        Mutex mtx3(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            mtx1.lock(); mtx2.lock(); mtx3.lock();
+            mtx1.unlock(); mtx2.unlock(); mtx3.unlock();
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+    }
+
+    STD_TEST(LockUnlockSequence) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        bool result = false;
+        Mutex mtx(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            mtx.lock();
+            mtx.unlock();
+
+            result = mtx.tryLock();
+            if (result) mtx.unlock();
+
+            mtx.lock();
+            mtx.unlock();
+
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(result == true);
     }
 }
