@@ -438,6 +438,7 @@ void WorkStealingThreadPool::Worker::run() noexcept {
 
     while (auto task = popNoLock()) {
         task->run();
+        flushLocal();
     }
 
     stdAtomicSubAndFetch(&pool_->running_, 1, MemoryOrder::Relaxed);
