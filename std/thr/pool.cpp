@@ -188,7 +188,7 @@ namespace {
                 condVar_.signal();
             }
 
-            void pushLocal(Task* task) noexcept {
+            void pushRemote(Task* task) noexcept {
                 {
                     LockGuard lock(mutex_);
 
@@ -199,7 +199,6 @@ namespace {
             }
 
             void pushThrLocal(Task* task) noexcept {
-                // pushLocal(task);
                 local_.pushBack(task);
             }
 
@@ -281,7 +280,7 @@ void WorkStealingThreadPool::submitTask(Task* task) noexcept {
     } else if (auto w = (Worker*)wq->dequeue()) {
         return w->push(task);
     } else {
-        return workers_[PCG32(&task).uniformUnbiased(workers_.length())]->pushLocal(task);
+        return workers_[PCG32(&task).uniformUnbiased(workers_.length())]->pushRemote(task);
     }
 }
 
