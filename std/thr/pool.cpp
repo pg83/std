@@ -192,7 +192,6 @@ namespace {
                     tasks_.pushBack(task);
                 }
 
-                stdAtomicAddAndFetch(&pool_->epoch_, 1, MemoryOrder::Release);
                 pool_->notifyOne();
             }
 
@@ -224,7 +223,6 @@ namespace {
         IntMap<Worker> workerIndex_;
         WaitQueue::Ref wq;
         size_t running_;
-        size_t epoch_;
 
         WorkStealingThreadPool(size_t numThreads);
 
@@ -242,7 +240,6 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     : workers_(numThreads)
     , wq(WaitQueue::construct(numThreads))
     , running_(numThreads)
-    , epoch_(0)
 {
     for (size_t i = 0; i < numThreads; ++i) {
         workers_.pushBack(workerIndex_.insertKeyed(this, i, numThreads));
@@ -367,8 +364,6 @@ void WorkStealingThreadPool::Worker::run() noexcept {
 void WorkStealingThreadPool::Worker::loop() {
     LockGuard lock(mutex_);
 
-    size_t epoch = 0;
-
     do {
         flush();
 
@@ -382,8 +377,6 @@ void WorkStealingThreadPool::Worker::loop() {
             flush();
         }
 
-        epoch = stdAtomicFetch(&pool_->epoch_, MemoryOrder::Acquire);
-
         IntrusiveList stolen;
 
         {
@@ -395,7 +388,7 @@ void WorkStealingThreadPool::Worker::loop() {
         local_.pushBack(stolen);
 
         flush();
-    } while (!tasks_.empty() || epoch != stdAtomicFetch(&pool_->epoch_, MemoryOrder::Acquire) || (sleep(), true));
+    } while (!tasks_.empty() || (sleep(), true));
 }
 
 void WorkStealingThreadPool::Worker::split(IntrusiveList* stolen) noexcept {
