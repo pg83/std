@@ -251,6 +251,8 @@ namespace {
 
         WorkStealingThreadPool(size_t numThreads);
 
+        ~WorkStealingThreadPool() noexcept override;
+
         bool notifyOne() noexcept;
         void join() noexcept override;
         Worker* localWorker() noexcept;
@@ -380,7 +382,9 @@ void WorkStealingThreadPool::join() noexcept {
 
     gw_->push(&gwTask);
     gw_->thread_.join();
+}
 
+WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
     delete gw_;
 }
 
