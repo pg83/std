@@ -12,12 +12,12 @@ struct Barrier::Impl {
     CondVar cv;
     size_t remaining;
 
-    Impl(int n)
+    Impl(size_t n)
         : remaining(n)
     {
     }
 
-    Impl(int n, CoroExecutor* exec)
+    Impl(size_t n, CoroExecutor* exec)
         : mutex(exec)
         , cv(exec)
         , remaining(n)
@@ -37,12 +37,12 @@ struct Barrier::Impl {
     }
 };
 
-Barrier::Barrier(int n)
+Barrier::Barrier(size_t n)
     : impl(new Impl(n))
 {
 }
 
-Barrier::Barrier(int n, CoroExecutor* exec)
+Barrier::Barrier(size_t n, CoroExecutor* exec)
     : impl(new Impl(n, exec))
 {
 }

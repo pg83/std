@@ -1,5 +1,7 @@
 #pragma once
 
+#include <std/sys/types.h>
+
 namespace stl {
     struct CoroExecutor;
 
@@ -8,8 +10,8 @@ namespace stl {
         Impl* impl;
 
     public:
-        explicit Barrier(int n);
-        Barrier(int n, CoroExecutor* exec);
+        explicit Barrier(size_t n);
+        Barrier(size_t n, CoroExecutor* exec);
 
         ~Barrier() noexcept;
 
