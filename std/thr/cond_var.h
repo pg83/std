@@ -10,8 +10,9 @@ namespace stl {
 
     public:
         CondVar();
-        CondVar(CondVarIface* iface);
         CondVar(CoroExecutor* exec);
+        CondVar(CondVarIface* iface);
+
         ~CondVar() noexcept;
 
         void wait(Mutex& mutex) noexcept;

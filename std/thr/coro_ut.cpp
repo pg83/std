@@ -297,8 +297,8 @@ STD_TEST_SUITE(CoroExecutor) {
         const int nCoros = 8;
         const int nIters = 200;
         Latch done(nCoros);
-        int value = 0;
-        int woken = 0;
+        int queue = 0;
+        int consumed = 0;
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
@@ -306,11 +306,11 @@ STD_TEST_SUITE(CoroExecutor) {
             exec->spawn([&](Cont*) {
                 for (int j = 0; j < nIters; ++j) {
                     LockGuard guard(mtx);
-                    int cur = value;
-                    while (value == cur) {
+                    while (queue == 0) {
                         cv.wait(mtx);
                     }
-                    ++woken;
+                    --queue;
+                    ++consumed;
                 }
                 done.arrive();
             });
@@ -319,14 +319,14 @@ STD_TEST_SUITE(CoroExecutor) {
         exec->spawn([&](Cont*) {
             for (int j = 0; j < nCoros * nIters; ++j) {
                 LockGuard guard(mtx);
-                ++value;
-                cv.broadcast();
+                ++queue;
+                cv.signal();
             }
         });
 
         done.wait();
         pool->join();
-        STD_INSIST(woken == nCoros * nIters);
+        STD_INSIST(consumed == nCoros * nIters);
     }
 
     const int depth = 22;

@@ -224,16 +224,15 @@ void ContImpl::run() noexcept {
     swapcontext(&workerCtx, &ctx_);
     *exec_->tls() = nullptr;
 
-    if (afterSuspend_) {
-        afterSuspend_->run();
+    if (auto* as = afterSuspend_) {
+        // after run(), cont may already be rescheduled by another thread
+        return as->run();
     }
 
-    if (!runable_) {
-        delete this;
-    } else if (afterSuspend_) {
-        // suspended — unlock() will reSchedule later
-    } else {
+    if (runable_) {
         reSchedule();
+    } else {
+        delete this;
     }
 }
 
