@@ -102,12 +102,15 @@ namespace {
     };
 
     struct CoroThreadImpl: public ThreadIface {
+        CoroExecutorImpl* exec_;
+        Runable* runable_;
         Mutex mtx_;
         CondVar cv_;
         bool finished_ = false;
 
         CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable);
 
+        void start() override;
         void notifyDone() noexcept;
         void join() noexcept override;
         void detach() noexcept override;
@@ -308,11 +311,16 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
 }
 
 CoroThreadImpl::CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable)
-    : mtx_(exec)
+    : exec_(exec)
+    , runable_(&runable)
+    , mtx_(exec)
     , cv_(exec)
 {
-    exec->spawnRun(SpawnParams().setRunable([this, &runable]() {
-        runable.run();
+}
+
+void CoroThreadImpl::start() {
+    exec_->spawnRun(SpawnParams().setRunable([this]() {
+        runable_->run();
         notifyDone();
     }));
 }

@@ -188,6 +188,13 @@ namespace {
                 condVar_.signal();
             }
 
+            void pushList(IntrusiveList& tasks) noexcept {
+                LockGuard lock(mutex_);
+                flushLocal();
+                tasks_.pushBack(tasks);
+                condVar_.signal();
+            }
+
             void pushRemote(Task* task) noexcept {
                 {
                     LockGuard lock(mutex_);
@@ -221,10 +228,25 @@ namespace {
             void split(IntrusiveList* stolen) noexcept;
         };
 
+        struct GlobalWorker: public Runable {
+            WorkStealingThreadPool* pool_;
+            Mutex mutex_;
+            CondVar condVar_;
+            IntrusiveList tasks_;
+            Thread thread_;
+
+            explicit GlobalWorker(WorkStealingThreadPool* pool) noexcept;
+
+            void push(Task* task) noexcept;
+            void loop();
+            void run() noexcept override;
+        };
+
         Vector<Worker*> workers_;
         IntMap<Worker> workerIndex_;
         WaitQueue::Ref wq;
         size_t running_;
+        GlobalWorker* gw_;
 
         WorkStealingThreadPool(size_t numThreads);
 
@@ -236,6 +258,52 @@ namespace {
         void submitTask(Task* task) noexcept override;
         void trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept;
     };
+}
+
+WorkStealingThreadPool::GlobalWorker::GlobalWorker(WorkStealingThreadPool* pool) noexcept
+    : pool_(pool)
+    , thread_(*this)
+{
+}
+
+void WorkStealingThreadPool::GlobalWorker::push(Task* task) noexcept {
+    LockGuard lock(mutex_);
+    tasks_.pushBack(task);
+    condVar_.signal();
+}
+
+void WorkStealingThreadPool::GlobalWorker::loop() {
+    for (;;) {
+        IntrusiveList chunk;
+
+        {
+            LockGuard lock(mutex_);
+            tasks_.xchgWithEmptyList(chunk);
+        }
+
+        while (auto task = (Task*)chunk.popFrontOrNull()) {
+            if (auto w = (Worker*)pool_->wq->dequeue()) {
+                chunk.pushFront(task);
+                w->pushList(chunk);
+                break;
+            }
+
+            task->run();
+        }
+
+        LockGuard lock(mutex_);
+
+        if (tasks_.empty()) {
+            condVar_.wait(mutex_);
+        }
+    }
+}
+
+void WorkStealingThreadPool::GlobalWorker::run() noexcept {
+    try {
+        loop();
+    } catch (ShutDown*) {
+    }
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
@@ -250,6 +318,8 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     for (auto w : mutRange(workers_)) {
         w->mutex_.unlock();
     }
+
+    gw_ = new GlobalWorker(this);
 }
 
 bool WorkStealingThreadPool::notifyOne() noexcept {
@@ -277,12 +347,10 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
 void WorkStealingThreadPool::submitTask(Task* task) noexcept {
     if (auto w = localWorker(); w) {
         return w->pushThrLocal(task);
-    }
-
-    while (true) {
-        if (auto w = (Worker*)wq->dequeue()) {
-            return w->push(task);
-        }
+    } else if (auto w = (Worker*)wq->dequeue()) {
+        return w->push(task);
+    } else {
+        return gw_->push(task);
     }
 }
 
@@ -302,6 +370,13 @@ void WorkStealingThreadPool::join() noexcept {
     for (auto w : mutRange(workers_)) {
         w->join();
     }
+
+    ShutDown gwTask;
+
+    gw_->push(&gwTask);
+    gw_->thread_.join();
+
+    delete gw_;
 }
 
 void WorkStealingThreadPool::trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept {
