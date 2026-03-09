@@ -265,11 +265,9 @@ namespace {
         IntMap<Worker> workerIndex_;
         WaitQueue::Ref wq;
         size_t running_;
-        GlobalWorker* gw_;
+        GlobalWorker gw_;
 
         WorkStealingThreadPool(size_t numThreads);
-
-        ~WorkStealingThreadPool() noexcept override;
 
         bool notifyOne() noexcept;
         void join() noexcept override;
@@ -340,7 +338,7 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     : workers_(numThreads)
     , wq(WaitQueue::construct(numThreads))
     , running_(numThreads)
-    , gw_(new GlobalWorker(this))
+    , gw_(this)
 {
     for (size_t i = 0; i < numThreads; ++i) {
         workers_.pushBack(workerIndex_.insertKeyed(this, i, numThreads));
@@ -368,8 +366,8 @@ WorkStealingThreadPool::LocalWorker* WorkStealingThreadPool::localWorker() noexc
         return curw;
     } else if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
         return curw = w;
-    } else if (gw_->thread_.threadId() == Thread::currentThreadId()) {
-        return curw = gw_;
+    } else if (gw_.thread_.threadId() == Thread::currentThreadId()) {
+        return curw = &gw_;
     }
 
     return nullptr;
@@ -381,7 +379,7 @@ void WorkStealingThreadPool::submitTask(Task* task) noexcept {
     } else if (auto w = (Worker*)wq->dequeue()) {
         return w->push(task);
     } else {
-        return gw_->push(task);
+        return gw_.push(task);
     }
 }
 
@@ -402,15 +400,11 @@ void WorkStealingThreadPool::join() noexcept {
         w->join();
     }
 
-    gw_->join();
-}
-
-WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
-    delete gw_;
+    gw_.join();
 }
 
 void WorkStealingThreadPool::trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept {
-    gw_->steal(stolen);
+    gw_.steal(stolen);
 
     for (u32 i = 0; stolen->empty() && i < n; ++i) {
         workers_[order[(offset + i) % n]]->split(stolen);
@@ -439,7 +433,7 @@ void WorkStealingThreadPool::Worker::run() noexcept {
     try {
         loop();
     } catch (ShutDown* sh) {
-        pool_->gw_->push(sh);
+        pool_->gw_.push(sh);
     }
 
     LockGuard lock(mutex_);
