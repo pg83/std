@@ -10,7 +10,6 @@ namespace stl {
         TreapNode* root = nullptr;
 
         void visitImpl(VisitorFace&& vis);
-        void visitImpl(VisitorFace& vis, TreapNode** buf, size_t count);
         void split(TreapNode* t, void* k, TreapNode** l, TreapNode** r) noexcept;
 
         virtual bool cmp(void* a, void* b) const noexcept = 0;

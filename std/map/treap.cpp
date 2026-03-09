@@ -82,36 +82,8 @@ TreapNode* Treap::remove(TreapNode* node) noexcept {
 }
 
 void Treap::visitImpl(VisitorFace&& vis) {
-    TreapNode* buf[64];
-
-    visitImpl(vis, buf, 64);
-}
-
-void Treap::visitImpl(VisitorFace& vis, TreapNode** buf, size_t count) {
-    if (!root) {
-        return;
-    }
-
-    size_t n = 0;
-
-    auto collect = makeVisitor([&](void* ptr) {
-        if (n < count) {
-            buf[n++] = (TreapNode*)ptr;
-        } else {
-            throw count;
-        }
-    });
-
-    try {
-        root->visit(collect);
-    } catch (size_t c) {
-        Vector<TreapNode*> newBuf(c * 2);
-
-        return visitImpl(vis, newBuf.mutData(), count * 2);
-    }
-
-    for (size_t i = 0; i < n; i++) {
-        vis.visit(buf[i]);
+    if (root) {
+        root->visit(vis);
     }
 }
 
