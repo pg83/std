@@ -158,7 +158,12 @@ ThreadPool::Ref ThreadPool::simple(size_t threads) {
 
 namespace {
     struct WorkStealingThreadPool: public ThreadPool {
-        struct Worker: public Runable, public WaitQueue::Item {
+        struct LocalWorker {
+            virtual void pushThrLocal(Task* task) noexcept = 0;
+            virtual void** tls(u64 key) noexcept = 0;
+        };
+
+        struct Worker: public LocalWorker, public Runable, public WaitQueue::Item {
             WorkStealingThreadPool* pool_;
             u32 myIndex_;
             PCG32 rng_;
@@ -192,8 +197,12 @@ namespace {
                 condVar_.signal();
             }
 
-            void pushThrLocal(Task* task) noexcept {
+            void pushThrLocal(Task* task) noexcept override {
                 local_.pushBack(task);
+            }
+
+            void** tls(u64 key) noexcept override {
+                return &tls_[key];
             }
 
             void notify() noexcept {
@@ -215,7 +224,7 @@ namespace {
             void split(IntrusiveList* stolen) noexcept;
         };
 
-        struct GlobalWorker: public Runable {
+        struct GlobalWorker: public LocalWorker, public Runable {
             WorkStealingThreadPool* pool_;
             Mutex mutex_;
             CondVar condVar_;
@@ -226,6 +235,15 @@ namespace {
             explicit GlobalWorker(WorkStealingThreadPool* pool) noexcept;
 
             void push(Task* task) noexcept;
+
+            void pushThrLocal(Task* task) noexcept override {
+                push(task);
+            }
+
+            void** tls(u64 key) noexcept override {
+                return &tls_[key];
+            }
+
             void loop();
             void run() noexcept override;
             void processChunk(IntrusiveList& chunk);
@@ -243,7 +261,7 @@ namespace {
 
         bool notifyOne() noexcept;
         void join() noexcept override;
-        Worker* localWorker() noexcept;
+        LocalWorker* localWorker() noexcept;
         void** tls(u64 key) noexcept override;
         void submitTask(Task* task) noexcept override;
         void trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept;
@@ -332,13 +350,15 @@ bool WorkStealingThreadPool::notifyOne() noexcept {
     return false;
 }
 
-WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
-    static thread_local Worker* curw = nullptr;
+WorkStealingThreadPool::LocalWorker* WorkStealingThreadPool::localWorker() noexcept {
+    static thread_local LocalWorker* curw = nullptr;
 
     if (curw) {
         return curw;
     } else if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
         return curw = w;
+    } else if (gw_->thread_.threadId() == Thread::currentThreadId()) {
+        return curw = gw_;
     }
 
     return nullptr;
@@ -355,13 +375,11 @@ void WorkStealingThreadPool::submitTask(Task* task) noexcept {
 }
 
 void** WorkStealingThreadPool::tls(u64 key) noexcept {
-    if (auto w = localWorker(); w) {
-        return &w->tls_[key];
-    } else if (gw_->thread_.threadId() == Thread::currentThreadId()) {
-        return &gw_->tls_[key];
-    } else {
-        return nullptr;
+    if (auto w = localWorker()) {
+        return w->tls(key);
     }
+
+    return nullptr;
 }
 
 void WorkStealingThreadPool::join() noexcept {
