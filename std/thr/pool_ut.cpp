@@ -563,7 +563,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         STD_INSIST(correct);
     }
 
-    STD_TEST(WorkerIsolation) {
+    STD_TEST(_WorkerIsolation) {
         const int N = 2;
         u64 key = registerTlsKey();
         Barrier barrier(N);
