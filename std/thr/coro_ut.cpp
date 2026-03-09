@@ -136,7 +136,7 @@ STD_TEST_SUITE(CoroExecutor) {
         int counter = 0;
 
         exec->spawn([&](Cont*) {
-            Mutex mtx(exec->createMutex());
+            Mutex mtx(exec.mutPtr());
 
             mtx.lock();
             ++counter;
@@ -155,7 +155,7 @@ STD_TEST_SUITE(CoroExecutor) {
         auto exec = CoroExecutor::create(pool.mutPtr());
         Latch done(2);
         int counter = 0;
-        Mutex mtx(exec->createMutex());
+        Mutex mtx(exec.mutPtr());
 
         for (int i = 0; i < 2; ++i) {
             exec->spawn([&](Cont* c) {
@@ -179,7 +179,7 @@ STD_TEST_SUITE(CoroExecutor) {
         const int nIters = 500;
         Latch done(nCoros);
         int counter = 0;
-        Mutex mtx(exec->createMutex());
+        Mutex mtx(exec.mutPtr());
 
         for (int i = 0; i < nCoros; ++i) {
             exec->spawn([&](Cont* c) {
