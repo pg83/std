@@ -12,33 +12,33 @@
 using namespace stl;
 
 namespace {
-struct PosixMutexImpl: public MutexIface, public pthread_mutex_t {
-    PosixMutexImpl() {
-        if (pthread_mutex_init(this, nullptr) != 0) {
-            Errno().raise(StringBuilder() << StringView(u8"pthread_mutex_init failed"));
+    struct PosixMutexImpl: public MutexIface, public pthread_mutex_t {
+        PosixMutexImpl() {
+            if (pthread_mutex_init(this, nullptr) != 0) {
+                Errno().raise(StringBuilder() << StringView(u8"pthread_mutex_init failed"));
+            }
         }
-    }
 
-    ~PosixMutexImpl() noexcept override {
-        STD_INSIST(pthread_mutex_destroy(this) == 0);
-    }
+        ~PosixMutexImpl() noexcept override {
+            STD_INSIST(pthread_mutex_destroy(this) == 0);
+        }
 
-    void lock() noexcept override {
-        STD_INSIST(pthread_mutex_lock(this) == 0);
-    }
+        void lock() noexcept override {
+            STD_INSIST(pthread_mutex_lock(this) == 0);
+        }
 
-    void unlock() noexcept override {
-        STD_INSIST(pthread_mutex_unlock(this) == 0);
-    }
+        void unlock() noexcept override {
+            STD_INSIST(pthread_mutex_unlock(this) == 0);
+        }
 
-    bool tryLock() noexcept override {
-        return pthread_mutex_trylock(this) == 0;
-    }
+        bool tryLock() noexcept override {
+            return pthread_mutex_trylock(this) == 0;
+        }
 
-    void* nativeHandle() noexcept override {
-        return static_cast<pthread_mutex_t*>(this);
-    }
-};
+        void* nativeHandle() noexcept override {
+            return static_cast<pthread_mutex_t*>(this);
+        }
+    };
 }
 
 Mutex::Mutex()
