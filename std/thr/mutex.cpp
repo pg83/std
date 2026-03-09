@@ -1,4 +1,5 @@
 #include "mutex.h"
+#include "coro.h"
 #include "mutex_iface.h"
 
 #include <std/str/view.h>
@@ -39,7 +40,12 @@ struct PosixMutexImpl: public MutexIface, public pthread_mutex_t {
 };
 
 Mutex::Mutex()
-    : impl(new PosixMutexImpl())
+    : Mutex(new PosixMutexImpl())
+{
+}
+
+Mutex::Mutex(CoroExecutor* exec)
+    : Mutex(exec->createMutex())
 {
 }
 

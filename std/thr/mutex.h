@@ -3,6 +3,7 @@
 namespace stl {
     class CondVar;
     struct MutexIface;
+    struct CoroExecutor;
 
     class Mutex {
         friend class CondVar;
@@ -13,6 +14,7 @@ namespace stl {
         Mutex();
         Mutex(bool lock);
         Mutex(MutexIface* iface);
+        Mutex(CoroExecutor* exec);
 
         ~Mutex() noexcept;
 
