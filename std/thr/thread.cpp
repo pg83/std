@@ -1,7 +1,8 @@
 #include "thread.h"
-#include "thread_iface.h"
-#include "runable.h"
 #include "coro.h"
+#include "mutex.h"
+#include "runable.h"
+#include "thread_iface.h"
 
 #include <std/str/view.h>
 #include <std/sys/throw.h>
@@ -9,6 +10,7 @@
 #include <std/dbg/insist.h>
 #include <std/str/builder.h>
 
+#include <unistd.h>
 #include <pthread.h>
 
 using namespace stl;
@@ -87,20 +89,24 @@ u64 Thread::currentThreadId() noexcept {
 void stl::detach(Runable& runable) {
     struct Helper: public Runable {
         Runable* slave;
+        Mutex m;
         Thread thr;
 
         Helper(Runable* r) noexcept
             : slave(r)
+            , m(true)
             , thr(*this)
         {
         }
 
         void run() override {
+            // race in musl libc
+            m.lock();
             ScopedPtr<Helper> that(this);
             slave->run();
             thr.detach();
         }
     };
 
-    new Helper(&runable);
+    (new Helper(&runable))->m.unlock();
 }
