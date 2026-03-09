@@ -139,7 +139,7 @@ void CoroMutexImpl::unlock() noexcept {
     LockGuard guard(queueMutex_);
 
     if (auto* node = waiters_.popFrontOrNull(); node) {
-        auto* cont = static_cast<ContImpl*>(static_cast<Task*>(node));
+        auto* cont = (ContImpl*)(Task*)node;
 
         cont->afterSuspend_ = nullptr;
         cont->reSchedule();
