@@ -21,9 +21,6 @@ namespace {
         explicit PosixThreadImpl(Runable& r)
             : runable(&r)
         {
-            if (pthread_create(&thread, nullptr, threadFunc, this)) {
-                Errno().raise(StringBuilder() << StringView(u8"pthread_create failed"));
-            }
         }
 
         static void* threadFunc(void* arg) {
@@ -42,21 +39,28 @@ namespace {
             static_assert(sizeof(pthread_t) <= sizeof(u64));
             return (u64)thread;
         }
+
+        void start() override {
+            if (pthread_create(&thread, nullptr, threadFunc, this)) {
+                Errno().raise(StringBuilder() << StringView(u8"pthread_create failed"));
+            }
+        }
     };
 }
 
 Thread::Thread(Runable& runable)
-    : impl(new PosixThreadImpl(runable))
+    : Thread(new PosixThreadImpl(runable))
 {
 }
 
 Thread::Thread(ThreadIface* iface)
     : impl(iface)
 {
+    impl->start();
 }
 
 Thread::Thread(CoroExecutor* exec, Runable& runable)
-    : impl(exec->createThread(runable))
+    : Thread(exec->createThread(runable))
 {
 }
 
@@ -83,26 +87,20 @@ u64 Thread::currentThreadId() noexcept {
 void stl::detach(Runable& runable) {
     struct Helper: public Runable {
         Runable* slave;
-        ScopedPtr<Thread> thr;
+        Thread thr;
 
         Helper(Runable* r) noexcept
             : slave(r)
-            , thr(nullptr)
+            , thr(*this)
         {
-        }
-
-        void start() {
-            (thr.ptr = new Thread(*this))->detach();
         }
 
         void run() override {
             ScopedPtr<Helper> that(this);
             slave->run();
+            thr.detach();
         }
     };
 
-    ScopedPtr<Helper> guard(new Helper(&runable));
-
-    guard.ptr->start();
-    guard.drop();
+    new Helper(&runable);
 }
