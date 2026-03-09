@@ -160,7 +160,9 @@ STD_TEST_SUITE(CoroMutex) {
 
         exec->spawn([&](Cont*) {
             result = mtx.tryLock();
-            if (result) mtx.unlock();
+            if (result) {
+                mtx.unlock();
+            }
             done.arrive();
         });
 
@@ -212,7 +214,10 @@ STD_TEST_SUITE(CoroMutex) {
 
         exec->spawn([&](Cont*) {
             for (int i = 0; i < 100; ++i) {
-                if (!mtx.tryLock()) { ok = false; break; }
+                if (!mtx.tryLock()) {
+                    ok = false;
+                    break;
+                }
                 mtx.unlock();
             }
             done.arrive();
@@ -232,7 +237,9 @@ STD_TEST_SUITE(CoroMutex) {
         exec->spawn([&](Cont*) {
             { LockGuard guard(mtx); }
             result = mtx.tryLock();
-            if (result) mtx.unlock();
+            if (result) {
+                mtx.unlock();
+            }
             done.arrive();
         });
 
@@ -255,8 +262,12 @@ STD_TEST_SUITE(CoroMutex) {
             }
             r1 = mtx1.tryLock();
             r2 = mtx2.tryLock();
-            if (r1) mtx1.unlock();
-            if (r2) mtx2.unlock();
+            if (r1) {
+                mtx1.unlock();
+            }
+            if (r2) {
+                mtx2.unlock();
+            }
             done.arrive();
         });
 
@@ -274,8 +285,12 @@ STD_TEST_SUITE(CoroMutex) {
         Mutex mtx3(exec.mutPtr());
 
         exec->spawn([&](Cont*) {
-            mtx1.lock(); mtx2.lock(); mtx3.lock();
-            mtx1.unlock(); mtx2.unlock(); mtx3.unlock();
+            mtx1.lock();
+            mtx2.lock();
+            mtx3.lock();
+            mtx1.unlock();
+            mtx2.unlock();
+            mtx3.unlock();
             done.arrive();
         });
 
@@ -294,7 +309,9 @@ STD_TEST_SUITE(CoroMutex) {
             mtx.unlock();
 
             result = mtx.tryLock();
-            if (result) mtx.unlock();
+            if (result) {
+                mtx.unlock();
+            }
 
             mtx.lock();
             mtx.unlock();

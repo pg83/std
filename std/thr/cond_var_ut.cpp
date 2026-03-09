@@ -2,6 +2,9 @@
 #include "thread.h"
 #include "runable.h"
 #include "cond_var.h"
+#include "coro.h"
+#include "pool.h"
+#include "latch.h"
 
 #include <std/tst/ut.h>
 
@@ -600,5 +603,506 @@ STD_TEST_SUITE(CondVar) {
         thread10.join();
 
         STD_INSIST(counter == numThreads);
+    }
+}
+
+STD_TEST_SUITE(CoroCondVar) {
+    STD_TEST(SignalWithoutWaiters) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            cv.signal();
+            cv.signal();
+            cv.signal();
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+    }
+
+    STD_TEST(BroadcastWithoutWaiters) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        CondVar cv(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            cv.broadcast();
+            cv.broadcast();
+            cv.broadcast();
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+    }
+
+    STD_TEST(WaitAndSignal) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        bool ready = false;
+        bool executed = false;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            while (!ready) {
+                cv.wait(mtx);
+            }
+            executed = true;
+            done.arrive();
+        });
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            ready = true;
+            cv.signal();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(executed == true);
+    }
+
+    STD_TEST(WaitAndBroadcast) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        bool ready = false;
+        bool executed = false;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            while (!ready) {
+                cv.wait(mtx);
+            }
+            executed = true;
+            done.arrive();
+        });
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            ready = true;
+            cv.broadcast();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(executed == true);
+    }
+
+    STD_TEST(MultipleWaitersBroadcast) {
+        auto exec = CoroExecutor::create(4);
+        const int N = 3;
+        Latch done(N);
+        bool ready = false;
+        int counter = 0;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        for (int i = 0; i < N; ++i) {
+            exec->spawn([&](Cont*) {
+                LockGuard lock(mtx);
+                while (!ready) {
+                    cv.wait(mtx);
+                }
+                ++counter;
+                done.arrive();
+            });
+        }
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            ready = true;
+            cv.broadcast();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(counter == N);
+    }
+
+    STD_TEST(SignalWakesOneWaiter) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(2);
+        bool ready = false;
+        int counter = 0;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        for (int i = 0; i < 2; ++i) {
+            exec->spawn([&](Cont*) {
+                LockGuard lock(mtx);
+                while (!ready) {
+                    cv.wait(mtx);
+                }
+                ++counter;
+                done.arrive();
+            });
+        }
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            ready = true;
+            cv.signal();
+            cv.signal();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(counter == 2);
+    }
+
+    STD_TEST(ProducerConsumerPattern) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        int data = 0;
+        bool dataReady = false;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            while (!dataReady) {
+                cv.wait(mtx);
+            }
+            STD_INSIST(data == 42);
+            done.arrive();
+        });
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            data = 42;
+            dataReady = true;
+            cv.signal();
+        });
+
+        done.wait();
+        exec->pool()->join();
+    }
+
+    STD_TEST(MultipleProducersConsumers) {
+        auto exec = CoroExecutor::create(4);
+        const int N = 3;
+        Latch done(N);
+        int data = 0;
+        bool dataReady = false;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        for (int i = 0; i < N; ++i) {
+            exec->spawn([&](Cont*) {
+                LockGuard lock(mtx);
+                while (!dataReady) {
+                    cv.wait(mtx);
+                }
+                STD_INSIST(data == 100);
+                done.arrive();
+            });
+        }
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            data = 100;
+            dataReady = true;
+            cv.broadcast();
+        });
+
+        done.wait();
+        exec->pool()->join();
+    }
+
+    STD_TEST(SequentialWaitSignal) {
+        auto exec = CoroExecutor::create(4);
+        bool ready1 = false, ready2 = false;
+        bool executed1 = false, executed2 = false;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        {
+            Latch done(1);
+            exec->spawn([&](Cont*) {
+                LockGuard lock(mtx);
+                while (!ready1) {
+                    cv.wait(mtx);
+                }
+                executed1 = true;
+                done.arrive();
+            });
+            exec->spawn([&](Cont*) {
+                LockGuard lock(mtx);
+                ready1 = true;
+                cv.signal();
+            });
+            done.wait();
+        }
+
+        STD_INSIST(executed1 == true);
+
+        {
+            Latch done(1);
+            exec->spawn([&](Cont*) {
+                LockGuard lock(mtx);
+                while (!ready2) {
+                    cv.wait(mtx);
+                }
+                executed2 = true;
+                done.arrive();
+            });
+            exec->spawn([&](Cont*) {
+                LockGuard lock(mtx);
+                ready2 = true;
+                cv.signal();
+            });
+            done.wait();
+        }
+
+        exec->pool()->join();
+        STD_INSIST(executed2 == true);
+    }
+
+    STD_TEST(WaitWithSpuriousWakeup) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        int value = 0;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            while (value != 5) {
+                cv.wait(mtx);
+            }
+            done.arrive();
+        });
+
+        for (int i = 1; i <= 5; ++i) {
+            exec->spawn([&, i](Cont*) {
+                LockGuard lock(mtx);
+                value = i;
+                cv.signal();
+            });
+        }
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(value == 5);
+    }
+
+    STD_TEST(MultipleCondVarsOneMutex) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(2);
+        bool ready1 = false, ready2 = false;
+        bool executed1 = false, executed2 = false;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv1(exec.mutPtr());
+        CondVar cv2(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            while (!ready1) {
+                cv1.wait(mtx);
+            }
+            executed1 = true;
+            done.arrive();
+        });
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            while (!ready2) {
+                cv2.wait(mtx);
+            }
+            executed2 = true;
+            done.arrive();
+        });
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            ready1 = true;
+            cv1.signal();
+        });
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            ready2 = true;
+            cv2.signal();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(executed1 == true);
+        STD_INSIST(executed2 == true);
+    }
+
+    STD_TEST(BroadcastMultipleTimes) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(2);
+        bool ready = false;
+        int counter = 0;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        for (int i = 0; i < 2; ++i) {
+            exec->spawn([&](Cont*) {
+                LockGuard lock(mtx);
+                while (!ready) {
+                    cv.wait(mtx);
+                }
+                ++counter;
+                done.arrive();
+            });
+        }
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            ready = true;
+            cv.broadcast();
+            cv.broadcast();
+            cv.broadcast();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(counter == 2);
+    }
+
+    STD_TEST(WaitWithPredicatePattern) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        bool predicate = false;
+        int result = 0;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            while (!predicate) {
+                cv.wait(mtx);
+            }
+            result = 123;
+            done.arrive();
+        });
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            predicate = true;
+            cv.signal();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(result == 123);
+    }
+
+    STD_TEST(ComplexSynchronizationPattern) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        int phase = 0;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            while (phase != 1) {
+                cv.wait(mtx);
+            }
+            phase = 2;
+            cv.broadcast();
+        });
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            while (phase != 2) {
+                cv.wait(mtx);
+            }
+            phase = 3;
+            cv.broadcast();
+        });
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            phase = 1;
+            cv.broadcast();
+            while (phase != 3) {
+                cv.wait(mtx);
+            }
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(phase == 3);
+    }
+
+    STD_TEST(RapidSignaling) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            for (int i = 0; i < 1000; ++i) {
+                LockGuard lock(mtx);
+                cv.signal();
+            }
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+    }
+
+    STD_TEST(RapidBroadcasting) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        exec->spawn([&](Cont*) {
+            for (int i = 0; i < 1000; ++i) {
+                LockGuard lock(mtx);
+                cv.broadcast();
+            }
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+    }
+
+    STD_TEST(ManyWaitersBroadcast) {
+        auto exec = CoroExecutor::create(4);
+        const int N = 10;
+        Latch done(N);
+        bool ready = false;
+        int counter = 0;
+        Mutex mtx(exec.mutPtr());
+        CondVar cv(exec.mutPtr());
+
+        for (int i = 0; i < N; ++i) {
+            exec->spawn([&](Cont*) {
+                LockGuard lock(mtx);
+                while (!ready) {
+                    cv.wait(mtx);
+                }
+                ++counter;
+                done.arrive();
+            });
+        }
+
+        exec->spawn([&](Cont*) {
+            LockGuard lock(mtx);
+            ready = true;
+            cv.broadcast();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(counter == N);
     }
 }
