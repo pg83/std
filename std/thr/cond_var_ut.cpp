@@ -881,13 +881,13 @@ STD_TEST_SUITE(CoroCondVar) {
             done.arrive();
         });
 
-        for (int i = 1; i <= 5; ++i) {
-            exec->spawn([&, i](Cont*) {
+        exec->spawn([&](Cont*) {
+            for (int i = 1; i <= 5; ++i) {
                 LockGuard lock(mtx);
                 value = i;
                 cv.signal();
-            });
-        }
+            }
+        });
 
         done.wait();
         exec->pool()->join();
