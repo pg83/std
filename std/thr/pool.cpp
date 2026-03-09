@@ -298,6 +298,16 @@ void WorkStealingThreadPool::GlobalWorker::processChunk(IntrusiveList& chunk) {
             return w->push(chunk);
         }
 
+        if (!chunk.empty()) {
+            {
+                LockGuard lock(mutex_);
+
+                tasks_.pushBack(chunk);
+            }
+
+            pool_->notifyOne();
+        }
+
         task->run();
     }
 }
