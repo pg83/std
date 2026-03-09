@@ -29,6 +29,7 @@ namespace {
         virtual ~ContImpl() = default;
 
         CoroExecutor* executor() noexcept override;
+        void reSchedule() noexcept;
         void run() noexcept override;
         void entryX() noexcept;
 
@@ -143,7 +144,7 @@ void CoroMutexImpl::unlock() noexcept {
         auto* cont = static_cast<ContImpl*>(static_cast<Task*>(node));
 
         cont->suspended_ = false;
-        exec_->pool_->submitTask(cont);
+        cont->reSchedule();
     } else {
         locked_ = false;
     }
@@ -198,6 +199,10 @@ void ContImpl::entry(u32 lo, u32 hi) noexcept {
     ((ContImpl*)(((uintptr_t)hi << 32) | lo))->entryX();
 }
 
+void ContImpl::reSchedule() noexcept {
+    exec_->pool_->submitTask(this);
+}
+
 void ContImpl::run() noexcept {
     ucontext_t workerCtx;
 
@@ -216,7 +221,7 @@ void ContImpl::run() noexcept {
     } else if (suspended_) {
         // don't resubmit — unlock() will submitTask later
     } else {
-        exec_->pool_->submitTask(this);
+        reSchedule();
     }
 }
 
