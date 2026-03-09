@@ -173,8 +173,6 @@ namespace {
                 return thread_.threadId();
             }
 
-            void flush() noexcept;
-
             void flushLocal() noexcept {
                 tasks_.pushBack(local_);
             }
@@ -185,7 +183,7 @@ namespace {
 
             void push(Task* task) noexcept {
                 LockGuard lock(mutex_);
-                flush();
+                flushLocal();
                 tasks_.pushBack(task);
                 condVar_.signal();
             }
@@ -339,13 +337,6 @@ WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex
     shuffle(rng_, so_.mutBegin(), so_.mutEnd());
 }
 
-void WorkStealingThreadPool::Worker::flush() noexcept {
-    if (!local_.empty()) {
-        flushLocal();
-        pool_->notifyOne();
-    }
-}
-
 void WorkStealingThreadPool::Worker::run() noexcept {
     try {
         loop();
@@ -356,7 +347,7 @@ void WorkStealingThreadPool::Worker::run() noexcept {
 
         LockGuard lock(mutex_);
 
-        flush();
+        flushLocal();
 
         while (auto task = popNoLock()) {
             task->run();
