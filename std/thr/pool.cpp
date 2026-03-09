@@ -12,6 +12,7 @@
 #include <std/alg/range.h>
 #include <std/alg/minmax.h>
 #include <std/lib/vector.h>
+#include <std/dbg/assert.h>
 #include <std/dbg/insist.h>
 #include <std/sys/atomic.h>
 #include <std/alg/shuffle.h>
