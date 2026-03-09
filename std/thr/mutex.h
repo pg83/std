@@ -2,16 +2,18 @@
 
 namespace stl {
     class CondVar;
+    struct MutexIface;
 
     class Mutex {
         friend class CondVar;
 
-        struct Impl;
-        Impl* impl;
+        MutexIface* impl;
 
     public:
         Mutex();
         Mutex(bool lock);
+        Mutex(MutexIface* iface);
+
         ~Mutex() noexcept;
 
         void lock() noexcept;

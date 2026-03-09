@@ -1,5 +1,6 @@
 #include "mutex.h"
 #include "cond_var.h"
+#include "mutex_iface.h"
 
 #include <std/str/view.h>
 #include <std/sys/throw.h>
@@ -32,7 +33,7 @@ CondVar::~CondVar() noexcept {
 }
 
 void CondVar::wait(Mutex& mutex) noexcept {
-    STD_INSIST(pthread_cond_wait(impl, (pthread_mutex_t*)mutex.impl) == 0);
+    STD_INSIST(pthread_cond_wait(impl, (pthread_mutex_t*)mutex.impl->nativeHandle()) == 0);
 }
 
 void CondVar::signal() noexcept {

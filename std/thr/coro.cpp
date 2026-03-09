@@ -1,10 +1,13 @@
 #include "coro.h"
 #include "task.h"
 #include "pool.h"
+#include "mutex.h"
+#include "mutex_iface.h"
 
 #include <std/sys/crt.h>
 #include <std/ptr/scoped.h>
 #include <std/alg/destruct.h>
+#include <std/lib/list.h>
 
 #include <ucontext.h>
 
@@ -18,6 +21,7 @@ namespace {
         ucontext_t ctx_;
         ucontext_t* workerCtx_;
         Runable* runable_;
+        bool suspended_;
 
         ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept;
 
@@ -45,6 +49,8 @@ namespace {
             return new HeapContImpl(exec, params.setStackPtr(allocateMemory(params.stackSize)));
         }
     }
+
+    struct CoroMutexImpl;
 
     struct CoroExecutorImpl: public CoroExecutor {
         ThreadPool::Ref pool_;
@@ -81,6 +87,63 @@ namespace {
         ThreadPool* pool() const noexcept override {
             return (ThreadPool*)pool_.ptr();
         }
+
+        MutexIface* createMutex() override;
+    };
+
+    struct CoroMutexImpl: public MutexIface {
+        CoroExecutorImpl* exec_;
+        Mutex queueMutex_;
+        IntrusiveList waiters_;
+        bool locked_;
+
+        CoroMutexImpl(CoroExecutorImpl* exec) noexcept
+            : exec_(exec)
+            , locked_(false)
+        {
+        }
+
+        void lock() noexcept override {
+            if (tryLock()) {
+                return;
+            }
+
+            auto* cont = exec_->currentCont();
+            LockGuard guard(queueMutex_);
+
+            if (!locked_) {
+                locked_ = true;
+                return;
+            }
+
+            waiters_.pushBack(cont);
+            cont->suspended_ = true;
+            swapcontext(&cont->ctx_, cont->workerCtx_);
+        }
+
+        void unlock() noexcept override {
+            LockGuard guard(queueMutex_);
+            auto* node = waiters_.popFrontOrNull();
+
+            if (node) {
+                auto* cont = static_cast<ContImpl*>(static_cast<Task*>(node));
+                cont->suspended_ = false;
+                exec_->pool_->submitTask(cont);
+            } else {
+                locked_ = false;
+            }
+        }
+
+        bool tryLock() noexcept override {
+            LockGuard guard(queueMutex_);
+
+            if (!locked_) {
+                locked_ = true;
+                return true;
+            }
+
+            return false;
+        }
     };
 }
 
@@ -88,6 +151,7 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
     : exec_(exec)
     , workerCtx_(nullptr)
     , runable_(params.runable)
+    , suspended_(false)
 {
     getcontext(&ctx_);
 
@@ -131,9 +195,15 @@ void ContImpl::run() noexcept {
 
     if (!runable_) {
         delete this;
+    } else if (suspended_) {
+        // don't resubmit — unlock() will submitTask later
     } else {
         exec_->pool_->submitTask(this);
     }
+}
+
+MutexIface* CoroExecutorImpl::createMutex() {
+    return new CoroMutexImpl(this);
 }
 
 CoroExecutor::~CoroExecutor() noexcept {

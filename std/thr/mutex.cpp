@@ -1,4 +1,5 @@
 #include "mutex.h"
+#include "mutex_iface.h"
 
 #include <std/str/view.h>
 #include <std/sys/throw.h>
@@ -9,20 +10,41 @@
 
 using namespace stl;
 
-struct Mutex::Impl: public pthread_mutex_t {
-    Impl() {
+struct PosixMutexImpl: public MutexIface, public pthread_mutex_t {
+    PosixMutexImpl() {
         if (pthread_mutex_init(this, nullptr) != 0) {
             Errno().raise(StringBuilder() << StringView(u8"pthread_mutex_init failed"));
         }
     }
 
-    ~Impl() noexcept {
+    ~PosixMutexImpl() noexcept override {
         STD_INSIST(pthread_mutex_destroy(this) == 0);
+    }
+
+    void lock() noexcept override {
+        STD_INSIST(pthread_mutex_lock(this) == 0);
+    }
+
+    void unlock() noexcept override {
+        STD_INSIST(pthread_mutex_unlock(this) == 0);
+    }
+
+    bool tryLock() noexcept override {
+        return pthread_mutex_trylock(this) == 0;
+    }
+
+    void* nativeHandle() noexcept override {
+        return static_cast<pthread_mutex_t*>(this);
     }
 };
 
 Mutex::Mutex()
-    : impl(new Impl())
+    : impl(new PosixMutexImpl())
+{
+}
+
+Mutex::Mutex(MutexIface* iface)
+    : impl(iface)
 {
 }
 
@@ -39,13 +61,13 @@ Mutex::~Mutex() noexcept {
 }
 
 void Mutex::lock() noexcept {
-    STD_INSIST(pthread_mutex_lock(impl) == 0);
+    impl->lock();
 }
 
 void Mutex::unlock() noexcept {
-    STD_INSIST(pthread_mutex_unlock(impl) == 0);
+    impl->unlock();
 }
 
 bool Mutex::tryLock() noexcept {
-    return pthread_mutex_trylock(impl) == 0;
+    return impl->tryLock();
 }

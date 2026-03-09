@@ -1,5 +1,6 @@
 #include "coro.h"
 #include "pool.h"
+#include "mutex.h"
 #include "latch.h"
 #include "wait_group.h"
 
@@ -126,6 +127,73 @@ STD_TEST_SUITE(CoroExecutor) {
 
         done.wait();
         pool->join();
+    }
+
+    STD_TEST(MutexBasic) {
+        auto pool = ThreadPool::workStealing(4);
+        auto exec = CoroExecutor::create(pool.mutPtr());
+        Latch done(1);
+        int counter = 0;
+
+        exec->spawn([&](Cont*) {
+            Mutex mtx(exec->createMutex());
+
+            mtx.lock();
+            ++counter;
+            mtx.unlock();
+
+            done.arrive();
+        });
+
+        done.wait();
+        pool->join();
+        STD_INSIST(counter == 1);
+    }
+
+    STD_TEST(MutexContention) {
+        auto pool = ThreadPool::workStealing(4);
+        auto exec = CoroExecutor::create(pool.mutPtr());
+        Latch done(2);
+        int counter = 0;
+        Mutex mtx(exec->createMutex());
+
+        for (int i = 0; i < 2; ++i) {
+            exec->spawn([&](Cont* c) {
+                for (int j = 0; j < 1000; ++j) {
+                    LockGuard guard(mtx);
+                    ++counter;
+                }
+                done.arrive();
+            });
+        }
+
+        done.wait();
+        pool->join();
+        STD_INSIST(counter == 2000);
+    }
+
+    STD_TEST(MutexStress) {
+        auto pool = ThreadPool::workStealing(4);
+        auto exec = CoroExecutor::create(pool.mutPtr());
+        const int nCoros = 16;
+        const int nIters = 500;
+        Latch done(nCoros);
+        int counter = 0;
+        Mutex mtx(exec->createMutex());
+
+        for (int i = 0; i < nCoros; ++i) {
+            exec->spawn([&](Cont* c) {
+                for (int j = 0; j < nIters; ++j) {
+                    LockGuard guard(mtx);
+                    ++counter;
+                }
+                done.arrive();
+            });
+        }
+
+        done.wait();
+        pool->join();
+        STD_INSIST(counter == nCoros * nIters);
     }
 
     const int depth = 22;
