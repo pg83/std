@@ -225,6 +225,7 @@ namespace {
             void push(Task* task) noexcept;
             void loop();
             void run() noexcept override;
+            void processChunk(IntrusiveList& chunk);
         };
 
         Vector<Worker*> workers_;
@@ -259,29 +260,34 @@ void WorkStealingThreadPool::GlobalWorker::push(Task* task) noexcept {
     condVar_.signal();
 }
 
+void WorkStealingThreadPool::GlobalWorker::processChunk(IntrusiveList& chunk) {
+    while (auto task = (Task*)chunk.popFrontOrNull()) {
+        if (auto w = (Worker*)pool_->wq->dequeue()) {
+            chunk.pushFront(task);
+
+            return w->push(chunk);
+        }
+
+        task->run();
+    }
+}
+
 void WorkStealingThreadPool::GlobalWorker::loop() {
+    LockGuard lock(mutex_);
+
     for (;;) {
+        while (tasks_.empty()) {
+            condVar_.wait(mutex_);
+        }
+
         IntrusiveList chunk;
 
+        tasks_.xchgWithEmptyList(chunk);
+
         {
-            LockGuard lock(mutex_);
-            tasks_.xchgWithEmptyList(chunk);
-        }
+            UnlockGuard unlock(mutex_);
 
-        while (auto task = (Task*)chunk.popFrontOrNull()) {
-            if (auto w = (Worker*)pool_->wq->dequeue()) {
-                chunk.pushFront(task);
-                w->push(chunk);
-                break;
-            }
-
-            task->run();
-        }
-
-        LockGuard lock(mutex_);
-
-        if (tasks_.empty()) {
-            condVar_.wait(mutex_);
+            processChunk(chunk);
         }
     }
 }
