@@ -1,6 +1,7 @@
 #include "barrier.h"
 #include "mutex.h"
 #include "cond_var.h"
+#include "coro.h"
 
 #include <std/sys/types.h>
 
@@ -13,6 +14,13 @@ struct Barrier::Impl {
 
     Impl(int n)
         : remaining(n)
+    {
+    }
+
+    Impl(int n, CoroExecutor* exec)
+        : mutex(exec)
+        , cv(exec)
+        , remaining(n)
     {
     }
 
@@ -31,6 +39,11 @@ struct Barrier::Impl {
 
 Barrier::Barrier(int n)
     : impl(new Impl(n))
+{
+}
+
+Barrier::Barrier(int n, CoroExecutor* exec)
+    : impl(new Impl(n, exec))
 {
 }
 

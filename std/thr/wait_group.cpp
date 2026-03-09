@@ -1,6 +1,7 @@
 #include "wait_group.h"
 #include "mutex.h"
 #include "cond_var.h"
+#include "coro.h"
 
 #include <std/sys/types.h>
 
@@ -13,6 +14,13 @@ struct WaitGroup::Impl {
 
     Impl()
         : counter(0)
+    {
+    }
+
+    Impl(CoroExecutor* exec)
+        : mutex(exec)
+        , cv(exec)
+        , counter(0)
     {
     }
 
@@ -40,6 +48,11 @@ struct WaitGroup::Impl {
 
 WaitGroup::WaitGroup()
     : impl(new Impl())
+{
+}
+
+WaitGroup::WaitGroup(CoroExecutor* exec)
+    : impl(new Impl(exec))
 {
 }
 
