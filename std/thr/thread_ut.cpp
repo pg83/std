@@ -1,3 +1,6 @@
+#include "coro.h"
+#include "pool.h"
+#include "latch.h"
 #include "mutex.h"
 #include "thread.h"
 #include "runable.h"
@@ -380,6 +383,31 @@ STD_TEST_SUITE(Thread) {
         STD_INSIST(value == 3);
     }
 
+    STD_TEST(ThreadId) {
+        u64 id = 0;
+
+        struct IdRunable: public Runable {
+            u64* id;
+
+            explicit IdRunable(u64* id)
+                : id(id)
+            {
+            }
+
+            void run() noexcept override {
+                *id = Thread::currentThreadId();
+            }
+        };
+
+        IdRunable runnable(&id);
+        Thread thread(runnable);
+        u64 mainId = Thread::currentThreadId();
+        thread.join();
+
+        STD_INSIST(id != 0);
+        STD_INSIST(id != mainId);
+    }
+
     STD_TEST(DetachWithSharedResource) {
         struct DetachSharedRunable: public Runable {
             Mutex* mutex;
@@ -433,5 +461,162 @@ STD_TEST_SUITE(Thread) {
         STD_INSIST(resource == 30);
         STD_INSIST(done1 == true);
         STD_INSIST(done2 == true);
+    }
+}
+
+STD_TEST_SUITE(CoroThread) {
+    STD_TEST(BasicCreationAndJoin) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        int counter = 0;
+        CounterRunable runnable(&counter);
+
+        exec->spawn([&](Cont*) {
+            Thread thread(exec.mutPtr(), runnable);
+            thread.join();
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(counter == 1);
+    }
+
+    STD_TEST(MultipleThreads) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        int counter1 = 0, counter2 = 0, counter3 = 0;
+        CounterRunable r1(&counter1), r2(&counter2), r3(&counter3);
+
+        exec->spawn([&](Cont*) {
+            Thread t1(exec.mutPtr(), r1);
+            Thread t2(exec.mutPtr(), r2);
+            Thread t3(exec.mutPtr(), r3);
+            t1.join();
+            t2.join();
+            t3.join();
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(counter1 == 1);
+        STD_INSIST(counter2 == 1);
+        STD_INSIST(counter3 == 1);
+    }
+
+    STD_TEST(WithMultipleIncrements) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        int counter = 0;
+        MultiIncrementRunable runnable(&counter, 1000);
+
+        exec->spawn([&](Cont*) {
+            Thread thread(exec.mutPtr(), runnable);
+            thread.join();
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(counter == 1000);
+    }
+
+    STD_TEST(SequentialCreation) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        int total = 0;
+
+        exec->spawn([&](Cont*) {
+            for (int i = 0; i < 10; ++i) {
+                int counter = 0;
+                CounterRunable runnable(&counter);
+                Thread thread(exec.mutPtr(), runnable);
+                thread.join();
+                total += counter;
+            }
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(total == 10);
+    }
+
+    STD_TEST(MultipleWithDifferentWorkloads) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        int counter1 = 0, counter2 = 0, counter3 = 0;
+        MultiIncrementRunable r1(&counter1, 100);
+        MultiIncrementRunable r2(&counter2, 500);
+        MultiIncrementRunable r3(&counter3, 1000);
+
+        exec->spawn([&](Cont*) {
+            Thread t1(exec.mutPtr(), r1);
+            Thread t2(exec.mutPtr(), r2);
+            Thread t3(exec.mutPtr(), r3);
+            t1.join();
+            t2.join();
+            t3.join();
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(counter1 == 100);
+        STD_INSIST(counter2 == 500);
+        STD_INSIST(counter3 == 1000);
+    }
+
+    STD_TEST(JoinOrder) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        int counter1 = 0, counter2 = 0;
+        CounterRunable r1(&counter1), r2(&counter2);
+
+        exec->spawn([&](Cont*) {
+            Thread t1(exec.mutPtr(), r1);
+            Thread t2(exec.mutPtr(), r2);
+            t2.join();
+            t1.join();
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(counter1 == 1);
+        STD_INSIST(counter2 == 1);
+    }
+
+    STD_TEST(ThreadId) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        u64 id = 0;
+        bool executed = false;
+
+        struct BoolRunable: public Runable {
+            bool* executed;
+            explicit BoolRunable(bool* e)
+                : executed(e)
+            {
+            }
+            void run() noexcept override {
+                *executed = true;
+            }
+        };
+
+        BoolRunable runnable(&executed);
+
+        exec->spawn([&](Cont*) {
+            Thread thread(exec.mutPtr(), runnable);
+            id = thread.threadId();
+            thread.join();
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(executed == true);
+        STD_INSIST(id != 0);
     }
 }
