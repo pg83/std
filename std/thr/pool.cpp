@@ -244,6 +244,11 @@ namespace {
                 return &tls_[key];
             }
 
+            void steal(IntrusiveList* stolen) noexcept {
+                LockGuard lock(mutex_);
+                tasks_.xchgWithEmptyList(*stolen);
+            }
+
             void loop();
             void run() noexcept override;
             void processChunk(IntrusiveList& chunk);
@@ -335,6 +340,7 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     : workers_(numThreads)
     , wq(WaitQueue::construct(numThreads))
     , running_(numThreads)
+    , gw_(new GlobalWorker(this))
 {
     for (size_t i = 0; i < numThreads; ++i) {
         workers_.pushBack(workerIndex_.insertKeyed(this, i, numThreads));
@@ -343,8 +349,6 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     for (auto w : mutRange(workers_)) {
         w->mutex_.unlock();
     }
-
-    gw_ = new GlobalWorker(this);
 }
 
 bool WorkStealingThreadPool::notifyOne() noexcept {
@@ -406,6 +410,8 @@ WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
 }
 
 void WorkStealingThreadPool::trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept {
+    gw_->steal(stolen);
+
     for (u32 i = 0; stolen->empty() && i < n; ++i) {
         workers_[order[(offset + i) % n]]->split(stolen);
     }
