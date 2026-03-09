@@ -40,6 +40,9 @@ namespace {
         }
     };
 
+    struct ShutDown2: public ShutDown {
+    };
+
     struct SyncThreadPool: public ThreadPool {
         IntMap<void*> tls_;
 
@@ -241,7 +244,6 @@ namespace {
         bool notifyOne() noexcept;
         void join() noexcept override;
         Worker* localWorker() noexcept;
-        Worker* nextSleeping() noexcept;
         void** tls(u64 key) noexcept override;
         void submitTask(Task* task) noexcept override;
         void trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept;
@@ -293,9 +295,14 @@ void WorkStealingThreadPool::GlobalWorker::loop() {
 }
 
 void WorkStealingThreadPool::GlobalWorker::run() noexcept {
-    try {
-        loop();
-    } catch (ShutDown*) {
+    while (pool_->running_) {
+        try {
+            loop();
+        } catch (ShutDown2*) {
+            return;
+        } catch (ShutDown* sh) {
+            pool_->submitTask(sh);
+        }
     }
 }
 
@@ -350,13 +357,11 @@ void WorkStealingThreadPool::submitTask(Task* task) noexcept {
 void** WorkStealingThreadPool::tls(u64 key) noexcept {
     if (auto w = localWorker(); w) {
         return &w->tls_[key];
-    }
-
-    if (gw_->thread_.threadId() == Thread::currentThreadId()) {
+    } else if (gw_->thread_.threadId() == Thread::currentThreadId()) {
         return &gw_->tls_[key];
+    } else {
+        return nullptr;
     }
-
-    return nullptr;
 }
 
 void WorkStealingThreadPool::join() noexcept {
@@ -368,7 +373,9 @@ void WorkStealingThreadPool::join() noexcept {
         w->join();
     }
 
-    gw_->push(&task);
+    ShutDown2 task2;
+
+    gw_->push(&task2);
     gw_->thread_.join();
 }
 
@@ -380,16 +387,6 @@ void WorkStealingThreadPool::trySteal(const u32* order, u32 n, u32 offset, Intru
     for (u32 i = 0; stolen->empty() && i < n; ++i) {
         workers_[order[(offset + i) % n]]->split(stolen);
     }
-}
-
-WorkStealingThreadPool::Worker* WorkStealingThreadPool::nextSleeping() noexcept {
-    while (stdAtomicFetch(&running_, MemoryOrder::Relaxed) > 1) {
-        if (auto w = (Worker*)wq->dequeue(); w) {
-            return w;
-        }
-    }
-
-    return nullptr;
 }
 
 WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers)
@@ -414,20 +411,18 @@ void WorkStealingThreadPool::Worker::run() noexcept {
     try {
         loop();
     } catch (ShutDown* sh) {
-        if (auto w = pool_->nextSleeping(); w) {
-            w->push(sh);
-        }
-
-        LockGuard lock(mutex_);
-
-        flushLocal();
-
-        while (auto task = popNoLock()) {
-            task->run();
-        }
-
-        stdAtomicSubAndFetch(&pool_->running_, 1, MemoryOrder::Relaxed);
+        pool_->gw_->push(sh);
     }
+
+    LockGuard lock(mutex_);
+
+    flushLocal();
+
+    while (auto task = popNoLock()) {
+        task->run();
+    }
+
+    stdAtomicSubAndFetch(&pool_->running_, 1, MemoryOrder::Relaxed);
 }
 
 void WorkStealingThreadPool::Worker::loop() {
