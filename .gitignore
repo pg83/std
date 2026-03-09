@@ -8,3 +8,6 @@ bld
 *bld*
 test
 libstd.a
+core
+core.*
+perf.*
