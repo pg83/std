@@ -42,9 +42,9 @@ namespace stl {
         virtual Cont* me() const noexcept = 0;
         virtual MutexIface* createMutex() = 0;
         virtual CondVarIface* createCondVar() = 0;
-        virtual ThreadIface* createThread(Runable& runable) = 0;
         virtual void spawnRun(SpawnParams params) = 0;
         virtual ThreadPool* pool() const noexcept = 0;
+        virtual ThreadIface* createThread(Runable& runable) = 0;
 
         template <typename F>
         void spawn(F f) {
