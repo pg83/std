@@ -247,6 +247,13 @@ namespace {
             void loop();
             void run() noexcept override;
             void processChunk(IntrusiveList& chunk);
+
+            void join() {
+                ShutDown2 task2;
+
+                push(&task2);
+                thread_.join();
+            }
         };
 
         Vector<Worker*> workers_;
@@ -391,10 +398,7 @@ void WorkStealingThreadPool::join() noexcept {
         w->join();
     }
 
-    ShutDown2 task2;
-
-    gw_->push(&task2);
-    gw_->thread_.join();
+    gw_->join();
 }
 
 WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
