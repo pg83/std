@@ -370,6 +370,8 @@ void WorkStealingThreadPool::Worker::loop() {
     size_t epoch = 0;
 
     do {
+        flush();
+
         while (auto task = popNoLock()) {
             {
                 UnlockGuard unlock(mutex_);
