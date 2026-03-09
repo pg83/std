@@ -113,16 +113,14 @@ CoroMutexImpl::CoroMutexImpl(CoroExecutorImpl* exec) noexcept
 }
 
 void CoroMutexImpl::lock() noexcept {
-    if (tryLock()) {
-        return;
-    }
-
     auto* cont = exec_->currentCont();
+
     queueMutex_.lock();
 
     if (!locked_) {
         locked_ = true;
         queueMutex_.unlock();
+
         return;
     }
 
@@ -135,10 +133,10 @@ void CoroMutexImpl::lock() noexcept {
 
 void CoroMutexImpl::unlock() noexcept {
     LockGuard guard(queueMutex_);
-    auto* node = waiters_.popFrontOrNull();
 
-    if (node) {
+    if (auto* node = waiters_.popFrontOrNull(); node) {
         auto* cont = static_cast<ContImpl*>(static_cast<Task*>(node));
+
         cont->suspended_ = false;
         exec_->pool_->submitTask(cont);
     } else {
@@ -150,8 +148,7 @@ bool CoroMutexImpl::tryLock() noexcept {
     LockGuard guard(queueMutex_);
 
     if (!locked_) {
-        locked_ = true;
-        return true;
+        return locked_ = true;
     }
 
     return false;
