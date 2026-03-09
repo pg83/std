@@ -3,6 +3,7 @@
 #include "mutex.h"
 #include "latch.h"
 #include "cond_var.h"
+#include "barrier.h"
 #include "wait_group.h"
 
 #include <std/tst/ut.h>

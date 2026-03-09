@@ -1,4 +1,6 @@
 #include "latch.h"
+#include "coro.h"
+#include "pool.h"
 #include "thread.h"
 
 #include <std/tst/ut.h>
@@ -64,6 +66,75 @@ STD_TEST_SUITE(Latch) {
         ScopedThread t7(worker);
 
         latch.wait();
+        STD_INSIST(counter == N);
+    }
+
+    STD_TEST(CoroBasic) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        Latch latch(1, exec.mutPtr());
+        int counter = 0;
+
+        exec->spawn([&](Cont*) {
+            latch.wait();
+            STD_INSIST(counter == 1);
+            done.arrive();
+        });
+
+        exec->spawn([&](Cont*) {
+            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            latch.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+    }
+
+    STD_TEST(CoroMultiple) {
+        const int N = 8;
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        Latch latch(N, exec.mutPtr());
+        int counter = 0;
+
+        exec->spawn([&](Cont*) {
+            latch.wait();
+            STD_INSIST(counter == N);
+            done.arrive();
+        });
+
+        for (int i = 0; i < N; ++i) {
+            exec->spawn([&](Cont*) {
+                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                latch.arrive();
+            });
+        }
+
+        done.wait();
+        exec->pool()->join();
+    }
+
+    STD_TEST(CoroManyWaiters) {
+        const int N = 4;
+        auto exec = CoroExecutor::create(4);
+        Latch done(N);
+        Latch latch(1, exec.mutPtr());
+        int counter = 0;
+
+        for (int i = 0; i < N; ++i) {
+            exec->spawn([&](Cont*) {
+                latch.wait();
+                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                done.arrive();
+            });
+        }
+
+        exec->spawn([&](Cont*) {
+            latch.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
         STD_INSIST(counter == N);
     }
 }

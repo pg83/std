@@ -26,7 +26,7 @@ struct Latch::Impl {
         LockGuard lock(mutex);
 
         if (--remaining == 0) {
-            cv.signal();
+            cv.broadcast();
         }
     }
 

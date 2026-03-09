@@ -1,4 +1,7 @@
 #include "wait_group.h"
+#include "coro.h"
+#include "latch.h"
+#include "pool.h"
 #include "thread.h"
 
 #include <std/tst/ut.h>
@@ -120,5 +123,80 @@ STD_TEST_SUITE(WaitGroup) {
         }
 
         STD_INSIST(counter == 3);
+    }
+
+    STD_TEST(CoroBasic) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        WaitGroup wg(exec.mutPtr());
+        int counter = 0;
+
+        exec->spawn([&](Cont*) {
+            wg.add(1);
+
+            exec->spawn([&](Cont*) {
+                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                wg.done();
+            });
+
+            wg.wait();
+            STD_INSIST(counter == 1);
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+    }
+
+    STD_TEST(CoroMultiple) {
+        const int N = 8;
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        WaitGroup wg(exec.mutPtr());
+        int counter = 0;
+
+        exec->spawn([&](Cont*) {
+            wg.add(N);
+
+            for (int i = 0; i < N; ++i) {
+                exec->spawn([&](Cont*) {
+                    stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                    wg.done();
+                });
+            }
+
+            wg.wait();
+            STD_INSIST(counter == N);
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+    }
+
+    STD_TEST(CoroReuseAfterWait) {
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        WaitGroup wg(exec.mutPtr());
+        int counter = 0;
+
+        exec->spawn([&](Cont*) {
+            for (int round = 0; round < 3; ++round) {
+                wg.add(1);
+
+                exec->spawn([&](Cont*) {
+                    stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                    wg.done();
+                });
+
+                wg.wait();
+            }
+
+            STD_INSIST(counter == 3);
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
     }
 }

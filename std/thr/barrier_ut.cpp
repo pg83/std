@@ -1,4 +1,7 @@
 #include "barrier.h"
+#include "coro.h"
+#include "latch.h"
+#include "pool.h"
 #include "thread.h"
 #include "runable.h"
 
@@ -137,40 +140,50 @@ STD_TEST_SUITE(Barrier) {
         STD_INSIST(correct);
     }
 
-    STD_TEST(MultipleBarriers) {
-        Barrier b1(2);
-        Barrier b2(2);
+    STD_TEST(CoroBasic) {
+        const int N = 6;
+        auto exec = CoroExecutor::create(4);
+        Latch done(N);
+        Barrier barrier(N, exec.mutPtr());
+        int arrived = 0;
+        bool correct = true;
+
+        for (int i = 0; i < N; ++i) {
+            exec->spawn([&](Cont*) {
+                stdAtomicAddAndFetch(&arrived, 1, MemoryOrder::Release);
+                barrier.wait();
+                if (stdAtomicFetch(&arrived, MemoryOrder::Acquire) != N) {
+                    correct = false;
+                }
+                done.arrive();
+            });
+        }
+
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(correct);
+    }
+
+    STD_TEST(CoroMultipleBarriers) {
+        const int N = 4;
+        auto exec = CoroExecutor::create(4);
+        Latch done(N);
+        Barrier b1(N, exec.mutPtr());
+        Barrier b2(N, exec.mutPtr());
         int phase = 0;
 
-        struct PhaseRunable: public Runable {
-            Barrier* b1;
-            Barrier* b2;
-            int* phase;
+        for (int i = 0; i < N; ++i) {
+            exec->spawn([&](Cont*) {
+                b1.wait();
+                stdAtomicAddAndFetch(&phase, 1, MemoryOrder::Relaxed);
+                b2.wait();
+                stdAtomicAddAndFetch(&phase, 1, MemoryOrder::Relaxed);
+                done.arrive();
+            });
+        }
 
-            PhaseRunable(Barrier* a, Barrier* b, int* p)
-                : b1(a)
-                , b2(b)
-                , phase(p)
-            {
-            }
-
-            void run() noexcept override {
-                b1->wait();
-                stdAtomicAddAndFetch(phase, 1, MemoryOrder::Relaxed);
-                b2->wait();
-                stdAtomicAddAndFetch(phase, 1, MemoryOrder::Relaxed);
-            }
-        };
-
-        PhaseRunable r1(&b1, &b2, &phase);
-        PhaseRunable r2(&b1, &b2, &phase);
-
-        Thread t1(r1);
-        Thread t2(r2);
-
-        t1.join();
-        t2.join();
-
-        STD_INSIST(phase == 4);
+        done.wait();
+        exec->pool()->join();
+        STD_INSIST(phase == N * 2);
     }
 }
