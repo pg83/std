@@ -21,7 +21,6 @@ namespace {
         ucontext_t ctx_;
         ucontext_t* workerCtx_;
         Runable* runable_;
-        bool suspended_;
         Runable* afterSuspend_;
 
         ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept;
@@ -131,7 +130,6 @@ void CoroMutexImpl::lock() noexcept {
     }
 
     waiters_.pushBack(cont);
-    cont->suspended_ = true;
     cont->afterSuspend_ = this;
     swapcontext(&cont->ctx_, cont->workerCtx_);
     // resumed here — worker already ran afterSuspend_
@@ -143,7 +141,7 @@ void CoroMutexImpl::unlock() noexcept {
     if (auto* node = waiters_.popFrontOrNull(); node) {
         auto* cont = static_cast<ContImpl*>(static_cast<Task*>(node));
 
-        cont->suspended_ = false;
+        cont->afterSuspend_ = nullptr;
         cont->reSchedule();
     } else {
         locked_ = false;
@@ -164,7 +162,6 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
     : exec_(exec)
     , workerCtx_(nullptr)
     , runable_(params.runable)
-    , suspended_(false)
     , afterSuspend_(nullptr)
 {
     getcontext(&ctx_);
@@ -213,13 +210,12 @@ void ContImpl::run() noexcept {
 
     if (afterSuspend_) {
         afterSuspend_->run();
-        afterSuspend_ = nullptr;
     }
 
     if (!runable_) {
         delete this;
-    } else if (suspended_) {
-        // don't resubmit — unlock() will submitTask later
+    } else if (afterSuspend_) {
+        // suspended — unlock() will reSchedule later
     } else {
         reSchedule();
     }
