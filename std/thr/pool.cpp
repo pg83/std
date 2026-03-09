@@ -369,6 +369,10 @@ void WorkStealingThreadPool::Worker::loop() {
         STD_ASSERT(local_.empty());
 
         while (auto task = popNoLock()) {
+            if (!tasks_.empty()) {
+                pool_->notifyOne();
+            }
+
             {
                 UnlockGuard unlock(mutex_);
 
