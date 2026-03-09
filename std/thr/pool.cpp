@@ -277,10 +277,12 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
 void WorkStealingThreadPool::submitTask(Task* task) noexcept {
     if (auto w = localWorker(); w) {
         return w->pushThrLocal(task);
-    } else if (auto w = (Worker*)wq->dequeue()) {
-        return w->push(task);
-    } else {
-        return workers_[PCG32(&task).uniformUnbiased(workers_.length())]->pushRemote(task);
+    }
+
+    while (true) {
+        if (auto w = (Worker*)wq->dequeue()) {
+            return w->push(task);
+        }
     }
 }
 
