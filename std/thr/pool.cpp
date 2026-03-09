@@ -365,7 +365,7 @@ void WorkStealingThreadPool::Worker::loop() {
     LockGuard lock(mutex_);
 
     do {
-        flush();
+        STD_ASSERT(local_.empty());
 
         while (auto task = popNoLock()) {
             {
