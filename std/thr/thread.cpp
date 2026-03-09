@@ -100,9 +100,9 @@ void stl::detach(Runable& runable) {
         }
 
         void run() override {
+            ScopedPtr<Helper> that(this);
             // race in musl libc
             m.lock();
-            ScopedPtr<Helper> that(this);
             slave->run();
             thr.detach();
         }
