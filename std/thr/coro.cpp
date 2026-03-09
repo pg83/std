@@ -22,7 +22,7 @@ namespace {
         ucontext_t* workerCtx_;
         Runable* runable_;
         bool suspended_;
-        Mutex* pendingUnlock_;
+        Runable* afterSuspend_;
 
         ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept;
 
@@ -92,7 +92,7 @@ namespace {
         MutexIface* createMutex() override;
     };
 
-    struct CoroMutexImpl: public MutexIface {
+    struct CoroMutexImpl: public MutexIface, public Runable {
         CoroExecutorImpl* exec_;
         Mutex queueMutex_;
         IntrusiveList waiters_;
@@ -100,6 +100,7 @@ namespace {
 
         CoroMutexImpl(CoroExecutorImpl* exec) noexcept;
 
+        void run() override;
         void lock() noexcept override;
         void unlock() noexcept override;
         bool tryLock() noexcept override;
@@ -110,6 +111,10 @@ CoroMutexImpl::CoroMutexImpl(CoroExecutorImpl* exec) noexcept
     : exec_(exec)
     , locked_(false)
 {
+}
+
+void CoroMutexImpl::run() {
+    queueMutex_.unlock();
 }
 
 void CoroMutexImpl::lock() noexcept {
@@ -126,9 +131,9 @@ void CoroMutexImpl::lock() noexcept {
 
     waiters_.pushBack(cont);
     cont->suspended_ = true;
-    cont->pendingUnlock_ = &queueMutex_;
+    cont->afterSuspend_ = this;
     swapcontext(&cont->ctx_, cont->workerCtx_);
-    // resumed here — worker already unlocked queueMutex_
+    // resumed here — worker already ran afterSuspend_
 }
 
 void CoroMutexImpl::unlock() noexcept {
@@ -159,7 +164,7 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
     , workerCtx_(nullptr)
     , runable_(params.runable)
     , suspended_(false)
-    , pendingUnlock_(nullptr)
+    , afterSuspend_(nullptr)
 {
     getcontext(&ctx_);
 
@@ -201,9 +206,9 @@ void ContImpl::run() noexcept {
     swapcontext(&workerCtx, &ctx_);
     *exec_->tls() = nullptr;
 
-    if (pendingUnlock_) {
-        pendingUnlock_->unlock();
-        pendingUnlock_ = nullptr;
+    if (afterSuspend_) {
+        afterSuspend_->run();
+        afterSuspend_ = nullptr;
     }
 
     if (!runable_) {
