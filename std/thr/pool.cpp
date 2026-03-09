@@ -175,6 +175,10 @@ namespace {
 
             void flush() noexcept;
 
+            void flushLocal() noexcept {
+                tasks_.pushBack(local_);
+            }
+
             Task* popNoLock() noexcept {
                 return (Task*)tasks_.popFrontOrNull();
             }
@@ -337,7 +341,7 @@ WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex
 
 void WorkStealingThreadPool::Worker::flush() noexcept {
     if (!local_.empty()) {
-        tasks_.pushBack(local_);
+        flushLocal();
         pool_->notifyOne();
     }
 }
@@ -369,9 +373,7 @@ void WorkStealingThreadPool::Worker::loop() {
         STD_ASSERT(local_.empty());
 
         while (auto task = popNoLock()) {
-            if (!tasks_.empty()) {
-                pool_->notifyOne();
-            }
+            pool_->notifyOne();
 
             {
                 UnlockGuard unlock(mutex_);
@@ -379,7 +381,7 @@ void WorkStealingThreadPool::Worker::loop() {
                 task->run();
             }
 
-            flush();
+            flushLocal();
         }
 
         IntrusiveList stolen;
@@ -392,7 +394,7 @@ void WorkStealingThreadPool::Worker::loop() {
 
         local_.pushBack(stolen);
 
-        flush();
+        flushLocal();
     } while (!tasks_.empty() || (sleep(), true));
 }
 
