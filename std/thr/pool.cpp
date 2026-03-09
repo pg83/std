@@ -378,9 +378,7 @@ void WorkStealingThreadPool::join() noexcept {
         w->join();
     }
 
-    ShutDown gwTask;
-
-    gw_->push(&gwTask);
+    gw_->push(&task);
     gw_->thread_.join();
 }
 
