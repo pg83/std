@@ -28,9 +28,10 @@ namespace {
 
         virtual ~ContImpl() = default;
 
+        void parkWith(Runable* afterSuspend) noexcept;
         CoroExecutor* executor() noexcept override;
-        void reSchedule() noexcept;
         void run() noexcept override;
+        void reSchedule() noexcept;
         void entryX() noexcept;
 
         static void entry(u32 lo, u32 hi) noexcept;
@@ -82,9 +83,11 @@ namespace {
         }
 
         void yield() noexcept override {
-            auto* c = currentCont();
+            currentCont()->parkWith(nullptr);
+        }
 
-            swapcontext(&c->ctx_, c->workerCtx_);
+        void parkWith(Runable* afterSuspend) noexcept {
+            currentCont()->parkWith(afterSuspend);
         }
 
         ThreadPool* pool() const noexcept override {
@@ -146,9 +149,7 @@ void CoroMutexImpl::lock() noexcept {
     }
 
     waiters_.pushBack(cont);
-    cont->afterSuspend_ = this;
-    swapcontext(&cont->ctx_, cont->workerCtx_);
-    // resumed here — worker already ran afterSuspend_
+    cont->parkWith(this);
 }
 
 void CoroMutexImpl::unlock() noexcept {
@@ -216,6 +217,11 @@ void ContImpl::reSchedule() noexcept {
     exec_->pool_->submitTask(this);
 }
 
+void ContImpl::parkWith(Runable* afterSuspend) noexcept {
+    afterSuspend_ = afterSuspend;
+    swapcontext(&ctx_, workerCtx_);
+}
+
 void ContImpl::run() noexcept {
     ucontext_t workerCtx;
 
@@ -254,10 +260,8 @@ void CoroCondVarImpl::wait(MutexIface* mutex) noexcept {
 
     queueMutex_.lock();
     waiters_.pushBack(cont);
-    cont->afterSuspend_ = this;
     mutex->unlock();
-    swapcontext(&cont->ctx_, cont->workerCtx_);
-    // resumed — queueMutex_ was unlocked by run(), mutex is not held
+    cont->parkWith(this);
     mutex->lock();
 }
 
