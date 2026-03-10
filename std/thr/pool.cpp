@@ -53,6 +53,10 @@ namespace {
         void** tls(u64 key) noexcept override {
             return &tls_[key];
         }
+
+        size_t numThreads() const noexcept override {
+            return 0;
+        }
     };
 
     class ThreadPoolImpl: public ThreadPool {
@@ -93,6 +97,10 @@ namespace {
         void submitTask(Task* task) noexcept override;
         void join() noexcept override;
         void** tls(u64 key) noexcept override;
+
+        size_t numThreads() const noexcept override {
+            return workerIndex_.size();
+        }
     };
 }
 
@@ -274,6 +282,10 @@ namespace {
         LocalWorker* localWorker() noexcept;
         void** tls(u64 key) noexcept override;
         void submitTask(Task* task) noexcept override;
+
+        size_t numThreads() const noexcept override {
+            return workerIndex_.size();
+        }
     };
 }
 

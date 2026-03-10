@@ -59,6 +59,8 @@ namespace stl {
         }
 
         static Ref create(size_t threads);
+        static Ref create(size_t threads, size_t reactors);
         static Ref create(ThreadPool* pool);
+        static Ref create(ThreadPool* pool, size_t reactors);
     };
 }

@@ -70,6 +70,10 @@ namespace stl {
             }
         }
 
+        size_t size() const noexcept {
+            return st.size();
+        }
+
         template <typename F>
         void visit(F f) {
             st.visit([f](auto el) {

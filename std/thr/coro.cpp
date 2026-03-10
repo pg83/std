@@ -102,7 +102,7 @@ namespace {
         ObjPool::Ref reactorPool_;
         Vector<ReactorThread*> reactors_;
 
-        explicit CoroExecutorImpl(ThreadPool::Ref pool);
+        CoroExecutorImpl(ThreadPool::Ref pool, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
 
         auto tls() {
@@ -418,13 +418,15 @@ void ReactorThread::run() noexcept {
     }
 }
 
-CoroExecutorImpl::CoroExecutorImpl(ThreadPool::Ref pool)
+CoroExecutorImpl::CoroExecutorImpl(ThreadPool::Ref pool, size_t reactors)
     : pool_(pool)
     , tlsKey_(registerTlsKey())
     , reactorPool_(ObjPool::fromMemory())
     , reactors_()
 {
-    reactors_.pushBack(reactorPool_->make<ReactorThread>(this));
+    for (size_t i = 0; i < reactors; ++i) {
+        reactors_.pushBack(reactorPool_->make<ReactorThread>(this));
+    }
 }
 
 CoroExecutorImpl::~CoroExecutorImpl() noexcept {
@@ -854,12 +856,34 @@ ChannelIface::~ChannelIface() noexcept {
 CoroExecutor::~CoroExecutor() noexcept {
 }
 
+static size_t defaultReactors(size_t threads) noexcept {
+    size_t r = threads / 4;
+
+    if (r > 16) {
+        r = 16;
+    }
+
+    if (r < 1) {
+        r = 1;
+    }
+
+    return r;
+}
+
 CoroExecutor::Ref CoroExecutor::create(ThreadPool* pool) {
-    return new CoroExecutorImpl(pool);
+    return create(pool, defaultReactors(pool->numThreads()));
+}
+
+CoroExecutor::Ref CoroExecutor::create(ThreadPool* pool, size_t reactors) {
+    return new CoroExecutorImpl(pool, reactors);
 }
 
 CoroExecutor::Ref CoroExecutor::create(size_t threads) {
-    return create(ThreadPool::workStealing(threads).mutPtr());
+    return create(threads, defaultReactors(threads));
+}
+
+CoroExecutor::Ref CoroExecutor::create(size_t threads, size_t reactors) {
+    return create(ThreadPool::workStealing(threads).mutPtr(), reactors);
 }
 
 SpawnParams& SpawnParams::setStackSize(size_t v) noexcept {
