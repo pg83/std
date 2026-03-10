@@ -156,6 +156,7 @@ ThreadPool::Ref ThreadPool::simple(size_t threads) {
 namespace {
     struct WorkStealingThreadPool: public ThreadPool {
         struct LocalWorker {
+            virtual void steal(IntrusiveList* stolen) noexcept = 0;
             virtual void pushThrLocal(Task* task) noexcept = 0;
             virtual void** tls(u64 key) noexcept = 0;
         };
@@ -163,7 +164,7 @@ namespace {
         struct Worker: public LocalWorker, public Runable, public WaitQueue::Item {
             WorkStealingThreadPool* pool_;
             PCG32 rng_;
-            Vector<Worker*> stealOrder_;
+            Vector<LocalWorker*> so_;
             Mutex mutex_;
             CondVar condVar_;
             IntrusiveList tasks_;
@@ -219,7 +220,7 @@ namespace {
             void trySteal(IntrusiveList* stolen) noexcept;
             void loop();
             void run() noexcept override;
-            void split(IntrusiveList* stolen) noexcept;
+            void steal(IntrusiveList* stolen) noexcept override;
         };
 
         struct GlobalWorker: public LocalWorker, public Runable {
@@ -243,7 +244,7 @@ namespace {
                 return &tls_[key];
             }
 
-            void steal(IntrusiveList* stolen) noexcept {
+            void steal(IntrusiveList* stolen) noexcept override {
                 LockGuard lock(mutex_);
                 tasks_.xchgWithEmptyList(*stolen);
             }
@@ -402,21 +403,21 @@ WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex
 void WorkStealingThreadPool::Worker::initStealOrder() noexcept {
     pool_->workerIndex_.visit([this](Worker& w) {
         if (&w != this) {
-            stealOrder_.pushBack(&w);
+            so_.pushBack(&w);
         }
     });
 
-    shuffle(rng_, stealOrder_.mutBegin(), stealOrder_.mutEnd());
+    so_.pushBack(&pool_->gw_);
+
+    shuffle(rng_, so_.mutBegin(), so_.mutEnd());
 }
 
 void WorkStealingThreadPool::Worker::trySteal(IntrusiveList* stolen) noexcept {
-    pool_->gw_.steal(stolen);
-
-    u32 n = (u32)stealOrder_.length();
-    u32 offset = rng_.uniformUnbiased(n);
+    const u32 n = (u32)so_.length();
+    const u32 offset = rng_.uniformUnbiased(n);
 
     for (u32 i = 0; stolen->empty() && i < n; ++i) {
-        stealOrder_[(offset + i) % n]->split(stolen);
+        so_[(offset + i) % n]->steal(stolen);
     }
 }
 
@@ -473,7 +474,7 @@ void WorkStealingThreadPool::Worker::loop() {
     } while (!tasks_.empty() || (sleep(), true));
 }
 
-void WorkStealingThreadPool::Worker::split(IntrusiveList* stolen) noexcept {
+void WorkStealingThreadPool::Worker::steal(IntrusiveList* stolen) noexcept {
     LockGuard lock(mutex_);
 
     tasks_.splitHalf(tasks_, *stolen);
