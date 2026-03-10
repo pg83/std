@@ -22,7 +22,7 @@ namespace stl {
         // remove fd from poller
         virtual void disarm(int fd) = 0;
         // wait for events, returns count. always finite timeout
-        virtual u32 wait(PollEvent* out, u32 maxEvents, u32 timeoutMs) = 0;
+        virtual u32 wait(PollEvent* out, u32 maxEvents, u32 timeoutUs) = 0;
 
         static PollerIface* create();
     };

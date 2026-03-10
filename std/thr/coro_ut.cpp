@@ -391,7 +391,7 @@ STD_TEST_SUITE(CoroPoll) {
         int result = 0;
 
         exec->spawn([&](Cont* c) {
-            u32 ready = c->poll(pipefd[0], PollFlag::In, 2000);
+            u32 ready = c->poll(pipefd[0], PollFlag::In, 2000000);
             STD_INSIST(ready & PollFlag::In);
             char buf;
             ::read(pipefd[0], &buf, 1);
@@ -420,7 +420,7 @@ STD_TEST_SUITE(CoroPoll) {
         STD_INSIST(::pipe(pipefd) == 0);
 
         exec->spawn([&](Cont* c) {
-            pollResult = c->poll(pipefd[0], PollFlag::In, 100);
+            pollResult = c->poll(pipefd[0], PollFlag::In, 100000);
             done.arrive();
         });
 
@@ -446,7 +446,7 @@ STD_TEST_SUITE(CoroPoll) {
 
         for (int i = 0; i < N; i++) {
             exec->spawn([&, i](Cont* c) {
-                u32 ready = c->poll(pipes[i][0], PollFlag::In, 2000);
+                u32 ready = c->poll(pipes[i][0], PollFlag::In, 2000000);
                 STD_INSIST(ready & PollFlag::In);
                 char buf;
                 ::read(pipes[i][0], &buf, 1);

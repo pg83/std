@@ -94,11 +94,11 @@ namespace {
             epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr);
         }
 
-        u32 wait(PollEvent* out, u32 maxEvents, u32 timeoutMs) override {
+        u32 wait(PollEvent* out, u32 maxEvents, u32 timeoutUs) override {
             epoll_event raw[64];
             u32 cap = maxEvents < 64 ? maxEvents : 64;
 
-            int n = epoll_wait(epfd_, raw, (int)cap, (int)timeoutMs);
+            int n = epoll_wait(epfd_, raw, (int)cap, (int)((timeoutUs + 999) / 1000));
 
             if (n < 0) {
                 return 0;
@@ -160,15 +160,15 @@ namespace {
             kevent(kqfd_, changes, 2, nullptr, 0, nullptr);
         }
 
-        u32 wait(PollEvent* out, u32 maxEvents, u32 timeoutMs) override {
+        u32 wait(PollEvent* out, u32 maxEvents, u32 timeoutUs) override {
             struct kevent raw[64];
 
             u32 cap = maxEvents < 64 ? maxEvents : 64;
 
             struct timespec ts;
 
-            ts.tv_sec = timeoutMs / 1000;
-            ts.tv_nsec = (timeoutMs % 1000) * 1000000L;
+            ts.tv_sec = timeoutUs / 1000000;
+            ts.tv_nsec = (timeoutUs % 1000000) * 1000L;
 
             int n = kevent(kqfd_, nullptr, 0, raw, (int)cap, &ts);
 

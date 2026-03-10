@@ -36,12 +36,12 @@ namespace {
     struct CoroExecutorImpl;
     struct ReactorThread;
 
-    static u64 monotonicNowNs() noexcept {
+    static u64 monotonicNowUs() noexcept {
         timespec ts;
 
         clock_gettime(CLOCK_MONOTONIC, &ts);
 
-        return (u64)ts.tv_sec * 1000000000ULL + (u64)ts.tv_nsec;
+        return (u64)ts.tv_sec * 1000000ULL + (u64)ts.tv_nsec / 1000;
     }
 
     struct ContImpl: public Cont, public Task {
@@ -59,7 +59,7 @@ namespace {
         void parkWith(Runable* afterSuspend) noexcept;
         CoroExecutor* executor() noexcept override;
         u32 poll(int fd, u32 flags) override;
-        u32 poll(int fd, u32 flags, u32 timeoutMs) override;
+        u32 poll(int fd, u32 flags, u64 timeoutUs) override;
         void run() noexcept override;
         void reSchedule() noexcept;
         void wake() noexcept;
@@ -241,7 +241,7 @@ namespace {
         int fd;
         u32 flags;
         u32 result;   // readiness flags returned, 0 = timeout
-        u64 deadline; // absolute monotonic ns
+        u64 deadline; // absolute monotonic us
 
         void* key() const noexcept override {
             return (void*)this;
@@ -270,7 +270,7 @@ namespace {
     };
 
     constexpr u32 REACTOR_MAX_EVENTS = 64;
-    constexpr u32 REACTOR_MAX_IDLE_MS = 30000;
+    constexpr u32 REACTOR_MAX_IDLE_US = 30000000;
 
     struct ReactorThread: public Runable {
         CoroExecutorImpl* exec;
@@ -355,7 +355,7 @@ void ReactorThread::drainWakeup() noexcept {
 void ReactorThread::run() noexcept {
     while (!done) {
         // Compute wait timeout
-        u64 now = monotonicNowNs();
+        u64 now = monotonicNowUs();
         u64 earliest;
 
         {
@@ -364,17 +364,17 @@ void ReactorThread::run() noexcept {
             earliest = timers.earliest();
         }
 
-        u32 timeoutMs;
+        u32 timeoutUs;
 
         if (earliest <= now) {
-            timeoutMs = 0;
+            timeoutUs = 0;
         } else {
-            u64 diffMs = (earliest - now) / 1000000ULL;
-            timeoutMs = (u32)(diffMs < REACTOR_MAX_IDLE_MS ? diffMs : REACTOR_MAX_IDLE_MS);
+            u64 diffUs = earliest - now;
+            timeoutUs = (u32)(diffUs < REACTOR_MAX_IDLE_US ? diffUs : REACTOR_MAX_IDLE_US);
         }
 
         PollEvent events[REACTOR_MAX_EVENTS];
-        u32 n = poller.ptr->wait(events, REACTOR_MAX_EVENTS, timeoutMs);
+        u32 n = poller.ptr->wait(events, REACTOR_MAX_EVENTS, timeoutUs);
 
         // Process fd-ready events
         for (u32 i = 0; i < n; i++) {
@@ -398,7 +398,7 @@ void ReactorThread::run() noexcept {
         }
 
         // Expire timers
-        now = monotonicNowNs();
+        now = monotonicNowUs();
 
         LockGuard g(timerMutex);
 
@@ -514,14 +514,14 @@ CoroExecutor* ContImpl::executor() noexcept {
     return exec_;
 }
 
-u32 ContImpl::poll(int fd, u32 flags, u32 timeoutMs) {
+u32 ContImpl::poll(int fd, u32 flags, u64 timeoutUs) {
     PollRequest req;
     req.cont = this;
     req.reactor = exec_->pickReactor(rng_);
     req.fd = fd;
     req.flags = flags;
     req.result = 0;
-    req.deadline = monotonicNowNs() + (u64)timeoutMs * 1000000ULL;
+    req.deadline = monotonicNowUs() + timeoutUs;
 
     parkWith(&req);
 
@@ -529,7 +529,7 @@ u32 ContImpl::poll(int fd, u32 flags, u32 timeoutMs) {
 }
 
 u32 ContImpl::poll(int fd, u32 flags) {
-    return poll(fd, flags, 86400000u);
+    return poll(fd, flags, 86400000000ULL);
 }
 
 void ContImpl::entryX() noexcept {
