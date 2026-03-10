@@ -162,9 +162,8 @@ namespace {
 
         struct Worker: public LocalWorker, public Runable, public WaitQueue::Item {
             WorkStealingThreadPool* pool_;
-            u32 myIndex_;
             PCG32 rng_;
-            Vector<u32> so_;
+            Vector<Worker*> stealOrder_;
             Mutex mutex_;
             CondVar condVar_;
             IntrusiveList tasks_;
@@ -172,7 +171,7 @@ namespace {
             IntMap<void*> tls_;
             Thread thread_;
 
-            Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers);
+            Worker(WorkStealingThreadPool* pool, u32 myIndex);
 
             auto key() const noexcept {
                 return thread_.threadId();
@@ -216,6 +215,8 @@ namespace {
                 condVar_.wait(mutex_);
             }
 
+            void initStealOrder() noexcept;
+            void trySteal(IntrusiveList* stolen) noexcept;
             void loop();
             void run() noexcept override;
             void split(IntrusiveList* stolen) noexcept;
@@ -261,7 +262,6 @@ namespace {
             }
         };
 
-        Vector<Worker*> workers_;
         IntMap<Worker> workerIndex_;
         WaitQueue::Ref wq;
         size_t running_;
@@ -274,7 +274,6 @@ namespace {
         LocalWorker* localWorker() noexcept;
         void** tls(u64 key) noexcept override;
         void submitTask(Task* task) noexcept override;
-        void trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept;
     };
 }
 
@@ -321,18 +320,18 @@ void WorkStealingThreadPool::GlobalWorker::run() noexcept {
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
-    : workers_(numThreads)
-    , wq(WaitQueue::construct(numThreads))
+    : wq(WaitQueue::construct(numThreads))
     , running_(numThreads)
     , gw_(this)
 {
     for (size_t i = 0; i < numThreads; ++i) {
-        workers_.pushBack(workerIndex_.insertKeyed(this, i, numThreads));
+        workerIndex_.insertKeyed(this, (u32)i);
     }
 
-    for (auto w : mutRange(workers_)) {
-        w->mutex_.unlock();
-    }
+    workerIndex_.visit([](Worker& w) {
+        w.initStealOrder();
+        w.mutex_.unlock();
+    });
 }
 
 bool WorkStealingThreadPool::notifyOne() noexcept {
@@ -391,30 +390,34 @@ void WorkStealingThreadPool::join() noexcept {
     gw_.join();
 }
 
-void WorkStealingThreadPool::trySteal(const u32* order, u32 n, u32 offset, IntrusiveList* stolen) noexcept {
-    gw_.steal(stolen);
-
-    for (u32 i = 0; stolen->empty() && i < n; ++i) {
-        workers_[order[(offset + i) % n]]->split(stolen);
-    }
-}
-
-WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u32 numWorkers)
+WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex)
     : WaitQueue::Item{nullptr, (u8)myIndex}
     , pool_(pool)
-    , myIndex_(myIndex)
     , rng_(splitMix64(myIndex))
-    , so_(numWorkers - 1)
     , mutex_(true)
     , thread_(*this)
 {
-    for (u32 i = 0; i < numWorkers; ++i) {
-        if (i != myIndex) {
-            so_.pushBack(i);
-        }
-    }
+}
 
-    shuffle(rng_, so_.mutBegin(), so_.mutEnd());
+void WorkStealingThreadPool::Worker::initStealOrder() noexcept {
+    pool_->workerIndex_.visit([this](Worker& w) {
+        if (&w != this) {
+            stealOrder_.pushBack(&w);
+        }
+    });
+
+    shuffle(rng_, stealOrder_.mutBegin(), stealOrder_.mutEnd());
+}
+
+void WorkStealingThreadPool::Worker::trySteal(IntrusiveList* stolen) noexcept {
+    pool_->gw_.steal(stolen);
+
+    u32 n = (u32)stealOrder_.length();
+    u32 offset = rng_.uniformUnbiased(n);
+
+    for (u32 i = 0; stolen->empty() && i < n; ++i) {
+        stealOrder_[(offset + i) % n]->split(stolen);
+    }
 }
 
 void WorkStealingThreadPool::Worker::run() noexcept {
@@ -461,7 +464,7 @@ void WorkStealingThreadPool::Worker::loop() {
         {
             UnlockGuard unlock(mutex_);
 
-            pool_->trySteal(so_.data(), (u32)so_.length(), rng_.uniformUnbiased(so_.length()), &stolen);
+            trySteal(&stolen);
         }
 
         local_.pushBack(stolen);
