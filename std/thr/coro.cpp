@@ -42,11 +42,18 @@ namespace {
         static void entry(u32 lo, u32 hi) noexcept;
     };
 
-    struct HeapContImpl: public ContImpl {
-        using ContImpl::ContImpl;
+    struct alignas(max_align_t) HeapContImpl: public ContImpl {
+        void* operator new(size_t, size_t stackSize) {
+            return allocateMemory(sizeof(HeapContImpl) + stackSize);
+        }
 
-        ~HeapContImpl() override {
-            freeMemory(ctx_.uc_stack.ss_sp);
+        void operator delete(void* p) noexcept {
+            freeMemory(p);
+        }
+
+        HeapContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
+            : ContImpl(exec, params.setStackPtr((char*)this + sizeof(HeapContImpl)))
+        {
         }
     };
 
@@ -54,7 +61,7 @@ namespace {
         if (params.stackPtr) {
             return new ContImpl(exec, params);
         } else {
-            return new HeapContImpl(exec, params.setStackPtr(allocateMemory(params.stackSize)));
+            return new (params.stackSize) HeapContImpl(exec, params);
         }
     }
 
