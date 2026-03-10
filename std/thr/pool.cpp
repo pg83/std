@@ -40,9 +40,6 @@ namespace {
         }
     };
 
-    struct ShutDown2: public ShutDown {
-    };
-
     struct SyncThreadPool: public ThreadPool {
         IntMap<void*> tls_;
 
@@ -231,6 +228,7 @@ namespace {
             IntrusiveList tasks_;
             IntMap<void*> tls_;
             Thread thread_;
+            bool done_ = false;
 
             explicit GlobalWorker(WorkStealingThreadPool* pool) noexcept;
 
@@ -251,12 +249,14 @@ namespace {
 
             void loop();
             void run() noexcept override;
-            void processChunk(IntrusiveList& chunk);
 
             void join() {
-                ShutDown2 task2;
+                {
+                    LockGuard g(mutex_);
+                    done_ = true;
+                    condVar_.signal();
+                }
 
-                push(&task2);
                 thread_.join();
             }
         };
@@ -290,54 +290,32 @@ void WorkStealingThreadPool::GlobalWorker::push(Task* task) noexcept {
     condVar_.signal();
 }
 
-void WorkStealingThreadPool::GlobalWorker::processChunk(IntrusiveList& chunk) {
-    while (auto task = (Task*)chunk.popFrontOrNull()) {
-        if (auto w = (Worker*)pool_->wq->dequeue()) {
-            chunk.pushFront(task);
-
-            return w->push(chunk);
-        }
-
-        if (!chunk.empty()) {
-            {
-                LockGuard lock(mutex_);
-
-                tasks_.pushBack(chunk);
-            }
-
-            pool_->notifyOne();
-        }
-
-        task->run();
-    }
-}
-
 void WorkStealingThreadPool::GlobalWorker::loop() {
     LockGuard lock(mutex_);
 
-    for (;;) {
-        while (tasks_.empty()) {
+    while (!done_) {
+        while (!done_ && tasks_.empty()) {
             condVar_.wait(mutex_);
         }
 
-        IntrusiveList chunk;
+        if (auto w = (Worker*)pool_->wq->dequeue()) {
+            w->push(tasks_);
+        } else {
+            auto task = (Task*)tasks_.popFrontOrNull();
 
-        tasks_.xchgWithEmptyList(chunk);
+            {
+                UnlockGuard unlock(mutex_);
 
-        {
-            UnlockGuard unlock(mutex_);
-
-            processChunk(chunk);
+                task->run();
+            }
         }
     }
 }
 
 void WorkStealingThreadPool::GlobalWorker::run() noexcept {
-    while (pool_->running_) {
+    while (true) {
         try {
-            loop();
-        } catch (ShutDown2*) {
-            return;
+            return loop();
         } catch (ShutDown* sh) {
             pool_->submitTask(sh);
         }
