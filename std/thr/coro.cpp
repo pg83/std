@@ -462,6 +462,7 @@ void CoroChannelImpl::enqueue(void* v) {
     auto* cont = exec_->currentCont();
 
     queueMutex_.lock();
+
     STD_INSIST(!closed_);
 
     if (sendOne(v)) {
