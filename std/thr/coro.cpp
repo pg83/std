@@ -245,7 +245,7 @@ namespace {
         u64 deadline; // absolute monotonic ns
 
         void* key() const noexcept override {
-            return (void*)&deadline;
+            return (void*)this;
         }
 
         void run() override;  // afterSuspend: registers request with reactor
@@ -253,12 +253,17 @@ namespace {
 
     struct DeadlineTreap: public Treap {
         bool cmp(void* a, void* b) const noexcept override {
-            return *(u64*)a < *(u64*)b;
+            auto* ra = (PollRequest*)a;
+            auto* rb = (PollRequest*)b;
+            if (ra->deadline != rb->deadline) {
+                return ra->deadline < rb->deadline;
+            }
+            return ra < rb;
         }
 
         u64 earliest() const noexcept {
             auto* n = min();
-            return n ? *(u64*)n->key() : UINT64_MAX;
+            return n ? ((PollRequest*)n)->deadline : UINT64_MAX;
         }
     };
 
