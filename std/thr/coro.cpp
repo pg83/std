@@ -248,7 +248,7 @@ namespace {
             return (void*)this;
         }
 
-        void run() override;  // afterSuspend: registers request with reactor
+        void run() override; // afterSuspend: registers request with reactor
     };
 
     struct DeadlineTreap: public Treap {
@@ -496,11 +496,11 @@ CoroExecutor* ContImpl::executor() noexcept {
 
 u32 ContImpl::poll(int fd, u32 flags, u32 timeoutMs) {
     PollRequest req;
-    req.cont     = this;
-    req.reactor  = exec_->pickReactor(rng_);
-    req.fd       = fd;
-    req.flags    = flags;
-    req.result   = 0;
+    req.cont = this;
+    req.reactor = exec_->pickReactor(rng_);
+    req.fd = fd;
+    req.flags = flags;
+    req.result = 0;
     req.deadline = monotonicNowNs() + (u64)timeoutMs * 1000000ULL;
 
     parkWith(&req);
