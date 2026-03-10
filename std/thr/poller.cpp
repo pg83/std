@@ -6,15 +6,21 @@
 #include <errno.h>
 #include <unistd.h>
 
+#if defined(__linux__)
+    #include <sys/epoll.h>
+#elif defined(__APPLE__) || defined(__FreeBSD__)
+    #include <sys/event.h>
+    #include <sys/time.h>
+#else
+    #error unsupported platform
+#endif
+
 using namespace stl;
 
 PollerIface::~PollerIface() noexcept {
 }
 
-#ifdef __linux__
-
-    #include <sys/epoll.h>
-
+#if defined(__linux__)
 namespace {
     static u32 toEpollFlags(u32 flags) noexcept {
         u32 r = 0;
@@ -95,12 +101,9 @@ namespace {
 PollerIface* PollerIface::create() {
     return new EpollPoller();
 }
+#endif
 
-#elif defined(__APPLE__) || defined(__FreeBSD__)
-
-    #include <sys/event.h>
-    #include <sys/time.h>
-
+#if defined(__APPLE__) || defined(__FreeBSD__)
 namespace {
     struct KqueuePoller: public PollerIface {
         int kqfd_;
@@ -172,7 +175,4 @@ namespace {
 PollerIface* PollerIface::create() {
     return new KqueuePoller();
 }
-
-#else
-    #error "Unsupported platform: no epoll or kqueue"
 #endif
