@@ -8,9 +8,9 @@
 namespace stl {
     struct ThreadPool;
     struct MutexIface;
+    struct ThreadIface;
     struct CondVarIface;
     struct ChannelIface;
-    struct ThreadIface;
     struct CoroExecutor;
 
     struct Cont {
