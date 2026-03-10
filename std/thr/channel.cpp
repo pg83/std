@@ -5,7 +5,7 @@
 using namespace stl;
 
 Channel::Channel(CoroExecutor* exec)
-    : Channel(exec, 1)
+    : Channel(exec, 0)
 {
 }
 
