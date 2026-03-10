@@ -299,7 +299,15 @@ void WorkStealingThreadPool::GlobalWorker::loop() {
         }
 
         if (auto w = (Worker*)pool_->wq->dequeue()) {
-            w->push(tasks_);
+            IntrusiveList tmp;
+
+            tasks_.xchgWithEmptyList(tmp);
+
+            {
+                UnlockGuard unlock(mutex_);
+
+                w->push(tmp);
+            }
         } else if (auto task = (Task*)tasks_.popFrontOrNull(); task) {
             UnlockGuard unlock(mutex_);
 
