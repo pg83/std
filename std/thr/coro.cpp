@@ -662,6 +662,10 @@ void CoroThreadImpl::join() noexcept {
 }
 
 void CoroThreadImpl::detach() noexcept {
+    exec_->spawn([this](Cont*) {
+        join();
+        delete this;
+    });
 }
 
 u64 CoroThreadImpl::threadId() const noexcept {

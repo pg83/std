@@ -35,6 +35,7 @@ namespace {
 
         void detach() noexcept override {
             STD_INSIST(pthread_detach(thread) == 0);
+            delete this;
         }
 
         u64 threadId() const noexcept override {
@@ -76,6 +77,7 @@ void Thread::join() noexcept {
 
 void Thread::detach() noexcept {
     impl->detach();
+    impl = nullptr;
 }
 
 u64 Thread::threadId() const noexcept {
