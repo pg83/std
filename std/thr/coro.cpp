@@ -5,12 +5,15 @@
 #include "cond_var.h"
 #include "mutex_iface.h"
 #include "cond_var_iface.h"
+#include "channel_iface.h"
 #include "thread_iface.h"
 
 #include <std/sys/crt.h>
 #include <std/ptr/scoped.h>
 #include <std/alg/destruct.h>
 #include <std/lib/list.h>
+#include <std/lib/ring_buf.h>
+#include <std/dbg/insist.h>
 
 #include <ucontext.h>
 
@@ -57,6 +60,7 @@ namespace {
 
     struct CoroMutexImpl;
     struct CoroCondVarImpl;
+    struct CoroChannelImpl;
 
     struct CoroExecutorImpl: public CoroExecutor {
         ThreadPool::Ref pool_;
@@ -98,6 +102,7 @@ namespace {
 
         MutexIface* createMutex() override;
         CondVarIface* createCondVar() override;
+        ChannelIface* createChannel(size_t cap) override;
         ThreadIface* createThread(Runable& runable) override;
     };
 
@@ -142,6 +147,33 @@ namespace {
         void lock() noexcept override;
         void unlock() noexcept override;
         bool tryLock() noexcept override;
+    };
+
+    struct Waiter: public IntrusiveNode {
+        ContImpl* cont;
+        void* value;
+        bool valueSet;
+    };
+
+    struct CoroChannelImpl: public ChannelIface, public Runable {
+        CoroExecutorImpl* exec_;
+        Mutex queueMutex_;
+        IntrusiveList senders_;
+        IntrusiveList receivers_;
+        RingBuffer buf_;
+        bool closed_;
+
+        CoroChannelImpl(CoroExecutorImpl* exec, size_t capacity) noexcept;
+
+        void* operator new(size_t, void* p) noexcept { return p; }
+        void operator delete(void* p) noexcept { freeMemory(p); }
+
+        void run() override;
+        void enqueue(void* v) override;
+        bool dequeue(void** out) override;
+        bool tryEnqueue(void* v) override;
+        bool tryDequeue(void** out) override;
+        void close() override;
     };
 }
 
@@ -327,12 +359,14 @@ void CoroThreadImpl::start() {
 
 void CoroThreadImpl::notifyDone() noexcept {
     LockGuard guard(mtx_);
+
     finished_ = true;
     cv_.signal();
 }
 
 void CoroThreadImpl::join() noexcept {
     LockGuard guard(mtx_);
+
     while (!finished_) {
         cv_.wait(mtx_);
     }
@@ -347,6 +381,204 @@ u64 CoroThreadImpl::threadId() const noexcept {
 
 ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
     return new CoroThreadImpl(this, runable);
+}
+
+CoroChannelImpl::CoroChannelImpl(CoroExecutorImpl* exec, size_t capacity) noexcept
+    : exec_(exec)
+    , queueMutex_(exec)
+    , buf_((void**)(this + 1), capacity)
+    , closed_(false)
+{
+}
+
+void CoroChannelImpl::run() {
+    queueMutex_.unlock();
+}
+
+void CoroChannelImpl::enqueue(void* v) {
+    auto* cont = exec_->currentCont();
+
+    queueMutex_.lock();
+
+    STD_INSIST(!closed_);
+
+    if (!receivers_.empty()) {
+        auto* node = receivers_.popFront();
+        auto* w = (Waiter*)node;
+
+        w->value = v;
+        w->valueSet = true;
+        w->cont->afterSuspend_ = nullptr;
+        w->cont->reSchedule();
+        queueMutex_.unlock();
+
+        return;
+    }
+
+    if (!buf_.full()) {
+        buf_.push(v);
+        queueMutex_.unlock();
+
+        return;
+    }
+
+    Waiter w;
+    w.cont = cont;
+    w.value = v;
+    w.valueSet = true;
+    senders_.pushBack(&w);
+    cont->parkWith(this);
+}
+
+bool CoroChannelImpl::dequeue(void** out) {
+    auto* cont = exec_->currentCont();
+
+    queueMutex_.lock();
+
+    if (!buf_.empty()) {
+        *out = buf_.pop();
+
+        if (!senders_.empty()) {
+            auto* node = senders_.popFront();
+            auto* w = (Waiter*)node;
+
+            buf_.push(w->value);
+            w->cont->afterSuspend_ = nullptr;
+            w->cont->reSchedule();
+        }
+
+        queueMutex_.unlock();
+
+        return true;
+    }
+
+    if (!senders_.empty()) {
+        auto* node = senders_.popFront();
+        auto* w = (Waiter*)node;
+
+        *out = w->value;
+        w->cont->afterSuspend_ = nullptr;
+        w->cont->reSchedule();
+        queueMutex_.unlock();
+
+        return true;
+    }
+
+    if (closed_) {
+        queueMutex_.unlock();
+
+        return false;
+    }
+
+    Waiter w;
+    w.cont = cont;
+    w.value = nullptr;
+    w.valueSet = false;
+    receivers_.pushBack(&w);
+    cont->parkWith(this);
+
+    if (w.valueSet) {
+        *out = w.value;
+
+        return true;
+    }
+
+    return false;
+}
+
+bool CoroChannelImpl::tryEnqueue(void* v) {
+    queueMutex_.lock();
+
+    if (closed_) {
+        queueMutex_.unlock();
+        STD_INSIST(false);
+    }
+
+    if (!receivers_.empty()) {
+        auto* node = receivers_.popFront();
+        auto* w = (Waiter*)node;
+
+        w->value = v;
+        w->valueSet = true;
+        w->cont->afterSuspend_ = nullptr;
+        w->cont->reSchedule();
+        queueMutex_.unlock();
+
+        return true;
+    }
+
+    if (!buf_.full()) {
+        buf_.push(v);
+        queueMutex_.unlock();
+
+        return true;
+    }
+
+    queueMutex_.unlock();
+
+    return false;
+}
+
+bool CoroChannelImpl::tryDequeue(void** out) {
+    queueMutex_.lock();
+
+    if (!buf_.empty()) {
+        *out = buf_.pop();
+
+        if (!senders_.empty()) {
+            auto* node = senders_.popFront();
+            auto* w = (Waiter*)node;
+
+            buf_.push(w->value);
+            w->cont->afterSuspend_ = nullptr;
+            w->cont->reSchedule();
+        }
+
+        queueMutex_.unlock();
+
+        return true;
+    }
+
+    if (!senders_.empty()) {
+        auto* node = senders_.popFront();
+        auto* w = (Waiter*)node;
+
+        *out = w->value;
+        w->cont->afterSuspend_ = nullptr;
+        w->cont->reSchedule();
+        queueMutex_.unlock();
+
+        return true;
+    }
+
+    queueMutex_.unlock();
+
+    return false;
+}
+
+void CoroChannelImpl::close() {
+    LockGuard guard(queueMutex_);
+
+    STD_INSIST(!closed_);
+    STD_INSIST(senders_.empty());
+
+    closed_ = true;
+
+    while (!receivers_.empty()) {
+        auto* node = receivers_.popFront();
+        auto* w = (Waiter*)node;
+
+        w->cont->afterSuspend_ = nullptr;
+        w->cont->reSchedule();
+    }
+}
+
+ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
+    void* mem = allocateMemory(sizeof(CoroChannelImpl) + cap * sizeof(void*));
+    return new (mem) CoroChannelImpl(this, cap);
+}
+
+ChannelIface::~ChannelIface() noexcept {
 }
 
 CoroExecutor::~CoroExecutor() noexcept {
