@@ -174,7 +174,8 @@ namespace {
         CoroChannelBase(CoroExecutorImpl* exec) noexcept;
 
         void wakeWaiter(Waiter* w) noexcept;
-        virtual bool sendOne(void* v) noexcept = 0;
+        bool sendOne(void* v) noexcept;
+        virtual bool bufferOne(void* v) noexcept;
         virtual bool recvOne(void** out) noexcept = 0;
 
         void run() override;
@@ -197,14 +198,13 @@ namespace {
             freeMemory(p);
         }
 
-        bool sendOne(void* v) noexcept override;
+        bool bufferOne(void* v) noexcept override;
         bool recvOne(void** out) noexcept override;
     };
 
     struct CoroChannelImpl0: public CoroChannelBase {
         CoroChannelImpl0(CoroExecutorImpl* exec) noexcept;
 
-        bool sendOne(void* v) noexcept override;
         bool recvOne(void** out) noexcept override;
     };
 }
@@ -520,7 +520,7 @@ CoroChannelImplN::CoroChannelImplN(CoroExecutorImpl* exec, size_t capacity) noex
 {
 }
 
-bool CoroChannelImplN::sendOne(void* v) noexcept {
+bool CoroChannelBase::sendOne(void* v) noexcept {
     if (!receivers_.empty()) {
         auto* w = (Waiter*)receivers_.popFront();
 
@@ -531,6 +531,14 @@ bool CoroChannelImplN::sendOne(void* v) noexcept {
         return true;
     }
 
+    return bufferOne(v);
+}
+
+bool CoroChannelBase::bufferOne(void*) noexcept {
+    return false;
+}
+
+bool CoroChannelImplN::bufferOne(void* v) noexcept {
     if (!buf_.full()) {
         buf_.push(v);
 
@@ -571,20 +579,6 @@ bool CoroChannelImplN::recvOne(void** out) noexcept {
 CoroChannelImpl0::CoroChannelImpl0(CoroExecutorImpl* exec) noexcept
     : CoroChannelBase(exec)
 {
-}
-
-bool CoroChannelImpl0::sendOne(void* v) noexcept {
-    if (!receivers_.empty()) {
-        auto* w = (Waiter*)receivers_.popFront();
-
-        w->value = v;
-        w->valueSet = true;
-        wakeWaiter(w);
-
-        return true;
-    }
-
-    return false;
 }
 
 bool CoroChannelImpl0::recvOne(void** out) noexcept {
