@@ -2,33 +2,33 @@
 #include "task.h"
 #include "pool.h"
 #include "mutex.h"
-#include "cond_var.h"
-#include "mutex_iface.h"
-#include "cond_var_iface.h"
-#include "channel_iface.h"
-#include "thread_iface.h"
 #include "poller.h"
 #include "thread.h"
+#include "cond_var.h"
+#include "mutex_iface.h"
+#include "thread_iface.h"
+#include "channel_iface.h"
+#include "cond_var_iface.h"
 
 #include <std/sys/crt.h>
+#include <std/rng/pcg.h>
+#include <std/lib/list.h>
+#include <std/map/treap.h>
 #include <std/sys/atomic.h>
 #include <std/ptr/scoped.h>
-#include <std/alg/destruct.h>
-#include <std/lib/list.h>
 #include <std/lib/vector.h>
-#include <std/lib/ring_buf.h>
 #include <std/dbg/insist.h>
-#include <std/map/treap.h>
-#include <std/map/treap_node.h>
+#include <std/alg/destruct.h>
+#include <std/lib/ring_buf.h>
 #include <std/mem/obj_pool.h>
-#include <std/rng/pcg.h>
+#include <std/map/treap_node.h>
 
 #include <std/sys/fd.h>
 
-#include <ucontext.h>
 #include <time.h>
-#include <unistd.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <ucontext.h>
 
 using namespace stl;
 
@@ -281,13 +281,14 @@ namespace {
         bool done;
 
         ReactorThread(CoroExecutorImpl* e);
+
         ~ReactorThread() noexcept;
 
         void join() noexcept;
-        void registerRequest(PollRequest* req);
         void wakeup() noexcept;
         void drainWakeup() noexcept;
         void run() noexcept override;
+        void registerRequest(PollRequest* req);
     };
 }
 
@@ -295,10 +296,12 @@ void PollRequest::run() {
     reactor->registerRequest(this);
 }
 
+ReactorThread::~ReactorThread() noexcept {
+}
+
 ReactorThread::ReactorThread(CoroExecutorImpl* e)
     : exec(e)
     , poller{PollerIface::create()}
-    , timerMutex()
     , thread_{}
     , done(false)
 {
@@ -308,8 +311,6 @@ ReactorThread::ReactorThread(CoroExecutorImpl* e)
     poller.ptr->arm(wakeReadFd.get(), PollFlag::In, nullptr);
     thread_.ptr = new Thread(*this);
 }
-
-ReactorThread::~ReactorThread() noexcept = default;
 
 void ReactorThread::join() noexcept {
     done = true;
@@ -357,6 +358,7 @@ void ReactorThread::run() noexcept {
 
         {
             LockGuard g(timerMutex);
+
             earliest = timers.earliest();
         }
 
