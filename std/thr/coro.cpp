@@ -172,9 +172,10 @@ namespace {
 
         CoroChannelImpl(CoroExecutorImpl* exec) noexcept;
 
-        void wakeWaiter(Waiter* w) noexcept;
         bool sendOne(void* v) noexcept;
         bool recvOne(void** out) noexcept;
+        void wakeWaiter(Waiter* w) noexcept;
+
         virtual bool bufferOne(void* v) noexcept;
         virtual bool unbufferOne(void** out) noexcept;
 
@@ -194,6 +195,7 @@ namespace {
         void* operator new(size_t, void* p) noexcept {
             return p;
         }
+
         void operator delete(void* p) noexcept {
             freeMemory(p);
         }
