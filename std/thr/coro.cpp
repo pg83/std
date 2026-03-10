@@ -529,7 +529,13 @@ u32 ContImpl::poll(int fd, u32 flags, u64 timeoutUs) {
 }
 
 u32 ContImpl::poll(int fd, u32 flags) {
-    return poll(fd, flags, 86400000000ULL);
+    for (;;) {
+        u32 res = poll(fd, flags, REACTOR_MAX_IDLE_US);
+
+        if (res) {
+            return res;
+        }
+    }
 }
 
 void ContImpl::entryX() noexcept {
