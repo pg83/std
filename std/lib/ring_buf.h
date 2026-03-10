@@ -5,7 +5,8 @@
 namespace stl {
     class RingBuffer {
         void** buf_;
-        size_t capacity_;
+
+        size_t capa_;
         size_t head_;
         size_t tail_;
         size_t size_;
@@ -13,7 +14,7 @@ namespace stl {
     public:
         RingBuffer(void** buf, size_t capacity) noexcept
             : buf_(buf)
-            , capacity_(capacity)
+            , capa_(capacity)
             , head_(0)
             , tail_(0)
             , size_(0)
@@ -25,7 +26,7 @@ namespace stl {
         }
 
         bool full() const noexcept {
-            return size_ == capacity_;
+            return size_ == capa_;
         }
 
         size_t size() const noexcept {
