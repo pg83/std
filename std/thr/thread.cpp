@@ -9,6 +9,7 @@
 #include <std/ptr/scoped.h>
 #include <std/dbg/insist.h>
 #include <std/str/builder.h>
+#include <std/alg/exchange.h>
 
 #include <unistd.h>
 #include <pthread.h>
@@ -76,8 +77,7 @@ void Thread::join() noexcept {
 }
 
 void Thread::detach() noexcept {
-    impl->detach();
-    impl = nullptr;
+    exchange(impl, nullptr)->detach();
 }
 
 u64 Thread::threadId() const noexcept {
