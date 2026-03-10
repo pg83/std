@@ -38,7 +38,9 @@ namespace {
 
     static u64 monotonicNowNs() noexcept {
         timespec ts;
+
         clock_gettime(CLOCK_MONOTONIC, &ts);
+
         return (u64)ts.tv_sec * 1000000000ULL + (u64)ts.tv_nsec;
     }
 
