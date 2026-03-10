@@ -165,8 +165,12 @@ namespace {
 
         CoroChannelImpl(CoroExecutorImpl* exec, size_t capacity) noexcept;
 
-        void* operator new(size_t, void* p) noexcept { return p; }
-        void operator delete(void* p) noexcept { freeMemory(p); }
+        void* operator new(size_t, void* p) noexcept {
+            return p;
+        }
+        void operator delete(void* p) noexcept {
+            freeMemory(p);
+        }
 
         void wakeWaiter(Waiter* w) noexcept;
         bool sendOne(void* v) noexcept;

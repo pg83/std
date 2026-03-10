@@ -32,17 +32,7 @@ namespace stl {
             return size_;
         }
 
-        void push(void* v) noexcept {
-            buf_[tail_] = v;
-            tail_ = (tail_ + 1) % capacity_;
-            ++size_;
-        }
-
-        void* pop() noexcept {
-            void* v = buf_[head_];
-            head_ = (head_ + 1) % capacity_;
-            --size_;
-            return v;
-        }
+        void push(void* v) noexcept;
+        void* pop() noexcept;
     };
 }

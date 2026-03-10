@@ -63,7 +63,7 @@ STD_TEST_SUITE(Channel) {
         // sender: will block after first enqueue since cap=1
         exec->spawn([&](Cont*) {
             ch.enqueue((void*)1);
-            ch.enqueue((void*)2);  // blocks here
+            ch.enqueue((void*)2); // blocks here
             done.arrive();
         });
 
@@ -116,8 +116,8 @@ STD_TEST_SUITE(Channel) {
             ch.close();
 
             void* v;
-            ch.dequeue(&v);  // gets 1
-            got = ch.dequeue(&v);  // returns false
+            ch.dequeue(&v);       // gets 1
+            got = ch.dequeue(&v); // returns false
             done.arrive();
         });
 
@@ -233,7 +233,7 @@ STD_TEST_SUITE(Channel) {
 
             STD_INSIST(ch.tryEnqueue((void*)1));
             STD_INSIST(ch.tryEnqueue((void*)2));
-            STD_INSIST(!ch.tryEnqueue((void*)3));  // full
+            STD_INSIST(!ch.tryEnqueue((void*)3)); // full
 
             STD_INSIST(ch.tryDequeue(&v));
             STD_INSIST(v == (void*)1);
