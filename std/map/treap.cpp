@@ -97,6 +97,16 @@ size_t Treap::length() const noexcept {
     return res;
 }
 
+TreapNode* Treap::min() const noexcept {
+    auto* t = root;
+
+    while (t && t->left) {
+        t = t->left;
+    }
+
+    return t;
+}
+
 size_t Treap::height() const noexcept {
     if (root) {
         return root->height();

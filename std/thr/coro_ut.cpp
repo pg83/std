@@ -5,11 +5,13 @@
 #include "cond_var.h"
 #include "barrier.h"
 #include "wait_group.h"
+#include "poller.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/atomic.h>
 
 #include <functional>
+#include <unistd.h>
 
 using namespace stl;
 
@@ -376,5 +378,99 @@ STD_TEST_SUITE(CoroExecutor) {
         exec->pool()->join();
 
         _ctx.output() << counter2 << endL << flsH;
+    }
+}
+
+STD_TEST_SUITE(CoroPoll) {
+    STD_TEST(PipeReadWrite) {
+        // reader polls In on pipe, writer writes — verify data arrives
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        int pipefd[2];
+        STD_INSIST(::pipe(pipefd) == 0);
+        int result = 0;
+
+        exec->spawn([&](Cont* c) {
+            u32 ready = c->poll(pipefd[0], PollFlag::In, 2000);
+            STD_INSIST(ready & PollFlag::In);
+            char buf;
+            ::read(pipefd[0], &buf, 1);
+            result = buf;
+            done.arrive();
+        });
+
+        exec->spawn([&](Cont*) {
+            char b = 42;
+            ::write(pipefd[1], &b, 1);
+        });
+
+        done.wait();
+        exec->pool()->join();
+        ::close(pipefd[0]);
+        ::close(pipefd[1]);
+        STD_INSIST(result == 42);
+    }
+
+    STD_TEST(Timeout) {
+        // poll on idle pipe with short timeout — must return 0 and ~100ms elapsed
+        auto exec = CoroExecutor::create(4);
+        Latch done(1);
+        u32 pollResult = 1;
+        int pipefd[2];
+        STD_INSIST(::pipe(pipefd) == 0);
+
+        exec->spawn([&](Cont* c) {
+            pollResult = c->poll(pipefd[0], PollFlag::In, 100);
+            done.arrive();
+        });
+
+        done.wait();
+        exec->pool()->join();
+        ::close(pipefd[0]);
+        ::close(pipefd[1]);
+        STD_INSIST(pollResult == 0);
+    }
+
+    STD_TEST(MultiPipe) {
+        // N coroutines each poll their own pipe, woken in reverse order
+        auto exec = CoroExecutor::create(4);
+        const int N = 8;
+        Latch done(N);
+        int pipes[N][2];
+        int order[N];
+        int orderIdx = 0;
+
+        for (int i = 0; i < N; i++) {
+            STD_INSIST(::pipe(pipes[i]) == 0);
+        }
+
+        for (int i = 0; i < N; i++) {
+            exec->spawn([&, i](Cont* c) {
+                u32 ready = c->poll(pipes[i][0], PollFlag::In, 2000);
+                STD_INSIST(ready & PollFlag::In);
+                char buf;
+                ::read(pipes[i][0], &buf, 1);
+                order[stdAtomicAddAndFetch(&orderIdx, 1, MemoryOrder::Relaxed) - 1] = i;
+                done.arrive();
+            });
+        }
+
+        // wake in reverse order
+        exec->spawn([&](Cont*) {
+            for (int i = N - 1; i >= 0; i--) {
+                char b = 1;
+                ::write(pipes[i][1], &b, 1);
+            }
+        });
+
+        done.wait();
+        exec->pool()->join();
+
+        for (int i = 0; i < N; i++) {
+            ::close(pipes[i][0]);
+            ::close(pipes[i][1]);
+        }
+        // all N coroutines woke up
+        STD_INSIST(orderIdx == N);
     }
 }

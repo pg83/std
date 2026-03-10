@@ -3,6 +3,7 @@
 #include "runable.h"
 
 #include <std/ptr/arc.h>
+#include <std/sys/types.h>
 #include <std/ptr/intrusive.h>
 
 namespace stl {
@@ -15,6 +16,8 @@ namespace stl {
 
     struct Cont {
         virtual CoroExecutor* executor() noexcept = 0;
+        virtual u32 poll(int fd, u32 flags) = 0;
+        virtual u32 poll(int fd, u32 flags, u32 timeoutMs) = 0;
     };
 
     struct SpawnParams {

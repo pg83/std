@@ -7,20 +7,40 @@
 #include "cond_var_iface.h"
 #include "channel_iface.h"
 #include "thread_iface.h"
+#include "poller.h"
+#include "thread.h"
 
 #include <std/sys/crt.h>
+#include <std/sys/atomic.h>
 #include <std/ptr/scoped.h>
 #include <std/alg/destruct.h>
 #include <std/lib/list.h>
+#include <std/lib/vector.h>
 #include <std/lib/ring_buf.h>
 #include <std/dbg/insist.h>
+#include <std/map/treap.h>
+#include <std/map/treap_node.h>
+#include <std/mem/obj_pool.h>
+#include <std/rng/pcg.h>
+
+#include <std/sys/fd.h>
 
 #include <ucontext.h>
+#include <time.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 using namespace stl;
 
 namespace {
     struct CoroExecutorImpl;
+    struct ReactorThread;
+
+    static u64 monotonicNowNs() noexcept {
+        timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return (u64)ts.tv_sec * 1000000000ULL + (u64)ts.tv_nsec;
+    }
 
     struct ContImpl: public Cont, public Task {
         CoroExecutorImpl* exec_;
@@ -28,6 +48,7 @@ namespace {
         ucontext_t* workerCtx_;
         Runable* runable_;
         Runable* afterSuspend_;
+        PCG32 rng_;
 
         ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept;
 
@@ -35,6 +56,8 @@ namespace {
 
         void parkWith(Runable* afterSuspend) noexcept;
         CoroExecutor* executor() noexcept override;
+        u32 poll(int fd, u32 flags) override;
+        u32 poll(int fd, u32 flags, u32 timeoutMs) override;
         void run() noexcept override;
         void reSchedule() noexcept;
         void entryX() noexcept;
@@ -73,12 +96,11 @@ namespace {
     struct CoroExecutorImpl: public CoroExecutor {
         ThreadPool::Ref pool_;
         const u64 tlsKey_;
+        ObjPool::Ref reactorPool_;
+        Vector<ReactorThread*> reactors_;
 
-        explicit CoroExecutorImpl(ThreadPool::Ref pool) noexcept
-            : pool_(pool)
-            , tlsKey_(registerTlsKey())
-        {
-        }
+        explicit CoroExecutorImpl(ThreadPool::Ref pool);
+        ~CoroExecutorImpl() noexcept override;
 
         auto tls() {
             return pool_->tls(tlsKey_);
@@ -107,6 +129,8 @@ namespace {
         ThreadPool* pool() const noexcept override {
             return (ThreadPool*)pool_.ptr();
         }
+
+        ReactorThread* pickReactor(PCG32& rng) noexcept;
 
         MutexIface* createMutex() override;
         CondVarIface* createCondVar() override;
@@ -207,6 +231,178 @@ namespace {
     struct CoroChannelImpl0: public CoroChannelImpl {
         CoroChannelImpl0(CoroExecutorImpl* exec) noexcept;
     };
+
+    // -------------------------------------------------------------------------
+    // Reactor: poll(fd, flags[, timeoutMs]) — non-blocking I/O for coroutines
+    // -------------------------------------------------------------------------
+
+    struct PollRequest: public TreapNode, public Runable {
+        ContImpl* cont;
+        ReactorThread* reactor;
+        int fd;
+        u32 flags;
+        u32 result;   // readiness flags returned, 0 = timeout
+        u64 deadline; // absolute monotonic ns
+
+        void* key() const noexcept override {
+            return (void*)&deadline;
+        }
+
+        void run() override;  // afterSuspend: registers request with reactor
+    };
+
+    struct DeadlineTreap: public Treap {
+        bool cmp(void* a, void* b) const noexcept override {
+            return *(u64*)a < *(u64*)b;
+        }
+
+        u64 earliest() const noexcept {
+            auto* n = min();
+            return n ? *(u64*)n->key() : UINT64_MAX;
+        }
+    };
+
+    constexpr u32 REACTOR_MAX_EVENTS = 64;
+    constexpr u32 REACTOR_MAX_IDLE_MS = 30000;
+
+    struct ReactorThread: public Runable {
+        CoroExecutorImpl* exec;
+        PollerIface* poller;
+        DeadlineTreap timers;
+        Mutex timerMutex;
+        ScopedFD wakeReadFd;
+        ScopedFD wakeWriteFd;
+        Thread* thread_;
+        bool done;
+
+        ReactorThread(CoroExecutorImpl* e)
+            : exec(e)
+            , poller(PollerIface::create())
+            , timerMutex()
+            , thread_(nullptr)
+            , done(false)
+        {
+            createPipeFD(wakeReadFd, wakeWriteFd);
+            // set read end non-blocking so drainWakeup() can loop safely
+            ::fcntl(wakeReadFd.get(), F_SETFL, O_NONBLOCK);
+            poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
+            thread_ = new Thread(*this);
+        }
+
+        ~ReactorThread() noexcept {
+            delete thread_;
+            delete poller;
+        }
+
+        void join() noexcept {
+            done = true;
+            wakeup();
+            thread_->join();
+        }
+
+        void registerRequest(PollRequest* req) {
+            poller->arm(req->fd, req->flags, req);
+
+            u64 prevEarliest;
+            {
+                LockGuard g(timerMutex);
+                prevEarliest = timers.earliest();
+                timers.insert(req);
+            }
+
+            if (req->deadline < prevEarliest) {
+                wakeup();
+            }
+        }
+
+        void wakeup() noexcept {
+            char b = 1;
+            ::write(wakeWriteFd.get(), &b, 1);
+        }
+
+        void drainWakeup() noexcept {
+            char buf[64];
+            while (::read(wakeReadFd.get(), buf, sizeof(buf)) > 0) {
+            }
+        }
+
+        void run() noexcept override {
+            while (!done) {
+                // Compute wait timeout
+                u64 now = monotonicNowNs();
+                u64 earliest;
+                {
+                    LockGuard g(timerMutex);
+                    earliest = timers.earliest();
+                }
+
+                u32 timeoutMs;
+                if (earliest <= now) {
+                    timeoutMs = 0;
+                } else {
+                    u64 diffMs = (earliest - now) / 1000000ULL;
+                    timeoutMs = (u32)(diffMs < REACTOR_MAX_IDLE_MS ? diffMs : REACTOR_MAX_IDLE_MS);
+                }
+
+                PollEvent events[REACTOR_MAX_EVENTS];
+                u32 n = poller->wait(events, REACTOR_MAX_EVENTS, timeoutMs);
+
+                // Process fd-ready events
+                for (u32 i = 0; i < n; i++) {
+                    if (events[i].data == nullptr) {
+                        // wakeup event — drain and re-arm
+                        drainWakeup();
+                        poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
+                    } else {
+                        auto* req = (PollRequest*)events[i].data;
+                        req->result = events[i].flags;
+                        {
+                            LockGuard g(timerMutex);
+                            timers.remove(req);
+                        }
+                        req->cont->reSchedule();
+                    }
+                }
+
+                // Expire timers
+                now = monotonicNowNs();
+                LockGuard g(timerMutex);
+                while (auto* node = timers.min()) {
+                    auto* req = (PollRequest*)node;
+                    if (req->deadline > now) {
+                        break;
+                    }
+                    timers.remove(req);
+                    poller->disarm(req->fd);
+                    req->result = 0;
+                    req->cont->reSchedule();
+                }
+            }
+        }
+    };
+
+    void PollRequest::run() {
+        reactor->registerRequest(this);
+    }
+}
+
+CoroExecutorImpl::CoroExecutorImpl(ThreadPool::Ref pool)
+    : pool_(pool)
+    , tlsKey_(registerTlsKey())
+    , reactorPool_(ObjPool::fromMemory())
+    , reactors_()
+{
+    reactors_.pushBack(reactorPool_->make<ReactorThread>(this));
+}
+
+CoroExecutorImpl::~CoroExecutorImpl() noexcept {
+    for (auto* r : reactors_) {
+        r->join();
+    }
+}
+
+ReactorThread* CoroExecutorImpl::pickReactor(PCG32& rng) noexcept {
+    return reactors_[rng.uniformBiased((u32)reactors_.length())];
 }
 
 CoroMutexImpl::CoroMutexImpl(CoroExecutorImpl* exec) noexcept
@@ -263,6 +459,7 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
     , workerCtx_(nullptr)
     , runable_(params.runable)
     , afterSuspend_(nullptr)
+    , rng_(this)
 {
     getcontext(&ctx_);
 
@@ -284,6 +481,24 @@ SpawnParams::SpawnParams() noexcept
 
 CoroExecutor* ContImpl::executor() noexcept {
     return exec_;
+}
+
+u32 ContImpl::poll(int fd, u32 flags, u32 timeoutMs) {
+    PollRequest req;
+    req.cont     = this;
+    req.reactor  = exec_->pickReactor(rng_);
+    req.fd       = fd;
+    req.flags    = flags;
+    req.result   = 0;
+    req.deadline = monotonicNowNs() + (u64)timeoutMs * 1000000ULL;
+
+    parkWith(&req);
+
+    return req.result;
+}
+
+u32 ContImpl::poll(int fd, u32 flags) {
+    return poll(fd, flags, 86400000u);
 }
 
 void ContImpl::entryX() noexcept {

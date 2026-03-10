@@ -25,6 +25,7 @@ namespace stl {
         TreapNode* find(void* key) const noexcept;
         TreapNode* erase(void* key) noexcept;
         TreapNode* remove(TreapNode* node) noexcept;
+        TreapNode* min() const noexcept;
 
         void insert(TreapNode* node) noexcept;
 
