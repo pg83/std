@@ -232,10 +232,6 @@ namespace {
         CoroChannelImpl0(CoroExecutorImpl* exec) noexcept;
     };
 
-    // -------------------------------------------------------------------------
-    // Reactor: poll(fd, flags[, timeoutMs]) — non-blocking I/O for coroutines
-    // -------------------------------------------------------------------------
-
     struct PollRequest: public TreapNode, public Runable {
         ContImpl* cont;
         ReactorThread* reactor;
@@ -255,14 +251,17 @@ namespace {
         bool cmp(void* a, void* b) const noexcept override {
             auto* ra = (PollRequest*)a;
             auto* rb = (PollRequest*)b;
+
             if (ra->deadline != rb->deadline) {
                 return ra->deadline < rb->deadline;
             }
+
             return ra < rb;
         }
 
         u64 earliest() const noexcept {
             auto* n = min();
+
             return n ? ((PollRequest*)n)->deadline : UINT64_MAX;
         }
     };
@@ -280,120 +279,142 @@ namespace {
         Thread* thread_;
         bool done;
 
-        ReactorThread(CoroExecutorImpl* e)
-            : exec(e)
-            , poller(PollerIface::create())
-            , timerMutex()
-            , thread_(nullptr)
-            , done(false)
+        ReactorThread(CoroExecutorImpl* e);
+        ~ReactorThread() noexcept;
+
+        void join() noexcept;
+        void registerRequest(PollRequest* req);
+        void wakeup() noexcept;
+        void drainWakeup() noexcept;
+        void run() noexcept override;
+    };
+}
+
+void PollRequest::run() {
+    reactor->registerRequest(this);
+}
+
+ReactorThread::ReactorThread(CoroExecutorImpl* e)
+    : exec(e)
+    , poller(PollerIface::create())
+    , timerMutex()
+    , thread_(nullptr)
+    , done(false)
+{
+    createPipeFD(wakeReadFd, wakeWriteFd);
+    // set read end non-blocking so drainWakeup() can loop safely
+    ::fcntl(wakeReadFd.get(), F_SETFL, O_NONBLOCK);
+    poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
+    thread_ = new Thread(*this);
+}
+
+ReactorThread::~ReactorThread() noexcept {
+    delete thread_;
+    delete poller;
+}
+
+void ReactorThread::join() noexcept {
+    done = true;
+    wakeup();
+    thread_->join();
+}
+
+void ReactorThread::registerRequest(PollRequest* req) {
+    u64 reqDeadline = req->deadline;
+    u64 prevEarliest;
+
+    {
+        LockGuard g(timerMutex);
+        prevEarliest = timers.earliest();
+        timers.insert(req);
+    }
+
+    // arm AFTER insert: if fd fires immediately, reactor can safely
+    // remove req from timers before the coroutine stack unwinds
+    poller->arm(req->fd, req->flags, req);
+
+    if (reqDeadline < prevEarliest) {
+        wakeup();
+    }
+}
+
+void ReactorThread::wakeup() noexcept {
+    char b = 1;
+
+    ::write(wakeWriteFd.get(), &b, 1);
+}
+
+void ReactorThread::drainWakeup() noexcept {
+    char buf[64];
+
+    while (::read(wakeReadFd.get(), buf, sizeof(buf)) > 0) {
+    }
+}
+
+void ReactorThread::run() noexcept {
+    while (!done) {
+        // Compute wait timeout
+        u64 now = monotonicNowNs();
+        u64 earliest;
+
         {
-            createPipeFD(wakeReadFd, wakeWriteFd);
-            // set read end non-blocking so drainWakeup() can loop safely
-            ::fcntl(wakeReadFd.get(), F_SETFL, O_NONBLOCK);
-            poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
-            thread_ = new Thread(*this);
+            LockGuard g(timerMutex);
+            earliest = timers.earliest();
         }
 
-        ~ReactorThread() noexcept {
-            delete thread_;
-            delete poller;
+        u32 timeoutMs;
+
+        if (earliest <= now) {
+            timeoutMs = 0;
+        } else {
+            u64 diffMs = (earliest - now) / 1000000ULL;
+            timeoutMs = (u32)(diffMs < REACTOR_MAX_IDLE_MS ? diffMs : REACTOR_MAX_IDLE_MS);
         }
 
-        void join() noexcept {
-            done = true;
-            wakeup();
-            thread_->join();
-        }
+        PollEvent events[REACTOR_MAX_EVENTS];
+        u32 n = poller->wait(events, REACTOR_MAX_EVENTS, timeoutMs);
 
-        void registerRequest(PollRequest* req) {
-            u64 reqDeadline = req->deadline;
-            u64 prevEarliest;
+        // Process fd-ready events
+        for (u32 i = 0; i < n; i++) {
+            if (events[i].data == nullptr) {
+                // wakeup event — drain and re-arm
+                drainWakeup();
+                poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
+            } else {
+                auto* req = (PollRequest*)events[i].data;
 
-            {
-                LockGuard g(timerMutex);
-                prevEarliest = timers.earliest();
-                timers.insert(req);
-            }
+                req->result = events[i].flags;
 
-            // arm AFTER insert: if fd fires immediately, reactor can safely
-            // remove req from timers before the coroutine stack unwinds
-            poller->arm(req->fd, req->flags, req);
-
-            if (reqDeadline < prevEarliest) {
-                wakeup();
-            }
-        }
-
-        void wakeup() noexcept {
-            char b = 1;
-            ::write(wakeWriteFd.get(), &b, 1);
-        }
-
-        void drainWakeup() noexcept {
-            char buf[64];
-            while (::read(wakeReadFd.get(), buf, sizeof(buf)) > 0) {
-            }
-        }
-
-        void run() noexcept override {
-            while (!done) {
-                // Compute wait timeout
-                u64 now = monotonicNowNs();
-                u64 earliest;
                 {
                     LockGuard g(timerMutex);
-                    earliest = timers.earliest();
-                }
 
-                u32 timeoutMs;
-                if (earliest <= now) {
-                    timeoutMs = 0;
-                } else {
-                    u64 diffMs = (earliest - now) / 1000000ULL;
-                    timeoutMs = (u32)(diffMs < REACTOR_MAX_IDLE_MS ? diffMs : REACTOR_MAX_IDLE_MS);
-                }
-
-                PollEvent events[REACTOR_MAX_EVENTS];
-                u32 n = poller->wait(events, REACTOR_MAX_EVENTS, timeoutMs);
-
-                // Process fd-ready events
-                for (u32 i = 0; i < n; i++) {
-                    if (events[i].data == nullptr) {
-                        // wakeup event — drain and re-arm
-                        drainWakeup();
-                        poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
-                    } else {
-                        auto* req = (PollRequest*)events[i].data;
-                        req->result = events[i].flags;
-                        {
-                            LockGuard g(timerMutex);
-                            timers.remove(req);
-                        }
-                        req->cont->afterSuspend_ = nullptr;
-                        req->cont->reSchedule();
-                    }
-                }
-
-                // Expire timers
-                now = monotonicNowNs();
-                LockGuard g(timerMutex);
-                while (auto* node = timers.min()) {
-                    auto* req = (PollRequest*)node;
-                    if (req->deadline > now) {
-                        break;
-                    }
                     timers.remove(req);
-                    poller->disarm(req->fd);
-                    req->result = 0;
-                    req->cont->afterSuspend_ = nullptr;
-                    req->cont->reSchedule();
                 }
+
+                req->cont->afterSuspend_ = nullptr;
+                req->cont->reSchedule();
             }
         }
-    };
 
-    void PollRequest::run() {
-        reactor->registerRequest(this);
+        // Expire timers
+        now = monotonicNowNs();
+
+        LockGuard g(timerMutex);
+
+        while (auto* node = timers.min()) {
+            auto* req = (PollRequest*)node;
+
+            if (req->deadline > now) {
+                break;
+            }
+
+            timers.remove(req);
+            poller->disarm(req->fd);
+
+            req->result = 0;
+            req->cont->afterSuspend_ = nullptr;
+            req->cont->reSchedule();
+        }
     }
 }
 
