@@ -317,7 +317,7 @@ void WorkStealingThreadPool::GlobalWorker::run() noexcept {
         try {
             return loop();
         } catch (ShutDown* sh) {
-            pool_->submitTask(sh);
+            tasks_.pushBack(sh);
         }
     }
 }
