@@ -52,7 +52,7 @@ namespace {
         }
 
         HeapContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
-            : ContImpl(exec, params.setStackPtr((char*)this + sizeof(HeapContImpl)))
+            : ContImpl(exec, params.setStackPtr((char*)(this + 1)))
         {
         }
     };
