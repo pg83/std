@@ -400,23 +400,20 @@ void CoroChannelImpl::wakeWaiter(Waiter* w) noexcept {
     w->cont->reSchedule();
 }
 
-// Called under lock. On success: unlocks and returns true. On failure: stays locked, returns false.
+// Called under lock. Returns true if sent, false if no room. Lock is NOT released.
 bool CoroChannelImpl::sendOne(void* v) noexcept {
     if (!receivers_.empty()) {
         auto* w = (Waiter*)receivers_.popFront();
 
         w->value = v;
         w->valueSet = true;
-
         wakeWaiter(w);
-        queueMutex_.unlock();
 
         return true;
     }
 
     if (!buf_.full()) {
         buf_.push(v);
-        queueMutex_.unlock();
 
         return true;
     }
@@ -424,7 +421,7 @@ bool CoroChannelImpl::sendOne(void* v) noexcept {
     return false;
 }
 
-// Called under lock. On success: unlocks and returns true. On failure: stays locked, returns false.
+// Called under lock. Returns true if received, false if no data. Lock is NOT released.
 bool CoroChannelImpl::recvOne(void** out) noexcept {
     if (!buf_.empty()) {
         *out = buf_.pop();
@@ -436,8 +433,6 @@ bool CoroChannelImpl::recvOne(void** out) noexcept {
             wakeWaiter(w);
         }
 
-        queueMutex_.unlock();
-
         return true;
     }
 
@@ -446,7 +441,6 @@ bool CoroChannelImpl::recvOne(void** out) noexcept {
 
         *out = w->value;
         wakeWaiter(w);
-        queueMutex_.unlock();
 
         return true;
     }
@@ -461,7 +455,7 @@ void CoroChannelImpl::run() {
 void CoroChannelImpl::enqueue(void* v) {
     auto* cont = exec_->currentCont();
 
-    queueMutex_.lock();
+    LockGuard guard(queueMutex_);
 
     STD_INSIST(!closed_);
 
@@ -476,21 +470,20 @@ void CoroChannelImpl::enqueue(void* v) {
     w.valueSet = true;
 
     senders_.pushBack(&w);
+    guard.drop();
     cont->parkWith(this);
 }
 
 bool CoroChannelImpl::dequeue(void** out) {
     auto* cont = exec_->currentCont();
 
-    queueMutex_.lock();
+    LockGuard guard(queueMutex_);
 
     if (recvOne(out)) {
         return true;
     }
 
     if (closed_) {
-        queueMutex_.unlock();
-
         return false;
     }
 
@@ -501,6 +494,7 @@ bool CoroChannelImpl::dequeue(void** out) {
     w.valueSet = false;
 
     receivers_.pushBack(&w);
+    guard.drop();
     cont->parkWith(this);
 
     if (w.valueSet) {
@@ -513,29 +507,17 @@ bool CoroChannelImpl::dequeue(void** out) {
 }
 
 bool CoroChannelImpl::tryEnqueue(void* v) {
-    queueMutex_.lock();
+    LockGuard guard(queueMutex_);
 
     STD_INSIST(!closed_);
 
-    if (sendOne(v)) {
-        return true;
-    }
-
-    queueMutex_.unlock();
-
-    return false;
+    return sendOne(v);
 }
 
 bool CoroChannelImpl::tryDequeue(void** out) {
-    queueMutex_.lock();
+    LockGuard guard(queueMutex_);
 
-    if (recvOne(out)) {
-        return true;
-    }
-
-    queueMutex_.unlock();
-
-    return false;
+    return recvOne(out);
 }
 
 void CoroChannelImpl::close() {

@@ -25,17 +25,23 @@ namespace stl {
     };
 
     class LockGuard {
-        Mutex& mutex_;
+        Mutex* mutex_;
 
     public:
         explicit LockGuard(Mutex& mutex)
-            : mutex_(mutex)
+            : mutex_(&mutex)
         {
-            mutex_.lock();
+            mutex_->lock();
         }
 
         ~LockGuard() noexcept {
-            mutex_.unlock();
+            if (mutex_) {
+                mutex_->unlock();
+            }
+        }
+
+        void drop() noexcept {
+            mutex_ = nullptr;
         }
     };
 
