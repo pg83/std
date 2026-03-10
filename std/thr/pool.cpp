@@ -300,26 +300,16 @@ void WorkStealingThreadPool::GlobalWorker::loop() {
 
         if (auto w = (Worker*)pool_->wq->dequeue()) {
             w->push(tasks_);
-        } else {
-            auto task = (Task*)tasks_.popFrontOrNull();
+        } else if (auto task = (Task*)tasks_.popFrontOrNull(); task) {
+            UnlockGuard unlock(mutex_);
 
-            {
-                UnlockGuard unlock(mutex_);
-
-                task->run();
-            }
+            task->run();
         }
     }
 }
 
 void WorkStealingThreadPool::GlobalWorker::run() noexcept {
-    while (true) {
-        try {
-            return loop();
-        } catch (ShutDown* sh) {
-            tasks_.pushBack(sh);
-        }
-    }
+    loop();
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
@@ -380,12 +370,14 @@ void** WorkStealingThreadPool::tls(u64 key) noexcept {
 }
 
 void WorkStealingThreadPool::join() noexcept {
-    ShutDown task;
+    while (running_) {
+        if (auto w = (Worker*)wq->dequeue(); w) {
+            ShutDown sh;
 
-    submitTask(&task);
-
-    for (auto w : mutRange(workers_)) {
-        w->join();
+            w->pushThrLocal(&sh);
+            w->notify();
+            w->join();
+        }
     }
 
     gw_.join();
@@ -421,7 +413,6 @@ void WorkStealingThreadPool::Worker::run() noexcept {
     try {
         loop();
     } catch (ShutDown* sh) {
-        pool_->gw_.push(sh);
     }
 
     LockGuard lock(mutex_);
@@ -440,7 +431,10 @@ void WorkStealingThreadPool::Worker::loop() {
     LockGuard lock(mutex_);
 
     do {
-        STD_ASSERT(local_.empty());
+        // ShutDown task only
+        while (auto task = (Task*)local_.popFrontOrNull()) {
+            task->run();
+        }
 
         while (auto task = popNoLock()) {
             pool_->notifyOne();
