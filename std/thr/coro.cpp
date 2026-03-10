@@ -306,16 +306,20 @@ namespace {
         }
 
         void registerRequest(PollRequest* req) {
-            poller->arm(req->fd, req->flags, req);
-
+            u64 reqDeadline = req->deadline;
             u64 prevEarliest;
+
             {
                 LockGuard g(timerMutex);
                 prevEarliest = timers.earliest();
                 timers.insert(req);
             }
 
-            if (req->deadline < prevEarliest) {
+            // arm AFTER insert: if fd fires immediately, reactor can safely
+            // remove req from timers before the coroutine stack unwinds
+            poller->arm(req->fd, req->flags, req);
+
+            if (reqDeadline < prevEarliest) {
                 wakeup();
             }
         }
@@ -365,6 +369,7 @@ namespace {
                             LockGuard g(timerMutex);
                             timers.remove(req);
                         }
+                        req->cont->afterSuspend_ = nullptr;
                         req->cont->reSchedule();
                     }
                 }
@@ -380,6 +385,7 @@ namespace {
                     timers.remove(req);
                     poller->disarm(req->fd);
                     req->result = 0;
+                    req->cont->afterSuspend_ = nullptr;
                     req->cont->reSchedule();
                 }
             }
