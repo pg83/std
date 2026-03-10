@@ -418,7 +418,7 @@ STD_TEST_SUITE(CoroPoll) {
         createPipeFD(readEnd, writeEnd);
 
         exec->spawn([&](Cont* c) {
-            pollResult = c->poll(readEnd.get(), PollFlag::In, 100000);
+            pollResult = c->poll(readEnd.get(), PollFlag::In, 1000);
             done.arrive();
         });
 
