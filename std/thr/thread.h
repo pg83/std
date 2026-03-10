@@ -5,8 +5,8 @@
 #include <std/sys/types.h>
 
 namespace stl {
-    struct CoroExecutor;
     struct ThreadIface;
+    struct CoroExecutor;
 
     // should not be used directly, use ScopedThread or detach(Runable&)
     class Thread {

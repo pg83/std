@@ -249,7 +249,6 @@ namespace {
                 tasks_.xchgWithEmptyList(*stolen);
             }
 
-            void loop();
             void run() noexcept override;
 
             void join() {
@@ -290,7 +289,7 @@ void WorkStealingThreadPool::GlobalWorker::push(Task* task) noexcept {
     condVar_.signal();
 }
 
-void WorkStealingThreadPool::GlobalWorker::loop() {
+void WorkStealingThreadPool::GlobalWorker::run() noexcept {
     LockGuard lock(mutex_);
 
     while (!done_) {
@@ -314,10 +313,6 @@ void WorkStealingThreadPool::GlobalWorker::loop() {
             task->run();
         }
     }
-}
-
-void WorkStealingThreadPool::GlobalWorker::run() noexcept {
-    loop();
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
