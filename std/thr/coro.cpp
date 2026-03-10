@@ -168,6 +168,10 @@ namespace {
         void* operator new(size_t, void* p) noexcept { return p; }
         void operator delete(void* p) noexcept { freeMemory(p); }
 
+        void wakeWaiter(Waiter* w) noexcept;
+        bool sendOne(void* v) noexcept;
+        bool recvOne(void** out) noexcept;
+
         void run() override;
         void enqueue(void* v) override;
         bool dequeue(void** out) override;
@@ -391,6 +395,65 @@ CoroChannelImpl::CoroChannelImpl(CoroExecutorImpl* exec, size_t capacity) noexce
 {
 }
 
+void CoroChannelImpl::wakeWaiter(Waiter* w) noexcept {
+    w->cont->afterSuspend_ = nullptr;
+    w->cont->reSchedule();
+}
+
+// Called under lock. On success: unlocks and returns true. On failure: stays locked, returns false.
+bool CoroChannelImpl::sendOne(void* v) noexcept {
+    if (!receivers_.empty()) {
+        auto* w = (Waiter*)receivers_.popFront();
+
+        w->value = v;
+        w->valueSet = true;
+
+        wakeWaiter(w);
+        queueMutex_.unlock();
+
+        return true;
+    }
+
+    if (!buf_.full()) {
+        buf_.push(v);
+        queueMutex_.unlock();
+
+        return true;
+    }
+
+    return false;
+}
+
+// Called under lock. On success: unlocks and returns true. On failure: stays locked, returns false.
+bool CoroChannelImpl::recvOne(void** out) noexcept {
+    if (!buf_.empty()) {
+        *out = buf_.pop();
+
+        if (!senders_.empty()) {
+            auto* w = (Waiter*)senders_.popFront();
+
+            buf_.push(w->value);
+            wakeWaiter(w);
+        }
+
+        queueMutex_.unlock();
+
+        return true;
+    }
+
+    if (!senders_.empty()) {
+        auto* w = (Waiter*)senders_.popFront();
+
+        *out = w->value;
+        wakeWaiter(w);
+        queueMutex_.unlock();
+
+        return true;
+    }
+
+    return false;
+}
+
 void CoroChannelImpl::run() {
     queueMutex_.unlock();
 }
@@ -399,33 +462,18 @@ void CoroChannelImpl::enqueue(void* v) {
     auto* cont = exec_->currentCont();
 
     queueMutex_.lock();
-
     STD_INSIST(!closed_);
 
-    if (!receivers_.empty()) {
-        auto* node = receivers_.popFront();
-        auto* w = (Waiter*)node;
-
-        w->value = v;
-        w->valueSet = true;
-        w->cont->afterSuspend_ = nullptr;
-        w->cont->reSchedule();
-        queueMutex_.unlock();
-
-        return;
-    }
-
-    if (!buf_.full()) {
-        buf_.push(v);
-        queueMutex_.unlock();
-
+    if (sendOne(v)) {
         return;
     }
 
     Waiter w;
+
     w.cont = cont;
     w.value = v;
     w.valueSet = true;
+
     senders_.pushBack(&w);
     cont->parkWith(this);
 }
@@ -435,32 +483,7 @@ bool CoroChannelImpl::dequeue(void** out) {
 
     queueMutex_.lock();
 
-    if (!buf_.empty()) {
-        *out = buf_.pop();
-
-        if (!senders_.empty()) {
-            auto* node = senders_.popFront();
-            auto* w = (Waiter*)node;
-
-            buf_.push(w->value);
-            w->cont->afterSuspend_ = nullptr;
-            w->cont->reSchedule();
-        }
-
-        queueMutex_.unlock();
-
-        return true;
-    }
-
-    if (!senders_.empty()) {
-        auto* node = senders_.popFront();
-        auto* w = (Waiter*)node;
-
-        *out = w->value;
-        w->cont->afterSuspend_ = nullptr;
-        w->cont->reSchedule();
-        queueMutex_.unlock();
-
+    if (recvOne(out)) {
         return true;
     }
 
@@ -471,9 +494,11 @@ bool CoroChannelImpl::dequeue(void** out) {
     }
 
     Waiter w;
+
     w.cont = cont;
     w.value = nullptr;
     w.valueSet = false;
+
     receivers_.pushBack(&w);
     cont->parkWith(this);
 
@@ -489,28 +514,9 @@ bool CoroChannelImpl::dequeue(void** out) {
 bool CoroChannelImpl::tryEnqueue(void* v) {
     queueMutex_.lock();
 
-    if (closed_) {
-        queueMutex_.unlock();
-        STD_INSIST(false);
-    }
+    STD_INSIST(!closed_);
 
-    if (!receivers_.empty()) {
-        auto* node = receivers_.popFront();
-        auto* w = (Waiter*)node;
-
-        w->value = v;
-        w->valueSet = true;
-        w->cont->afterSuspend_ = nullptr;
-        w->cont->reSchedule();
-        queueMutex_.unlock();
-
-        return true;
-    }
-
-    if (!buf_.full()) {
-        buf_.push(v);
-        queueMutex_.unlock();
-
+    if (sendOne(v)) {
         return true;
     }
 
@@ -522,32 +528,7 @@ bool CoroChannelImpl::tryEnqueue(void* v) {
 bool CoroChannelImpl::tryDequeue(void** out) {
     queueMutex_.lock();
 
-    if (!buf_.empty()) {
-        *out = buf_.pop();
-
-        if (!senders_.empty()) {
-            auto* node = senders_.popFront();
-            auto* w = (Waiter*)node;
-
-            buf_.push(w->value);
-            w->cont->afterSuspend_ = nullptr;
-            w->cont->reSchedule();
-        }
-
-        queueMutex_.unlock();
-
-        return true;
-    }
-
-    if (!senders_.empty()) {
-        auto* node = senders_.popFront();
-        auto* w = (Waiter*)node;
-
-        *out = w->value;
-        w->cont->afterSuspend_ = nullptr;
-        w->cont->reSchedule();
-        queueMutex_.unlock();
-
+    if (recvOne(out)) {
         return true;
     }
 
@@ -565,17 +546,12 @@ void CoroChannelImpl::close() {
     closed_ = true;
 
     while (!receivers_.empty()) {
-        auto* node = receivers_.popFront();
-        auto* w = (Waiter*)node;
-
-        w->cont->afterSuspend_ = nullptr;
-        w->cont->reSchedule();
+        wakeWaiter((Waiter*)receivers_.popFront());
     }
 }
 
 ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
-    void* mem = allocateMemory(sizeof(CoroChannelImpl) + cap * sizeof(void*));
-    return new (mem) CoroChannelImpl(this, cap);
+    return new (allocateMemory(sizeof(CoroChannelImpl) + cap * sizeof(void*))) CoroChannelImpl(this, cap);
 }
 
 ChannelIface::~ChannelIface() noexcept {
