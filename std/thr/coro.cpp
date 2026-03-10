@@ -272,12 +272,12 @@ namespace {
 
     struct ReactorThread: public Runable {
         CoroExecutorImpl* exec;
-        PollerIface* poller;
+        ScopedPtr<PollerIface> poller;
         DeadlineTreap timers;
         Mutex timerMutex;
         ScopedFD wakeReadFd;
         ScopedFD wakeWriteFd;
-        Thread* thread_;
+        ScopedPtr<Thread> thread_;
         bool done;
 
         ReactorThread(CoroExecutorImpl* e);
@@ -297,27 +297,24 @@ void PollRequest::run() {
 
 ReactorThread::ReactorThread(CoroExecutorImpl* e)
     : exec(e)
-    , poller(PollerIface::create())
+    , poller{PollerIface::create()}
     , timerMutex()
-    , thread_(nullptr)
+    , thread_{}
     , done(false)
 {
     createPipeFD(wakeReadFd, wakeWriteFd);
     // set read end non-blocking so drainWakeup() can loop safely
     ::fcntl(wakeReadFd.get(), F_SETFL, O_NONBLOCK);
-    poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
-    thread_ = new Thread(*this);
+    poller.ptr->arm(wakeReadFd.get(), PollFlag::In, nullptr);
+    thread_.ptr = new Thread(*this);
 }
 
-ReactorThread::~ReactorThread() noexcept {
-    delete thread_;
-    delete poller;
-}
+ReactorThread::~ReactorThread() noexcept = default;
 
 void ReactorThread::join() noexcept {
     done = true;
     wakeup();
-    thread_->join();
+    thread_.ptr->join();
 }
 
 void ReactorThread::registerRequest(PollRequest* req) {
@@ -332,7 +329,7 @@ void ReactorThread::registerRequest(PollRequest* req) {
 
     // arm AFTER insert: if fd fires immediately, reactor can safely
     // remove req from timers before the coroutine stack unwinds
-    poller->arm(req->fd, req->flags, req);
+    poller.ptr->arm(req->fd, req->flags, req);
 
     if (reqDeadline < prevEarliest) {
         wakeup();
@@ -373,14 +370,14 @@ void ReactorThread::run() noexcept {
         }
 
         PollEvent events[REACTOR_MAX_EVENTS];
-        u32 n = poller->wait(events, REACTOR_MAX_EVENTS, timeoutMs);
+        u32 n = poller.ptr->wait(events, REACTOR_MAX_EVENTS, timeoutMs);
 
         // Process fd-ready events
         for (u32 i = 0; i < n; i++) {
             if (events[i].data == nullptr) {
                 // wakeup event — drain and re-arm
                 drainWakeup();
-                poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
+                poller.ptr->arm(wakeReadFd.get(), PollFlag::In, nullptr);
             } else {
                 auto* req = (PollRequest*)events[i].data;
 
@@ -409,7 +406,7 @@ void ReactorThread::run() noexcept {
             }
 
             timers.remove(req);
-            poller->disarm(req->fd);
+            poller.ptr->disarm(req->fd);
 
             req->result = 0;
             req->cont->wake();
