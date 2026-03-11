@@ -15,8 +15,9 @@ namespace stl {
     struct CoroExecutor;
 
     struct Cont {
+        u32 poll(int fd, u32 flags);
+
         virtual CoroExecutor* executor() noexcept = 0;
-        virtual u32 poll(int fd, u32 flags) = 0;
         virtual u32 poll(int fd, u32 flags, u64 timeoutUs) = 0;
     };
 
