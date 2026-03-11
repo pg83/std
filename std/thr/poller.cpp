@@ -107,9 +107,9 @@ namespace {
         }
 
         void waitImpl(VisitorFace&& v, u32 timeoutUs) override {
-            epoll_event raw[64];
+            epoll_event raw[1024];
 
-            int n = epoll_wait(epfd_, raw, 64, (int)((timeoutUs + 999) / 1000));
+            int n = epoll_wait(epfd_, raw, sizeof(raw) / sizeof(raw[0]), (int)((timeoutUs + 999) / 1000));
 
             for (auto& e : range(raw, raw + n)) {
                 PollEvent ev{e.data.ptr, fromEpollFlags(e.events)};
@@ -163,14 +163,14 @@ namespace {
         }
 
         void waitImpl(VisitorFace&& v, u32 timeoutUs) override {
-            struct kevent raw[64];
+            struct kevent raw[1024];
 
             struct timespec ts;
 
             ts.tv_sec = timeoutUs / 1000000;
             ts.tv_nsec = (timeoutUs % 1000000) * 1000L;
 
-            int n = kevent(kqfd_, nullptr, 0, raw, 64, &ts);
+            int n = kevent(kqfd_, nullptr, 0, raw, sizeof(raw) / sizeof(raw[0]), &ts);
 
             for (auto& e : range(raw, raw + n)) {
                 u32 fl = 0;
