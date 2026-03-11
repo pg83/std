@@ -346,13 +346,6 @@ namespace {
                 return 0;
             }
 
-            // Wake fd fired: new commands arrived during poll(), drain and return 0 so caller re-enters
-            if (fds_[0].revents & POLLIN) {
-                drainCmds();
-
-                return 0;
-            }
-
             u32 count = 0;
 
             for (size_t i = 1; i < fds_.length() && count < maxEvents; ++i) {
@@ -368,6 +361,10 @@ namespace {
                     ++count;
                     armed_.erase((u64)efd); // ONESHOT
                 }
+            }
+
+            if (fds_[0].revents & POLLIN) {
+                drainCmds();
             }
 
             return count;
