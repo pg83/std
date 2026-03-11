@@ -287,12 +287,22 @@ namespace {
         }
 
         void arm(int fd, u32 flags, void* data) override {
-            Cmd cmd{.fd = fd, .flags = flags, .data = data};
+            Cmd cmd{
+                .fd = fd,
+                .flags = flags,
+                .data = data,
+            };
+
             wakeWriteFd_.write(&cmd, sizeof(cmd));
         }
 
         void disarm(int fd) override {
-            Cmd cmd{.fd = fd, .flags = 0, .data = nullptr};
+            Cmd cmd{
+                .fd = fd,
+                .flags = 0,
+                .data = nullptr,
+            };
+
             wakeWriteFd_.write(&cmd, sizeof(cmd));
         }
 
