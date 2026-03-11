@@ -385,7 +385,7 @@ void** WorkStealingThreadPool::tls(u64 key) noexcept {
 }
 
 void WorkStealingThreadPool::join() noexcept {
-    while (running_) {
+    while (stdAtomicFetch(&running_, MemoryOrder::Acquire)) {
         if (auto w = (Worker*)wq->dequeue(); w) {
             ShutDown sh;
 
