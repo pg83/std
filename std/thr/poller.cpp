@@ -230,33 +230,53 @@ PollerIface* PollerIface::create() {
 namespace {
     static short toPollEvents(u32 flags) noexcept {
         short r = 0;
-        if (flags & PollFlag::In)  r |= POLLIN;
-        if (flags & PollFlag::Out) r |= POLLOUT;
+
+        if (flags & PollFlag::In) {
+            r |= POLLIN;
+        }
+
+        if (flags & PollFlag::Out) {
+            r |= POLLOUT;
+        }
+
         return r;
     }
 
     static u32 fromPollEvents(short events) noexcept {
         u32 r = 0;
-        if (events & POLLIN)  r |= PollFlag::In;
-        if (events & POLLOUT) r |= PollFlag::Out;
-        if (events & POLLERR) r |= PollFlag::Err;
-        if (events & POLLHUP) r |= PollFlag::Hup;
+
+        if (events & POLLIN) {
+            r |= PollFlag::In;
+        }
+
+        if (events & POLLOUT) {
+            r |= PollFlag::Out;
+        }
+
+        if (events & POLLERR) {
+            r |= PollFlag::Err;
+        }
+
+        if (events & POLLHUP) {
+            r |= PollFlag::Hup;
+        }
+
         return r;
     }
 
-    struct PollPoller : public PollerIface {
+    struct PollPoller: public PollerIface {
         ScopedFD wakeReadFd_;
         ScopedFD wakeWriteFd_;
 
         struct Cmd {
             int fd;
-            u32 flags;  // 0 = disarm
+            u32 flags; // 0 = disarm
             void* data;
         };
 
         // reactor-thread-only
         IntMap<Cmd> armed_;
-        Vector<struct pollfd> fds_;  // rebuilt each wait()
+        Vector<struct pollfd> fds_; // rebuilt each wait()
 
         PollPoller() {
             createPipeFD(wakeReadFd_, wakeWriteFd_);
@@ -303,7 +323,7 @@ namespace {
         void buildFds() {
             fds_.clear();
 
-            struct pollfd wake{};
+            struct pollfd wake {};
 
             wake.fd = wakeReadFd_.get();
             wake.events = POLLIN;
@@ -311,7 +331,7 @@ namespace {
             fds_.pushBack(wake);
 
             armed_.visit([&](const Cmd& cmd) {
-                struct pollfd pfd{};
+                struct pollfd pfd {};
 
                 pfd.fd = cmd.fd;
                 pfd.events = toPollEvents(cmd.flags);
@@ -350,7 +370,7 @@ namespace {
                     out[count].data = cmd->data;
                     out[count].flags = fromPollEvents(fds_[i].revents);
                     ++count;
-                    armed_.erase((u64)efd);  // ONESHOT
+                    armed_.erase((u64)efd); // ONESHOT
                 }
             }
 
