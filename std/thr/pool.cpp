@@ -96,11 +96,13 @@ namespace {
         CondVar condVar_;
         IntrusiveList queue_;
         IntMap<Worker> workerIndex_;
+        alignas(64) int inflight_ = 0;
 
         void workerLoop();
 
     public:
         ThreadPoolImpl(size_t numThreads);
+        ~ThreadPoolImpl() noexcept;
 
         void submitTask(Task* task) noexcept override;
         void join() noexcept override;
@@ -120,12 +122,19 @@ ThreadPoolImpl::ThreadPoolImpl(size_t numThreads) {
 }
 
 void ThreadPoolImpl::submitTask(Task* task) noexcept {
+    stdAtomicAddAndFetch(&inflight_, 1, MemoryOrder::Relaxed);
     LockGuard lock(mutex_);
     queue_.pushBack(task);
     condVar_.signal();
 }
 
 void ThreadPoolImpl::join() noexcept {
+    while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) != 0) {
+        sched_yield();
+    }
+}
+
+ThreadPoolImpl::~ThreadPoolImpl() noexcept {
     ShutDown task;
 
     submitTask(&task);
@@ -155,6 +164,7 @@ void ThreadPoolImpl::workerLoop() {
             UnlockGuard unlock(mutex_);
 
             t->run();
+            stdAtomicAddAndFetch(&inflight_, -1, MemoryOrder::Release);
         }
     }
 }
@@ -282,6 +292,7 @@ namespace {
         ScopedPtr<GlobalWorker> gw_;
 
         WorkStealingThreadPool(size_t numThreads);
+        ~WorkStealingThreadPool() noexcept;
 
         bool notifyOne() noexcept;
         void join() noexcept override;
@@ -427,6 +438,10 @@ void WorkStealingThreadPool::join() noexcept {
     while (sleeping() != workerIndex_.size() + 1) {
         sched_yield();
     }
+}
+
+WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
+    join();
 
     workerIndex_.visit([](Worker& w) {
         w.join();

@@ -118,7 +118,7 @@ namespace {
         CoroExecutorImpl(ThreadPool::Ref pool, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
 
-        void join() override;
+        void join() noexcept override;
 
         auto tls() {
             return pool_->tls(tlsKey_);
@@ -452,18 +452,17 @@ CoroExecutorImpl::CoroExecutorImpl(ThreadPool::Ref pool, size_t reactors)
 }
 
 CoroExecutorImpl::~CoroExecutorImpl() noexcept {
-}
-
-void CoroExecutorImpl::join() {
-    while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) != 0) {
-        sched_yield();
-    }
+    join();
 
     for (auto* r : reactors_) {
         r->join();
     }
+}
 
-    pool_->join();
+void CoroExecutorImpl::join() noexcept {
+    while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) != 0) {
+        sched_yield();
+    }
 }
 
 ReactorThread* CoroExecutorImpl::pickReactor() noexcept {
