@@ -9,24 +9,22 @@
 
 #include <errno.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <poll.h>
+#include <fcntl.h>
 
 #if defined(__linux__)
     #include <sys/epoll.h>
 #elif defined(__APPLE__) || defined(__FreeBSD__)
     #include <sys/event.h>
     #include <sys/time.h>
+#endif
+
+#if defined(_WIN32)
+    #include <winsock2.h>
+    #define STD_POLL WSAPoll
 #else
-    #define USE_POLL_POLLER
-
-    #if defined(_WIN32)
-        #include <winsock2.h>
-        #define STD_POLL WSAPoll
-    #else
-        #include <poll.h>
-        #define STD_POLL poll
-    #endif
-
-    #include <fcntl.h>
+    #define STD_POLL poll
 #endif
 
 using namespace stl;
@@ -127,10 +125,6 @@ namespace {
         }
     };
 }
-
-PollerIface* PollerIface::create() {
-    return new EpollPoller();
-}
 #endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
@@ -218,13 +212,8 @@ namespace {
         }
     };
 }
-
-PollerIface* PollerIface::create() {
-    return new KqueuePoller();
-}
 #endif
 
-#if defined(USE_POLL_POLLER)
 namespace {
     static short toPollEvents(u32 flags) noexcept {
         short r = 0;
@@ -371,6 +360,15 @@ namespace {
 }
 
 PollerIface* PollerIface::create() {
+    if (getenv("USE_POLL_POLLER")) {
+        return new PollPoller();
+    }
+
+#if defined(__linux__)
+    return new EpollPoller();
+#elif defined(__APPLE__) || defined(__FreeBSD__)
+    return new KqueuePoller();
+#else
     return new PollPoller();
-}
 #endif
+}
