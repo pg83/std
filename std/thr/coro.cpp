@@ -69,10 +69,9 @@ namespace {
 
         virtual ~ContImpl() = default;
 
+        u32 poll(int fd, u32 flags, u64 timeoutUs) override;
         void parkWith(Runable* afterSuspend) noexcept;
         CoroExecutor* executor() noexcept override;
-        u32 poll(int fd, u32 flags) override;
-        u32 poll(int fd, u32 flags, u64 timeoutUs) override;
         void run() noexcept override;
         void reSchedule() noexcept;
         void entryX() noexcept;
@@ -544,7 +543,7 @@ u32 ContImpl::poll(int fd, u32 flags, u64 timeoutUs) {
     return req.result;
 }
 
-u32 ContImpl::poll(int fd, u32 flags) {
+u32 Cont::poll(int fd, u32 flags) {
     for (;;) {
         u32 res = poll(fd, flags, REACTOR_MAX_IDLE_US);
 
