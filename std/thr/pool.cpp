@@ -360,10 +360,10 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     PCG32 rng{(size_t)this};
 
     for (size_t i = 0; i < numThreads; ++i) {
-        workerIndex_.insertKeyed(this, (u32)i, rng.nextU32());
+        workerIndex_.insertKeyed(this, (u32)i, rng.nextU64());
     }
 
-    gw_.ptr = new GlobalWorker(this, rng.nextU32());
+    gw_.ptr = new GlobalWorker(this, rng.nextU64());
 
     workerIndex_.visit([](Worker& w) {
         w.initStealOrder();

@@ -37,6 +37,10 @@ u32 PCG32::nextU32() noexcept {
     return xorShift(exchange(state_, state_ * 6364136223846793005ULL + seq_));
 }
 
+u64 PCG32::nextU64() noexcept {
+    return splitMix64((u64)nextU32() << 32 | nextU32());
+}
+
 u32 PCG32::uniformUnbiased(u32 n) noexcept {
     const u32 limit = -n % n; // 2^32 % n — число «лишних» значений сверху
     u32 x;

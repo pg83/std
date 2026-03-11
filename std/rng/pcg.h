@@ -13,6 +13,7 @@ namespace stl {
         PCG32(u64 state, u64 seq) noexcept;
 
         u32 nextU32() noexcept;
+        u64 nextU64() noexcept;
 
         u32 uniformBiased(u32 n) noexcept {
             // https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
