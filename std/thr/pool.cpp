@@ -305,11 +305,11 @@ namespace {
         WorkStealingThreadPool(size_t numThreads);
 
         bool notifyOne() noexcept;
-        size_t sleeping() const noexcept;
         void join() noexcept override;
+        size_t sleeping() const noexcept;
+        PCG32& random() noexcept override;
         LocalWorker* localWorker() noexcept;
         void** tls(u64 key) noexcept override;
-        PCG32& random() noexcept override;
         void submitTask(Task* task) noexcept override;
 
         size_t numThreads() const noexcept override {
