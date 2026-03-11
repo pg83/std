@@ -325,6 +325,12 @@ void WorkStealingThreadPool::GlobalWorker::run() noexcept {
             task->run();
         }
     }
+
+    while (auto task = (Task*)tasks_.popFrontOrNull()) {
+        UnlockGuard unlock(mutex_);
+
+        task->run();
+    }
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
