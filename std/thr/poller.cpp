@@ -6,8 +6,6 @@
 #include <errno.h>
 #include <unistd.h>
 
-#undef __linux__
-
 #if defined(__linux__)
     #include <sys/epoll.h>
 #elif defined(__APPLE__) || defined(__FreeBSD__)
