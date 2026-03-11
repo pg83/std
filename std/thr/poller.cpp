@@ -6,13 +6,28 @@
 #include <errno.h>
 #include <unistd.h>
 
+#undef __linux__
+
 #if defined(__linux__)
     #include <sys/epoll.h>
 #elif defined(__APPLE__) || defined(__FreeBSD__)
     #include <sys/event.h>
     #include <sys/time.h>
 #else
-    #error unsupported platform
+    #if defined(_WIN32)
+        #include <winsock2.h>
+        #define STD_POLL WSAPoll
+    #else
+        #include <poll.h>
+        #define STD_POLL poll
+    #endif
+
+    #include <std/sys/fd.h>
+    #include <std/lib/vector.h>
+    #include <std/alg/range.h>
+    #include <std/sym/i_map.h>
+
+    #include <fcntl.h>
 #endif
 
 using namespace stl;
@@ -207,5 +222,144 @@ namespace {
 
 PollerIface* PollerIface::create() {
     return new KqueuePoller();
+}
+#endif
+
+#if !defined(__linux__) && !defined(__APPLE__) && !defined(__FreeBSD__)
+
+namespace {
+    static short toPollEvents(u32 flags) noexcept {
+        short r = 0;
+        if (flags & PollFlag::In)  r |= POLLIN;
+        if (flags & PollFlag::Out) r |= POLLOUT;
+        return r;
+    }
+
+    static u32 fromPollEvents(short events) noexcept {
+        u32 r = 0;
+        if (events & POLLIN)  r |= PollFlag::In;
+        if (events & POLLOUT) r |= PollFlag::Out;
+        if (events & POLLERR) r |= PollFlag::Err;
+        if (events & POLLHUP) r |= PollFlag::Hup;
+        return r;
+    }
+
+    struct PollPoller : public PollerIface {
+        ScopedFD wakeReadFd_;
+        ScopedFD wakeWriteFd_;
+
+        struct Cmd {
+            int fd;
+            u32 flags;  // 0 = disarm
+            void* data;
+        };
+
+        // reactor-thread-only
+        IntMap<Cmd> armed_;
+        Vector<struct pollfd> fds_;  // rebuilt each wait()
+
+        PollPoller() {
+            createPipeFD(wakeReadFd_, wakeWriteFd_);
+            fcntl(wakeReadFd_.get(), F_SETFL, O_NONBLOCK);
+        }
+
+        ~PollPoller() noexcept {
+        }
+
+        void arm(int fd, u32 flags, void* data) override {
+            Cmd cmd{fd, flags, data};
+            wakeWriteFd_.write(&cmd, sizeof(cmd));
+        }
+
+        void disarm(int fd) override {
+            Cmd cmd{fd, 0, nullptr};
+            wakeWriteFd_.write(&cmd, sizeof(cmd));
+        }
+
+        // Read all pending Cmds from pipe, apply to armed_. Returns true if any read.
+        bool drainCmds() {
+            bool any = false;
+
+            Cmd batch[16];
+            ssize_t n;
+
+            while ((n = ::read(wakeReadFd_.get(), batch, sizeof(batch))) > 0) {
+                STD_INSIST((size_t)n % sizeof(Cmd) == 0);
+
+                for (const Cmd& cmd : range(batch, batch + (size_t)n / sizeof(Cmd))) {
+                    if (cmd.flags != 0) {
+                        armed_[cmd.fd] = cmd;
+                    } else {
+                        armed_.erase(cmd.fd);
+                    }
+                }
+
+                any = true;
+            }
+
+            return any;
+        }
+
+        void buildFds() {
+            fds_.clear();
+
+            struct pollfd wake{};
+
+            wake.fd = wakeReadFd_.get();
+            wake.events = POLLIN;
+
+            fds_.pushBack(wake);
+
+            armed_.visit([&](const Cmd& cmd) {
+                struct pollfd pfd{};
+
+                pfd.fd = cmd.fd;
+                pfd.events = toPollEvents(cmd.flags);
+
+                fds_.pushBack(pfd);
+            });
+        }
+
+        u32 wait(PollEvent* out, u32 maxEvents, u32 timeoutUs) override {
+            drainCmds();
+            buildFds();
+
+            int n = STD_POLL(fds_.mutData(), (int)fds_.length(), (int)((timeoutUs + 999) / 1000));
+
+            if (n < 0) {
+                return 0;
+            }
+
+            // Wake fd fired: new commands arrived during poll(), drain and return 0 so caller re-enters
+            if (fds_[0].revents & POLLIN) {
+                drainCmds();
+
+                return 0;
+            }
+
+            u32 count = 0;
+
+            for (size_t i = 1; i < fds_.length() && count < maxEvents; ++i) {
+                if (fds_[i].revents == 0) {
+                    continue;
+                }
+
+                int efd = fds_[i].fd;
+
+                if (Cmd* cmd = armed_.find(efd); cmd) {
+                    out[count].data = cmd->data;
+                    out[count].flags = fromPollEvents(fds_[i].revents);
+                    ++count;
+                    armed_.erase((u64)efd);  // ONESHOT
+                }
+            }
+
+            return count;
+        }
+    };
+}
+
+PollerIface* PollerIface::create() {
+    return new PollPoller();
 }
 #endif
