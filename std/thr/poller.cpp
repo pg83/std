@@ -323,10 +323,16 @@ namespace {
         void buildFds() {
             fds_.clear();
 
-            fds_.pushBack({.fd = wakeReadFd_.get(), .events = POLLIN});
+            fds_.pushBack({
+                .fd = wakeReadFd_.get(),
+                .events = POLLIN,
+            });
 
             armed_.visit([&](const Cmd& cmd) {
-                fds_.pushBack({.fd = cmd.fd, .events = toPollEvents(cmd.flags)});
+                fds_.pushBack({
+                    .fd = cmd.fd,
+                    .events = toPollEvents(cmd.flags),
+                });
             });
         }
 
