@@ -297,9 +297,7 @@ namespace {
         }
 
         // Read all pending Cmds from pipe, apply to armed_. Returns true if any read.
-        bool drainCmds() {
-            bool any = false;
-
+        void drainCmds() {
             Cmd batch[16];
             ssize_t n;
 
@@ -313,11 +311,7 @@ namespace {
                         armed_.erase(cmd.fd);
                     }
                 }
-
-                any = true;
             }
-
-            return any;
         }
 
         void buildFds() {
