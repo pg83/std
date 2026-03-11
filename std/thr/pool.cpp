@@ -240,6 +240,7 @@ namespace {
             IntMap<void*> tls_;
             Thread thread_;
             bool done_ = false;
+            bool idle_ = false;
 
             explicit GlobalWorker(WorkStealingThreadPool* pool) noexcept;
 
@@ -260,6 +261,10 @@ namespace {
 
             void run() noexcept override;
 
+            bool sleeping() const noexcept {
+                return stdAtomicFetch(&idle_, MemoryOrder::Acquire);
+            }
+
             void join() {
                 {
                     LockGuard g(mutex_);
@@ -278,6 +283,7 @@ namespace {
         WorkStealingThreadPool(size_t numThreads);
 
         bool notifyOne() noexcept;
+        size_t sleeping() const noexcept;
         void join() noexcept override;
         LocalWorker* localWorker() noexcept;
         void** tls(u64 key) noexcept override;
@@ -306,7 +312,9 @@ void WorkStealingThreadPool::GlobalWorker::run() noexcept {
 
     while (!done_) {
         while (!done_ && tasks_.empty()) {
+            stdAtomicStore(&idle_, true, MemoryOrder::Release);
             condVar_.wait(mutex_);
+            stdAtomicStore(&idle_, false, MemoryOrder::Release);
         }
 
         if (auto w = (Worker*)pool_->wq->dequeue()) {
@@ -383,8 +391,12 @@ void** WorkStealingThreadPool::tls(u64 key) noexcept {
     return nullptr;
 }
 
+size_t WorkStealingThreadPool::sleeping() const noexcept {
+    return wq->sleeping() + (size_t)gw_.sleeping();
+}
+
 void WorkStealingThreadPool::join() noexcept {
-    while (wq->sleeping() != workerIndex_.size()) {
+    while (sleeping() != workerIndex_.size() + 1) {
         sched_yield();
     }
 
