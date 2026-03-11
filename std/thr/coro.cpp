@@ -44,6 +44,20 @@ namespace {
         return (u64)ts.tv_sec * 1000000ULL + (u64)ts.tv_nsec / 1000;
     }
 
+    static size_t defaultReactors(size_t threads) noexcept {
+        size_t r = threads / 4;
+
+        if (r > 16) {
+            r = 16;
+        }
+
+        if (r < 1) {
+            r = 1;
+        }
+
+        return r;
+    }
+
     struct ContImpl: public Cont, public Task {
         CoroExecutorImpl* exec_;
         ucontext_t ctx_;
@@ -860,20 +874,6 @@ ChannelIface::~ChannelIface() noexcept {
 CoroExecutor::~CoroExecutor() noexcept {
 }
 
-static size_t defaultReactors(size_t threads) noexcept {
-    size_t r = threads / 4;
-
-    if (r > 16) {
-        r = 16;
-    }
-
-    if (r < 1) {
-        r = 1;
-    }
-
-    return r;
-}
-
 CoroExecutor::Ref CoroExecutor::create(ThreadPool* pool) {
     return create(pool, defaultReactors(pool->numThreads()));
 }
@@ -883,7 +883,7 @@ CoroExecutor::Ref CoroExecutor::create(ThreadPool* pool, size_t reactors) {
 }
 
 CoroExecutor::Ref CoroExecutor::create(size_t threads) {
-    return create(threads, defaultReactors(threads));
+    return create(ThreadPool::workStealing(threads).mutPtr());
 }
 
 CoroExecutor::Ref CoroExecutor::create(size_t threads, size_t reactors) {
