@@ -221,12 +221,7 @@ namespace {
             }
 
             template <typename T>
-            void push(T& task) noexcept {
-                LockGuard lock(mutex_);
-                flushLocal();
-                tasks_.pushBack(task);
-                condVar_.signal();
-            }
+            void push(T& task) noexcept;
 
             void pushThrLocal(Task* task) noexcept override {
                 local_.pushBack(task);
@@ -279,15 +274,7 @@ namespace {
                 return stdAtomicFetch(&idle_, MemoryOrder::Acquire);
             }
 
-            void join() {
-                {
-                    LockGuard g(mutex_);
-                    done_ = true;
-                    condVar_.signal();
-                }
-
-                thread_.join();
-            }
+            void join();
         };
 
         IntMap<Worker> workerIndex_;
@@ -308,6 +295,14 @@ namespace {
             return workerIndex_.size();
         }
     };
+}
+
+template <typename T>
+void WorkStealingThreadPool::Worker::push(T& task) noexcept {
+    LockGuard lock(mutex_);
+    flushLocal();
+    tasks_.pushBack(task);
+    condVar_.signal();
 }
 
 WorkStealingThreadPool::GlobalWorker::GlobalWorker(WorkStealingThreadPool* pool, u64 seed) noexcept
@@ -349,6 +344,16 @@ void WorkStealingThreadPool::GlobalWorker::run() noexcept {
             task->run();
         }
     }
+}
+
+void WorkStealingThreadPool::GlobalWorker::join() {
+    {
+        LockGuard g(mutex_);
+        done_ = true;
+        condVar_.signal();
+    }
+
+    thread_.join();
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
