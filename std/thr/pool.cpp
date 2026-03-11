@@ -7,6 +7,7 @@
 #include "wait_queue.h"
 
 #include <std/rng/pcg.h>
+#include <std/ptr/scoped.h>
 #include <std/lib/list.h>
 #include <std/sym/i_map.h>
 #include <std/alg/range.h>
@@ -206,7 +207,7 @@ namespace {
             IntrusiveList local_;
             Thread thread_;
 
-            Worker(WorkStealingThreadPool* pool, u32 myIndex);
+            Worker(WorkStealingThreadPool* pool, u32 myIndex, u64 seed);
 
             auto key() const noexcept {
                 return thread_.threadId();
@@ -262,7 +263,7 @@ namespace {
             bool idle_ = false;
             Thread thread_;
 
-            explicit GlobalWorker(WorkStealingThreadPool* pool) noexcept;
+            GlobalWorker(WorkStealingThreadPool* pool, u64 seed) noexcept;
 
             void push(Task* task) noexcept;
 
@@ -294,7 +295,7 @@ namespace {
 
         IntMap<Worker> workerIndex_;
         WaitQueue::Ref wq;
-        GlobalWorker gw_;
+        ScopedPtr<GlobalWorker> gw_;
 
         WorkStealingThreadPool(size_t numThreads);
 
@@ -312,8 +313,8 @@ namespace {
     };
 }
 
-WorkStealingThreadPool::GlobalWorker::GlobalWorker(WorkStealingThreadPool* pool) noexcept
-    : LocalWorker((size_t)pool)
+WorkStealingThreadPool::GlobalWorker::GlobalWorker(WorkStealingThreadPool* pool, u64 seed) noexcept
+    : LocalWorker(seed)
     , pool_(pool)
     , thread_(*this)
 {
@@ -355,11 +356,14 @@ void WorkStealingThreadPool::GlobalWorker::run() noexcept {
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     : wq(WaitQueue::construct(numThreads))
-    , gw_(this)
 {
+    PCG32 rng{(size_t)this};
+
     for (size_t i = 0; i < numThreads; ++i) {
-        workerIndex_.insertKeyed(this, (u32)i);
+        workerIndex_.insertKeyed(this, (u32)i, rng.nextU32());
     }
+
+    gw_.ptr = new GlobalWorker(this, rng.nextU32());
 
     workerIndex_.visit([](Worker& w) {
         w.initStealOrder();
@@ -384,8 +388,8 @@ WorkStealingThreadPool::LocalWorker* WorkStealingThreadPool::localWorker() noexc
         return curw;
     } else if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
         return curw = w;
-    } else if (gw_.thread_.threadId() == Thread::currentThreadId()) {
-        return curw = &gw_;
+    } else if (gw_.ptr->thread_.threadId() == Thread::currentThreadId()) {
+        return curw = gw_.ptr;
     }
 
     return nullptr;
@@ -397,7 +401,7 @@ void WorkStealingThreadPool::submitTask(Task* task) noexcept {
     } else if (auto w = (Worker*)wq->dequeue()) {
         return w->push(task);
     } else {
-        return gw_.push(task);
+        return gw_.ptr->push(task);
     }
 }
 
@@ -414,7 +418,7 @@ PCG32& WorkStealingThreadPool::random() noexcept {
 }
 
 size_t WorkStealingThreadPool::sleeping() const noexcept {
-    return wq->sleeping() + (size_t)gw_.sleeping();
+    return wq->sleeping() + (size_t)gw_.ptr->sleeping();
 }
 
 void WorkStealingThreadPool::join() noexcept {
@@ -434,11 +438,11 @@ void WorkStealingThreadPool::join() noexcept {
         w.join();
     });
 
-    gw_.join();
+    gw_.ptr->join();
 }
 
-WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex)
-    : LocalWorker(splitMix64(myIndex))
+WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u64 seed)
+    : LocalWorker(seed)
     , WaitQueue::Item{nullptr, (u8)myIndex}
     , pool_(pool)
     , mutex_(true)
@@ -453,7 +457,7 @@ void WorkStealingThreadPool::Worker::initStealOrder() noexcept {
         }
     });
 
-    so_.pushBack(&pool_->gw_);
+    so_.pushBack(pool_->gw_.ptr);
 
     shuffle(rng_, so_.mutBegin(), so_.mutEnd());
 }
