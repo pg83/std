@@ -568,9 +568,7 @@ u32 Cont::poll(int fd, u32 flags, u64 timeoutUs) {
 
 u32 Cont::poll(int fd, u32 flags) {
     for (;;) {
-        u32 res = poll(fd, flags, REACTOR_MAX_IDLE_US);
-
-        if (res) {
+        if (auto res = poll(fd, flags, REACTOR_MAX_IDLE_US); res) {
             return res;
         }
     }
