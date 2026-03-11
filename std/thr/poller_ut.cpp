@@ -16,8 +16,8 @@ STD_TEST_SUITE(Poller) {
     STD_TEST(WaitTimeout) {
         ScopedPtr<PollerIface> p;
         p.ptr = PollerIface::create();
-        PollEvent ev[4];
-        u32 n = p.ptr->wait(ev, 4, 1000);
+        u32 n = 0;
+        p.ptr->wait([&](PollEvent*) { ++n; }, 1000);
         STD_INSIST(n == 0);
     }
 
@@ -29,12 +29,14 @@ STD_TEST_SUITE(Poller) {
 
         p.ptr->arm(w.get(), PollFlag::Out, (void*)0xBEEF);
 
-        PollEvent ev[4];
-        u32 n = p.ptr->wait(ev, 4, 100000);
+        u32 n = 0;
+        p.ptr->wait([&](PollEvent* ev) {
+            ++n;
+            STD_INSIST(ev->data == (void*)0xBEEF);
+            STD_INSIST(ev->flags & PollFlag::Out);
+        }, 100000);
 
         STD_INSIST(n == 1);
-        STD_INSIST(ev[0].data == (void*)0xBEEF);
-        STD_INSIST(ev[0].flags & PollFlag::Out);
     }
 
     STD_TEST(ArmReadable) {
@@ -48,12 +50,14 @@ STD_TEST_SUITE(Poller) {
         char c = 42;
         w.write(&c, 1);
 
-        PollEvent ev[4];
-        u32 n = p.ptr->wait(ev, 4, 100000);
+        u32 n = 0;
+        p.ptr->wait([&](PollEvent* ev) {
+            ++n;
+            STD_INSIST(ev->data == (void*)0xCAFE);
+            STD_INSIST(ev->flags & PollFlag::In);
+        }, 100000);
 
         STD_INSIST(n == 1);
-        STD_INSIST(ev[0].data == (void*)0xCAFE);
-        STD_INSIST(ev[0].flags & PollFlag::In);
     }
 
     STD_TEST(DataPointer) {
@@ -65,11 +69,13 @@ STD_TEST_SUITE(Poller) {
         void* sentinel = (void*)0x1234ABCD;
         p.ptr->arm(w.get(), PollFlag::Out, sentinel);
 
-        PollEvent ev[4];
-        u32 n = p.ptr->wait(ev, 4, 100000);
+        u32 n = 0;
+        p.ptr->wait([&](PollEvent* ev) {
+            ++n;
+            STD_INSIST(ev->data == sentinel);
+        }, 100000);
 
         STD_INSIST(n == 1);
-        STD_INSIST(ev[0].data == sentinel);
     }
 
     STD_TEST(Disarm) {
@@ -84,8 +90,8 @@ STD_TEST_SUITE(Poller) {
         char c = 42;
         w.write(&c, 1);
 
-        PollEvent ev[4];
-        u32 n = p.ptr->wait(ev, 4, 1000);
+        u32 n = 0;
+        p.ptr->wait([&](PollEvent*) { ++n; }, 1000);
 
         STD_INSIST(n == 0);
     }
@@ -101,12 +107,13 @@ STD_TEST_SUITE(Poller) {
         char c = 42;
         w.write(&c, 1);
 
-        PollEvent ev[4];
-        u32 n = p.ptr->wait(ev, 4, 100000);
+        u32 n = 0;
+        p.ptr->wait([&](PollEvent*) { ++n; }, 100000);
         STD_INSIST(n == 1);
 
         // after ONESHOT fires, second wait should time out
-        n = p.ptr->wait(ev, 4, 1000);
+        n = 0;
+        p.ptr->wait([&](PollEvent*) { ++n; }, 1000);
         STD_INSIST(n == 0);
     }
 
@@ -122,11 +129,13 @@ STD_TEST_SUITE(Poller) {
             char c = (char)i;
             w.write(&c, 1);
 
-            PollEvent ev[4];
-            u32 n = p.ptr->wait(ev, 4, 100000);
+            u32 n = 0;
+            p.ptr->wait([&](PollEvent* ev) {
+                ++n;
+                STD_INSIST(ev->data == (void*)(uintptr_t)i);
+            }, 100000);
 
             STD_INSIST(n == 1);
-            STD_INSIST(ev[0].data == (void*)(uintptr_t)i);
 
             // drain
             r.read(&c, 1);
@@ -143,8 +152,8 @@ STD_TEST_SUITE(Poller) {
         p.ptr->arm(w1.get(), PollFlag::Out, (void*)1);
         p.ptr->arm(w2.get(), PollFlag::Out, (void*)2);
 
-        PollEvent ev[4];
-        u32 n = p.ptr->wait(ev, 4, 100000);
+        u32 n = 0;
+        p.ptr->wait([&](PollEvent*) { ++n; }, 100000);
 
         STD_INSIST(n == 2);
     }

@@ -106,22 +106,16 @@ namespace {
             epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr);
         }
 
-        u32 wait(PollEvent* out, u32 maxEvents, u32 timeoutUs) override {
+        void waitImpl(VisitorFace&& v, u32 timeoutUs) override {
             epoll_event raw[64];
-            u32 cap = maxEvents < 64 ? maxEvents : 64;
 
-            int n = epoll_wait(epfd_, raw, (int)cap, (int)((timeoutUs + 999) / 1000));
-
-            if (n < 0) {
-                return 0;
-            }
+            int n = epoll_wait(epfd_, raw, 64, (int)((timeoutUs + 999) / 1000));
 
             for (int i = 0; i < n; i++) {
-                out[i].data = raw[i].data.ptr;
-                out[i].flags = fromEpollFlags(raw[i].events);
-            }
+                PollEvent ev{raw[i].data.ptr, fromEpollFlags(raw[i].events)};
 
-            return (u32)n;
+                v.visit(&ev);
+            }
         }
     };
 }
@@ -168,25 +162,17 @@ namespace {
             kevent(kqfd_, changes, 2, nullptr, 0, nullptr);
         }
 
-        u32 wait(PollEvent* out, u32 maxEvents, u32 timeoutUs) override {
+        void waitImpl(VisitorFace&& v, u32 timeoutUs) override {
             struct kevent raw[64];
-
-            u32 cap = maxEvents < 64 ? maxEvents : 64;
 
             struct timespec ts;
 
             ts.tv_sec = timeoutUs / 1000000;
             ts.tv_nsec = (timeoutUs % 1000000) * 1000L;
 
-            int n = kevent(kqfd_, nullptr, 0, raw, (int)cap, &ts);
-
-            if (n < 0) {
-                return 0;
-            }
+            int n = kevent(kqfd_, nullptr, 0, raw, 64, &ts);
 
             for (int i = 0; i < n; i++) {
-                out[i].data = raw[i].udata;
-
                 u32 fl = 0;
 
                 if (raw[i].filter == EVFILT_READ) {
@@ -205,10 +191,10 @@ namespace {
                     fl |= PollFlag::Err;
                 }
 
-                out[i].flags = fl;
-            }
+                PollEvent ev{raw[i].udata, fl};
 
-            return (u32)n;
+                v.visit(&ev);
+            }
         }
     };
 }
@@ -327,19 +313,17 @@ namespace {
             });
         }
 
-        u32 wait(PollEvent* out, u32 maxEvents, u32 timeoutUs) override {
+        void waitImpl(VisitorFace&& v, u32 timeoutUs) override {
             drainCmds();
             buildFds();
 
             int n = STD_POLL(fds_.mutData(), (int)fds_.length(), (int)((timeoutUs + 999) / 1000));
 
             if (n < 0) {
-                return 0;
+                return;
             }
 
-            u32 count = 0;
-
-            for (size_t i = 1; i < fds_.length() && count < maxEvents; ++i) {
+            for (size_t i = 1; i < fds_.length(); ++i) {
                 if (fds_[i].revents == 0) {
                     continue;
                 }
@@ -347,14 +331,12 @@ namespace {
                 int efd = fds_[i].fd;
 
                 if (Cmd* cmd = armed_.find(efd); cmd) {
-                    out[count].data = cmd->data;
-                    out[count].flags = fromPollEvents(fds_[i].revents);
-                    ++count;
+                    PollEvent ev{cmd->data, fromPollEvents(fds_[i].revents)};
+
+                    v.visit(&ev);
                     armed_.erase((u64)efd); // ONESHOT
                 }
             }
-
-            return count;
         }
     };
 }

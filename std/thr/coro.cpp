@@ -396,19 +396,15 @@ void ReactorThread::run() noexcept {
             timeoutUs = (u32)(diffUs < REACTOR_MAX_IDLE_US ? diffUs : REACTOR_MAX_IDLE_US);
         }
 
-        PollEvent events[REACTOR_MAX_EVENTS];
-        u32 n = poller.ptr->wait(events, REACTOR_MAX_EVENTS, timeoutUs);
-
-        // Process fd-ready events
-        for (u32 i = 0; i < n; i++) {
-            if (events[i].data == nullptr) {
+        poller.ptr->wait([this](PollEvent* ev) {
+            if (ev->data == nullptr) {
                 // wakeup event — drain and re-arm
                 drainWakeup();
                 poller.ptr->arm(wakeReadFd.get(), PollFlag::In, nullptr);
             } else {
-                auto* req = (PollRequest*)events[i].data;
+                auto* req = (PollRequest*)ev->data;
 
-                req->result = events[i].flags;
+                req->result = ev->flags;
 
                 {
                     LockGuard g(timerMutex);
@@ -418,7 +414,7 @@ void ReactorThread::run() noexcept {
 
                 req->cont->reSchedule();
             }
-        }
+        }, timeoutUs);
 
         // Expire timers
         now = monotonicNowUs();

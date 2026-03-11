@@ -1,5 +1,6 @@
 #pragma once
 #include <std/sys/types.h>
+#include <std/lib/visitor.h>
 
 namespace stl {
     namespace PollFlag {
@@ -21,8 +22,15 @@ namespace stl {
         virtual void arm(int fd, u32 flags, void* data) = 0;
         // remove fd from poller
         virtual void disarm(int fd) = 0;
-        // wait for events, returns count. always finite timeout
-        virtual u32 wait(PollEvent* out, u32 maxEvents, u32 timeoutUs) = 0;
+        // wait for events, always finite timeout
+        virtual void waitImpl(VisitorFace&& v, u32 timeoutUs) = 0;
+
+        template <typename V>
+        void wait(V v, u32 timeoutUs) {
+            waitImpl(makeVisitor([v](void* ptr) {
+                v((PollEvent*)ptr);
+            }), timeoutUs);
+        }
 
         static PollerIface* create();
     };
