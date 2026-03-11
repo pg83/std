@@ -237,9 +237,7 @@ namespace {
                 condVar_.signal();
             }
 
-            void join() noexcept {
-                thread_.join();
-            }
+            void join() noexcept;
 
             void sleep() noexcept {
                 pool_->wq->enqueue(this);
@@ -426,14 +424,6 @@ void WorkStealingThreadPool::join() noexcept {
     }
 
     workerIndex_.visit([](Worker& w) {
-        ShutDown sh;
-
-        {
-            LockGuard lock(w.mutex_);
-            w.pushThrLocal(&sh);
-        }
-
-        w.notify();
         w.join();
     });
 
@@ -448,6 +438,17 @@ WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex
     , thread_(*this)
 {
 }
+            void WorkStealingThreadPool::Worker::join() noexcept {
+        ShutDown sh;
+
+        {
+            LockGuard lock(mutex_);
+            pushThrLocal(&sh);
+        }
+
+        notify();
+                thread_.join();
+            }
 
 void WorkStealingThreadPool::Worker::initStealOrder() noexcept {
     pool_->workerIndex_.visit([this](Worker& w) {
