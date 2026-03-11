@@ -256,9 +256,9 @@ namespace {
             IntrusiveList tasks_;
             IntMap<void*> tls_;
             PCG32 rng_;
-            Thread thread_;
             bool done_ = false;
             bool idle_ = false;
+            Thread thread_;
 
             explicit GlobalWorker(WorkStealingThreadPool* pool) noexcept;
 
