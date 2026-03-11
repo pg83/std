@@ -20,6 +20,7 @@
 #include <std/rng/split_mix_64.h>
 
 #include <stdlib.h>
+#include <sched.h>
 
 using namespace stl;
 
@@ -272,7 +273,6 @@ namespace {
 
         IntMap<Worker> workerIndex_;
         WaitQueue::Ref wq;
-        size_t running_;
         GlobalWorker gw_;
 
         WorkStealingThreadPool(size_t numThreads);
@@ -325,17 +325,10 @@ void WorkStealingThreadPool::GlobalWorker::run() noexcept {
             task->run();
         }
     }
-
-    while (auto task = (Task*)tasks_.popFrontOrNull()) {
-        UnlockGuard unlock(mutex_);
-
-        task->run();
-    }
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     : wq(WaitQueue::construct(numThreads))
-    , running_(numThreads)
     , gw_(this)
 {
     for (size_t i = 0; i < numThreads; ++i) {
@@ -391,19 +384,21 @@ void** WorkStealingThreadPool::tls(u64 key) noexcept {
 }
 
 void WorkStealingThreadPool::join() noexcept {
-    while (stdAtomicFetch(&running_, MemoryOrder::Acquire)) {
-        if (auto w = (Worker*)wq->dequeue(); w) {
-            ShutDown sh;
-
-            {
-                LockGuard lock(w->mutex_);
-                w->pushThrLocal(&sh);
-            }
-
-            w->notify();
-            w->join();
-        }
+    while (wq->sleeping() != workerIndex_.size()) {
+        sched_yield();
     }
+
+    workerIndex_.visit([](Worker& w) {
+        ShutDown sh;
+
+        {
+            LockGuard lock(w.mutex_);
+            w.pushThrLocal(&sh);
+        }
+
+        w.notify();
+        w.join();
+    });
 
     gw_.join();
 }
@@ -443,17 +438,6 @@ void WorkStealingThreadPool::Worker::run() noexcept {
         loop();
     } catch (ShutDown* sh) {
     }
-
-    LockGuard lock(mutex_);
-
-    flushLocal();
-
-    while (auto task = popNoLock()) {
-        task->run();
-        flushLocal();
-    }
-
-    stdAtomicSubAndFetch(&pool_->running_, 1, MemoryOrder::Relaxed);
 }
 
 void WorkStealingThreadPool::Worker::loop() {

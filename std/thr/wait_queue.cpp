@@ -46,6 +46,16 @@ namespace {
                 }
             }
         }
+
+        size_t sleeping() const noexcept override {
+            T val = stdAtomicFetch(&bits_, MemoryOrder::Acquire);
+
+            if constexpr (sizeof(T) == 8) {
+                return (size_t)__builtin_popcountll(val);
+            } else {
+                return (size_t)__builtin_popcount(val);
+            }
+        }
     };
 
 #if __SIZEOF_POINTER__ == 8
@@ -55,6 +65,7 @@ namespace {
     struct PointerImpl: public WaitQueue {
         // upper 16 bits: tag, lower 48 bits: pointer
         u64 head_ = 0;
+        size_t count_ = 0;
 
         static u64 pack(Item* ptr, u64 tag) noexcept {
             return ((tag & 0xFFFFu) << 48) | ((uintptr_t)(ptr) & 0x0000FFFFFFFFFFFFu);
@@ -76,6 +87,8 @@ namespace {
                 item->next = unpackPtr(old);
                 desired = pack(item, unpackTag(old) + 1);
             } while (!stdAtomicCAS(&head_, &old, desired, MemoryOrder::Release, MemoryOrder::Relaxed));
+
+            stdAtomicAddAndFetch(&count_, 1, MemoryOrder::Release);
         }
 
         Item* dequeue() noexcept override {
@@ -91,9 +104,15 @@ namespace {
                 u64 desired = pack(ptr->next, unpackTag(old));
 
                 if (stdAtomicCAS(&head_, &old, desired, MemoryOrder::Acquire, MemoryOrder::Acquire)) {
+                    stdAtomicSubAndFetch(&count_, 1, MemoryOrder::Release);
+
                     return ptr;
                 }
             }
+        }
+
+        size_t sleeping() const noexcept override {
+            return stdAtomicFetch(&count_, MemoryOrder::Acquire);
         }
     };
 #endif
@@ -101,7 +120,7 @@ namespace {
     struct MutexImpl: public WaitQueue {
         Mutex mutex;
         Item* head = nullptr;
-        int empty = true;
+        size_t count_ = 0;
 
         void enqueue(Item* item) noexcept override {
             LockGuard lock(mutex);
@@ -109,11 +128,11 @@ namespace {
             item->next = head;
             head = item;
 
-            stdAtomicStore(&empty, false, MemoryOrder::Release);
+            stdAtomicAddAndFetch(&count_, 1, MemoryOrder::Release);
         }
 
         Item* dequeue() noexcept override {
-            if (stdAtomicFetch(&empty, MemoryOrder::Acquire)) {
+            if (!stdAtomicFetch(&count_, MemoryOrder::Acquire)) {
                 return nullptr;
             }
 
@@ -127,9 +146,13 @@ namespace {
 
             head = item->next;
 
-            stdAtomicStore(&empty, head == nullptr, MemoryOrder::Release);
+            stdAtomicSubAndFetch(&count_, 1, MemoryOrder::Release);
 
             return item;
+        }
+
+        size_t sleeping() const noexcept override {
+            return stdAtomicFetch(&count_, MemoryOrder::Acquire);
         }
     };
 }
