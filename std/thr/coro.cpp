@@ -75,7 +75,6 @@ namespace {
         u32 poll(int fd, u32 flags, u64 timeoutUs) override;
         void run() noexcept override;
         void reSchedule() noexcept;
-        void wake() noexcept;
         void entryX() noexcept;
 
         static void entry(u32 lo, u32 hi) noexcept;
@@ -218,7 +217,6 @@ namespace {
 
         bool sendOne(void* v) noexcept;
         bool recvOne(void** out) noexcept;
-        void wakeWaiter(Waiter* w) noexcept;
 
         virtual bool bufferOne(void* v) noexcept;
         virtual bool unbufferOne(void** out) noexcept;
@@ -410,7 +408,7 @@ void ReactorThread::run() noexcept {
                     timers.remove(req);
                 }
 
-                req->cont->wake();
+                req->cont->reSchedule();
             }
         }
 
@@ -430,7 +428,7 @@ void ReactorThread::run() noexcept {
             poller.ptr->disarm(req->fd);
 
             req->result = 0;
-            req->cont->wake();
+            req->cont->reSchedule();
         }
     }
 }
@@ -488,7 +486,7 @@ void CoroMutexImpl::unlock() noexcept {
     if (auto* node = waiters_.popFrontOrNull(); node) {
         auto* cont = (ContImpl*)(Task*)node;
 
-        cont->wake();
+        cont->reSchedule();
     } else {
         locked_ = false;
     }
@@ -570,11 +568,6 @@ void ContImpl::reSchedule() noexcept {
     exec_->pool_->submitTask(this);
 }
 
-void ContImpl::wake() noexcept {
-    afterSuspend_ = nullptr;
-    reSchedule();
-}
-
 void ContImpl::parkWith(Runable* afterSuspend) noexcept {
     afterSuspend_ = afterSuspend;
     swapcontext(&ctx_, workerCtx_);
@@ -589,7 +582,8 @@ void ContImpl::run() noexcept {
     *exec_->tls() = nullptr;
 
     if (auto* as = afterSuspend_) {
-        // after run(), cont may already be rescheduled by another thread
+        afterSuspend_ = nullptr;
+        // after as->run(), cont may already be rescheduled by another thread
         return as->run();
     }
 
@@ -629,7 +623,7 @@ void CoroCondVarImpl::signal() noexcept {
     if (auto* node = waiters_.popFrontOrNull(); node) {
         auto* cont = (ContImpl*)(Task*)node;
 
-        cont->wake();
+        cont->reSchedule();
     }
 }
 
@@ -639,7 +633,7 @@ void CoroCondVarImpl::broadcast() noexcept {
     while (auto* node = waiters_.popFrontOrNull()) {
         auto* cont = (ContImpl*)(Task*)node;
 
-        cont->wake();
+        cont->reSchedule();
     }
 }
 
@@ -697,10 +691,6 @@ CoroChannelImpl::CoroChannelImpl(CoroExecutorImpl* exec) noexcept
     , queueMutex_(exec)
     , closed_(false)
 {
-}
-
-void CoroChannelImpl::wakeWaiter(Waiter* w) noexcept {
-    w->cont->wake();
 }
 
 void CoroChannelImpl::run() {
@@ -784,7 +774,7 @@ void CoroChannelImpl::close() {
     closed_ = true;
 
     while (!receivers_.empty()) {
-        wakeWaiter((Waiter*)receivers_.popFront());
+        ((Waiter*)receivers_.popFront())->cont->reSchedule();
     }
 }
 
@@ -802,7 +792,7 @@ bool CoroChannelImpl::sendOne(void* v) noexcept {
 
         w->value = v;
         w->valueSet = true;
-        wakeWaiter(w);
+        w->cont->reSchedule();
 
         return true;
     }
@@ -823,7 +813,7 @@ bool CoroChannelImpl::recvOne(void** out) noexcept {
         auto* w = (Waiter*)senders_.popFront();
 
         *out = w->value;
-        wakeWaiter(w);
+        w->cont->reSchedule();
 
         return true;
     }
@@ -853,7 +843,7 @@ bool CoroChannelImplN::unbufferOne(void** out) noexcept {
             auto* w = (Waiter*)senders_.popFront();
 
             buf_.push(w->value);
-            wakeWaiter(w);
+            w->cont->reSchedule();
         }
 
         return true;
