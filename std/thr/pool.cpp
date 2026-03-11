@@ -7,7 +7,6 @@
 #include "wait_queue.h"
 
 #include <std/rng/pcg.h>
-#include <std/ptr/scoped.h>
 #include <std/lib/list.h>
 #include <std/sym/i_map.h>
 #include <std/alg/range.h>
@@ -16,9 +15,9 @@
 #include <std/dbg/assert.h>
 #include <std/dbg/insist.h>
 #include <std/sys/atomic.h>
+#include <std/ptr/scoped.h>
 #include <std/alg/shuffle.h>
 #include <std/alg/exchange.h>
-#include <std/rng/split_mix_64.h>
 
 #include <stdlib.h>
 #include <sched.h>
