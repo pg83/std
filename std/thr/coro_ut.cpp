@@ -329,6 +329,53 @@ STD_TEST_SUITE(CoroExecutor) {
     }
 }
 
+STD_TEST_SUITE(CoroRandom) {
+    STD_TEST(NonZero) {
+        auto exec = CoroExecutor::create(4);
+        u32 result = 0;
+
+        exec->spawn([&](Cont*) {
+            result = exec->random();
+        });
+
+        exec->pool()->join();
+        STD_INSIST(result != 0);
+    }
+
+    STD_TEST(DifferentPerCoro) {
+        auto exec = CoroExecutor::create(4);
+        const int N = 8;
+        u32 values[N] = {};
+
+        for (int i = 0; i < N; ++i) {
+            exec->spawn([&, i](Cont*) {
+                values[i] = exec->random();
+            });
+        }
+
+        exec->pool()->join();
+
+        for (int i = 0; i < N; ++i) {
+            for (int j = i + 1; j < N; ++j) {
+                STD_INSIST(values[i] != values[j]);
+            }
+        }
+    }
+
+    STD_TEST(Successive) {
+        auto exec = CoroExecutor::create(4);
+        u32 a = 0, b = 0;
+
+        exec->spawn([&](Cont*) {
+            a = exec->random();
+            b = exec->random();
+        });
+
+        exec->pool()->join();
+        STD_INSIST(a != b);
+    }
+}
+
 STD_TEST_SUITE(CoroPoll) {
     STD_TEST(PipeReadWrite) {
         // reader polls In on pipe, writer writes — verify data arrives

@@ -64,7 +64,6 @@ namespace {
         ucontext_t* workerCtx_;
         Runable* runable_;
         Runable* afterSuspend_;
-        PCG32 rng_;
 
         ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept;
 
@@ -139,6 +138,10 @@ namespace {
             currentCont()->parkWith(nullptr);
         }
 
+        u32 random() noexcept override {
+            return pool_->random().nextU32();
+        }
+
         void parkWith(Runable* afterSuspend) noexcept {
             currentCont()->parkWith(afterSuspend);
         }
@@ -147,7 +150,7 @@ namespace {
             return (ThreadPool*)pool_.ptr();
         }
 
-        ReactorThread* pickReactor(PCG32& rng) noexcept;
+        ReactorThread* pickReactor() noexcept;
 
         MutexIface* createMutex() override;
         CondVarIface* createCondVar() override;
@@ -449,8 +452,8 @@ CoroExecutorImpl::~CoroExecutorImpl() noexcept {
     }
 }
 
-ReactorThread* CoroExecutorImpl::pickReactor(PCG32& rng) noexcept {
-    return reactors_[rng.uniformBiased((u32)reactors_.length())];
+ReactorThread* CoroExecutorImpl::pickReactor() noexcept {
+    return reactors_[pool_->random().uniformBiased((u32)reactors_.length())];
 }
 
 CoroMutexImpl::CoroMutexImpl(CoroExecutorImpl* exec) noexcept
@@ -506,7 +509,6 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
     , workerCtx_(nullptr)
     , runable_(params.runable)
     , afterSuspend_(nullptr)
-    , rng_(this)
 {
     getcontext(&ctx_);
 
@@ -533,7 +535,7 @@ CoroExecutor* ContImpl::executor() noexcept {
 u32 ContImpl::poll(int fd, u32 flags, u64 timeoutUs) {
     PollRequest req;
     req.cont = this;
-    req.reactor = exec_->pickReactor(rng_);
+    req.reactor = exec_->pickReactor();
     req.fd = fd;
     req.flags = flags;
     req.result = 0;

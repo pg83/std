@@ -43,6 +43,7 @@ namespace stl {
         virtual ~CoroExecutor() noexcept;
 
         virtual void yield() noexcept = 0;
+        virtual u32 random() noexcept = 0;
         virtual Cont* me() const noexcept = 0;
         virtual MutexIface* createMutex() = 0;
         virtual CondVarIface* createCondVar() = 0;

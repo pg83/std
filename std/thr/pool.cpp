@@ -43,6 +43,7 @@ namespace {
 
     struct SyncThreadPool: public ThreadPool {
         IntMap<void*> tls_;
+        PCG32 rng_{this};
 
         void submitTask(Task* task) noexcept override {
             task->run();
@@ -55,6 +56,10 @@ namespace {
             return &tls_[key];
         }
 
+        PCG32& random() noexcept override {
+            return rng_;
+        }
+
         size_t numThreads() const noexcept override {
             return 0;
         }
@@ -64,10 +69,12 @@ namespace {
         struct Worker: public Runable {
             ThreadPoolImpl* pool_;
             IntMap<void*> tls_;
+            PCG32 rng_;
             Thread thread_;
 
             explicit Worker(ThreadPoolImpl* p) noexcept
                 : pool_(p)
+                , rng_(this)
                 , thread_(*this)
             {
             }
@@ -98,6 +105,7 @@ namespace {
         void submitTask(Task* task) noexcept override;
         void join() noexcept override;
         void** tls(u64 key) noexcept override;
+        PCG32& random() noexcept override;
 
         size_t numThreads() const noexcept override {
             return workerIndex_.size();
@@ -135,6 +143,10 @@ void** ThreadPoolImpl::tls(u64 key) noexcept {
     return nullptr;
 }
 
+PCG32& ThreadPoolImpl::random() noexcept {
+    return workerIndex_.find(Thread::currentThreadId())->rng_;
+}
+
 void ThreadPoolImpl::workerLoop() {
     LockGuard lock(mutex_);
 
@@ -168,6 +180,7 @@ namespace {
             virtual void steal(IntrusiveList* stolen) noexcept = 0;
             virtual void pushThrLocal(Task* task) noexcept = 0;
             virtual void** tls(u64 key) noexcept = 0;
+            virtual PCG32& random() noexcept = 0;
         };
 
         struct Worker: public LocalWorker, public Runable, public WaitQueue::Item {
@@ -211,6 +224,10 @@ namespace {
                 return &tls_[key];
             }
 
+            PCG32& random() noexcept override {
+                return rng_;
+            }
+
             void notify() noexcept {
                 LockGuard lock(mutex_);
                 condVar_.signal();
@@ -238,6 +255,7 @@ namespace {
             CondVar condVar_;
             IntrusiveList tasks_;
             IntMap<void*> tls_;
+            PCG32 rng_;
             Thread thread_;
             bool done_ = false;
             bool idle_ = false;
@@ -252,6 +270,10 @@ namespace {
 
             void** tls(u64 key) noexcept override {
                 return &tls_[key];
+            }
+
+            PCG32& random() noexcept override {
+                return rng_;
             }
 
             void steal(IntrusiveList* stolen) noexcept override {
@@ -287,6 +309,7 @@ namespace {
         void join() noexcept override;
         LocalWorker* localWorker() noexcept;
         void** tls(u64 key) noexcept override;
+        PCG32& random() noexcept override;
         void submitTask(Task* task) noexcept override;
 
         size_t numThreads() const noexcept override {
@@ -297,6 +320,7 @@ namespace {
 
 WorkStealingThreadPool::GlobalWorker::GlobalWorker(WorkStealingThreadPool* pool) noexcept
     : pool_(pool)
+    , rng_(this)
     , thread_(*this)
 {
 }
@@ -389,6 +413,10 @@ void** WorkStealingThreadPool::tls(u64 key) noexcept {
     }
 
     return nullptr;
+}
+
+PCG32& WorkStealingThreadPool::random() noexcept {
+    return localWorker()->random();
 }
 
 size_t WorkStealingThreadPool::sleeping() const noexcept {
