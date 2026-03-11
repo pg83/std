@@ -177,21 +177,33 @@ ThreadPool::Ref ThreadPool::simple(size_t threads) {
 namespace {
     struct WorkStealingThreadPool: public ThreadPool {
         struct LocalWorker {
+            IntMap<void*> tls_;
+            PCG32 rng_;
+
+            explicit LocalWorker(u64 seed) noexcept
+                : rng_(seed)
+            {
+            }
+
             virtual void steal(IntrusiveList* stolen) noexcept = 0;
             virtual void pushThrLocal(Task* task) noexcept = 0;
-            virtual void** tls(u64 key) noexcept = 0;
-            virtual PCG32& random() noexcept = 0;
+
+            void** tls(u64 key) noexcept {
+                return &tls_[key];
+            }
+
+            PCG32& random() noexcept {
+                return rng_;
+            }
         };
 
         struct Worker: public LocalWorker, public Runable, public WaitQueue::Item {
             WorkStealingThreadPool* pool_;
-            PCG32 rng_;
             Vector<LocalWorker*> so_;
             Mutex mutex_;
             CondVar condVar_;
             IntrusiveList tasks_;
             IntrusiveList local_;
-            IntMap<void*> tls_;
             Thread thread_;
 
             Worker(WorkStealingThreadPool* pool, u32 myIndex);
@@ -220,14 +232,6 @@ namespace {
                 local_.pushBack(task);
             }
 
-            void** tls(u64 key) noexcept override {
-                return &tls_[key];
-            }
-
-            PCG32& random() noexcept override {
-                return rng_;
-            }
-
             void notify() noexcept {
                 LockGuard lock(mutex_);
                 condVar_.signal();
@@ -254,8 +258,6 @@ namespace {
             Mutex mutex_;
             CondVar condVar_;
             IntrusiveList tasks_;
-            IntMap<void*> tls_;
-            PCG32 rng_;
             bool done_ = false;
             bool idle_ = false;
             Thread thread_;
@@ -266,14 +268,6 @@ namespace {
 
             void pushThrLocal(Task* task) noexcept override {
                 push(task);
-            }
-
-            void** tls(u64 key) noexcept override {
-                return &tls_[key];
-            }
-
-            PCG32& random() noexcept override {
-                return rng_;
             }
 
             void steal(IntrusiveList* stolen) noexcept override {
@@ -319,8 +313,8 @@ namespace {
 }
 
 WorkStealingThreadPool::GlobalWorker::GlobalWorker(WorkStealingThreadPool* pool) noexcept
-    : pool_(pool)
-    , rng_(this)
+    : LocalWorker((size_t)pool)
+    , pool_(pool)
     , thread_(*this)
 {
 }
@@ -444,9 +438,9 @@ void WorkStealingThreadPool::join() noexcept {
 }
 
 WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex)
-    : WaitQueue::Item{nullptr, (u8)myIndex}
+    : LocalWorker(splitMix64(myIndex))
+    , WaitQueue::Item{nullptr, (u8)myIndex}
     , pool_(pool)
-    , rng_(splitMix64(myIndex))
     , mutex_(true)
     , thread_(*this)
 {
