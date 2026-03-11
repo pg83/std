@@ -246,10 +246,10 @@ namespace {
                 condVar_.wait(mutex_);
             }
 
-            void initStealOrder() noexcept;
-            void trySteal(IntrusiveList* stolen) noexcept;
             void loop();
             void run() noexcept override;
+            void initStealOrder() noexcept;
+            void trySteal(IntrusiveList* stolen) noexcept;
             void steal(IntrusiveList* stolen) noexcept override;
         };
 
