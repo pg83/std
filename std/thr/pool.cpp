@@ -96,7 +96,7 @@ namespace {
         CondVar condVar_;
         IntrusiveList queue_;
         IntMap<Worker> workerIndex_;
-        alignas(64) int inflight_ = 0;
+        size_t inflight_ = 0;
 
         void workerLoop();
 
@@ -122,14 +122,20 @@ ThreadPoolImpl::ThreadPoolImpl(size_t numThreads) {
 }
 
 void ThreadPoolImpl::submitTask(Task* task) noexcept {
-    stdAtomicAddAndFetch(&inflight_, 1, MemoryOrder::Relaxed);
     LockGuard lock(mutex_);
+    ++inflight_;
     queue_.pushBack(task);
     condVar_.signal();
 }
 
 void ThreadPoolImpl::join() noexcept {
-    while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) != 0) {
+    for (;;) {
+        {
+            LockGuard lock(mutex_);
+            if (inflight_ == 0) {
+                return;
+            }
+        }
         sched_yield();
     }
 }
@@ -161,10 +167,13 @@ void ThreadPoolImpl::workerLoop() {
 
     for (;; condVar_.wait(mutex_)) {
         while (auto t = (Task*)queue_.popFrontOrNull()) {
-            UnlockGuard unlock(mutex_);
+            {
+                UnlockGuard unlock(mutex_);
 
-            t->run();
-            stdAtomicAddAndFetch(&inflight_, -1, MemoryOrder::Release);
+                t->run();
+            }
+
+            --inflight_;
         }
     }
 }
