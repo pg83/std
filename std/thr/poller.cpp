@@ -363,10 +363,6 @@ namespace {
                 }
             }
 
-            if (fds_[0].revents & POLLIN) {
-                drainCmds();
-            }
-
             return count;
         }
     };
