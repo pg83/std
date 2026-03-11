@@ -71,14 +71,12 @@ STD_TEST_SUITE(Latch) {
 
     STD_TEST(CoroBasic) {
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         Latch latch(1, exec.mutPtr());
         int counter = 0;
 
         exec->spawn([&](Cont*) {
             latch.wait();
             STD_INSIST(counter == 1);
-            done.arrive();
         });
 
         exec->spawn([&](Cont*) {
@@ -86,21 +84,18 @@ STD_TEST_SUITE(Latch) {
             latch.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
     }
 
     STD_TEST(CoroMultiple) {
         const int N = 8;
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         Latch latch(N, exec.mutPtr());
         int counter = 0;
 
         exec->spawn([&](Cont*) {
             latch.wait();
             STD_INSIST(counter == N);
-            done.arrive();
         });
 
         for (int i = 0; i < N; ++i) {
@@ -110,14 +105,12 @@ STD_TEST_SUITE(Latch) {
             });
         }
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
     }
 
     STD_TEST(CoroManyWaiters) {
         const int N = 4;
         auto exec = CoroExecutor::create(4);
-        Latch done(N);
         Latch latch(1, exec.mutPtr());
         int counter = 0;
 
@@ -125,7 +118,6 @@ STD_TEST_SUITE(Latch) {
             exec->spawn([&](Cont*) {
                 latch.wait();
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-                done.arrive();
             });
         }
 
@@ -133,8 +125,7 @@ STD_TEST_SUITE(Latch) {
             latch.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(counter == N);
     }
 }

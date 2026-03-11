@@ -1,6 +1,5 @@
 #include "wait_group.h"
 #include "coro.h"
-#include "latch.h"
 #include "pool.h"
 #include "thread.h"
 
@@ -127,7 +126,6 @@ STD_TEST_SUITE(WaitGroup) {
 
     STD_TEST(CoroBasic) {
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         WaitGroup wg(exec.mutPtr());
         int counter = 0;
 
@@ -141,17 +139,14 @@ STD_TEST_SUITE(WaitGroup) {
 
             wg.wait();
             STD_INSIST(counter == 1);
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
     }
 
     STD_TEST(CoroMultiple) {
         const int N = 8;
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         WaitGroup wg(exec.mutPtr());
         int counter = 0;
 
@@ -167,16 +162,13 @@ STD_TEST_SUITE(WaitGroup) {
 
             wg.wait();
             STD_INSIST(counter == N);
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
     }
 
     STD_TEST(CoroReuseAfterWait) {
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         WaitGroup wg(exec.mutPtr());
         int counter = 0;
 
@@ -193,10 +185,8 @@ STD_TEST_SUITE(WaitGroup) {
             }
 
             STD_INSIST(counter == 3);
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
     }
 }

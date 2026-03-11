@@ -12,17 +12,14 @@ STD_TEST_SUITE(Channel) {
     STD_TEST(Basic) {
         auto exec = CoroExecutor::create(4);
         Channel ch(exec.mutPtr(), 1);
-        Latch done(1);
         void* result = nullptr;
 
         exec->spawn([&](Cont*) {
             ch.enqueue((void*)42);
             ch.dequeue(&result);
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(result == (void*)42);
     }
 
@@ -30,7 +27,6 @@ STD_TEST_SUITE(Channel) {
         auto exec = CoroExecutor::create(4);
         const size_t cap = 8;
         Channel ch(exec.mutPtr(), cap);
-        Latch done(1);
         int count = 0;
 
         exec->spawn([&](Cont*) {
@@ -45,26 +41,21 @@ STD_TEST_SUITE(Channel) {
                     ++count;
                 }
             }
-
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(count == (int)cap);
     }
 
     STD_TEST(BlockingSender) {
         auto exec = CoroExecutor::create(4);
         Channel ch(exec.mutPtr(), 1);
-        Latch done(2);
         void* received = nullptr;
 
         // sender: will block after first enqueue since cap=1
         exec->spawn([&](Cont*) {
             ch.enqueue((void*)1);
             ch.enqueue((void*)2); // blocks here
-            done.arrive();
         });
 
         // receiver: drains the channel
@@ -74,41 +65,34 @@ STD_TEST_SUITE(Channel) {
             ch.dequeue(&v1);
             ch.dequeue(&v2);
             received = v2;
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(received == (void*)2);
     }
 
     STD_TEST(BlockingReceiver) {
         auto exec = CoroExecutor::create(4);
         Channel ch(exec.mutPtr(), 1);
-        Latch done(2);
         void* received = nullptr;
 
         // receiver: blocks waiting for value
         exec->spawn([&](Cont*) {
             ch.dequeue(&received);
-            done.arrive();
         });
 
         // sender: sends after receiver is waiting
         exec->spawn([&](Cont*) {
             ch.enqueue((void*)99);
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(received == (void*)99);
     }
 
     STD_TEST(Close) {
         auto exec = CoroExecutor::create(4);
         Channel ch(exec.mutPtr(), 4);
-        Latch done(1);
         bool got = true;
 
         exec->spawn([&](Cont*) {
@@ -118,11 +102,9 @@ STD_TEST_SUITE(Channel) {
             void* v;
             ch.dequeue(&v);       // gets 1
             got = ch.dequeue(&v); // returns false
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(!got);
     }
 
@@ -130,7 +112,6 @@ STD_TEST_SUITE(Channel) {
         auto exec = CoroExecutor::create(4);
         Channel ch(exec.mutPtr(), 1);
         const int N = 4;
-        Latch done(N);
         int falseCount = 0;
 
         for (int i = 0; i < N; ++i) {
@@ -140,7 +121,6 @@ STD_TEST_SUITE(Channel) {
                 if (!ok) {
                     stdAtomicAddAndFetch(&falseCount, 1, MemoryOrder::Relaxed);
                 }
-                done.arrive();
             });
         }
 
@@ -148,8 +128,7 @@ STD_TEST_SUITE(Channel) {
             ch.close();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(falseCount == N);
     }
 
@@ -157,7 +136,6 @@ STD_TEST_SUITE(Channel) {
         auto exec = CoroExecutor::create(4);
         Channel ch(exec.mutPtr(), 4);
         const int N = 100;
-        Latch done(2);
         int sum = 0;
 
         exec->spawn([&](Cont*) {
@@ -165,7 +143,6 @@ STD_TEST_SUITE(Channel) {
                 ch.enqueue((void*)(uintptr_t)(i + 1));
             }
             ch.close();
-            done.arrive();
         });
 
         exec->spawn([&](Cont*) {
@@ -173,11 +150,9 @@ STD_TEST_SUITE(Channel) {
             while (ch.dequeue(&v)) {
                 stdAtomicAddAndFetch(&sum, (int)(uintptr_t)v, MemoryOrder::Relaxed);
             }
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(sum == N * (N + 1) / 2);
     }
 
@@ -189,7 +164,6 @@ STD_TEST_SUITE(Channel) {
         const int nPerProducer = 50;
         const int total = nProducers * nPerProducer;
         Latch prodDone(nProducers);
-        Latch consDone(nConsumers);
         int consumed = 0;
 
         for (int i = 0; i < nProducers; ++i) {
@@ -207,7 +181,6 @@ STD_TEST_SUITE(Channel) {
                 while (ch.dequeue(&v)) {
                     stdAtomicAddAndFetch(&consumed, 1, MemoryOrder::Relaxed);
                 }
-                consDone.arrive();
             });
         }
 
@@ -216,15 +189,13 @@ STD_TEST_SUITE(Channel) {
             ch.close();
         });
 
-        consDone.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(consumed == total);
     }
 
     STD_TEST(TryEnqueueDequeue) {
         auto exec = CoroExecutor::create(4);
         Channel ch(exec.mutPtr(), 2);
-        Latch done(1);
 
         exec->spawn([&](Cont*) {
             void* v;
@@ -242,12 +213,9 @@ STD_TEST_SUITE(Channel) {
             STD_INSIST(v == (void*)2);
 
             STD_INSIST(!ch.tryDequeue(&v));
-
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
     }
 
     STD_TEST(Stress) {
@@ -258,7 +226,6 @@ STD_TEST_SUITE(Channel) {
         const int nPerProducer = 200;
         const int total = nProducers * nPerProducer;
         Latch prodDone(nProducers);
-        Latch consDone(nConsumers);
         int consumed = 0;
 
         for (int i = 0; i < nProducers; ++i) {
@@ -276,7 +243,6 @@ STD_TEST_SUITE(Channel) {
                 while (ch.dequeue(&v)) {
                     stdAtomicAddAndFetch(&consumed, 1, MemoryOrder::Relaxed);
                 }
-                consDone.arrive();
             });
         }
 
@@ -285,8 +251,7 @@ STD_TEST_SUITE(Channel) {
             ch.close();
         });
 
-        consDone.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(consumed == total);
     }
 }

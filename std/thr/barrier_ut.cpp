@@ -1,6 +1,5 @@
 #include "barrier.h"
 #include "coro.h"
-#include "latch.h"
 #include "pool.h"
 #include "thread.h"
 #include "runable.h"
@@ -143,7 +142,6 @@ STD_TEST_SUITE(Barrier) {
     STD_TEST(CoroBasic) {
         const int N = 6;
         auto exec = CoroExecutor::create(4);
-        Latch done(N);
         Barrier barrier(N, exec.mutPtr());
         int arrived = 0;
         bool correct = true;
@@ -155,19 +153,16 @@ STD_TEST_SUITE(Barrier) {
                 if (stdAtomicFetch(&arrived, MemoryOrder::Acquire) != N) {
                     correct = false;
                 }
-                done.arrive();
             });
         }
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(correct);
     }
 
     STD_TEST(CoroMultipleBarriers) {
         const int N = 4;
         auto exec = CoroExecutor::create(4);
-        Latch done(N);
         Barrier b1(N, exec.mutPtr());
         Barrier b2(N, exec.mutPtr());
         int phase = 0;
@@ -178,12 +173,10 @@ STD_TEST_SUITE(Barrier) {
                 stdAtomicAddAndFetch(&phase, 1, MemoryOrder::Relaxed);
                 b2.wait();
                 stdAtomicAddAndFetch(&phase, 1, MemoryOrder::Relaxed);
-                done.arrive();
             });
         }
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(phase == N * 2);
     }
 }
