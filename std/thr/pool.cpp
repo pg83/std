@@ -129,13 +129,11 @@ void ThreadPoolImpl::submitTask(Task* task) noexcept {
 }
 
 void ThreadPoolImpl::join() noexcept {
-    for (;;) {
-        {
-            LockGuard lock(mutex_);
-            if (inflight_ == 0) {
-                return;
-            }
-        }
+    LockGuard lock(mutex_);
+
+    while (inflight_) {
+        UnlockGuard unlock(mutex_);
+
         sched_yield();
     }
 }
