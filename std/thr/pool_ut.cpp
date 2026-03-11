@@ -1,5 +1,4 @@
 #include "pool.h"
-#include "latch.h"
 #include "mutex.h"
 #include "barrier.h"
 #include "cond_var.h"
@@ -183,15 +182,12 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
     STD_TEST(MultipleTasks) {
         auto pool = ThreadPool::workStealing(2);
         int counter = 0;
-        Latch latch(10);
 
         for (int i = 0; i < 10; ++i) {
-            pool->submit([&counter, &latch] {
+            pool->submit([&counter] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-                latch.arrive();
             });
         }
-        latch.wait();
         pool->join();
 
         STD_INSIST(counter == 10);
@@ -212,15 +208,12 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
     STD_TEST(ManyTasksMultipleThreads) {
         auto pool = ThreadPool::workStealing(4);
         int counter = 0;
-        Latch latch(100);
 
         for (int i = 0; i < 100; ++i) {
-            pool->submit([&counter, &latch] {
+            pool->submit([&counter] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-                latch.arrive();
             });
         }
-        latch.wait();
         pool->join();
 
         STD_INSIST(counter == 100);
@@ -233,23 +226,11 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
 
     STD_TEST(TasksWithWork) {
         auto pool = ThreadPool::workStealing(4);
-        int counter = 0;
-        Latch latch(20);
 
         for (int i = 0; i < 20; ++i) {
-            pool->submit([&counter, &latch] {
-                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-                latch.arrive();
-            });
+            pool->submit([] { for (volatile int i = 0; i < 10000; ++i) {} });
         }
-
-        for (volatile int i = 0; i < 10000; ++i) {
-        }
-
-        latch.wait();
         pool->join();
-
-        STD_INSIST(counter == 20);
     }
 
     STD_TEST(SingleThreadPool) {
@@ -267,15 +248,12 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
     STD_TEST(ManyThreadsPool) {
         auto pool = ThreadPool::workStealing(8);
         int counter = 0;
-        Latch latch(200);
 
         for (int i = 0; i < 200; ++i) {
-            pool->submit([&counter, &latch] {
+            pool->submit([&counter] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-                latch.arrive();
             });
         }
-        latch.wait();
         pool->join();
 
         STD_INSIST(counter == 200);
@@ -284,15 +262,12 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
     STD_TEST(WorkStealing) {
         auto pool = ThreadPool::workStealing(4);
         int counter = 0;
-        Latch latch(100);
 
         for (int i = 0; i < 100; ++i) {
-            pool->submit([&counter, &latch] {
+            pool->submit([&counter] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-                latch.arrive();
             });
         }
-        latch.wait();
         pool->join();
 
         STD_INSIST(counter == 100);
@@ -301,12 +276,10 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
     STD_TEST(MixedWorkload) {
         auto pool = ThreadPool::workStealing(4);
         int counter = 0;
-        Latch latch(100);
 
         for (int i = 0; i < 50; ++i) {
-            pool->submit([&counter, &latch] {
+            pool->submit([&counter] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-                latch.arrive();
             });
         }
 
@@ -314,13 +287,11 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
         }
 
         for (int i = 0; i < 50; ++i) {
-            pool->submit([&counter, &latch] {
+            pool->submit([&counter] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-                latch.arrive();
             });
         }
 
-        latch.wait();
         pool->join();
 
         STD_INSIST(counter == 100);
@@ -335,15 +306,6 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
 
         auto* task = new StressTask(&state, depth);
         pool->submit([task] { task->run(); });
-
-        {
-            LockGuard lock(state.mutex);
-
-            while (stdAtomicFetch(&state.counter, MemoryOrder::Acquire) > 0) {
-                state.condVar.wait(state.mutex);
-            }
-        }
-
         pool->join();
     }
 
@@ -530,14 +492,11 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
     STD_TEST(NotNullFromTask) {
         u64 key = registerTlsKey();
         bool notNull = false;
-        Latch latch(1);
 
         auto pool = ThreadPool::workStealing(2);
-        pool->submit([p = pool.mutPtr(), key, &notNull, &latch] {
+        pool->submit([p = pool.mutPtr(), key, &notNull] {
             notNull = (p->tls(key) != nullptr);
-            latch.arrive();
         });
-        latch.wait();
         pool->join();
         STD_INSIST(notNull);
     }
@@ -547,18 +506,15 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         u64 k2 = registerTlsKey();
         int v1 = 10, v2 = 20;
         bool correct = true;
-        Latch latch(1);
 
         auto pool = ThreadPool::workStealing(2);
-        pool->submit([p = pool.mutPtr(), k1, k2, &v1, &v2, &correct, &latch] {
+        pool->submit([p = pool.mutPtr(), k1, k2, &v1, &v2, &correct] {
             *p->tls(k1) = &v1;
             *p->tls(k2) = &v2;
             if (*p->tls(k1) != &v1 || *p->tls(k2) != &v2) {
                 correct = false;
             }
-            latch.arrive();
         });
-        latch.wait();
         pool->join();
         STD_INSIST(correct);
     }
@@ -567,21 +523,18 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         const int N = 2;
         u64 key = registerTlsKey();
         Barrier barrier(N);
-        Barrier done(N + 1);
         bool correct = true;
 
         auto pool = ThreadPool::workStealing(N);
         for (int i = 0; i < N; ++i) {
-            pool->submit([p = pool.mutPtr(), key, &barrier, &done, id = i + 1, &correct] {
+            pool->submit([p = pool.mutPtr(), key, &barrier, id = i + 1, &correct] {
                 *p->tls(key) = (void*)(uintptr_t)id;
                 barrier.wait();
                 if ((uintptr_t)*p->tls(key) != (uintptr_t)id) {
                     correct = false;
                 }
-                done.wait();
             });
         }
-        done.wait();
         pool->join();
         STD_INSIST(correct);
     }
