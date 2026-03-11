@@ -139,6 +139,8 @@ void ThreadPoolImpl::join() noexcept {
 }
 
 ThreadPoolImpl::~ThreadPoolImpl() noexcept {
+    join();
+
     ShutDown task;
 
     submitTask(&task);
