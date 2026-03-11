@@ -1,6 +1,10 @@
 #include "poller.h"
 
+#include <std/sys/fd.h>
 #include <std/sys/types.h>
+#include <std/alg/range.h>
+#include <std/sym/i_map.h>
+#include <std/lib/vector.h>
 #include <std/dbg/insist.h>
 
 #include <errno.h>
@@ -12,6 +16,8 @@
     #include <sys/event.h>
     #include <sys/time.h>
 #else
+    #define USE_POLL_POLLER
+
     #if defined(_WIN32)
         #include <winsock2.h>
         #define STD_POLL WSAPoll
@@ -19,11 +25,6 @@
         #include <poll.h>
         #define STD_POLL poll
     #endif
-
-    #include <std/sys/fd.h>
-    #include <std/lib/vector.h>
-    #include <std/alg/range.h>
-    #include <std/sym/i_map.h>
 
     #include <fcntl.h>
 #endif
@@ -223,8 +224,7 @@ PollerIface* PollerIface::create() {
 }
 #endif
 
-#if !defined(__linux__) && !defined(__APPLE__) && !defined(__FreeBSD__)
-
+#if defined(USE_POLL_POLLER)
 namespace {
     static short toPollEvents(u32 flags) noexcept {
         short r = 0;
