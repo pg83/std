@@ -441,7 +441,6 @@ CoroExecutorImpl::CoroExecutorImpl(ThreadPool::Ref pool, size_t reactors)
     : pool_(pool)
     , tlsKey_(registerTlsKey())
     , reactorPool_(ObjPool::fromMemory())
-    , reactors_()
 {
     for (size_t i = 0; i < reactors; ++i) {
         reactors_.pushBack(reactorPool_->make<ReactorThread>(this));
