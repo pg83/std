@@ -389,7 +389,11 @@ void WorkStealingThreadPool::join() noexcept {
         if (auto w = (Worker*)wq->dequeue(); w) {
             ShutDown sh;
 
-            w->pushThrLocal(&sh);
+            {
+                LockGuard lock(w->mutex_);
+                w->pushThrLocal(&sh);
+            }
+
             w->notify();
             w->join();
         }
@@ -450,7 +454,6 @@ void WorkStealingThreadPool::Worker::loop() {
     LockGuard lock(mutex_);
 
     do {
-        // ShutDown task only
         while (auto task = (Task*)local_.popFrontOrNull()) {
             task->run();
         }
