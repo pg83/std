@@ -111,8 +111,8 @@ namespace {
 
             int n = epoll_wait(epfd_, raw, 64, (int)((timeoutUs + 999) / 1000));
 
-            for (int i = 0; i < n; i++) {
-                PollEvent ev{raw[i].data.ptr, fromEpollFlags(raw[i].events)};
+            for (auto& e : range(raw, raw + n)) {
+                PollEvent ev{e.data.ptr, fromEpollFlags(e.events)};
 
                 v.visit(&ev);
             }
@@ -172,26 +172,26 @@ namespace {
 
             int n = kevent(kqfd_, nullptr, 0, raw, 64, &ts);
 
-            for (int i = 0; i < n; i++) {
+            for (auto& e : range(raw, raw + n)) {
                 u32 fl = 0;
 
-                if (raw[i].filter == EVFILT_READ) {
+                if (e.filter == EVFILT_READ) {
                     fl |= PollFlag::In;
                 }
 
-                if (raw[i].filter == EVFILT_WRITE) {
+                if (e.filter == EVFILT_WRITE) {
                     fl |= PollFlag::Out;
                 }
 
-                if (raw[i].flags & EV_EOF) {
+                if (e.flags & EV_EOF) {
                     fl |= PollFlag::Hup;
                 }
 
-                if (raw[i].flags & EV_ERROR) {
+                if (e.flags & EV_ERROR) {
                     fl |= PollFlag::Err;
                 }
 
-                PollEvent ev{raw[i].udata, fl};
+                PollEvent ev{e.udata, fl};
 
                 v.visit(&ev);
             }
@@ -323,18 +323,16 @@ namespace {
                 return;
             }
 
-            for (size_t i = 1; i < fds_.length(); ++i) {
-                if (fds_[i].revents == 0) {
+            for (auto& pfd : range(fds_.mutData() + 1, fds_.mutData() + fds_.length())) {
+                if (pfd.revents == 0) {
                     continue;
                 }
 
-                int efd = fds_[i].fd;
-
-                if (Cmd* cmd = armed_.find(efd); cmd) {
-                    PollEvent ev{cmd->data, fromPollEvents(fds_[i].revents)};
+                if (Cmd* cmd = armed_.find(pfd.fd); cmd) {
+                    PollEvent ev{cmd->data, fromPollEvents(pfd.revents)};
 
                     v.visit(&ev);
-                    armed_.erase((u64)efd); // ONESHOT
+                    armed_.erase((u64)pfd.fd); // ONESHOT
                 }
             }
         }
