@@ -287,12 +287,12 @@ namespace {
         }
 
         void arm(int fd, u32 flags, void* data) override {
-            Cmd cmd{fd, flags, data};
+            Cmd cmd{.fd = fd, .flags = flags, .data = data};
             wakeWriteFd_.write(&cmd, sizeof(cmd));
         }
 
         void disarm(int fd) override {
-            Cmd cmd{fd, 0, nullptr};
+            Cmd cmd{.fd = fd, .flags = 0, .data = nullptr};
             wakeWriteFd_.write(&cmd, sizeof(cmd));
         }
 
@@ -323,20 +323,10 @@ namespace {
         void buildFds() {
             fds_.clear();
 
-            struct pollfd wake {};
-
-            wake.fd = wakeReadFd_.get();
-            wake.events = POLLIN;
-
-            fds_.pushBack(wake);
+            fds_.pushBack({.fd = wakeReadFd_.get(), .events = POLLIN});
 
             armed_.visit([&](const Cmd& cmd) {
-                struct pollfd pfd {};
-
-                pfd.fd = cmd.fd;
-                pfd.events = toPollEvents(cmd.flags);
-
-                fds_.pushBack(pfd);
+                fds_.pushBack({.fd = cmd.fd, .events = toPollEvents(cmd.flags)});
             });
         }
 
