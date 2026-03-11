@@ -380,6 +380,7 @@ STD_TEST_SUITE(CoroPoll) {
     STD_TEST(PipeReadWrite) {
         // reader polls In on pipe, writer writes — verify data arrives
         auto exec = CoroExecutor::create(4);
+        Latch done(1);
         ScopedFD readEnd, writeEnd;
         createPipeFD(readEnd, writeEnd);
         int result = 0;
@@ -390,6 +391,7 @@ STD_TEST_SUITE(CoroPoll) {
             char buf;
             readEnd.read(&buf, 1);
             result = buf;
+            done.arrive();
         });
 
         exec->spawn([&](Cont*) {
@@ -397,6 +399,7 @@ STD_TEST_SUITE(CoroPoll) {
             writeEnd.write(&b, 1);
         });
 
+        done.wait();
         exec->pool()->join();
         STD_INSIST(result == 42);
     }
@@ -423,6 +426,7 @@ STD_TEST_SUITE(CoroPoll) {
         // N coroutines each poll their own pipe, woken in reverse order
         auto exec = CoroExecutor::create(4);
         const int N = 8;
+        Latch done(N);
         ScopedFD readEnds[N], writeEnds[N];
         int order[N];
         int orderIdx = 0;
@@ -438,6 +442,7 @@ STD_TEST_SUITE(CoroPoll) {
                 char buf;
                 readEnds[i].read(&buf, 1);
                 order[stdAtomicAddAndFetch(&orderIdx, 1, MemoryOrder::Relaxed) - 1] = i;
+                done.arrive();
             });
         }
 
@@ -449,6 +454,7 @@ STD_TEST_SUITE(CoroPoll) {
             }
         });
 
+        done.wait();
         exec->pool()->join();
         STD_INSIST(orderIdx == N);
     }
