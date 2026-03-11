@@ -48,6 +48,7 @@ namespace stl {
         virtual Cont* me() const noexcept = 0;
         virtual MutexIface* createMutex() = 0;
         virtual CondVarIface* createCondVar() = 0;
+        virtual void join() = 0;
         virtual void spawnRun(SpawnParams params) = 0;
         virtual ThreadPool* pool() const noexcept = 0;
         virtual ChannelIface* createChannel(size_t cap) = 0;

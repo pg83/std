@@ -27,6 +27,7 @@
 
 #include <time.h>
 #include <fcntl.h>
+#include <sched.h>
 #include <unistd.h>
 #include <ucontext.h>
 
@@ -67,7 +68,7 @@ namespace {
 
         ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept;
 
-        virtual ~ContImpl() = default;
+        virtual ~ContImpl();
 
         u32 poll(int fd, u32 flags, u64 timeoutUs) override;
         void parkWith(Runable* afterSuspend) noexcept;
@@ -112,9 +113,12 @@ namespace {
         const u64 tlsKey_;
         ObjPool::Ref reactorPool_;
         Vector<ReactorThread*> reactors_;
+        alignas(64) int inflight_ = 0;
 
         CoroExecutorImpl(ThreadPool::Ref pool, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
+
+        void join() override;
 
         auto tls() {
             return pool_->tls(tlsKey_);
@@ -312,6 +316,10 @@ void PollRequest::run() {
     reactor->registerRequest(this);
 }
 
+ContImpl::~ContImpl() {
+    stdAtomicAddAndFetch(&exec_->inflight_, -1, MemoryOrder::Release);
+}
+
 ReactorThread::~ReactorThread() noexcept {
 }
 
@@ -444,9 +452,18 @@ CoroExecutorImpl::CoroExecutorImpl(ThreadPool::Ref pool, size_t reactors)
 }
 
 CoroExecutorImpl::~CoroExecutorImpl() noexcept {
+}
+
+void CoroExecutorImpl::join() {
+    while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) != 0) {
+        sched_yield();
+    }
+
     for (auto* r : reactors_) {
         r->join();
     }
+
+    pool_->join();
 }
 
 ReactorThread* CoroExecutorImpl::pickReactor() noexcept {
@@ -507,6 +524,7 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
     , runable_(params.runable)
     , afterSuspend_(nullptr)
 {
+    stdAtomicAddAndFetch(&exec_->inflight_, 1, MemoryOrder::Relaxed);
     getcontext(&ctx_);
 
     ctx_.uc_stack.ss_sp = params.stackPtr;

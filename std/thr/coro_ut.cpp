@@ -1,7 +1,6 @@
 #include "coro.h"
 #include "pool.h"
 #include "mutex.h"
-#include "latch.h"
 #include "cond_var.h"
 #include "poller.h"
 
@@ -22,21 +21,19 @@ namespace {
 
 STD_TEST_SUITE(CoroExecutor) {
     STD_TEST(Basic) {
-        auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool.mutPtr());
+        auto exec = CoroExecutor::create(4);
         int counter = 0;
 
         exec->spawn([&](Cont*) {
             ++counter;
         });
 
-        pool->join();
+        exec->join();
         STD_INSIST(counter == 1);
     }
 
     STD_TEST(SingleYield) {
-        auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool.mutPtr());
+        auto exec = CoroExecutor::create(4);
         int counter = 0;
 
         exec->spawn([&](Cont* c) {
@@ -45,13 +42,12 @@ STD_TEST_SUITE(CoroExecutor) {
             ++counter;
         });
 
-        pool->join();
+        exec->join();
         STD_INSIST(counter == 2);
     }
 
     STD_TEST(MultipleYields) {
-        auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool.mutPtr());
+        auto exec = CoroExecutor::create(4);
         int counter = 0;
 
         exec->spawn([&](Cont* c) {
@@ -61,7 +57,7 @@ STD_TEST_SUITE(CoroExecutor) {
             }
         });
 
-        pool->join();
+        exec->join();
         STD_INSIST(counter == 10);
     }
 
@@ -76,13 +72,12 @@ STD_TEST_SUITE(CoroExecutor) {
             });
         }
 
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(counter == 100);
     }
 
     STD_TEST(NestedSpawn) {
-        auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool.mutPtr());
+        auto exec = CoroExecutor::create(4);
         int counter = 0;
 
         exec->spawn([&](Cont*) {
@@ -93,13 +88,12 @@ STD_TEST_SUITE(CoroExecutor) {
             stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
         });
 
-        pool->join();
+        exec->join();
         STD_INSIST(counter == 2);
     }
 
     STD_TEST(YieldInterleave) {
-        auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool.mutPtr());
+        auto exec = CoroExecutor::create(4);
 
         auto fn = [&](Cont* c) {
             for (int i = 0; i < 5; ++i) {
@@ -110,12 +104,11 @@ STD_TEST_SUITE(CoroExecutor) {
         exec->spawn(fn);
         exec->spawn(fn);
 
-        pool->join();
+        exec->join();
     }
 
     STD_TEST(MutexBasic) {
-        auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool.mutPtr());
+        auto exec = CoroExecutor::create(4);
         int counter = 0;
 
         exec->spawn([&](Cont*) {
@@ -126,13 +119,12 @@ STD_TEST_SUITE(CoroExecutor) {
             mtx.unlock();
         });
 
-        pool->join();
+        exec->join();
         STD_INSIST(counter == 1);
     }
 
     STD_TEST(MutexContention) {
-        auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool.mutPtr());
+        auto exec = CoroExecutor::create(4);
         int counter = 0;
         Mutex mtx(exec.mutPtr());
 
@@ -145,13 +137,12 @@ STD_TEST_SUITE(CoroExecutor) {
             });
         }
 
-        pool->join();
+        exec->join();
         STD_INSIST(counter == 2000);
     }
 
     STD_TEST(MutexStress) {
-        auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool.mutPtr());
+        auto exec = CoroExecutor::create(4);
         const int nCoros = 16;
         const int nIters = 500;
         int counter = 0;
@@ -166,13 +157,12 @@ STD_TEST_SUITE(CoroExecutor) {
             });
         }
 
-        pool->join();
+        exec->join();
         STD_INSIST(counter == nCoros * nIters);
     }
 
     STD_TEST(CondVarBasic) {
-        auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool.mutPtr());
+        auto exec = CoroExecutor::create(4);
         int value = 0;
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
@@ -190,13 +180,12 @@ STD_TEST_SUITE(CoroExecutor) {
             cv.signal();
         });
 
-        pool->join();
+        exec->join();
         STD_INSIST(value == 1);
     }
 
     STD_TEST(CondVarBroadcast) {
-        auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool.mutPtr());
+        auto exec = CoroExecutor::create(4);
         const int N = 5;
         int value = 0;
         Mutex mtx(exec.mutPtr());
@@ -217,13 +206,12 @@ STD_TEST_SUITE(CoroExecutor) {
             cv.broadcast();
         });
 
-        pool->join();
+        exec->join();
         STD_INSIST(value == 1);
     }
 
     STD_TEST(CondVarProducerConsumer) {
-        auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool.mutPtr());
+        auto exec = CoroExecutor::create(4);
         const int N = 10;
         int produced = 0;
         int consumed = 0;
@@ -250,13 +238,12 @@ STD_TEST_SUITE(CoroExecutor) {
             }
         });
 
-        pool->join();
+        exec->join();
         STD_INSIST(consumed == N);
     }
 
     STD_TEST(CondVarStress) {
-        auto pool = ThreadPool::workStealing(4);
-        auto exec = CoroExecutor::create(pool.mutPtr());
+        auto exec = CoroExecutor::create(4);
         const int nCoros = 8;
         const int nIters = 200;
         int queue = 0;
@@ -285,7 +272,7 @@ STD_TEST_SUITE(CoroExecutor) {
             }
         });
 
-        pool->join();
+        exec->join();
         STD_INSIST(consumed == nCoros * nIters);
     }
 
@@ -323,7 +310,7 @@ STD_TEST_SUITE(CoroExecutor) {
             run(c, depth);
         });
 
-        exec->pool()->join();
+        exec->join();
 
         _ctx.output() << counter2 << endL << flsH;
     }
@@ -338,7 +325,7 @@ STD_TEST_SUITE(CoroRandom) {
             result = exec->random();
         });
 
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(result != 0);
     }
 
@@ -353,7 +340,7 @@ STD_TEST_SUITE(CoroRandom) {
             });
         }
 
-        exec->pool()->join();
+        exec->join();
 
         for (int i = 0; i < N; ++i) {
             for (int j = i + 1; j < N; ++j) {
@@ -371,7 +358,7 @@ STD_TEST_SUITE(CoroRandom) {
             b = exec->random();
         });
 
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(a != b);
     }
 }
@@ -380,7 +367,6 @@ STD_TEST_SUITE(CoroPoll) {
     STD_TEST(PipeReadWrite) {
         // reader polls In on pipe, writer writes — verify data arrives
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         ScopedFD readEnd, writeEnd;
         createPipeFD(readEnd, writeEnd);
         int result = 0;
@@ -391,7 +377,6 @@ STD_TEST_SUITE(CoroPoll) {
             char buf;
             readEnd.read(&buf, 1);
             result = buf;
-            done.arrive();
         });
 
         exec->spawn([&](Cont*) {
@@ -399,26 +384,22 @@ STD_TEST_SUITE(CoroPoll) {
             writeEnd.write(&b, 1);
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(result == 42);
     }
 
     STD_TEST(Timeout) {
-        // poll on idle pipe with short timeout — must return 0 and ~100ms elapsed
+        // poll on idle pipe with short timeout — must return 0
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         u32 pollResult = 1;
         ScopedFD readEnd, writeEnd;
         createPipeFD(readEnd, writeEnd);
 
         exec->spawn([&](Cont* c) {
             pollResult = c->poll(readEnd.get(), PollFlag::In, 1000);
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(pollResult == 0);
     }
 
@@ -426,7 +407,6 @@ STD_TEST_SUITE(CoroPoll) {
         // N coroutines each poll their own pipe, woken in reverse order
         auto exec = CoroExecutor::create(4);
         const int N = 8;
-        Latch done(N);
         ScopedFD readEnds[N], writeEnds[N];
         int order[N];
         int orderIdx = 0;
@@ -442,7 +422,6 @@ STD_TEST_SUITE(CoroPoll) {
                 char buf;
                 readEnds[i].read(&buf, 1);
                 order[stdAtomicAddAndFetch(&orderIdx, 1, MemoryOrder::Relaxed) - 1] = i;
-                done.arrive();
             });
         }
 
@@ -454,8 +433,7 @@ STD_TEST_SUITE(CoroPoll) {
             }
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(orderIdx == N);
     }
 }
