@@ -16,9 +16,9 @@ namespace stl {
 
     struct Cont {
         u32 poll(int fd, u32 flags);
+        u32 poll(int fd, u32 flags, u64 timeoutUs);
 
         virtual CoroExecutor* executor() noexcept = 0;
-        virtual u32 poll(int fd, u32 flags, u64 timeoutUs) = 0;
     };
 
     struct SpawnParams {
@@ -52,6 +52,7 @@ namespace stl {
         virtual void spawnRun(SpawnParams params) = 0;
         virtual ThreadPool* pool() const noexcept = 0;
         virtual ChannelIface* createChannel(size_t cap) = 0;
+        virtual u32 poll(int fd, u32 flags, u64 timeoutUs) = 0;
         virtual ThreadIface* createThread(Runable& runable) = 0;
 
         template <typename F>

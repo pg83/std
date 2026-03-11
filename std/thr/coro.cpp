@@ -70,7 +70,6 @@ namespace {
 
         virtual ~ContImpl();
 
-        u32 poll(int fd, u32 flags, u64 timeoutUs) override;
         void parkWith(Runable* afterSuspend) noexcept;
         CoroExecutor* executor() noexcept override;
         void run() noexcept override;
@@ -158,6 +157,8 @@ namespace {
         CondVarIface* createCondVar() override;
         ChannelIface* createChannel(size_t cap) override;
         ThreadIface* createThread(Runable& runable) override;
+
+        u32 poll(int fd, u32 flags, u64 timeoutUs) override;
     };
 
     struct CoroThreadImpl: public ThreadIface {
@@ -546,18 +547,23 @@ CoroExecutor* ContImpl::executor() noexcept {
     return exec_;
 }
 
-u32 ContImpl::poll(int fd, u32 flags, u64 timeoutUs) {
+u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 timeoutUs) {
     PollRequest req;
-    req.cont = this;
-    req.reactor = exec_->pickReactor();
+
+    req.cont = currentCont();
+    req.reactor = pickReactor();
     req.fd = fd;
     req.flags = flags;
     req.result = 0;
     req.deadline = monotonicNowUs() + timeoutUs;
 
-    parkWith(&req);
+    req.cont->parkWith(&req);
 
     return req.result;
+}
+
+u32 Cont::poll(int fd, u32 flags, u64 timeoutUs) {
+    return executor()->poll(fd, flags, timeoutUs);
 }
 
 u32 Cont::poll(int fd, u32 flags) {
