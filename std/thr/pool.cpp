@@ -438,17 +438,19 @@ WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex
     , thread_(*this)
 {
 }
-            void WorkStealingThreadPool::Worker::join() noexcept {
-        ShutDown sh;
 
-        {
-            LockGuard lock(mutex_);
-            pushThrLocal(&sh);
-        }
+void WorkStealingThreadPool::Worker::join() noexcept {
+    ShutDown sh;
 
-        notify();
-                thread_.join();
-            }
+    {
+        LockGuard lock(mutex_);
+
+        pushThrLocal(&sh);
+    }
+
+    notify();
+    thread_.join();
+}
 
 void WorkStealingThreadPool::Worker::initStealOrder() noexcept {
     pool_->workerIndex_.visit([this](Worker& w) {
