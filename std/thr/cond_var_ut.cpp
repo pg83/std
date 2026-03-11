@@ -609,7 +609,6 @@ STD_TEST_SUITE(CondVar) {
 STD_TEST_SUITE(CoroCondVar) {
     STD_TEST(SignalWithoutWaiters) {
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
@@ -617,32 +616,26 @@ STD_TEST_SUITE(CoroCondVar) {
             cv.signal();
             cv.signal();
             cv.signal();
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
     }
 
     STD_TEST(BroadcastWithoutWaiters) {
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         CondVar cv(exec.mutPtr());
 
         exec->spawn([&](Cont*) {
             cv.broadcast();
             cv.broadcast();
             cv.broadcast();
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
     }
 
     STD_TEST(WaitAndSignal) {
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         bool ready = false;
         bool executed = false;
         Mutex mtx(exec.mutPtr());
@@ -654,7 +647,6 @@ STD_TEST_SUITE(CoroCondVar) {
                 cv.wait(mtx);
             }
             executed = true;
-            done.arrive();
         });
 
         exec->spawn([&](Cont*) {
@@ -663,14 +655,12 @@ STD_TEST_SUITE(CoroCondVar) {
             cv.signal();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(executed == true);
     }
 
     STD_TEST(WaitAndBroadcast) {
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         bool ready = false;
         bool executed = false;
         Mutex mtx(exec.mutPtr());
@@ -682,7 +672,6 @@ STD_TEST_SUITE(CoroCondVar) {
                 cv.wait(mtx);
             }
             executed = true;
-            done.arrive();
         });
 
         exec->spawn([&](Cont*) {
@@ -691,15 +680,13 @@ STD_TEST_SUITE(CoroCondVar) {
             cv.broadcast();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(executed == true);
     }
 
     STD_TEST(MultipleWaitersBroadcast) {
         auto exec = CoroExecutor::create(4);
         const int N = 3;
-        Latch done(N);
         bool ready = false;
         int counter = 0;
         Mutex mtx(exec.mutPtr());
@@ -712,7 +699,6 @@ STD_TEST_SUITE(CoroCondVar) {
                     cv.wait(mtx);
                 }
                 ++counter;
-                done.arrive();
             });
         }
 
@@ -722,14 +708,12 @@ STD_TEST_SUITE(CoroCondVar) {
             cv.broadcast();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(counter == N);
     }
 
     STD_TEST(SignalWakesOneWaiter) {
         auto exec = CoroExecutor::create(4);
-        Latch done(2);
         bool ready = false;
         int counter = 0;
         Mutex mtx(exec.mutPtr());
@@ -742,7 +726,6 @@ STD_TEST_SUITE(CoroCondVar) {
                     cv.wait(mtx);
                 }
                 ++counter;
-                done.arrive();
             });
         }
 
@@ -753,14 +736,12 @@ STD_TEST_SUITE(CoroCondVar) {
             cv.signal();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(counter == 2);
     }
 
     STD_TEST(ProducerConsumerPattern) {
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         int data = 0;
         bool dataReady = false;
         Mutex mtx(exec.mutPtr());
@@ -772,7 +753,6 @@ STD_TEST_SUITE(CoroCondVar) {
                 cv.wait(mtx);
             }
             STD_INSIST(data == 42);
-            done.arrive();
         });
 
         exec->spawn([&](Cont*) {
@@ -782,14 +762,12 @@ STD_TEST_SUITE(CoroCondVar) {
             cv.signal();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
     }
 
     STD_TEST(MultipleProducersConsumers) {
         auto exec = CoroExecutor::create(4);
         const int N = 3;
-        Latch done(N);
         int data = 0;
         bool dataReady = false;
         Mutex mtx(exec.mutPtr());
@@ -802,7 +780,6 @@ STD_TEST_SUITE(CoroCondVar) {
                     cv.wait(mtx);
                 }
                 STD_INSIST(data == 100);
-                done.arrive();
             });
         }
 
@@ -813,8 +790,7 @@ STD_TEST_SUITE(CoroCondVar) {
             cv.broadcast();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
     }
 
     STD_TEST(SequentialWaitSignal) {
@@ -862,13 +838,12 @@ STD_TEST_SUITE(CoroCondVar) {
             done.wait();
         }
 
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(executed2 == true);
     }
 
     STD_TEST(WaitWithSpuriousWakeup) {
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         int value = 0;
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
@@ -878,7 +853,6 @@ STD_TEST_SUITE(CoroCondVar) {
             while (value != 5) {
                 cv.wait(mtx);
             }
-            done.arrive();
         });
 
         exec->spawn([&](Cont*) {
@@ -889,14 +863,12 @@ STD_TEST_SUITE(CoroCondVar) {
             }
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(value == 5);
     }
 
     STD_TEST(MultipleCondVarsOneMutex) {
         auto exec = CoroExecutor::create(4);
-        Latch done(2);
         bool ready1 = false, ready2 = false;
         bool executed1 = false, executed2 = false;
         Mutex mtx(exec.mutPtr());
@@ -909,7 +881,6 @@ STD_TEST_SUITE(CoroCondVar) {
                 cv1.wait(mtx);
             }
             executed1 = true;
-            done.arrive();
         });
 
         exec->spawn([&](Cont*) {
@@ -918,7 +889,6 @@ STD_TEST_SUITE(CoroCondVar) {
                 cv2.wait(mtx);
             }
             executed2 = true;
-            done.arrive();
         });
 
         exec->spawn([&](Cont*) {
@@ -933,15 +903,13 @@ STD_TEST_SUITE(CoroCondVar) {
             cv2.signal();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(executed1 == true);
         STD_INSIST(executed2 == true);
     }
 
     STD_TEST(BroadcastMultipleTimes) {
         auto exec = CoroExecutor::create(4);
-        Latch done(2);
         bool ready = false;
         int counter = 0;
         Mutex mtx(exec.mutPtr());
@@ -954,7 +922,6 @@ STD_TEST_SUITE(CoroCondVar) {
                     cv.wait(mtx);
                 }
                 ++counter;
-                done.arrive();
             });
         }
 
@@ -966,14 +933,12 @@ STD_TEST_SUITE(CoroCondVar) {
             cv.broadcast();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(counter == 2);
     }
 
     STD_TEST(WaitWithPredicatePattern) {
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         bool predicate = false;
         int result = 0;
         Mutex mtx(exec.mutPtr());
@@ -985,7 +950,6 @@ STD_TEST_SUITE(CoroCondVar) {
                 cv.wait(mtx);
             }
             result = 123;
-            done.arrive();
         });
 
         exec->spawn([&](Cont*) {
@@ -994,14 +958,12 @@ STD_TEST_SUITE(CoroCondVar) {
             cv.signal();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(result == 123);
     }
 
     STD_TEST(ComplexSynchronizationPattern) {
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         int phase = 0;
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
@@ -1031,17 +993,14 @@ STD_TEST_SUITE(CoroCondVar) {
             while (phase != 3) {
                 cv.wait(mtx);
             }
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(phase == 3);
     }
 
     STD_TEST(RapidSignaling) {
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
@@ -1050,16 +1009,13 @@ STD_TEST_SUITE(CoroCondVar) {
                 LockGuard lock(mtx);
                 cv.signal();
             }
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
     }
 
     STD_TEST(RapidBroadcasting) {
         auto exec = CoroExecutor::create(4);
-        Latch done(1);
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
@@ -1068,17 +1024,14 @@ STD_TEST_SUITE(CoroCondVar) {
                 LockGuard lock(mtx);
                 cv.broadcast();
             }
-            done.arrive();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
     }
 
     STD_TEST(ManyWaitersBroadcast) {
         auto exec = CoroExecutor::create(4);
         const int N = 10;
-        Latch done(N);
         bool ready = false;
         int counter = 0;
         Mutex mtx(exec.mutPtr());
@@ -1091,7 +1044,6 @@ STD_TEST_SUITE(CoroCondVar) {
                     cv.wait(mtx);
                 }
                 ++counter;
-                done.arrive();
             });
         }
 
@@ -1101,8 +1053,7 @@ STD_TEST_SUITE(CoroCondVar) {
             cv.broadcast();
         });
 
-        done.wait();
-        exec->pool()->join();
+        exec->join();
         STD_INSIST(counter == N);
     }
 }
