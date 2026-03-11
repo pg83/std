@@ -321,6 +321,7 @@ WorkStealingThreadPool::GlobalWorker::GlobalWorker(WorkStealingThreadPool* pool,
 
 void WorkStealingThreadPool::GlobalWorker::push(Task* task) noexcept {
     LockGuard lock(mutex_);
+    stdAtomicStore(&idle_, false, MemoryOrder::Release);
     tasks_.pushBack(task);
     condVar_.signal();
 }
@@ -332,7 +333,6 @@ void WorkStealingThreadPool::GlobalWorker::run() noexcept {
         while (!done_ && tasks_.empty()) {
             stdAtomicStore(&idle_, true, MemoryOrder::Release);
             condVar_.wait(mutex_);
-            stdAtomicStore(&idle_, false, MemoryOrder::Release);
         }
 
         if (auto w = (Worker*)pool_->wq->dequeue()) {
