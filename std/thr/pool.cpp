@@ -283,17 +283,19 @@ namespace {
                 STD_INSIST(pipeW_.write(&task, sizeof(task)) == sizeof(task));
             }
 
-            void run() override {
+            Task* recv() noexcept {
                 Task* task;
 
                 STD_INSIST(pipeR_.read(&task, sizeof(task)) == sizeof(task));
 
-                if (!task) {
-                    return;
-                }
+                return task;
+            }
 
-                pool_->submitTask(task);
-                pool_->submitTask(this);
+            void run() override {
+                if (auto task = recv(); task) {
+                    pool_->submitTask(task);
+                    pool_->submitTask(this);
+                }
             }
         };
 
