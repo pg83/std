@@ -325,8 +325,6 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
 void WorkStealingThreadPool::submitTask(Task* task) noexcept {
     if (auto w = localWorker(); w) {
         return w->pushThrLocal(task);
-    } else if (auto w = (Worker*)wq->dequeue(); w) {
-        return w->push(task);
     } else {
         return dequeueWorker()->push(task);
     }
