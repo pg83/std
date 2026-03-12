@@ -233,11 +233,6 @@ namespace {
                 }
             }
 
-            void notify() noexcept {
-                LockGuard lock(mutex_);
-                condVar_.signal();
-            }
-
             void join() noexcept;
 
             void sleep() noexcept {
@@ -258,7 +253,6 @@ namespace {
         WorkStealingThreadPool(size_t numThreads);
         ~WorkStealingThreadPool() noexcept;
 
-        bool notifyOne() noexcept;
         void join() noexcept override;
         Worker* localWorker() noexcept;
         Worker* dequeueWorker() noexcept;
@@ -298,16 +292,6 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::dequeueWorker() noexcept
 
         sched_yield();
     }
-}
-
-bool WorkStealingThreadPool::notifyOne() noexcept {
-    if (auto item = (Worker*)wq->dequeue()) {
-        item->notify();
-
-        return true;
-    }
-
-    return false;
 }
 
 WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
@@ -400,11 +384,15 @@ void WorkStealingThreadPool::Worker::loop() {
     LockGuard lock(mutex_);
 
     while (true) {
+        flushLocal();
+
         STD_ASSERT(local_.empty());
 
         while (auto task = popNoLock()) {
             if (!tasks_.empty()) {
-                pool_->notifyOne();
+                if (auto w = (Worker*)pool_->wq->dequeue(); w) {
+                    w->push(popNoLock());
+                }
             }
 
             {
