@@ -9,7 +9,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <poll.h>
 #include <unistd.h>
 #include <sys/uio.h>
 
@@ -25,51 +24,6 @@ size_t FD::read(void* data, size_t len) {
     }
 
     Errno().raise(StringBuilder() << StringView(u8"read() failed"));
-}
-
-size_t FD::readNB(void* data, size_t len) {
-    size_t total = 0;
-    auto* buf = (char*)data;
-
-    while (total < len) {
-        struct pollfd pfd = {fd, POLLIN, 0};
-
-        if (::poll(&pfd, 1, -1) < 0) {
-            if (errno == EINTR) {
-                continue;
-            }
-
-            Errno().raise(StringBuilder() << StringView(u8"poll() failed"));
-        }
-
-        auto res = ::read(fd, buf + total, len - total);
-
-        if (res < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
-                continue;
-            }
-
-            Errno().raise(StringBuilder() << StringView(u8"readNB() failed"));
-        }
-
-        total += res;
-    }
-
-    return total;
-}
-
-size_t FD::tryReadNB(void* data, size_t len) {
-    auto res = ::read(fd, data, len);
-
-    if (res < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            return 0;
-        }
-
-        Errno().raise(StringBuilder() << StringView(u8"tryReadNB() failed"));
-    }
-
-    return res;
 }
 
 size_t FD::write(const void* data, size_t len) {
