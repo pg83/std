@@ -369,8 +369,7 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::dequeueWorker() noexcept
 }
 
 void WorkStealingThreadPool::startPipeReader() noexcept {
-    Task* pr = &pipeReader_;
-    dequeueWorker()->push(pr);
+    dequeueWorker()->push(&pipeReader_);
 }
 
 bool WorkStealingThreadPool::notifyOne() noexcept {
