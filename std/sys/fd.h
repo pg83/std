@@ -30,6 +30,7 @@ namespace stl {
 
         void close();
         void fsync();
+        void setNonBlocking();
 
         void xchg(FD& fd) noexcept;
     };

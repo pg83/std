@@ -332,7 +332,7 @@ ReactorState::ReactorState(CoroExecutorImpl* e)
     , done(false)
 {
     createPipeFD(wakeReadFd, wakeWriteFd);
-    ::fcntl(wakeReadFd.get(), F_SETFL, O_NONBLOCK);
+    wakeReadFd.setNonBlocking();
     poller.ptr->arm(wakeReadFd.get(), PollFlag::In, nullptr);
 }
 

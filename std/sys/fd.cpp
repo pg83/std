@@ -46,6 +46,12 @@ size_t FD::writeV(iovec* parts, size_t count) {
     return res;
 }
 
+void FD::setNonBlocking() {
+    if (::fcntl(fd, F_SETFL, O_NONBLOCK) < 0) {
+        Errno().raise(StringBuilder() << StringView(u8"fcntl(O_NONBLOCK) failed"));
+    }
+}
+
 void FD::fsync() {
     if (::fsync(fd) < 0) {
         Errno().raise(StringBuilder() << StringView(u8"fsync() failed"));

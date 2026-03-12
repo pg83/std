@@ -8,6 +8,9 @@
 #include <std/sys/atomic.h>
 #include <std/sys/fd.h>
 
+#include <errno.h>
+#include <unistd.h>
+
 #include <functional>
 
 using namespace stl;
@@ -435,5 +438,58 @@ STD_TEST_SUITE(CoroPoll) {
 
         exec->join();
         STD_INSIST(orderIdx == N);
+    }
+
+    STD_TEST(PipeThroughput) {
+        auto exec = CoroExecutor::create(4);
+        const int N = 1000;
+        const size_t TOTAL = 1024 * 1024;
+
+        struct Pipe { ScopedFD r, w; };
+        Pipe* pipes = new Pipe[N];
+
+        for (int i = 0; i < N; i++) {
+            createPipeFD(pipes[i].r, pipes[i].w);
+            pipes[i].r.setNonBlocking();
+            pipes[i].w.setNonBlocking();
+
+            int rfd = pipes[i].r.get();
+            int wfd = pipes[i].w.get();
+            CoroExecutor* ex = exec.mutPtr();
+
+            exec->spawnRun(SpawnParams().setStackSize(64 * 1024).setRunable([ex, rfd, TOTAL]() {
+                char buf[16 * 1024];
+                size_t received = 0;
+
+                while (received < TOTAL) {
+                    ssize_t n = ::read(rfd, buf, sizeof(buf));
+
+                    if (n > 0) {
+                        received += (size_t)n;
+                    } else if (errno == EAGAIN) {
+                        ex->me()->poll(rfd, PollFlag::In);
+                    }
+                }
+            }));
+
+            exec->spawnRun(SpawnParams().setStackSize(64 * 1024).setRunable([ex, wfd, TOTAL]() {
+                char buf[16 * 1024] = {};
+                size_t sent = 0;
+
+                while (sent < TOTAL) {
+                    size_t rem = TOTAL - sent;
+                    ssize_t n = ::write(wfd, buf, rem < sizeof(buf) ? rem : sizeof(buf));
+
+                    if (n > 0) {
+                        sent += (size_t)n;
+                    } else if (errno == EAGAIN) {
+                        ex->me()->poll(wfd, PollFlag::Out);
+                    }
+                }
+            }));
+        }
+
+        exec->join();
+        delete[] pipes;
     }
 }

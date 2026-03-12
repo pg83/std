@@ -253,7 +253,7 @@ namespace {
 
         PollPoller() {
             createPipeFD(wakeReadFd_, wakeWriteFd_);
-            fcntl(wakeReadFd_.get(), F_SETFL, O_NONBLOCK);
+            wakeReadFd_.setNonBlocking();
         }
 
         ~PollPoller() noexcept {
