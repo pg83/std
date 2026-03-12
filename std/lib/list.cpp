@@ -151,3 +151,8 @@ void IntrusiveList::pushBack(IntrusiveList& lst) noexcept {
         lst.head.reset();
     }
 }
+
+void IntrusiveList::pushFront(IntrusiveList& lst) noexcept {
+    lst.pushBack(*this);
+    lst.xchgWithEmptyList(*this);
+}

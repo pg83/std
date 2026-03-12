@@ -440,6 +440,7 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     , reactorPool_(ObjPool::fromMemory())
 {
     createPipeFD(joinR_, joinW_);
+
     for (size_t i = 0; i < reactors; ++i) {
         reactors_.pushBack(reactorPool_->make<ReactorState>(this));
     }
