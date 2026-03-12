@@ -199,30 +199,11 @@ ThreadPool::Ref ThreadPool::simple(size_t threads) {
 
 namespace {
     struct WorkStealingThreadPool: public ThreadPool {
-        struct LocalWorker {
+        struct Worker: public Runable, public WaitQueue::Item {
+            WorkStealingThreadPool* pool_;
             IntMap<void*> tls_;
             PCG32 rng_;
-
-            explicit LocalWorker(u64 seed) noexcept
-                : rng_(seed)
-            {
-            }
-
-            virtual void steal(IntrusiveList* stolen) noexcept = 0;
-            virtual void pushThrLocal(Task* task) noexcept = 0;
-
-            void** tls(u64 key) noexcept {
-                return &tls_[key];
-            }
-
-            PCG32& random() noexcept {
-                return rng_;
-            }
-        };
-
-        struct Worker: public LocalWorker, public Runable, public WaitQueue::Item {
-            WorkStealingThreadPool* pool_;
-            Vector<LocalWorker*> so_;
+            Vector<Worker*> so_;
             Mutex mutex_;
             CondVar condVar_;
             IntrusiveList tasks_;
@@ -245,7 +226,15 @@ namespace {
 
             void push(Task* task) noexcept;
 
-            void pushThrLocal(Task* task) noexcept override {
+            void** tls(u64 key) noexcept {
+                return &tls_[key];
+            }
+
+            PCG32& random() noexcept {
+                return rng_;
+            }
+
+            void pushThrLocal(Task* task) noexcept {
                 if (task->priority()) {
                     local_.pushFront(task);
                 } else {
@@ -269,7 +258,7 @@ namespace {
             void run() noexcept override;
             void initStealOrder() noexcept;
             void trySteal(IntrusiveList* stolen) noexcept;
-            void steal(IntrusiveList* stolen) noexcept override;
+            void steal(IntrusiveList* stolen) noexcept;
         };
 
         struct PipeReader: public Task {
@@ -434,9 +423,9 @@ WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
 }
 
 WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u64 seed)
-    : LocalWorker(seed)
-    , WaitQueue::Item{nullptr, (u8)myIndex}
+    : WaitQueue::Item{nullptr, (u8)myIndex}
     , pool_(pool)
+    , rng_(seed)
     , mutex_(true)
     , thread_(*this)
 {
