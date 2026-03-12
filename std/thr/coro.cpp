@@ -130,8 +130,12 @@ namespace {
             return (ContImpl*)*tls();
         }
 
-        void spawnRun(SpawnParams params) override {
-            pool_->submitTask(makeContImpl(this, params));
+        Cont* spawnRun(SpawnParams params) override {
+            auto res = makeContImpl(this, params);
+
+            pool_->submitTask(res);
+
+            return res;
         }
 
         Cont* me() const noexcept override {
@@ -166,6 +170,7 @@ namespace {
 
     struct CoroThreadImpl: public ThreadIface {
         CoroExecutorImpl* exec_;
+        Cont* cont_ = nullptr;
         Runable* runable_;
         Mutex mtx_;
         CondVar cv_;
@@ -566,6 +571,10 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 timeoutUs) {
     return req.result;
 }
 
+u64 Cont::id() const noexcept {
+    return (u64)(size_t)this;
+}
+
 u32 Cont::poll(int fd, u32 flags, u64 timeoutUs) {
     return executor()->poll(fd, flags, timeoutUs);
 }
@@ -674,7 +683,7 @@ CoroThreadImpl::CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable)
 }
 
 void CoroThreadImpl::start() {
-    exec_->spawnRun(SpawnParams().setRunable([this]() {
+    cont_ = exec_->spawnRun(SpawnParams().setRunable([this]() {
         runable_->run();
         notifyDone();
     }));
@@ -703,7 +712,7 @@ void CoroThreadImpl::detach() noexcept {
 }
 
 u64 CoroThreadImpl::threadId() const noexcept {
-    return (size_t)this;
+    return cont_->id();
 }
 
 ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
@@ -896,6 +905,10 @@ CoroExecutor::Ref CoroExecutor::create(size_t threads) {
 
 CoroExecutor::Ref CoroExecutor::create(size_t threads, size_t reactors) {
     return new CoroExecutorImpl(threads, reactors);
+}
+
+u64 CoroExecutor::currentCoroId() const noexcept {
+    return me()->id();
 }
 
 SpawnParams& SpawnParams::setStackSize(size_t v) noexcept {
