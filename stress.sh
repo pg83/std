@@ -3,5 +3,5 @@
 set -xue
 
 while true; do
-    time ./tst/test > /dev/null
+    time timeout 10s ./tst/test > /dev/null
 done
