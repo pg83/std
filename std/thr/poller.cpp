@@ -6,6 +6,7 @@
 #include <std/sym/i_map.h>
 #include <std/lib/vector.h>
 #include <std/dbg/insist.h>
+#include <std/alg/minmax.h>
 
 #include <errno.h>
 #include <unistd.h>
@@ -106,7 +107,7 @@ namespace {
             epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr);
         }
 
-        void waitImpl(VisitorFace&& v, u32 timeoutUs) override {
+        void waitImpl(VisitorFace& v, u32 timeoutUs) override {
             epoll_event raw[1024];
 
             int n = epoll_wait(epfd_, raw, sizeof(raw) / sizeof(raw[0]), (int)((timeoutUs + 999) / 1000));
@@ -162,7 +163,7 @@ namespace {
             kevent(kqfd_, changes, 2, nullptr, 0, nullptr);
         }
 
-        void waitImpl(VisitorFace&& v, u32 timeoutUs) override {
+        void waitImpl(VisitorFace& v, u32 timeoutUs) override {
             struct kevent raw[1024];
 
             struct timespec ts;
@@ -313,7 +314,7 @@ namespace {
             });
         }
 
-        void waitImpl(VisitorFace&& v, u32 timeoutUs) override {
+        void waitImpl(VisitorFace& v, u32 timeoutUs) override {
             drainCmds();
             buildFds();
 
@@ -351,4 +352,8 @@ PollerIface* PollerIface::create() {
 #else
     return new PollPoller();
 #endif
+}
+
+void PollerIface::waitBase(VisitorFace&& v, u32 timeoutUs) {
+    waitImpl(v, min(timeoutUs, 30000000u));
 }

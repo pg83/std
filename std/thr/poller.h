@@ -24,11 +24,13 @@ namespace stl {
         // remove fd from poller
         virtual void disarm(int fd) = 0;
         // wait for events, always finite timeout
-        virtual void waitImpl(VisitorFace&& v, u32 timeoutUs) = 0;
+        virtual void waitImpl(VisitorFace& v, u32 timeoutUs) = 0;
+
+        void waitBase(VisitorFace&& v, u32 timeoutUs);
 
         template <typename V>
         void wait(V v, u32 timeoutUs) {
-            waitImpl(makeVisitor([v](void* ptr) {
+            waitBase(makeVisitor([v](void* ptr) {
                 v((PollEvent*)ptr);
             }), timeoutUs);
         }

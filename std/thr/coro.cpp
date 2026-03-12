@@ -296,9 +296,6 @@ namespace {
         }
     };
 
-    constexpr u32 REACTOR_MAX_EVENTS = 64;
-    constexpr u32 REACTOR_MAX_IDLE_US = 30000000;
-
     struct ReactorState {
         CoroExecutorImpl* exec;
         ScopedPtr<PollerIface> poller;
@@ -386,14 +383,7 @@ void ReactorState::run() noexcept {
             earliest = timers.earliest();
         }
 
-        u32 timeoutUs;
-
-        if (earliest <= now) {
-            timeoutUs = 0;
-        } else {
-            u64 diffUs = earliest - now;
-            timeoutUs = (u32)(diffUs < REACTOR_MAX_IDLE_US ? diffUs : REACTOR_MAX_IDLE_US);
-        }
+        const u32 timeoutUs = earliest <= now ? 0 : earliest - now;
 
         poller.ptr->wait([this](PollEvent* ev) {
             if (ev->data == nullptr) {
@@ -901,7 +891,7 @@ u64 CoroExecutor::currentCoroId() const noexcept {
 
 u32 CoroExecutor::poll(int fd, u32 flags) {
     for (;;) {
-        if (auto res = poll(fd, flags, REACTOR_MAX_IDLE_US); res) {
+        if (auto res = poll(fd, flags, 0xffffffffu); res) {
             return res;
         }
     }
