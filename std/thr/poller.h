@@ -31,8 +31,8 @@ namespace stl {
         template <typename V>
         void wait(V v, u32 timeoutUs) {
             waitBase(makeVisitor([v](void* ptr) {
-                v((PollEvent*)ptr);
-            }), timeoutUs);
+                         v((PollEvent*)ptr);
+                     }), timeoutUs);
         }
 
         static PollerIface* create();

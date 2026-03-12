@@ -443,7 +443,9 @@ STD_TEST_SUITE(CoroPoll) {
         const int N = 1000;
         const size_t TOTAL = 100 * 1024 * 1024;
 
-        struct Pipe { ScopedFD r, w; };
+        struct Pipe {
+            ScopedFD r, w;
+        };
         Pipe* pipes = new Pipe[N];
 
         for (int i = 0; i < N; i++) {
