@@ -129,10 +129,10 @@ STD_TEST_SUITE(WaitGroup) {
         WaitGroup wg(exec.mutPtr());
         int counter = 0;
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             wg.add(1);
 
-            exec->spawn([&](Cont*) {
+            exec->spawn([&]() {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
                 wg.done();
             });
@@ -150,11 +150,11 @@ STD_TEST_SUITE(WaitGroup) {
         WaitGroup wg(exec.mutPtr());
         int counter = 0;
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             wg.add(N);
 
             for (int i = 0; i < N; ++i) {
-                exec->spawn([&](Cont*) {
+                exec->spawn([&]() {
                     stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
                     wg.done();
                 });
@@ -172,11 +172,11 @@ STD_TEST_SUITE(WaitGroup) {
         WaitGroup wg(exec.mutPtr());
         int counter = 0;
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             for (int round = 0; round < 3; ++round) {
                 wg.add(1);
 
-                exec->spawn([&](Cont*) {
+                exec->spawn([&]() {
                     stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
                     wg.done();
                 });

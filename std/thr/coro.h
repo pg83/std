@@ -64,7 +64,7 @@ namespace stl {
         template <typename F>
         Cont* spawn(F f) {
             return spawnRun(SpawnParams().setRunable([this, f]() {
-                f(this->me());
+                f();
             }));
         }
 

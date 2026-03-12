@@ -74,12 +74,12 @@ STD_TEST_SUITE(Latch) {
         Latch latch(1, exec.mutPtr());
         int counter = 0;
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             latch.wait();
             STD_INSIST(counter == 1);
         });
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             latch.arrive();
         });
@@ -93,13 +93,13 @@ STD_TEST_SUITE(Latch) {
         Latch latch(N, exec.mutPtr());
         int counter = 0;
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             latch.wait();
             STD_INSIST(counter == N);
         });
 
         for (int i = 0; i < N; ++i) {
-            exec->spawn([&](Cont*) {
+            exec->spawn([&]() {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
                 latch.arrive();
             });
@@ -115,13 +115,13 @@ STD_TEST_SUITE(Latch) {
         int counter = 0;
 
         for (int i = 0; i < N; ++i) {
-            exec->spawn([&](Cont*) {
+            exec->spawn([&]() {
                 latch.wait();
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             });
         }
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             latch.arrive();
         });
 

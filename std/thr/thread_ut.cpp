@@ -469,7 +469,7 @@ STD_TEST_SUITE(CoroThread) {
         int counter = 0;
         CounterRunable runnable(&counter);
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             Thread thread(exec.mutPtr(), runnable);
             thread.join();
         });
@@ -483,7 +483,7 @@ STD_TEST_SUITE(CoroThread) {
         int counter1 = 0, counter2 = 0, counter3 = 0;
         CounterRunable r1(&counter1), r2(&counter2), r3(&counter3);
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             Thread t1(exec.mutPtr(), r1);
             Thread t2(exec.mutPtr(), r2);
             Thread t3(exec.mutPtr(), r3);
@@ -503,7 +503,7 @@ STD_TEST_SUITE(CoroThread) {
         int counter = 0;
         MultiIncrementRunable runnable(&counter, 1000);
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             Thread thread(exec.mutPtr(), runnable);
             thread.join();
         });
@@ -516,7 +516,7 @@ STD_TEST_SUITE(CoroThread) {
         auto exec = CoroExecutor::create(4);
         int total = 0;
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             for (int i = 0; i < 10; ++i) {
                 int counter = 0;
                 CounterRunable runnable(&counter);
@@ -537,7 +537,7 @@ STD_TEST_SUITE(CoroThread) {
         MultiIncrementRunable r2(&counter2, 500);
         MultiIncrementRunable r3(&counter3, 1000);
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             Thread t1(exec.mutPtr(), r1);
             Thread t2(exec.mutPtr(), r2);
             Thread t3(exec.mutPtr(), r3);
@@ -557,7 +557,7 @@ STD_TEST_SUITE(CoroThread) {
         int counter1 = 0, counter2 = 0;
         CounterRunable r1(&counter1), r2(&counter2);
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             Thread t1(exec.mutPtr(), r1);
             Thread t2(exec.mutPtr(), r2);
             t2.join();
@@ -587,7 +587,7 @@ STD_TEST_SUITE(CoroThread) {
 
         BoolRunable runnable(&executed);
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             Thread thread(exec.mutPtr(), runnable);
             id = thread.threadId();
             thread.join();

@@ -27,7 +27,7 @@ STD_TEST_SUITE(CoroExecutor) {
         auto exec = CoroExecutor::create(4);
         int counter = 0;
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             ++counter;
         });
 
@@ -39,9 +39,9 @@ STD_TEST_SUITE(CoroExecutor) {
         auto exec = CoroExecutor::create(4);
         int counter = 0;
 
-        exec->spawn([&](Cont* c) {
+        exec->spawn([&]() {
             ++counter;
-            c->executor()->yield();
+            exec->yield();
             ++counter;
         });
 
@@ -53,10 +53,10 @@ STD_TEST_SUITE(CoroExecutor) {
         auto exec = CoroExecutor::create(4);
         int counter = 0;
 
-        exec->spawn([&](Cont* c) {
+        exec->spawn([&]() {
             for (int i = 0; i < 10; ++i) {
                 ++counter;
-                c->executor()->yield();
+                exec->yield();
             }
         });
 
@@ -69,8 +69,8 @@ STD_TEST_SUITE(CoroExecutor) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            exec->spawn([&](Cont* c) {
-                c->executor()->yield();
+            exec->spawn([&]() {
+                exec->yield();
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             });
         }
@@ -83,8 +83,8 @@ STD_TEST_SUITE(CoroExecutor) {
         auto exec = CoroExecutor::create(4);
         int counter = 0;
 
-        exec->spawn([&](Cont*) {
-            exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
+            exec->spawn([&]() {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             });
 
@@ -98,9 +98,9 @@ STD_TEST_SUITE(CoroExecutor) {
     STD_TEST(YieldInterleave) {
         auto exec = CoroExecutor::create(4);
 
-        auto fn = [&](Cont* c) {
+        auto fn = [&]() {
             for (int i = 0; i < 5; ++i) {
-                c->executor()->yield();
+                exec->yield();
             }
         };
 
@@ -114,7 +114,7 @@ STD_TEST_SUITE(CoroExecutor) {
         auto exec = CoroExecutor::create(4);
         int counter = 0;
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             Mutex mtx(exec.mutPtr());
 
             mtx.lock();
@@ -132,7 +132,7 @@ STD_TEST_SUITE(CoroExecutor) {
         Mutex mtx(exec.mutPtr());
 
         for (int i = 0; i < 2; ++i) {
-            exec->spawn([&](Cont* c) {
+            exec->spawn([&]() {
                 for (int j = 0; j < 1000; ++j) {
                     LockGuard guard(mtx);
                     ++counter;
@@ -152,7 +152,7 @@ STD_TEST_SUITE(CoroExecutor) {
         Mutex mtx(exec.mutPtr());
 
         for (int i = 0; i < nCoros; ++i) {
-            exec->spawn([&](Cont* c) {
+            exec->spawn([&]() {
                 for (int j = 0; j < nIters; ++j) {
                     LockGuard guard(mtx);
                     ++counter;
@@ -170,14 +170,14 @@ STD_TEST_SUITE(CoroExecutor) {
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             LockGuard guard(mtx);
             while (value == 0) {
                 cv.wait(mtx);
             }
         });
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             LockGuard guard(mtx);
             value = 1;
             cv.signal();
@@ -195,7 +195,7 @@ STD_TEST_SUITE(CoroExecutor) {
         CondVar cv(exec.mutPtr());
 
         for (int i = 0; i < N; ++i) {
-            exec->spawn([&](Cont*) {
+            exec->spawn([&]() {
                 LockGuard guard(mtx);
                 while (value == 0) {
                     cv.wait(mtx);
@@ -203,7 +203,7 @@ STD_TEST_SUITE(CoroExecutor) {
             });
         }
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             LockGuard guard(mtx);
             value = 1;
             cv.broadcast();
@@ -222,7 +222,7 @@ STD_TEST_SUITE(CoroExecutor) {
         CondVar cv(exec.mutPtr());
 
         // consumer
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             for (int i = 0; i < N; ++i) {
                 LockGuard guard(mtx);
                 while (produced == consumed) {
@@ -233,7 +233,7 @@ STD_TEST_SUITE(CoroExecutor) {
         });
 
         // producer
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             for (int i = 0; i < N; ++i) {
                 LockGuard guard(mtx);
                 ++produced;
@@ -255,7 +255,7 @@ STD_TEST_SUITE(CoroExecutor) {
         CondVar cv(exec.mutPtr());
 
         for (int i = 0; i < nCoros; ++i) {
-            exec->spawn([&](Cont*) {
+            exec->spawn([&]() {
                 for (int j = 0; j < nIters; ++j) {
                     LockGuard guard(mtx);
                     while (queue == 0) {
@@ -267,7 +267,7 @@ STD_TEST_SUITE(CoroExecutor) {
             });
         }
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             for (int j = 0; j < nCoros * nIters; ++j) {
                 LockGuard guard(mtx);
                 ++queue;
@@ -287,35 +287,33 @@ STD_TEST_SUITE(CoroExecutor) {
 
         int counter2 = 0;
 
-        std::function<void(Cont*, int)> run = [&](Cont* c, int d) {
+        std::function<void(int)> run = [&](int d) {
             stdAtomicAddAndFetch(&counter2, 1, MemoryOrder::Relaxed);
 
             doW(work);
 
             if (d > 0) {
                 exec->spawnRun(SpawnParams().setStackSize(2000).setRunable([&, d]() {
-                    run(exec->me(), d - 1);
+                    run(d - 1);
                 }));
             }
 
-            c->executor()->yield();
+            exec->yield();
 
             if (d > 0) {
                 exec->spawnRun(SpawnParams().setStackSize(2000).setRunable([&, d]() {
-                    run(exec->me(), d - 1);
+                    run(d - 1);
                 }));
             }
 
             doW(work);
         };
 
-        exec->spawn([&](Cont* c) {
-            run(c, depth);
+        exec->spawn([&]() {
+            run(depth);
         });
 
         exec->join();
-
-        _ctx.output() << counter2 << endL << flsH;
     }
 }
 
@@ -324,7 +322,7 @@ STD_TEST_SUITE(CoroRandom) {
         auto exec = CoroExecutor::create(4);
         u32 result = 0;
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             result = exec->random();
         });
 
@@ -338,7 +336,7 @@ STD_TEST_SUITE(CoroRandom) {
         u32 values[N] = {};
 
         for (int i = 0; i < N; ++i) {
-            exec->spawn([&, i](Cont*) {
+            exec->spawn([&, i]() {
                 values[i] = exec->random();
             });
         }
@@ -356,7 +354,7 @@ STD_TEST_SUITE(CoroRandom) {
         auto exec = CoroExecutor::create(4);
         u32 a = 0, b = 0;
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             a = exec->random();
             b = exec->random();
         });
@@ -374,7 +372,8 @@ STD_TEST_SUITE(CoroPoll) {
         createPipeFD(readEnd, writeEnd);
         int result = 0;
 
-        exec->spawn([&](Cont* c) {
+        exec->spawn([&]() {
+            auto c = exec->me();
             u32 ready = c->poll(readEnd.get(), PollFlag::In, 2000000);
             STD_INSIST(ready & PollFlag::In);
             char buf;
@@ -382,7 +381,7 @@ STD_TEST_SUITE(CoroPoll) {
             result = buf;
         });
 
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             char b = 42;
             writeEnd.write(&b, 1);
         });
@@ -398,8 +397,8 @@ STD_TEST_SUITE(CoroPoll) {
         ScopedFD readEnd, writeEnd;
         createPipeFD(readEnd, writeEnd);
 
-        exec->spawn([&](Cont* c) {
-            pollResult = c->poll(readEnd.get(), PollFlag::In, 1000);
+        exec->spawn([&]() {
+            pollResult = exec->me()->poll(readEnd.get(), PollFlag::In, 1000);
         });
 
         exec->join();
@@ -419,8 +418,8 @@ STD_TEST_SUITE(CoroPoll) {
         }
 
         for (int i = 0; i < N; i++) {
-            exec->spawn([&, i](Cont* c) {
-                u32 ready = c->poll(readEnds[i].get(), PollFlag::In, 2000000);
+            exec->spawn([&, i]() {
+                u32 ready = exec->me()->poll(readEnds[i].get(), PollFlag::In, 2000000);
                 STD_INSIST(ready & PollFlag::In);
                 char buf;
                 readEnds[i].read(&buf, 1);
@@ -429,7 +428,7 @@ STD_TEST_SUITE(CoroPoll) {
         }
 
         // wake in reverse order
-        exec->spawn([&](Cont*) {
+        exec->spawn([&]() {
             for (int i = N - 1; i >= 0; i--) {
                 char b = 1;
                 writeEnds[i].write(&b, 1);

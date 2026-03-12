@@ -705,7 +705,7 @@ void CoroThreadImpl::join() noexcept {
 }
 
 void CoroThreadImpl::detach() noexcept {
-    exec_->spawn([this](Cont*) {
+    exec_->spawn([this]() {
         join();
         delete this;
     });

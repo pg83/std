@@ -147,7 +147,7 @@ STD_TEST_SUITE(Barrier) {
         bool correct = true;
 
         for (int i = 0; i < N; ++i) {
-            exec->spawn([&](Cont*) {
+            exec->spawn([&]() {
                 stdAtomicAddAndFetch(&arrived, 1, MemoryOrder::Release);
                 barrier.wait();
                 if (stdAtomicFetch(&arrived, MemoryOrder::Acquire) != N) {
@@ -168,7 +168,7 @@ STD_TEST_SUITE(Barrier) {
         int phase = 0;
 
         for (int i = 0; i < N; ++i) {
-            exec->spawn([&](Cont*) {
+            exec->spawn([&]() {
                 b1.wait();
                 stdAtomicAddAndFetch(&phase, 1, MemoryOrder::Relaxed);
                 b2.wait();
