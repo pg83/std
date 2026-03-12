@@ -31,6 +31,16 @@ size_t HashTable::size() const noexcept {
     return buf.used();
 }
 
+HashTable::Node* HashTable::any() const noexcept {
+    for (auto node : buckets(buf)) {
+        if (node) {
+            return node;
+        }
+    }
+
+    return nullptr;
+}
+
 HashTable::Node* HashTable::find(u64 key) const noexcept {
     for (auto node = *bucketFor(key); node; node = node->next) {
         if (node->key == key) {

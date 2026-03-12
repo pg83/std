@@ -7,6 +7,7 @@
 #include "wait_queue.h"
 
 #include <std/rng/pcg.h>
+#include <std/sys/fd.h>
 #include <std/lib/list.h>
 #include <std/sym/i_map.h>
 #include <std/alg/range.h>
@@ -272,12 +273,50 @@ namespace {
             void steal(IntrusiveList* stolen) noexcept override;
         };
 
+        struct PipeReader: public Task {
+            WorkStealingThreadPool* pool_;
+            ScopedFD pipeR_;
+
+            explicit PipeReader(WorkStealingThreadPool* p) noexcept
+                : pool_(p)
+            {
+            }
+
+            u8 priority() const noexcept override {
+                return 1;
+            }
+
+            void run() override {
+                Task* task;
+                pipeR_.read(&task, sizeof(task));
+
+                if (!task) {
+                    return;
+                }
+
+                auto* self = static_cast<Worker*>(pool_->localWorker());
+
+                if (auto* w = (Worker*)pool_->wq->dequeue()) {
+                    w->push(task);
+                } else {
+                    self->pushThrLocal(task);
+                }
+
+                self->pushThrLocal(this);
+            }
+        };
+
+        size_t numThreads_;
         IntMap<Worker> workerIndex_;
         WaitQueue::Ref wq;
+        ScopedFD pipeW_;
+        PipeReader pipeReader_{this};
 
         WorkStealingThreadPool(size_t numThreads);
         ~WorkStealingThreadPool() noexcept;
 
+        Worker* dequeueWorker() noexcept;
+        void startPipeReader() noexcept;
         bool notifyOne() noexcept;
         void join() noexcept override;
         PCG32& random() noexcept override;
@@ -286,7 +325,7 @@ namespace {
         void submitTask(Task* task) noexcept override;
 
         size_t numThreads() const noexcept override {
-            return workerIndex_.size();
+            return numThreads_;
         }
     };
 }
@@ -300,11 +339,14 @@ void WorkStealingThreadPool::Worker::push(T& task) noexcept {
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
-    : wq(WaitQueue::construct(numThreads))
+    : numThreads_(numThreads)
+    , wq(WaitQueue::construct(numThreads + 1))
 {
+    createPipeFD(pipeReader_.pipeR_, pipeW_);
+
     PCG32 rng{(size_t)this};
 
-    for (size_t i = 0; i < numThreads; ++i) {
+    for (size_t i = 0; i <= numThreads; ++i) {
         workerIndex_.insertKeyed(this, (u32)i, rng.nextU64());
     }
 
@@ -312,6 +354,23 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
         w.initStealOrder();
         w.mutex_.unlock();
     });
+
+    startPipeReader();
+}
+
+WorkStealingThreadPool::Worker* WorkStealingThreadPool::dequeueWorker() noexcept {
+    Worker* w;
+
+    while (!(w = (Worker*)wq->dequeue())) {
+        sched_yield();
+    }
+
+    return w;
+}
+
+void WorkStealingThreadPool::startPipeReader() noexcept {
+    Task* pr = &pipeReader_;
+    dequeueWorker()->push(pr);
 }
 
 bool WorkStealingThreadPool::notifyOne() noexcept {
@@ -341,13 +400,7 @@ void WorkStealingThreadPool::submitTask(Task* task) noexcept {
         return w->pushThrLocal(task);
     }
 
-    while (true) {
-        if (auto w = (Worker*)wq->dequeue()) {
-            return w->push(task);
-        }
-
-        sched_yield();
-    }
+    pipeW_.write(&task, sizeof(task));
 }
 
 void** WorkStealingThreadPool::tls(u64 key) noexcept {
@@ -363,13 +416,25 @@ PCG32& WorkStealingThreadPool::random() noexcept {
 }
 
 void WorkStealingThreadPool::join() noexcept {
+    Task* null_task = nullptr;
+    pipeW_.write(&null_task, sizeof(null_task));
+
     while (wq->sleeping() != workerIndex_.size()) {
         sched_yield();
     }
+
+    startPipeReader();
 }
 
 WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
     join();
+
+    Task* null_task = nullptr;
+    pipeW_.write(&null_task, sizeof(null_task));
+
+    while (wq->sleeping() != workerIndex_.size()) {
+        sched_yield();
+    }
 
     workerIndex_.visit([](Worker& w) {
         w.join();

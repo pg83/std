@@ -34,6 +34,14 @@ namespace stl {
             }
         }
 
+        T* any() const noexcept {
+            if (auto n = (Node*)st.any(); n) {
+                return &n->t;
+            }
+
+            return nullptr;
+        }
+
         T* find(K key) const noexcept {
             if (auto n = (Node*)st.find(H::hash(key)); n) {
                 return &n->t;

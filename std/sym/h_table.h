@@ -30,6 +30,7 @@ namespace stl {
 
         ~HashTable() noexcept;
 
+        Node* any() const noexcept;
         Node* find(u64 key) const noexcept;
         void xchg(HashTable& t) noexcept;
         size_t capacity() const noexcept;
