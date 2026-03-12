@@ -888,7 +888,7 @@ CoroExecutor::~CoroExecutor() noexcept {
 }
 
 CoroExecutor::Ref CoroExecutor::create(size_t threads) {
-    return create(threads, defaultReactors(threads));
+    return create(threads, threads);
 }
 
 CoroExecutor::Ref CoroExecutor::create(size_t threads, size_t reactors) {
