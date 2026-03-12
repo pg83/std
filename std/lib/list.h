@@ -32,6 +32,8 @@ namespace stl {
             insertAfter(&head, node);
         }
 
+        void pushFront(IntrusiveList& lst) noexcept;
+
         IntrusiveNode* popFront() noexcept {
             return head.next->remove();
         }

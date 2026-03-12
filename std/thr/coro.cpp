@@ -18,6 +18,7 @@
 #include <std/ptr/scoped.h>
 #include <std/lib/vector.h>
 #include <std/dbg/insist.h>
+#include <std/alg/minmax.h>
 #include <std/alg/destruct.h>
 #include <std/lib/ring_buf.h>
 #include <std/mem/obj_pool.h>
@@ -43,20 +44,6 @@ namespace {
         clock_gettime(CLOCK_MONOTONIC, &ts);
 
         return (u64)ts.tv_sec * 1000000ULL + (u64)ts.tv_nsec / 1000;
-    }
-
-    static size_t defaultReactors(size_t threads) noexcept {
-        size_t r = threads / 4;
-
-        if (r > 16) {
-            r = 16;
-        }
-
-        if (r < 1) {
-            r = 1;
-        }
-
-        return r;
     }
 
     struct ContImpl: public Cont, public Task {
@@ -440,6 +427,7 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     , reactorPool_(ObjPool::fromMemory())
 {
     createPipeFD(joinR_, joinW_);
+
     for (size_t i = 0; i < reactors; ++i) {
         reactors_.pushBack(reactorPool_->make<ReactorState>(this));
     }
@@ -887,7 +875,7 @@ CoroExecutor::~CoroExecutor() noexcept {
 }
 
 CoroExecutor::Ref CoroExecutor::create(size_t threads) {
-    return create(threads, defaultReactors(threads));
+    return create(threads, max(threads / 4, (size_t)1));
 }
 
 CoroExecutor::Ref CoroExecutor::create(size_t threads, size_t reactors) {
