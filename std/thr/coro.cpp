@@ -116,6 +116,8 @@ namespace {
         ObjPool::Ref reactorPool_;
         Vector<ReactorState*> reactors_;
         alignas(64) int inflight_ = 0;
+        ScopedFD joinR_;
+        ScopedFD joinW_;
 
         CoroExecutorImpl(size_t threads, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
@@ -324,7 +326,11 @@ u8 ContImpl::priority() const noexcept {
 }
 
 ContImpl::~ContImpl() {
-    stdAtomicAddAndFetch(&exec_->inflight_, -1, MemoryOrder::Release);
+    if (stdAtomicAddAndFetch(&exec_->inflight_, -1, MemoryOrder::Release) == (int)exec_->reactors_.length()) {
+        char b = 1;
+
+        exec_->joinW_.write(&b, 1);
+    }
 }
 
 ReactorState::ReactorState(CoroExecutorImpl* e)
@@ -433,6 +439,7 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     , tlsKey_(registerTlsKey())
     , reactorPool_(ObjPool::fromMemory())
 {
+    createPipeFD(joinR_, joinW_);
     for (size_t i = 0; i < reactors; ++i) {
         reactors_.pushBack(reactorPool_->make<ReactorState>(this));
     }
@@ -459,7 +466,9 @@ CoroExecutorImpl::~CoroExecutorImpl() noexcept {
 
 void CoroExecutorImpl::join() noexcept {
     while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) > reactors_.length()) {
-        sched_yield();
+        char b;
+
+        joinR_.read(&b, 1);
     }
 }
 
