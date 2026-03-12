@@ -288,27 +288,20 @@ namespace {
             }
 
             void send(Task* task) noexcept {
-                pipeW_.write(&task, sizeof(task));
+                STD_INSIST(pipeW_.write(&task, sizeof(task)) == sizeof(task));
             }
 
             void run() override {
                 Task* task;
 
-                pipeR_.read(&task, sizeof(task));
+                STD_INSIST(pipeR_.read(&task, sizeof(task)) == sizeof(task));
 
                 if (!task) {
                     return;
                 }
 
-                auto* self = pool_->localWorker();
-
-                if (auto* w = (Worker*)pool_->wq->dequeue()) {
-                    w->push(task);
-                } else {
-                    self->pushThrLocal(task);
-                }
-
-                self->pushThrLocal(this);
+                pool_->submitTask(task);
+                pool_->submitTask(this);
             }
         };
 
@@ -397,9 +390,11 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
 void WorkStealingThreadPool::submitTask(Task* task) noexcept {
     if (auto w = localWorker(); w) {
         return w->pushThrLocal(task);
+    } else if (auto w = (Worker*)wq->dequeue(); w) {
+        return w->push(task);
+    } else {
+        return pipeReader_.send(task);
     }
-
-    pipeReader_.send(task);
 }
 
 void** WorkStealingThreadPool::tls(u64 key) noexcept {
