@@ -25,6 +25,8 @@ namespace stl {
         }
 
         size_t read(void* data, size_t len);
+        size_t readNB(void* data, size_t len);
+        size_t tryReadNB(void* data, size_t len);
         size_t writeV(iovec* parts, size_t count);
         size_t write(const void* data, size_t len);
 
