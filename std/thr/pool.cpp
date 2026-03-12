@@ -259,7 +259,6 @@ namespace {
         ~WorkStealingThreadPool() noexcept;
 
         bool notifyOne() noexcept;
-        void stopTheWorld() noexcept;
         void join() noexcept override;
         Worker* localWorker() noexcept;
         Worker* dequeueWorker() noexcept;
@@ -345,18 +344,14 @@ PCG32& WorkStealingThreadPool::random() noexcept {
     return localWorker()->random();
 }
 
-void WorkStealingThreadPool::stopTheWorld() noexcept {
+void WorkStealingThreadPool::join() noexcept {
     while (wq->sleeping() != workerIndex_.size()) {
         sched_yield();
     }
 }
 
-void WorkStealingThreadPool::join() noexcept {
-    stopTheWorld();
-}
-
 WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
-    stopTheWorld();
+    join();
     workerIndex_.visit([](Worker& w) {
         w.join();
     });
