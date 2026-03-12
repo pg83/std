@@ -115,7 +115,6 @@ namespace {
         const u64 tlsKey_;
         ObjPool::Ref reactorPool_;
         Vector<ReactorState*> reactors_;
-        size_t numReactors_;
         alignas(64) int inflight_ = 0;
 
         CoroExecutorImpl(size_t threads, size_t reactors);
@@ -438,7 +437,6 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     : pool_(ThreadPool::workStealing(threads + reactors))
     , tlsKey_(registerTlsKey())
     , reactorPool_(ObjPool::fromMemory())
-    , numReactors_(reactors)
 {
     for (size_t i = 0; i < reactors; ++i) {
         reactors_.pushBack(reactorPool_->make<ReactorState>(this));
@@ -465,7 +463,7 @@ CoroExecutorImpl::~CoroExecutorImpl() noexcept {
 }
 
 void CoroExecutorImpl::join() noexcept {
-    while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) > (int)numReactors_) {
+    while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) > reactors_.length()) {
         sched_yield();
     }
 }
