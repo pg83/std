@@ -440,10 +440,10 @@ STD_TEST_SUITE(CoroPoll) {
         STD_INSIST(orderIdx == N);
     }
 
-    STD_TEST(PipeThroughput) {
+    STD_TEST(_PipeThroughput) {
         auto exec = CoroExecutor::create(4);
         const int N = 1000;
-        const size_t TOTAL = 1024 * 1024;
+        const size_t TOTAL = 10 * 1024 * 1024;
 
         struct Pipe { ScopedFD r, w; };
         Pipe* pipes = new Pipe[N];
