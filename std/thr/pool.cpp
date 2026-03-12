@@ -275,14 +275,20 @@ namespace {
         struct PipeReader: public Task {
             WorkStealingThreadPool* pool_;
             ScopedFD pipeR_;
+            ScopedFD pipeW_;
 
             explicit PipeReader(WorkStealingThreadPool* p) noexcept
                 : pool_(p)
             {
+                createPipeFD(pipeR_, pipeW_);
             }
 
             u8 priority() const noexcept override {
                 return 1;
+            }
+
+            void send(Task* task) noexcept {
+                pipeW_.write(&task, sizeof(task));
             }
 
             void run() override {
@@ -306,10 +312,8 @@ namespace {
             }
         };
 
-        size_t numThreads_;
         IntMap<Worker> workerIndex_;
         WaitQueue::Ref wq;
-        ScopedFD pipeW_;
         PipeReader pipeReader_{this};
 
         WorkStealingThreadPool(size_t numThreads);
@@ -325,7 +329,7 @@ namespace {
         void submitTask(Task* task) noexcept override;
 
         size_t numThreads() const noexcept override {
-            return numThreads_;
+            return workerIndex_.size();
         }
     };
 }
@@ -338,11 +342,8 @@ void WorkStealingThreadPool::Worker::push(Task* task) noexcept {
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
-    : numThreads_(numThreads)
-    , wq(WaitQueue::construct(numThreads + 1))
+    : wq(WaitQueue::construct(numThreads + 1))
 {
-    createPipeFD(pipeReader_.pipeR_, pipeW_);
-
     PCG32 rng{(size_t)this};
 
     for (size_t i = 0; i <= numThreads; ++i) {
@@ -399,7 +400,7 @@ void WorkStealingThreadPool::submitTask(Task* task) noexcept {
         return w->pushThrLocal(task);
     }
 
-    pipeW_.write(&task, sizeof(task));
+    pipeReader_.send(task);
 }
 
 void** WorkStealingThreadPool::tls(u64 key) noexcept {
@@ -415,8 +416,7 @@ PCG32& WorkStealingThreadPool::random() noexcept {
 }
 
 void WorkStealingThreadPool::join() noexcept {
-    Task* null_task = nullptr;
-    pipeW_.write(&null_task, sizeof(null_task));
+    pipeReader_.send(nullptr);
 
     while (wq->sleeping() != workerIndex_.size()) {
         sched_yield();
@@ -428,8 +428,7 @@ void WorkStealingThreadPool::join() noexcept {
 WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
     join();
 
-    Task* null_task = nullptr;
-    pipeW_.write(&null_task, sizeof(null_task));
+    pipeReader_.send(nullptr);
 
     while (wq->sleeping() != workerIndex_.size()) {
         sched_yield();
