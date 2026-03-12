@@ -399,7 +399,7 @@ void WorkStealingThreadPool::Worker::run() noexcept {
 void WorkStealingThreadPool::Worker::loop() {
     LockGuard lock(mutex_);
 
-    do {
+    while (true) {
         STD_ASSERT(local_.empty());
 
         while (auto task = popNoLock()) {
@@ -427,7 +427,11 @@ void WorkStealingThreadPool::Worker::loop() {
         local_.pushBack(stolen);
 
         flushLocal();
-    } while (!tasks_.empty() || (sleep(), true));
+
+        if (tasks_.empty()) {
+            sleep();
+        }
+    }
 }
 
 void WorkStealingThreadPool::Worker::steal(IntrusiveList* stolen) noexcept {
