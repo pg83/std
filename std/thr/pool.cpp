@@ -59,10 +59,6 @@ namespace {
         PCG32& random() noexcept override {
             return rng_;
         }
-
-        size_t numThreads() const noexcept override {
-            return 0;
-        }
     };
 
     class ThreadPoolImpl: public ThreadPool {
@@ -108,10 +104,6 @@ namespace {
         void join() noexcept override;
         void** tls(u64 key) noexcept override;
         PCG32& random() noexcept override;
-
-        size_t numThreads() const noexcept override {
-            return workerIndex_.size();
-        }
     };
 }
 
@@ -312,18 +304,14 @@ namespace {
         WorkStealingThreadPool(size_t numThreads);
         ~WorkStealingThreadPool() noexcept;
 
-        Worker* dequeueWorker() noexcept;
-        void startPipeReader() noexcept;
         bool notifyOne() noexcept;
         void join() noexcept override;
-        PCG32& random() noexcept override;
         Worker* localWorker() noexcept;
+        void startPipeReader() noexcept;
+        Worker* dequeueWorker() noexcept;
+        PCG32& random() noexcept override;
         void** tls(u64 key) noexcept override;
         void submitTask(Task* task) noexcept override;
-
-        size_t numThreads() const noexcept override {
-            return workerIndex_.size();
-        }
     };
 }
 

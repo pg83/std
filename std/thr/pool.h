@@ -15,11 +15,10 @@ namespace stl {
     struct ThreadPool: public ARC {
         virtual ~ThreadPool() noexcept;
 
-        virtual void submitTask(Task* task) noexcept = 0;
         virtual void join() noexcept = 0;
-        virtual void** tls(u64 key) noexcept = 0;
         virtual PCG32& random() noexcept = 0;
-        virtual size_t numThreads() const noexcept = 0;
+        virtual void** tls(u64 key) noexcept = 0;
+        virtual void submitTask(Task* task) noexcept = 0;
 
         template <typename F>
         void submit(F f) {
