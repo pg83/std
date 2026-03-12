@@ -25,12 +25,15 @@ namespace stl {
         size_t stackSize;
         void* stackPtr;
         Runable* runable;
+        u8 priority;
 
         SpawnParams() noexcept;
 
         SpawnParams& setStackPtr(void* v) noexcept;
         SpawnParams& setStackSize(size_t v) noexcept;
         SpawnParams& setRunablePtr(Runable* v) noexcept;
+
+        SpawnParams& setPriority(u8 v) noexcept;
 
         template <typename F>
         SpawnParams& setRunable(F f) {
@@ -64,7 +67,5 @@ namespace stl {
 
         static Ref create(size_t threads);
         static Ref create(size_t threads, size_t reactors);
-        static Ref create(ThreadPool* pool);
-        static Ref create(ThreadPool* pool, size_t reactors);
     };
 }

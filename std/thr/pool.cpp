@@ -178,6 +178,10 @@ void ThreadPoolImpl::workerLoop() {
     }
 }
 
+u8 Task::priority() const noexcept {
+    return 0;
+}
+
 ThreadPool::~ThreadPool() noexcept {
 }
 
@@ -243,7 +247,11 @@ namespace {
             void push(T& task) noexcept;
 
             void pushThrLocal(Task* task) noexcept override {
-                local_.pushBack(task);
+                if (task->priority()) {
+                    local_.pushFront(task);
+                } else {
+                    local_.pushBack(task);
+                }
             }
 
             void notify() noexcept {
@@ -335,7 +343,11 @@ WorkStealingThreadPool::GlobalWorker::GlobalWorker(WorkStealingThreadPool* pool,
 void WorkStealingThreadPool::GlobalWorker::push(Task* task) noexcept {
     LockGuard lock(mutex_);
     stdAtomicStore(&idle_, false, MemoryOrder::Release);
-    tasks_.pushBack(task);
+    if (task->priority()) {
+        tasks_.pushFront(task);
+    } else {
+        tasks_.pushBack(task);
+    }
     condVar_.signal();
 }
 

@@ -35,7 +35,7 @@ using namespace stl;
 
 namespace {
     struct CoroExecutorImpl;
-    struct ReactorThread;
+    struct ReactorState;
 
     static u64 monotonicNowUs() noexcept {
         timespec ts;
@@ -65,6 +65,9 @@ namespace {
         ucontext_t* workerCtx_;
         Runable* runable_;
         Runable* afterSuspend_;
+        u8 priority_;
+
+        u8 priority() const noexcept override;
 
         ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept;
 
@@ -111,10 +114,11 @@ namespace {
         ThreadPool::Ref pool_;
         const u64 tlsKey_;
         ObjPool::Ref reactorPool_;
-        Vector<ReactorThread*> reactors_;
+        Vector<ReactorState*> reactors_;
+        size_t numReactors_;
         alignas(64) int inflight_ = 0;
 
-        CoroExecutorImpl(ThreadPool::Ref pool, size_t reactors);
+        CoroExecutorImpl(size_t threads, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
 
         void join() noexcept override;
@@ -151,7 +155,7 @@ namespace {
             return (ThreadPool*)pool_.ptr();
         }
 
-        ReactorThread* pickReactor() noexcept;
+        ReactorState* pickReactor() noexcept;
 
         MutexIface* createMutex() override;
         CondVarIface* createCondVar() override;
@@ -256,7 +260,7 @@ namespace {
 
     struct PollRequest: public TreapNode, public Runable {
         ContImpl* cont;
-        ReactorThread* reactor;
+        ReactorState* reactor;
         int fd;
         u32 flags;
         u32 result;   // readiness flags returned, 0 = timeout
@@ -291,24 +295,21 @@ namespace {
     constexpr u32 REACTOR_MAX_EVENTS = 64;
     constexpr u32 REACTOR_MAX_IDLE_US = 30000000;
 
-    struct ReactorThread: public Runable {
+    struct ReactorState {
         CoroExecutorImpl* exec;
         ScopedPtr<PollerIface> poller;
         DeadlineTreap timers;
         Mutex timerMutex;
         ScopedFD wakeReadFd;
         ScopedFD wakeWriteFd;
-        ScopedPtr<Thread> thread_;
         bool done;
 
-        ReactorThread(CoroExecutorImpl* e);
+        ReactorState(CoroExecutorImpl* e);
+        ~ReactorState() noexcept;
 
-        ~ReactorThread() noexcept;
-
-        void join() noexcept;
+        void run() noexcept;
         void wakeup() noexcept;
         void drainWakeup() noexcept;
-        void run() noexcept override;
         void registerRequest(PollRequest* req);
     };
 }
@@ -317,33 +318,28 @@ void PollRequest::run() {
     reactor->registerRequest(this);
 }
 
+u8 ContImpl::priority() const noexcept {
+    return priority_;
+}
+
 ContImpl::~ContImpl() {
     stdAtomicAddAndFetch(&exec_->inflight_, -1, MemoryOrder::Release);
 }
 
-ReactorThread::~ReactorThread() noexcept {
-}
-
-ReactorThread::ReactorThread(CoroExecutorImpl* e)
+ReactorState::ReactorState(CoroExecutorImpl* e)
     : exec(e)
     , poller{PollerIface::create()}
-    , thread_{}
     , done(false)
 {
     createPipeFD(wakeReadFd, wakeWriteFd);
-    // set read end non-blocking so drainWakeup() can loop safely
     ::fcntl(wakeReadFd.get(), F_SETFL, O_NONBLOCK);
     poller.ptr->arm(wakeReadFd.get(), PollFlag::In, nullptr);
-    thread_.ptr = new Thread(*this);
 }
 
-void ReactorThread::join() noexcept {
-    done = true;
-    wakeup();
-    thread_.ptr->join();
+ReactorState::~ReactorState() noexcept {
 }
 
-void ReactorThread::registerRequest(PollRequest* req) {
+void ReactorState::registerRequest(PollRequest* req) {
     u64 reqDeadline = req->deadline;
     u64 prevEarliest;
 
@@ -362,22 +358,21 @@ void ReactorThread::registerRequest(PollRequest* req) {
     }
 }
 
-void ReactorThread::wakeup() noexcept {
+void ReactorState::wakeup() noexcept {
     char b = 1;
 
     ::write(wakeWriteFd.get(), &b, 1);
 }
 
-void ReactorThread::drainWakeup() noexcept {
+void ReactorState::drainWakeup() noexcept {
     char buf[64];
 
     while (::read(wakeReadFd.get(), buf, sizeof(buf)) > 0) {
     }
 }
 
-void ReactorThread::run() noexcept {
+void ReactorState::run() noexcept {
     while (!done) {
-        // Compute wait timeout
         u64 now = monotonicNowUs();
         u64 earliest;
 
@@ -398,7 +393,6 @@ void ReactorThread::run() noexcept {
 
         poller.ptr->wait([this](PollEvent* ev) {
             if (ev->data == nullptr) {
-                // wakeup event — drain and re-arm
                 drainWakeup();
                 poller.ptr->arm(wakeReadFd.get(), PollFlag::In, nullptr);
             } else {
@@ -416,34 +410,44 @@ void ReactorThread::run() noexcept {
             }
         }, timeoutUs);
 
-        // Expire timers
         now = monotonicNowUs();
 
-        LockGuard g(timerMutex);
+        {
+            LockGuard g(timerMutex);
 
-        while (auto* node = timers.min()) {
-            auto* req = (PollRequest*)node;
+            while (auto* node = timers.min()) {
+                auto* req = (PollRequest*)node;
 
-            if (req->deadline > now) {
-                break;
+                if (req->deadline > now) {
+                    break;
+                }
+
+                timers.remove(req);
+                poller.ptr->disarm(req->fd);
+
+                req->result = 0;
+                req->cont->reSchedule();
             }
-
-            timers.remove(req);
-            poller.ptr->disarm(req->fd);
-
-            req->result = 0;
-            req->cont->reSchedule();
         }
+
+        exec->yield();
     }
 }
 
-CoroExecutorImpl::CoroExecutorImpl(ThreadPool::Ref pool, size_t reactors)
-    : pool_(pool)
+CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
+    : pool_(ThreadPool::workStealing(threads + reactors))
     , tlsKey_(registerTlsKey())
     , reactorPool_(ObjPool::fromMemory())
+    , numReactors_(reactors)
 {
     for (size_t i = 0; i < reactors; ++i) {
-        reactors_.pushBack(reactorPool_->make<ReactorThread>(this));
+        reactors_.pushBack(reactorPool_->make<ReactorState>(this));
+    }
+
+    for (auto* r : reactors_) {
+        spawnRun(SpawnParams().setPriority(1).setRunable([r]() {
+            r->run();
+        }));
     }
 }
 
@@ -451,17 +455,22 @@ CoroExecutorImpl::~CoroExecutorImpl() noexcept {
     join();
 
     for (auto* r : reactors_) {
-        r->join();
+        r->done = true;
+        r->wakeup();
     }
-}
 
-void CoroExecutorImpl::join() noexcept {
     while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) != 0) {
         sched_yield();
     }
 }
 
-ReactorThread* CoroExecutorImpl::pickReactor() noexcept {
+void CoroExecutorImpl::join() noexcept {
+    while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) > (int)numReactors_) {
+        sched_yield();
+    }
+}
+
+ReactorState* CoroExecutorImpl::pickReactor() noexcept {
     return reactors_[pool_->random().uniformBiased((u32)reactors_.length())];
 }
 
@@ -518,6 +527,7 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
     , workerCtx_(nullptr)
     , runable_(params.runable)
     , afterSuspend_(nullptr)
+    , priority_(params.priority)
 {
     stdAtomicAddAndFetch(&exec_->inflight_, 1, MemoryOrder::Relaxed);
     getcontext(&ctx_);
@@ -535,6 +545,7 @@ SpawnParams::SpawnParams() noexcept
     : stackSize(16 * 1024)
     , stackPtr(nullptr)
     , runable(nullptr)
+    , priority(0)
 {
 }
 
@@ -881,20 +892,12 @@ ChannelIface::~ChannelIface() noexcept {
 CoroExecutor::~CoroExecutor() noexcept {
 }
 
-CoroExecutor::Ref CoroExecutor::create(ThreadPool* pool) {
-    return create(pool, defaultReactors(pool->numThreads()));
-}
-
-CoroExecutor::Ref CoroExecutor::create(ThreadPool* pool, size_t reactors) {
-    return new CoroExecutorImpl(pool, reactors);
-}
-
 CoroExecutor::Ref CoroExecutor::create(size_t threads) {
-    return create(ThreadPool::workStealing(threads).mutPtr());
+    return create(threads, defaultReactors(threads));
 }
 
 CoroExecutor::Ref CoroExecutor::create(size_t threads, size_t reactors) {
-    return create(ThreadPool::workStealing(threads).mutPtr(), reactors);
+    return new CoroExecutorImpl(threads, reactors);
 }
 
 SpawnParams& SpawnParams::setStackSize(size_t v) noexcept {
@@ -905,6 +908,12 @@ SpawnParams& SpawnParams::setStackSize(size_t v) noexcept {
 
 SpawnParams& SpawnParams::setStackPtr(void* v) noexcept {
     stackPtr = v;
+
+    return *this;
+}
+
+SpawnParams& SpawnParams::setPriority(u8 v) noexcept {
+    priority = v;
 
     return *this;
 }
