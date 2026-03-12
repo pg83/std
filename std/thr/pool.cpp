@@ -305,6 +305,7 @@ namespace {
         ~WorkStealingThreadPool() noexcept;
 
         bool notifyOne() noexcept;
+        void stopTheWorld() noexcept;
         void join() noexcept override;
         Worker* localWorker() noexcept;
         void startPipeReader() noexcept;
@@ -397,23 +398,21 @@ PCG32& WorkStealingThreadPool::random() noexcept {
     return localWorker()->random();
 }
 
-void WorkStealingThreadPool::join() noexcept {
+void WorkStealingThreadPool::stopTheWorld() noexcept {
     pipeReader_.send(nullptr);
 
     while (wq->sleeping() != workerIndex_.size()) {
         sched_yield();
     }
+}
 
+void WorkStealingThreadPool::join() noexcept {
+    stopTheWorld();
     startPipeReader();
 }
 
 WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
-    pipeReader_.send(nullptr);
-
-    while (wq->sleeping() != workerIndex_.size()) {
-        sched_yield();
-    }
-
+    stopTheWorld();
     workerIndex_.visit([](Worker& w) {
         w.join();
     });
@@ -430,14 +429,7 @@ WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex
 
 void WorkStealingThreadPool::Worker::join() noexcept {
     ShutDown sh;
-
-    {
-        LockGuard lock(mutex_);
-
-        pushThrLocal(&sh);
-    }
-
-    notify();
+    push(&sh);
     thread_.join();
 }
 
@@ -471,9 +463,7 @@ void WorkStealingThreadPool::Worker::loop() {
     LockGuard lock(mutex_);
 
     do {
-        while (auto task = (Task*)local_.popFrontOrNull()) {
-            task->run();
-        }
+        STD_ASSERT(local_.empty());
 
         while (auto task = popNoLock()) {
             if (!tasks_.empty()) {
