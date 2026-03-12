@@ -243,8 +243,7 @@ namespace {
                 return (Task*)tasks_.popFrontOrNull();
             }
 
-            template <typename T>
-            void push(T& task) noexcept;
+            void push(Task* task) noexcept;
 
             void pushThrLocal(Task* task) noexcept override {
                 if (task->priority()) {
@@ -288,13 +287,14 @@ namespace {
 
             void run() override {
                 Task* task;
+
                 pipeR_.read(&task, sizeof(task));
 
                 if (!task) {
                     return;
                 }
 
-                auto* self = static_cast<Worker*>(pool_->localWorker());
+                auto* self = pool_->localWorker();
 
                 if (auto* w = (Worker*)pool_->wq->dequeue()) {
                     w->push(task);
@@ -330,8 +330,7 @@ namespace {
     };
 }
 
-template <typename T>
-void WorkStealingThreadPool::Worker::push(T& task) noexcept {
+void WorkStealingThreadPool::Worker::push(Task* task) noexcept {
     LockGuard lock(mutex_);
     flushLocal();
     tasks_.pushBack(task);
@@ -359,13 +358,13 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
 }
 
 WorkStealingThreadPool::Worker* WorkStealingThreadPool::dequeueWorker() noexcept {
-    Worker* w;
+    while (true) {
+        if (auto w = (Worker*)wq->dequeue(); w) {
+            return w;
+        }
 
-    while (!(w = (Worker*)wq->dequeue())) {
         sched_yield();
     }
-
-    return w;
 }
 
 void WorkStealingThreadPool::startPipeReader() noexcept {
