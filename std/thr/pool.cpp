@@ -277,7 +277,7 @@ WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     PCG32 rng{(size_t)this};
 
     for (size_t i = 0; i < numThreads; ++i) {
-        workerIndex_.insertKeyed(this, (u32)i, rng.nextU64());
+        workerIndex_.insertKeyed(this, i, rng.nextU64());
     }
 
     workerIndex_.visit([](Worker& w) {
@@ -336,6 +336,7 @@ void WorkStealingThreadPool::join() noexcept {
 
 WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
     join();
+
     workerIndex_.visit([](Worker& w) {
         w.join();
     });
