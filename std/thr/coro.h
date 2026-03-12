@@ -17,9 +17,6 @@ namespace stl {
     struct Cont {
         u64 id() const noexcept;
 
-        u32 poll(int fd, u32 flags);
-        u32 poll(int fd, u32 flags, u64 timeoutUs);
-
         virtual CoroExecutor* executor() noexcept = 0;
     };
 
@@ -59,6 +56,7 @@ namespace stl {
         virtual u32 poll(int fd, u32 flags, u64 timeoutUs) = 0;
         virtual ThreadIface* createThread(Runable& runable) = 0;
 
+        u32 poll(int fd, u32 flags);
         u64 currentCoroId() const noexcept;
 
         template <typename F>

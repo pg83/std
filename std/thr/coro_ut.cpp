@@ -373,8 +373,7 @@ STD_TEST_SUITE(CoroPoll) {
         int result = 0;
 
         exec->spawn([&]() {
-            auto c = exec->me();
-            u32 ready = c->poll(readEnd.get(), PollFlag::In, 2000000);
+            u32 ready = exec->poll(readEnd.get(), PollFlag::In, 2000000);
             STD_INSIST(ready & PollFlag::In);
             char buf;
             readEnd.read(&buf, 1);
@@ -398,7 +397,7 @@ STD_TEST_SUITE(CoroPoll) {
         createPipeFD(readEnd, writeEnd);
 
         exec->spawn([&]() {
-            pollResult = exec->me()->poll(readEnd.get(), PollFlag::In, 1000);
+            pollResult = exec->poll(readEnd.get(), PollFlag::In, 1000);
         });
 
         exec->join();
@@ -419,7 +418,7 @@ STD_TEST_SUITE(CoroPoll) {
 
         for (int i = 0; i < N; i++) {
             exec->spawn([&, i]() {
-                u32 ready = exec->me()->poll(readEnds[i].get(), PollFlag::In, 2000000);
+                u32 ready = exec->poll(readEnds[i].get(), PollFlag::In, 2000000);
                 STD_INSIST(ready & PollFlag::In);
                 char buf;
                 readEnds[i].read(&buf, 1);
@@ -466,7 +465,7 @@ STD_TEST_SUITE(CoroPoll) {
                     if (n > 0) {
                         received += (size_t)n;
                     } else if (errno == EAGAIN) {
-                        ex->me()->poll(rfd, PollFlag::In);
+                        ex->poll(rfd, PollFlag::In);
                     }
                 }
             }));
@@ -482,7 +481,7 @@ STD_TEST_SUITE(CoroPoll) {
                     if (n > 0) {
                         sent += (size_t)n;
                     } else if (errno == EAGAIN) {
-                        ex->me()->poll(wfd, PollFlag::Out);
+                        ex->poll(wfd, PollFlag::Out);
                     }
                 }
             }));

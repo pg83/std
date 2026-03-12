@@ -575,18 +575,6 @@ u64 Cont::id() const noexcept {
     return (u64)(size_t)this;
 }
 
-u32 Cont::poll(int fd, u32 flags, u64 timeoutUs) {
-    return executor()->poll(fd, flags, timeoutUs);
-}
-
-u32 Cont::poll(int fd, u32 flags) {
-    for (;;) {
-        if (auto res = poll(fd, flags, REACTOR_MAX_IDLE_US); res) {
-            return res;
-        }
-    }
-}
-
 void ContImpl::entryX() noexcept {
     runable_->run();
     runable_ = nullptr;
@@ -909,6 +897,14 @@ CoroExecutor::Ref CoroExecutor::create(size_t threads, size_t reactors) {
 
 u64 CoroExecutor::currentCoroId() const noexcept {
     return me()->id();
+}
+
+u32 CoroExecutor::poll(int fd, u32 flags) {
+    for (;;) {
+        if (auto res = poll(fd, flags, REACTOR_MAX_IDLE_US); res) {
+            return res;
+        }
+    }
 }
 
 SpawnParams& SpawnParams::setStackSize(size_t v) noexcept {
