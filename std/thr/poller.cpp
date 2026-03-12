@@ -112,6 +112,10 @@ namespace {
 
             int n = epoll_wait(epfd_, raw, sizeof(raw) / sizeof(raw[0]), (int)((timeoutUs + 999) / 1000));
 
+            if (n <= 0) {
+                return;
+            }
+
             for (auto& e : range(raw, raw + n)) {
                 PollEvent ev{e.data.ptr, fromEpollFlags(e.events)};
 
