@@ -177,6 +177,10 @@ namespace {
 
             int n = kevent(kqfd_, nullptr, 0, raw, sizeof(raw) / sizeof(raw[0]), &ts);
 
+            if (n <= 0) {
+                return;
+            }
+
             for (auto& e : range(raw, raw + n)) {
                 u32 fl = 0;
 
