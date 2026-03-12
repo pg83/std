@@ -384,7 +384,9 @@ void WorkStealingThreadPool::Worker::loop() {
     LockGuard lock(mutex_);
 
     while (true) {
-        flushLocal();
+        while (tasks_.empty()) {
+            sleep();
+        }
 
         STD_ASSERT(local_.empty());
 
@@ -415,10 +417,6 @@ void WorkStealingThreadPool::Worker::loop() {
         local_.pushBack(stolen);
 
         flushLocal();
-
-        if (tasks_.empty()) {
-            sleep();
-        }
     }
 }
 
