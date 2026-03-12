@@ -408,8 +408,6 @@ void WorkStealingThreadPool::join() noexcept {
 }
 
 WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
-    join();
-
     pipeReader_.send(nullptr);
 
     while (wq->sleeping() != workerIndex_.size()) {
