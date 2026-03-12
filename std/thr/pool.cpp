@@ -215,8 +215,6 @@ namespace {
                 return (Task*)tasks_.popFrontOrNull();
             }
 
-            void push(Task* task) noexcept;
-
             void** tls(u64 key) noexcept {
                 return &tls_[key];
             }
@@ -225,26 +223,15 @@ namespace {
                 return rng_;
             }
 
-            void pushThrLocal(Task* task) noexcept {
-                if (task->priority()) {
-                    local_.pushFront(task);
-                } else {
-                    local_.pushBack(task);
-                }
-            }
-
-            void join() noexcept;
-
-            void sleep() noexcept {
-                pool_->wq->enqueue(this);
-                condVar_.wait(mutex_);
-            }
-
             void loop();
+            void join() noexcept;
+            void sleep() noexcept;
             void run() noexcept override;
             void initStealOrder() noexcept;
-            void trySteal(IntrusiveList* stolen) noexcept;
+            void push(Task* task) noexcept;
+            void pushThrLocal(Task* task) noexcept;
             void steal(IntrusiveList* stolen) noexcept;
+            void trySteal(IntrusiveList* stolen) noexcept;
         };
 
         IntMap<Worker> workerIndex_;
@@ -260,6 +247,21 @@ namespace {
         void** tls(u64 key) noexcept override;
         void submitTask(Task* task) noexcept override;
     };
+}
+
+void WorkStealingThreadPool::Worker::pushThrLocal(Task* task) noexcept {
+    if (task->priority()) {
+        local_.pushFront(task);
+    } else {
+        local_.pushBack(task);
+    }
+}
+
+void WorkStealingThreadPool::Worker::sleep() noexcept {
+    while (tasks_.empty()) {
+        pool_->wq->enqueue(this);
+        condVar_.wait(mutex_);
+    }
 }
 
 void WorkStealingThreadPool::Worker::push(Task* task) noexcept {
@@ -384,9 +386,7 @@ void WorkStealingThreadPool::Worker::loop() {
     LockGuard lock(mutex_);
 
     while (true) {
-        while (tasks_.empty()) {
-            sleep();
-        }
+        sleep();
 
         STD_ASSERT(local_.empty());
 
