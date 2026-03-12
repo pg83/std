@@ -345,6 +345,8 @@ void WorkStealingThreadPool::submitTask(Task* task) noexcept {
         if (auto w = (Worker*)wq->dequeue()) {
             return w->push(task);
         }
+
+        sched_yield();
     }
 }
 
