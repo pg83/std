@@ -261,12 +261,12 @@ void WorkStealingThreadPool::Worker::sleep() noexcept {
     while (tasks_.empty()) {
         pool_->wq->enqueue(this);
         condVar_.wait(mutex_);
+        flushLocal();
     }
 }
 
 void WorkStealingThreadPool::Worker::push(Task* task) noexcept {
     LockGuard lock(mutex_);
-    flushLocal();
     tasks_.pushBack(task);
     condVar_.signal();
 }
@@ -387,8 +387,6 @@ void WorkStealingThreadPool::Worker::loop() {
 
     while (true) {
         sleep();
-
-        STD_ASSERT(local_.empty());
 
         while (auto task = popNoLock()) {
             if (!tasks_.empty()) {
