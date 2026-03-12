@@ -439,7 +439,7 @@ STD_TEST_SUITE(CoroPoll) {
     }
 
     STD_TEST(_PipeThroughput) {
-        auto exec = CoroExecutor::create(4);
+        auto exec = CoroExecutor::create(8);
         const int N = 1000;
         const size_t TOTAL = 100 * 1024 * 1024;
 
