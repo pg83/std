@@ -321,17 +321,18 @@ ReactorState::~ReactorState() noexcept {
 }
 
 void ReactorState::registerRequest(PollRequest* req) {
-    u64 reqDeadline = req->deadline;
-    u64 prevEarliest;
+    const auto reqDeadline = req->deadline;
+    const auto prevEarliest = LockGuard(timerMutex).run([&]() {
+        auto prevEarliest = timers.earliest();
 
-    {
-        LockGuard g(timerMutex);
-        prevEarliest = timers.earliest();
         timers.insert(req);
+
         // arm under lock: prevents reactor from processing an
         // already-expired timer before the fd is registered
         poller->arm(req->fd, req->flags, req);
-    }
+
+        return prevEarliest;
+    });
 
     if (reqDeadline < prevEarliest) {
         wakeup();
