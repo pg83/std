@@ -2,6 +2,7 @@
 
 namespace stl {
     class CondVar;
+    class LockGuard;
 
     struct MutexIface;
     struct CoroExecutor;
@@ -40,6 +41,11 @@ namespace stl {
             }
         }
 
+        template <typename F>
+        auto run(F f) {
+            return f();
+        }
+
         void drop() noexcept {
             mutex_ = nullptr;
         }
@@ -57,6 +63,11 @@ namespace stl {
 
         ~UnlockGuard() noexcept {
             mutex_.lock();
+        }
+
+        template <typename F>
+        auto run(F f) {
+            return f();
         }
     };
 }

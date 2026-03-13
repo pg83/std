@@ -355,13 +355,9 @@ void ReactorState::drainWakeup() noexcept {
 
 void ReactorState::run() noexcept {
     while (!done) {
-        u64 earliest;
-
-        {
-            LockGuard g(timerMutex);
-
-            earliest = timers.earliest();
-        }
+        const u64 earliest = LockGuard(timerMutex).run([this]() {
+            return timers.earliest();
+        });
 
         poller.ptr->wait([this](PollEvent* ev) {
             if (ev->data == nullptr) {
@@ -372,21 +368,15 @@ void ReactorState::run() noexcept {
 
                 req->result = ev->flags;
 
-                {
-                    LockGuard g(timerMutex);
-
+                LockGuard(timerMutex).run([this, &req]() {
                     timers.remove(req);
-                }
+                });
 
                 req->cont->reSchedule();
             }
         }, earliest);
 
-        auto now = monotonicNowUs();
-
-        {
-            LockGuard g(timerMutex);
-
+        LockGuard(timerMutex).run([this, now = monotonicNowUs()]() {
             while (auto* node = timers.min()) {
                 auto* req = (PollRequest*)node;
 
@@ -400,7 +390,7 @@ void ReactorState::run() noexcept {
                 req->result = 0;
                 req->cont->reSchedule();
             }
-        }
+        });
 
         exec->yield();
     }
