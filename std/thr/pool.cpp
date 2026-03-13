@@ -58,6 +58,9 @@ namespace {
         PCG32& random() noexcept override {
             return rng_;
         }
+
+        void beforeBlock() noexcept override {
+        }
     };
 
     class ThreadPoolImpl: public ThreadPool {
@@ -103,6 +106,7 @@ namespace {
         void join() noexcept override;
         void** tls(u64 key) noexcept override;
         PCG32& random() noexcept override;
+        void beforeBlock() noexcept override {}
     };
 }
 
@@ -242,6 +246,7 @@ namespace {
         PCG32& random() noexcept override;
         void** tls(u64 key) noexcept override;
         void submitTask(Task* task) noexcept override;
+        void beforeBlock() noexcept override;
     };
 }
 
@@ -322,6 +327,26 @@ void** WorkStealingThreadPool::tls(u64 key) noexcept {
 
 PCG32& WorkStealingThreadPool::random() noexcept {
     return localWorker()->random();
+}
+
+void WorkStealingThreadPool::beforeBlock() noexcept {
+    auto w = localWorker();
+
+    if (!w) {
+        return;
+    }
+
+    while (!w->local_.empty()) {
+        auto* task = (Task*)w->local_.popFront();
+
+        if (auto* idle = (Worker*)wq->dequeue(); idle) {
+            idle->push(task);
+        } else {
+            LockGuard lock(w->mutex_);
+            w->tasks_.pushFront(task);
+            break;
+        }
+    }
 }
 
 void WorkStealingThreadPool::join() noexcept {

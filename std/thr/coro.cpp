@@ -378,6 +378,8 @@ void ReactorState::run() noexcept {
             return timers.earliest();
         });
 
+        exec->pool_->beforeBlock();
+
         poller->wait([this](PollEvent* ev) {
             if (ev->data == nullptr) {
                 drainWakeup();
