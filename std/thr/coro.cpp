@@ -10,12 +10,12 @@
 #include "channel_iface.h"
 #include "cond_var_iface.h"
 
+#include <std/sys/fd.h>
 #include <std/sys/crt.h>
 #include <std/rng/pcg.h>
 #include <std/lib/list.h>
 #include <std/map/treap.h>
 #include <std/sys/atomic.h>
-#include <std/ptr/scoped.h>
 #include <std/lib/vector.h>
 #include <std/dbg/insist.h>
 #include <std/alg/minmax.h>
@@ -24,8 +24,6 @@
 #include <std/lib/ring_buf.h>
 #include <std/mem/obj_pool.h>
 #include <std/map/treap_node.h>
-
-#include <std/sys/fd.h>
 
 #include <time.h>
 #include <fcntl.h>
