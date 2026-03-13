@@ -19,8 +19,6 @@ namespace stl {
         u32 result;
         u64 deadline;
 
-        void* key() const noexcept override;
-
         virtual void reSchedule() noexcept = 0;
         virtual void parkWith(Runable* afterSuspend) noexcept = 0;
     };

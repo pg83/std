@@ -18,10 +18,6 @@
 
 using namespace stl;
 
-void* PollRequest::key() const noexcept {
-    return (void*)this;
-}
-
 ReactorIface::~ReactorIface() noexcept {
 }
 
