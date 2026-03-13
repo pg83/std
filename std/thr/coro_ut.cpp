@@ -469,21 +469,24 @@ STD_TEST_SUITE(CoroPoll) {
 
     STD_TEST(_PipeThroughput) {
         auto exec = CoroExecutor::create(8);
-        const int N = 1000;
-        const size_t TOTAL = 100 * 1024 * 1024;
+        const int N = 200;
+        const size_t TOTAL = 500 * 1024 * 1024;
 
         struct Pipe {
             ScopedFD r, w;
         };
+
         Pipe* pipes = new Pipe[N];
 
         for (int i = 0; i < N; i++) {
             createPipeFD(pipes[i].r, pipes[i].w);
+
             pipes[i].r.setNonBlocking();
             pipes[i].w.setNonBlocking();
 
             int rfd = pipes[i].r.get();
             int wfd = pipes[i].w.get();
+
             CoroExecutor* ex = exec.mutPtr();
 
             exec->spawnRun(SpawnParams().setStackSize(64 * 1024).setRunable([ex, rfd, TOTAL]() {

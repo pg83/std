@@ -415,8 +415,8 @@ void ReactorState::run() noexcept {
                 }
 
                 timers.remove(req);
-
                 req->remove();
+
                 rearmOrDisarm(req->fd);
 
                 req->result = 0;
