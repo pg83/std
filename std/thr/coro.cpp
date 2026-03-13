@@ -132,6 +132,7 @@ namespace {
         }
 
         void parkWith(Runable* afterSuspend) noexcept {
+            pool_->beforeBlock();
             currentCont()->parkWith(afterSuspend);
         }
 
