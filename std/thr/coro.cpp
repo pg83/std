@@ -922,6 +922,10 @@ SpawnParams& SpawnParams::setRunablePtr(Runable* v) noexcept {
     return *this;
 }
 
+SpawnParams& SpawnParams::setStack(void* v, size_t len) noexcept {
+    return setStackPtr(v).setStackSize(len);
+}
+
 SpawnParams& SpawnParams::setStack(ObjPool* v, size_t len) noexcept {
     return setStack(v->allocate(len), len);
 }
