@@ -18,9 +18,6 @@
 
 using namespace stl;
 
-ReactorIface::~ReactorIface() noexcept {
-}
-
 namespace {
     struct DeadlineTreap: public Treap {
         bool cmp(void* a, void* b) const noexcept override {
@@ -102,16 +99,22 @@ void ReactorState::processRequest(PollRequest* req) {
     timerMutex.lock();
 
     const auto prevEarliest = timers.earliest();
+
     timers.insert(req);
+
     auto& entry = fdMap_[req->fd];
+
     entry.pushBack(req);
+
     const auto fl = entry.flags();
     const auto fd = req->fd;
     const auto needsWakeup = req->deadline < prevEarliest;
 
     req->parkWith(makeRunablePtr([this, fd, fl, needsWakeup]() {
         poller->arm(fd, fl, (void*)(uintptr_t)(fd + 1));
+
         timerMutex.unlock();
+
         if (needsWakeup) {
             wakeup();
         }
@@ -192,6 +195,9 @@ void ReactorState::run() noexcept {
 
         exec->yield();
     }
+}
+
+ReactorIface::~ReactorIface() noexcept {
 }
 
 ReactorIface* ReactorIface::create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool) {
