@@ -501,9 +501,7 @@ void CoroMutexImpl::unlock() noexcept {
     LockGuard guard(queueMutex_);
 
     if (auto* node = waiters_.popFrontOrNull(); node) {
-        auto* cont = (ContImpl*)(Task*)node;
-
-        cont->reSchedule();
+        ((ContImpl*)(Task*)node)->reSchedule();
     } else {
         locked_ = false;
     }
