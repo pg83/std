@@ -363,8 +363,6 @@ void ReactorState::run() noexcept {
             earliest = timers.earliest();
         }
 
-        const u32 deadlineUs = min(earliest, monotonicNowUs());
-
         poller.ptr->wait([this](PollEvent* ev) {
             if (ev->data == nullptr) {
                 drainWakeup();
@@ -382,7 +380,7 @@ void ReactorState::run() noexcept {
 
                 req->cont->reSchedule();
             }
-        }, deadlineUs);
+        }, earliest);
 
         auto now = monotonicNowUs();
 
