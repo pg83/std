@@ -383,7 +383,7 @@ void ReactorState::run() noexcept {
                 drainWakeup();
                 poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
             } else {
-                int fd = (int)((uintptr_t)ev->data - 1);
+                int fd = (uintptr_t)ev->data - 1;
 
                 LockGuard(timerMutex).run([this, fd, evFlags = ev->flags]() {
                     if (auto* entry = fdMap_.find(fd); entry) {
