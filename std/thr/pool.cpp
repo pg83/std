@@ -340,8 +340,7 @@ void WorkStealingThreadPool::beforeBlock() noexcept {
             idle->push(&w->local_);
         } else {
             LockGuard lock(w->mutex_);
-
-            w->tasks_.pushFront(w->local_);
+            w->flushLocal();
         }
     }
 }
