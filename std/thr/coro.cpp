@@ -38,14 +38,6 @@ namespace {
     struct CoroExecutorImpl;
     struct ReactorState;
 
-    static u64 monotonicNowUs() noexcept {
-        timespec ts;
-
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-
-        return (u64)ts.tv_sec * 1000000ULL + (u64)ts.tv_nsec / 1000;
-    }
-
     struct ContImpl: public Cont, public Task {
         CoroExecutorImpl* exec_;
         ucontext_t ctx_;
@@ -367,7 +359,6 @@ void ReactorState::drainWakeup() noexcept {
 
 void ReactorState::run() noexcept {
     while (!done) {
-        u64 now = monotonicNowUs();
         u64 earliest;
 
         {
@@ -376,7 +367,7 @@ void ReactorState::run() noexcept {
             earliest = timers.earliest();
         }
 
-        const u32 timeoutUs = earliest <= now ? 0 : earliest - now;
+        const u32 deadlineUs = min(earliest, monotonicNowUs());
 
         poller.ptr->wait([this](PollEvent* ev) {
             if (ev->data == nullptr) {
@@ -395,9 +386,9 @@ void ReactorState::run() noexcept {
 
                 req->cont->reSchedule();
             }
-        }, timeoutUs);
+        }, deadlineUs);
 
-        now = monotonicNowUs();
+        auto now = monotonicNowUs();
 
         {
             LockGuard g(timerMutex);

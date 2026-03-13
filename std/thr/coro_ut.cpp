@@ -373,7 +373,7 @@ STD_TEST_SUITE(CoroPoll) {
         int result = 0;
 
         exec->spawn([&]() {
-            u32 ready = exec->poll(readEnd.get(), PollFlag::In, 2000000);
+            u32 ready = exec->poll(readEnd.get(), PollFlag::In);
             STD_INSIST(ready & PollFlag::In);
             char buf;
             readEnd.read(&buf, 1);

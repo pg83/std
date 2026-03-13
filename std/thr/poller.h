@@ -26,13 +26,13 @@ namespace stl {
         // wait for events, always finite timeout
         virtual void waitImpl(VisitorFace& v, u32 timeoutUs) = 0;
 
-        void waitBase(VisitorFace&& v, u32 timeoutUs);
+        void waitBase(VisitorFace&& v, u64 deadlineUs);
 
         template <typename V>
-        void wait(V v, u32 timeoutUs) {
+        void wait(V v, u64 deadlineUs) {
             waitBase(makeVisitor([v](void* ptr) {
                          v((PollEvent*)ptr);
-                     }), timeoutUs);
+                     }), deadlineUs);
         }
 
         static PollerIface* create();

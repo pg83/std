@@ -3,6 +3,7 @@
 #include <std/dbg/insist.h>
 #include <std/ios/output.h>
 
+#include <time.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -46,4 +47,12 @@ void stl::memZero(void* from, void* to) noexcept {
     if (len) {
         memset(from, 0, len);
     }
+}
+
+u64 stl::monotonicNowUs() noexcept {
+    timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    return (u64)ts.tv_sec * 1000000ULL + (u64)ts.tv_nsec / 1000;
 }

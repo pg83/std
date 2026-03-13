@@ -1,6 +1,7 @@
 #include "poller.h"
 
 #include <std/sys/fd.h>
+#include <std/sys/crt.h>
 #include <std/sys/types.h>
 #include <std/alg/range.h>
 #include <std/sym/i_map.h>
@@ -362,6 +363,12 @@ PollerIface* PollerIface::create() {
 #endif
 }
 
-void PollerIface::waitBase(VisitorFace&& v, u32 timeoutUs) {
-    waitImpl(v, min(timeoutUs, 30000000u));
+void PollerIface::waitBase(VisitorFace&& v, u64 deadlineUs) {
+    auto now = monotonicNowUs();
+
+    if (now >= deadlineUs) {
+        waitImpl(v, 0);
+    } else {
+        waitImpl(v, min(deadlineUs - now, (u64)30000000));
+    }
 }
