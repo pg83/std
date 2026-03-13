@@ -6,8 +6,8 @@
 
 namespace stl {
     class ObjPool;
-    class Runable;
 
+    struct Runable;
     struct ThreadPool;
     struct CoroExecutor;
     struct ReactorIface;
