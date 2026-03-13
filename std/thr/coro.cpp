@@ -440,7 +440,7 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     }
 
     for (auto* r : reactors_) {
-        spawnRun(SpawnParams().setPriority(1).setRunable([r]() {
+        spawnRun(SpawnParams().setStack(opool_.mutPtr(), 16 * 1024).setPriority(1).setRunable([r]() {
             r->run();
         }));
     }
@@ -920,4 +920,8 @@ SpawnParams& SpawnParams::setRunablePtr(Runable* v) noexcept {
     runable = v;
 
     return *this;
+}
+
+SpawnParams& SpawnParams::setStack(ObjPool* v, size_t len) noexcept {
+    return setStack(v->allocate(len), len);
 }

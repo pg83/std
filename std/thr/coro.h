@@ -7,6 +7,8 @@
 #include <std/ptr/intrusive.h>
 
 namespace stl {
+    class ObjPool;
+
     struct ThreadPool;
     struct MutexIface;
     struct ThreadIface;
@@ -32,6 +34,11 @@ namespace stl {
         SpawnParams& setStackPtr(void* v) noexcept;
         SpawnParams& setStackSize(size_t v) noexcept;
         SpawnParams& setRunablePtr(Runable* v) noexcept;
+        SpawnParams& setStack(ObjPool* v, size_t len) noexcept;
+
+        SpawnParams& setStack(void* v, size_t len) noexcept {
+            return setStackPtr(v).setStackSize(len);
+        }
 
         template <typename F>
         SpawnParams& setRunable(F f) {
