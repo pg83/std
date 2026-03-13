@@ -208,11 +208,11 @@ namespace {
         virtual bool unbufferOne(void** out) noexcept;
 
         void run() override;
+        void close() override;
         void enqueue(void* v) override;
         bool dequeue(void** out) override;
         bool tryEnqueue(void* v) override;
         bool tryDequeue(void** out) override;
-        void close() override;
     };
 
     struct CoroChannelImplN: public CoroChannelImpl {
