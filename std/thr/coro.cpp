@@ -15,6 +15,7 @@
 #include <std/rng/pcg.h>
 #include <std/lib/list.h>
 #include <std/map/treap.h>
+#include <std/sym/i_map.h>
 #include <std/sys/atomic.h>
 #include <std/lib/vector.h>
 #include <std/dbg/insist.h>
@@ -238,7 +239,7 @@ namespace {
         CoroChannelImpl0(CoroExecutorImpl* exec) noexcept;
     };
 
-    struct PollRequest: public TreapNode, public Runable {
+    struct PollRequest: public TreapNode, public IntrusiveNode, public Runable {
         ContImpl* cont;
         ReactorState* reactor;
         int fd;
@@ -272,10 +273,21 @@ namespace {
         }
     };
 
+    struct FdEntry: public IntrusiveList {
+        u32 flags() const noexcept {
+            u32 f = 0;
+            for (auto* n = front(); n != end(); n = n->next) {
+                f |= static_cast<const PollRequest*>(n)->flags;
+            }
+            return f;
+        }
+    };
+
     struct ReactorState {
         CoroExecutorImpl* exec;
         PollerIface* poller;
         DeadlineTreap timers;
+        IntMap<FdEntry> fdMap_;
         Mutex timerMutex;
         ScopedFD wakeReadFd;
         ScopedFD wakeWriteFd;
@@ -288,6 +300,7 @@ namespace {
         void wakeup() noexcept;
         void drainWakeup() noexcept;
         void registerRequest(PollRequest* req);
+        void rearmOrDisarm(int fd);
     };
 }
 
@@ -320,6 +333,19 @@ ReactorState::ReactorState(CoroExecutorImpl* e)
 ReactorState::~ReactorState() noexcept {
 }
 
+void ReactorState::rearmOrDisarm(int fd) {
+    auto* entry = fdMap_.find(fd);
+
+    if (!entry || entry->empty()) {
+        poller->disarm(fd);
+        if (entry) {
+            fdMap_.erase(fd);
+        }
+    } else {
+        poller->arm(fd, entry->flags(), (void*)(uintptr_t)(fd + 1));
+    }
+}
+
 void ReactorState::registerRequest(PollRequest* req) {
     u64 reqDeadline = req->deadline;
     u64 prevEarliest;
@@ -328,9 +354,9 @@ void ReactorState::registerRequest(PollRequest* req) {
         LockGuard g(timerMutex);
         prevEarliest = timers.earliest();
         timers.insert(req);
-        // arm under lock: prevents reactor from processing an
-        // already-expired timer before the fd is registered
-        poller->arm(req->fd, req->flags, req);
+        auto& entry = fdMap_[req->fd];
+        entry.pushBack(req);
+        poller->arm(req->fd, entry.flags(), (void*)(uintptr_t)(req->fd + 1));
     }
 
     if (reqDeadline < prevEarliest) {
@@ -362,15 +388,29 @@ void ReactorState::run() noexcept {
                 drainWakeup();
                 poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
             } else {
-                auto* req = (PollRequest*)ev->data;
+                int fd = (int)((uintptr_t)ev->data - 1);
 
-                req->result = ev->flags;
+                LockGuard(timerMutex).run([this, fd, evFlags = ev->flags]() {
+                    if (auto* entry = fdMap_.find(fd); entry) {
+                        auto* n = entry->mutFront();
 
-                LockGuard(timerMutex).run([this, &req]() {
-                    timers.remove(req);
+                        while (n != entry->mutEnd()) {
+                            auto* next = n->next;
+                            auto* req = static_cast<PollRequest*>(n);
+
+                            if (req->flags & evFlags) {
+                                req->result = evFlags;
+                                n->remove();
+                                timers.remove(req);
+                                req->cont->reSchedule();
+                            }
+
+                            n = next;
+                        }
+
+                        rearmOrDisarm(fd);
+                    }
                 });
-
-                req->cont->reSchedule();
             }
         }, earliest);
 
@@ -383,7 +423,9 @@ void ReactorState::run() noexcept {
                 }
 
                 timers.remove(req);
-                poller->disarm(req->fd);
+
+                static_cast<IntrusiveNode*>(req)->remove();
+                rearmOrDisarm(req->fd);
 
                 req->result = 0;
                 req->cont->reSchedule();
