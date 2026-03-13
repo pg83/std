@@ -388,9 +388,7 @@ void ReactorState::run() noexcept {
 
                 LockGuard(timerMutex).run([this, fd, evFlags = ev->flags]() {
                     if (auto* entry = fdMap_.find(fd); entry) {
-                        auto* n = entry->mutFront();
-
-                        while (n != entry->mutEnd()) {
+                        for (auto* n = entry->mutFront(); n != entry->mutEnd(); ) {
                             auto* next = n->next;
                             auto* req = static_cast<PollRequest*>(n);
 
@@ -420,7 +418,7 @@ void ReactorState::run() noexcept {
 
                 timers.remove(req);
 
-                static_cast<IntrusiveNode*>(req)->remove();
+                req->remove();
                 rearmOrDisarm(req->fd);
 
                 req->result = 0;
