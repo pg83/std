@@ -19,6 +19,7 @@
 #include <std/lib/vector.h>
 #include <std/dbg/insist.h>
 #include <std/alg/minmax.h>
+#include <std/alg/exchange.h>
 #include <std/alg/destruct.h>
 #include <std/lib/ring_buf.h>
 #include <std/mem/obj_pool.h>
@@ -333,11 +334,10 @@ void ReactorState::registerRequest(PollRequest* req) {
         LockGuard g(timerMutex);
         prevEarliest = timers.earliest();
         timers.insert(req);
+        // arm under lock: prevents reactor from processing an
+        // already-expired timer before the fd is registered
+        poller.ptr->arm(req->fd, req->flags, req);
     }
-
-    // arm AFTER insert: if fd fires immediately, reactor can safely
-    // remove req from timers before the coroutine stack unwinds
-    poller.ptr->arm(req->fd, req->flags, req);
 
     if (reqDeadline < prevEarliest) {
         wakeup();
@@ -580,8 +580,7 @@ void ContImpl::run() noexcept {
     swapcontext(&workerCtx, &ctx_);
     *exec_->tls() = nullptr;
 
-    if (auto* as = afterSuspend_) {
-        afterSuspend_ = nullptr;
+    if (auto* as = exchange(afterSuspend_, nullptr)) {
         // after as->run(), cont may already be rescheduled by another thread
         return as->run();
     }
