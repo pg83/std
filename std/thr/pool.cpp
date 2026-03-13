@@ -222,6 +222,7 @@ namespace {
             void loop();
             void join() noexcept;
             void sleep() noexcept;
+            void beforeBlock() noexcept;
             void run() noexcept override;
             void initStealOrder() noexcept;
             void push(Task* task) noexcept;
@@ -273,6 +274,20 @@ void WorkStealingThreadPool::Worker::push(IntrusiveList* tasks) noexcept {
     LockGuard lock(mutex_);
     tasks_.pushBack(*tasks);
     condVar_.signal();
+}
+
+void WorkStealingThreadPool::Worker::beforeBlock() noexcept {
+    if (local_.empty()) {
+        return;
+    }
+
+    if (auto* idle = (Worker*)pool_->wq->dequeue(); idle) {
+        idle->push(&local_);
+    } else {
+        LockGuard lock(mutex_);
+
+        flushLocal();
+    }
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
@@ -333,15 +348,8 @@ PCG32& WorkStealingThreadPool::random() noexcept {
 }
 
 void WorkStealingThreadPool::beforeBlock() noexcept {
-    if (auto w = localWorker(); !w) {
-        return;
-    } else if (!w->local_.empty()) {
-        if (auto* idle = (Worker*)wq->dequeue(); idle) {
-            idle->push(&w->local_);
-        } else {
-            LockGuard lock(w->mutex_);
-            w->flushLocal();
-        }
+    if (auto w = localWorker(); w) {
+        w->beforeBlock();
     }
 }
 
