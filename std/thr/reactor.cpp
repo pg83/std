@@ -57,8 +57,6 @@ namespace {
         Mutex timerMutex;
         ScopedFD wakeReadFd;
         ScopedFD wakeWriteFd;
-        bool done;
-
         ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool);
 
         ~ReactorState() noexcept override = default;
@@ -77,7 +75,6 @@ ReactorState::ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool)
     , pool(p)
     , poller(PollerIface::create(opool))
     , timerMutex(e)
-    , done(false)
 {
     createPipeFD(wakeReadFd, wakeWriteFd);
     wakeReadFd.setNonBlocking();
@@ -128,7 +125,7 @@ void ReactorState::wakeup() noexcept {
 }
 
 void ReactorState::join() noexcept {
-    done = true;
+    exec = nullptr;
     wakeup();
 }
 
@@ -140,7 +137,7 @@ void ReactorState::drainWakeup() noexcept {
 }
 
 void ReactorState::run() noexcept {
-    while (!done) {
+    while (auto* e = exec) {
         const u64 earliest = LockGuard(timerMutex).run([this]() {
             return timers.earliest();
         });
@@ -193,7 +190,7 @@ void ReactorState::run() noexcept {
             }
         });
 
-        exec->yield();
+        e->yield();
     }
 }
 
