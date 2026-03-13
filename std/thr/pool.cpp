@@ -169,10 +169,6 @@ void ThreadPoolImpl::workerLoop() {
     }
 }
 
-u8 Task::priority() const noexcept {
-    return 0;
-}
-
 ThreadPool::~ThreadPool() noexcept {
 }
 
