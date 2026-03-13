@@ -440,6 +440,31 @@ STD_TEST_SUITE(CoroPoll) {
         STD_INSIST(orderIdx == N);
     }
 
+    STD_TEST(SameFdMultiPoll) {
+        // N coroutines all poll the same read fd; one write wakes all of them
+        auto exec = CoroExecutor::create(4);
+        ScopedFD readEnd, writeEnd;
+        createPipeFD(readEnd, writeEnd);
+        const int N = 4;
+        int woken = 0;
+
+        for (int i = 0; i < N; i++) {
+            exec->spawn([&]() {
+                u32 ready = exec->poll(readEnd.get(), PollFlag::In);
+                STD_INSIST(ready & PollFlag::In);
+                stdAtomicAddAndFetch(&woken, 1, MemoryOrder::Relaxed);
+            });
+        }
+
+        exec->spawn([&]() {
+            char b = 1;
+            writeEnd.write(&b, 1);
+        });
+
+        exec->join();
+        STD_INSIST(woken == N);
+    }
+
     STD_TEST(_PipeThroughput) {
         auto exec = CoroExecutor::create(8);
         const int N = 1000;
