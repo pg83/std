@@ -58,9 +58,6 @@ namespace {
         PCG32& random() noexcept override {
             return rng_;
         }
-
-        void beforeBlock() noexcept override {
-        }
     };
 
     class ThreadPoolImpl: public ThreadPool {
@@ -106,7 +103,6 @@ namespace {
         void join() noexcept override;
         void** tls(u64 key) noexcept override;
         PCG32& random() noexcept override;
-        void beforeBlock() noexcept override {}
     };
 }
 
@@ -230,6 +226,7 @@ namespace {
             void initStealOrder() noexcept;
             void push(Task* task) noexcept;
             void pushThrLocal(Task* task) noexcept;
+            void push(IntrusiveList* task) noexcept;
             void steal(IntrusiveList* stolen) noexcept;
             void trySteal(IntrusiveList* stolen) noexcept;
         };
@@ -269,6 +266,12 @@ void WorkStealingThreadPool::Worker::sleep() noexcept {
 void WorkStealingThreadPool::Worker::push(Task* task) noexcept {
     LockGuard lock(mutex_);
     tasks_.pushBack(task);
+    condVar_.signal();
+}
+
+void WorkStealingThreadPool::Worker::push(IntrusiveList* tasks) noexcept {
+    LockGuard lock(mutex_);
+    tasks_.pushBack(*tasks);
     condVar_.signal();
 }
 
@@ -330,21 +333,15 @@ PCG32& WorkStealingThreadPool::random() noexcept {
 }
 
 void WorkStealingThreadPool::beforeBlock() noexcept {
-    auto w = localWorker();
-
-    if (!w) {
+    if (auto w = localWorker(); !w) {
         return;
-    }
-
-    while (!w->local_.empty()) {
-        auto* task = (Task*)w->local_.popFront();
-
+    } else if (!w->local_.empty()) {
         if (auto* idle = (Worker*)wq->dequeue(); idle) {
-            idle->push(task);
+            idle->push(&w->local_);
         } else {
             LockGuard lock(w->mutex_);
-            w->tasks_.pushFront(task);
-            break;
+
+            w->tasks_.pushFront(w->local_);
         }
     }
 }
@@ -452,4 +449,7 @@ ThreadPool::Ref ThreadPool::workStealing(size_t threads) {
     }
 
     return new WorkStealingThreadPool(threads);
+}
+
+void ThreadPool::beforeBlock() noexcept {
 }

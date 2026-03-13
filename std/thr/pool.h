@@ -19,7 +19,7 @@ namespace stl {
         virtual PCG32& random() noexcept = 0;
         virtual void** tls(u64 key) noexcept = 0;
         virtual void submitTask(Task* task) noexcept = 0;
-        virtual void beforeBlock() noexcept = 0;
+        virtual void beforeBlock() noexcept;
 
         template <typename F>
         void submit(F f) {
