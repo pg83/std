@@ -396,22 +396,18 @@ void WorkStealingThreadPool::Worker::loop() {
                 }
             }
 
-            {
-                UnlockGuard unlock(mutex_);
-
+            UnlockGuard(mutex_).run([task]() {
                 task->run();
-            }
+            });
 
             flushLocal();
         }
 
         IntrusiveList stolen;
 
-        {
-            UnlockGuard unlock(mutex_);
-
+        UnlockGuard(mutex_).run([this, &stolen]() {
             trySteal(&stolen);
-        }
+        });
 
         local_.pushBack(stolen);
 
