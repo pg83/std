@@ -347,17 +347,15 @@ void ReactorState::rearmOrDisarm(int fd) {
 }
 
 void ReactorState::registerRequest(PollRequest* req) {
-    u64 reqDeadline = req->deadline;
-    u64 prevEarliest;
-
-    {
-        LockGuard g(timerMutex);
-        prevEarliest = timers.earliest();
+    const auto reqDeadline = req->deadline;
+    const auto prevEarliest = LockGuard(timerMutex).run([&]() {
+        auto prevEarliest = timers.earliest();
         timers.insert(req);
         auto& entry = fdMap_[req->fd];
         entry.pushBack(req);
         poller->arm(req->fd, entry.flags(), (void*)(uintptr_t)(req->fd + 1));
-    }
+        return prevEarliest;
+    });
 
     if (reqDeadline < prevEarliest) {
         wakeup();
