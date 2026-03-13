@@ -387,7 +387,7 @@ void ReactorState::run() noexcept {
 
                 LockGuard(timerMutex).run([this, fd, evFlags = ev->flags]() {
                     if (auto* entry = fdMap_.find(fd); entry) {
-                        for (auto* n = entry->mutFront(); n != entry->mutEnd(); ) {
+                        for (auto* n = entry->mutFront(); n != entry->mutEnd();) {
                             auto* next = n->next;
 
                             if (auto* req = (PollRequest*)n; req->flags & evFlags) {
