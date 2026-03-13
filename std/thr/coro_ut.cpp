@@ -441,11 +441,13 @@ STD_TEST_SUITE(CoroPoll) {
     }
 
     STD_TEST(SameFdMultiPoll) {
-        // N coroutines all poll the same read fd; one write wakes all of them
+        // N coroutines all poll the same read fd; one write wakes all of them.
+        // Nobody reads, so the byte stays in the pipe — late-registering coroutines
+        // are still woken when they arm the fd (level-triggered ONESHOT epoll).
         auto exec = CoroExecutor::create(4);
         ScopedFD readEnd, writeEnd;
         createPipeFD(readEnd, writeEnd);
-        const int N = 4;
+        const int N = 40;
         int woken = 0;
 
         for (int i = 0; i < N; i++) {
