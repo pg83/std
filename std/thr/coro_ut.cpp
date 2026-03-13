@@ -418,7 +418,7 @@ STD_TEST_SUITE(CoroPoll) {
 
         for (int i = 0; i < N; i++) {
             exec->spawn([&, i]() {
-                u32 ready = exec->poll(readEnds[i].get(), PollFlag::In, 2000000);
+                u32 ready = exec->poll(readEnds[i].get(), PollFlag::In);
                 STD_INSIST(ready & PollFlag::In);
                 char buf;
                 readEnds[i].read(&buf, 1);

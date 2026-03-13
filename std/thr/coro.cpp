@@ -154,7 +154,7 @@ namespace {
         ChannelIface* createChannel(size_t cap) override;
         ThreadIface* createThread(Runable& runable) override;
 
-        u32 poll(int fd, u32 flags, u64 timeoutUs) override;
+        u32 poll(int fd, u32 flags, u64 deadlineUs) override;
     };
 
     struct CoroThreadImpl: public ThreadIface {
@@ -543,7 +543,7 @@ CoroExecutor* ContImpl::executor() noexcept {
     return exec_;
 }
 
-u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 timeoutUs) {
+u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
     PollRequest req;
 
     req.cont = currentCont();
@@ -551,7 +551,7 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 timeoutUs) {
     req.fd = fd;
     req.flags = flags;
     req.result = 0;
-    req.deadline = monotonicNowUs() + timeoutUs;
+    req.deadline = deadlineUs;
 
     req.cont->parkWith(&req);
 
@@ -888,7 +888,7 @@ u64 CoroExecutor::currentCoroId() const noexcept {
 
 u32 CoroExecutor::poll(int fd, u32 flags) {
     for (;;) {
-        if (auto res = poll(fd, flags, 0xffffffffu); res) {
+        if (auto res = poll(fd, flags, UINT64_MAX); res) {
             return res;
         }
     }
