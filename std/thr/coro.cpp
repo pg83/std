@@ -239,7 +239,7 @@ namespace {
         CoroChannelImpl0(CoroExecutorImpl* exec) noexcept;
     };
 
-    struct PollRequest: public TreapNode, public IntrusiveNode, public Runable {
+    struct PollRequest: public TreapNode, public IntrusiveNode {
         ContImpl* cont;
         ReactorState* reactor;
         int fd;
@@ -250,8 +250,6 @@ namespace {
         void* key() const noexcept override {
             return (void*)this;
         }
-
-        void run() override; // afterSuspend: registers request with reactor
     };
 
     struct DeadlineTreap: public Treap {
@@ -304,10 +302,6 @@ namespace {
     };
 }
 
-void PollRequest::run() {
-    reactor->registerRequest(this);
-}
-
 u8 ContImpl::priority() const noexcept {
     return priority_;
 }
@@ -323,6 +317,7 @@ ContImpl::~ContImpl() {
 ReactorState::ReactorState(CoroExecutorImpl* e)
     : exec(e)
     , poller(PollerIface::create(e->opool_.mutPtr()))
+    , timerMutex(e)
     , done(false)
 {
     createPipeFD(wakeReadFd, wakeWriteFd);
@@ -345,19 +340,23 @@ void ReactorState::rearmOrDisarm(int fd) {
 }
 
 void ReactorState::registerRequest(PollRequest* req) {
-    const auto reqDeadline = req->deadline;
-    const auto prevEarliest = LockGuard(timerMutex).run([&]() {
-        auto prevEarliest = timers.earliest();
-        timers.insert(req);
-        auto& entry = fdMap_[req->fd];
-        entry.pushBack(req);
-        poller->arm(req->fd, entry.flags(), (void*)(uintptr_t)(req->fd + 1));
-        return prevEarliest;
-    });
+    timerMutex.lock();
 
-    if (reqDeadline < prevEarliest) {
-        wakeup();
-    }
+    const auto prevEarliest = timers.earliest();
+    timers.insert(req);
+    auto& entry = fdMap_[req->fd];
+    entry.pushBack(req);
+    const auto fl = entry.flags();
+    const auto fd = req->fd;
+    const auto needsWakeup = req->deadline < prevEarliest;
+
+    req->cont->parkWith(makeRunablePtr([this, fd, fl, needsWakeup]() {
+        poller->arm(fd, fl, (void*)(uintptr_t)(fd + 1));
+        timerMutex.unlock();
+        if (needsWakeup) {
+            wakeup();
+        }
+    }));
 }
 
 void ReactorState::wakeup() noexcept {
@@ -561,7 +560,7 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
     req.result = 0;
     req.deadline = deadlineUs;
 
-    req.cont->parkWith(&req);
+    req.reactor->registerRequest(&req);
 
     return req.result;
 }
