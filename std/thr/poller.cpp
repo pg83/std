@@ -8,12 +8,13 @@
 #include <std/lib/vector.h>
 #include <std/dbg/insist.h>
 #include <std/alg/minmax.h>
+#include <std/mem/obj_pool.h>
 
+#include <poll.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <poll.h>
-#include <fcntl.h>
 
 #if defined(__linux__)
     #include <sys/epoll.h>
@@ -360,6 +361,20 @@ PollerIface* PollerIface::create() {
     return new KqueuePoller();
 #else
     return new PollPoller();
+#endif
+}
+
+PollerIface* PollerIface::create(ObjPool* pool) {
+    if (getenv("USE_POLL_POLLER")) {
+        return pool->make<PollPoller>();
+    }
+
+#if defined(__linux__)
+    return pool->make<EpollPoller>();
+#elif defined(__APPLE__) || defined(__FreeBSD__)
+    return pool->make<KqueuePoller>();
+#else
+    return new pool-><PollPoller>();
 #endif
 }
 

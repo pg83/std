@@ -91,8 +91,8 @@ namespace {
     struct CoroChannelImplN;
 
     struct CoroExecutorImpl: public CoroExecutor {
+        ObjPool::Ref opool_;
         const u64 tlsKey_;
-        ObjPool::Ref reactorPool_;
         Vector<ReactorState*> reactors_;
         alignas(64) int inflight_ = 0;
         ScopedFD joinR_;
@@ -276,7 +276,7 @@ namespace {
 
     struct ReactorState {
         CoroExecutorImpl* exec;
-        ScopedPtr<PollerIface> poller;
+        PollerIface* poller;
         DeadlineTreap timers;
         Mutex timerMutex;
         ScopedFD wakeReadFd;
@@ -311,12 +311,12 @@ ContImpl::~ContImpl() {
 
 ReactorState::ReactorState(CoroExecutorImpl* e)
     : exec(e)
-    , poller{PollerIface::create()}
+    , poller(PollerIface::create(e->opool_.mutPtr()))
     , done(false)
 {
     createPipeFD(wakeReadFd, wakeWriteFd);
     wakeReadFd.setNonBlocking();
-    poller.ptr->arm(wakeReadFd.get(), PollFlag::In, nullptr);
+    poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
 }
 
 ReactorState::~ReactorState() noexcept {
@@ -332,7 +332,7 @@ void ReactorState::registerRequest(PollRequest* req) {
         timers.insert(req);
         // arm under lock: prevents reactor from processing an
         // already-expired timer before the fd is registered
-        poller.ptr->arm(req->fd, req->flags, req);
+        poller->arm(req->fd, req->flags, req);
     }
 
     if (reqDeadline < prevEarliest) {
@@ -359,10 +359,10 @@ void ReactorState::run() noexcept {
             return timers.earliest();
         });
 
-        poller.ptr->wait([this](PollEvent* ev) {
+        poller->wait([this](PollEvent* ev) {
             if (ev->data == nullptr) {
                 drainWakeup();
-                poller.ptr->arm(wakeReadFd.get(), PollFlag::In, nullptr);
+                poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
             } else {
                 auto* req = (PollRequest*)ev->data;
 
@@ -385,7 +385,7 @@ void ReactorState::run() noexcept {
                 }
 
                 timers.remove(req);
-                poller.ptr->disarm(req->fd);
+                poller->disarm(req->fd);
 
                 req->result = 0;
                 req->cont->reSchedule();
@@ -397,14 +397,14 @@ void ReactorState::run() noexcept {
 }
 
 CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
-    : tlsKey_(registerTlsKey())
-    , reactorPool_(ObjPool::fromMemory())
+    : opool_(ObjPool::fromMemory())
+    , tlsKey_(registerTlsKey())
     , pool_(ThreadPool::workStealing(threads + reactors))
 {
     createPipeFD(joinR_, joinW_);
 
     for (size_t i = 0; i < reactors; ++i) {
-        reactors_.pushBack(reactorPool_->make<ReactorState>(this));
+        reactors_.pushBack(opool_->make<ReactorState>(this));
     }
 
     for (auto* r : reactors_) {

@@ -4,6 +4,8 @@
 #include <std/lib/visitor.h>
 
 namespace stl {
+    class ObjPool;
+
     namespace PollFlag {
         constexpr u32 In = 1;
         constexpr u32 Out = 2;
@@ -36,5 +38,6 @@ namespace stl {
         }
 
         static PollerIface* create();
+        static PollerIface* create(ObjPool* pool);
     };
 }
