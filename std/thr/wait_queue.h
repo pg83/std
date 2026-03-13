@@ -15,9 +15,9 @@ namespace stl {
 
         virtual ~WaitQueue() noexcept;
 
-        virtual void enqueue(Item* item) noexcept = 0;
         virtual Item* dequeue() noexcept = 0;
         virtual size_t sleeping() const noexcept = 0;
+        virtual void enqueue(Item* item) noexcept = 0;
 
         static Ref construct(size_t maxWaiters);
     };
