@@ -1,13 +1,12 @@
 #pragma once
 
-#include "runable.h"
-
 #include <std/lib/node.h>
 #include <std/sys/types.h>
 #include <std/map/treap_node.h>
 
 namespace stl {
     class ObjPool;
+    class Runable;
 
     struct ThreadPool;
     struct CoroExecutor;
