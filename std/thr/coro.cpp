@@ -149,7 +149,6 @@ namespace {
         Runable* runable_;
         Mutex mtx_;
         CondVar cv_;
-        bool finished_ = false;
 
         CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable);
 
@@ -503,14 +502,14 @@ void CoroThreadImpl::start() {
 void CoroThreadImpl::notifyDone() noexcept {
     LockGuard guard(mtx_);
 
-    finished_ = true;
+    runable_ = nullptr;
     cv_.signal();
 }
 
 void CoroThreadImpl::join() noexcept {
     LockGuard guard(mtx_);
 
-    while (!finished_) {
+    while (runable_) {
         cv_.wait(mtx_);
     }
 }
