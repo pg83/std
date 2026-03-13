@@ -390,9 +390,8 @@ void ReactorState::run() noexcept {
                     if (auto* entry = fdMap_.find(fd); entry) {
                         for (auto* n = entry->mutFront(); n != entry->mutEnd(); ) {
                             auto* next = n->next;
-                            auto* req = static_cast<PollRequest*>(n);
 
-                            if (req->flags & evFlags) {
+                            if (auto* req = (PollRequest*)n; req->flags & evFlags) {
                                 req->result = evFlags;
                                 n->remove();
                                 timers.remove(req);
