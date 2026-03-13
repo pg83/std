@@ -91,13 +91,13 @@ namespace {
     struct CoroChannelImplN;
 
     struct CoroExecutorImpl: public CoroExecutor {
-        ThreadPool::Ref pool_;
         const u64 tlsKey_;
         ObjPool::Ref reactorPool_;
         Vector<ReactorState*> reactors_;
         alignas(64) int inflight_ = 0;
         ScopedFD joinR_;
         ScopedFD joinW_;
+        ThreadPool::Ref pool_;
 
         CoroExecutorImpl(size_t threads, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
@@ -397,9 +397,9 @@ void ReactorState::run() noexcept {
 }
 
 CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
-    : pool_(ThreadPool::workStealing(threads + reactors))
-    , tlsKey_(registerTlsKey())
+    : tlsKey_(registerTlsKey())
     , reactorPool_(ObjPool::fromMemory())
+    , pool_(ThreadPool::workStealing(threads + reactors))
 {
     createPipeFD(joinR_, joinW_);
 
