@@ -305,7 +305,7 @@ ContImpl::~ContImpl() {
     if (stdAtomicAddAndFetch(&exec_->inflight_, -1, MemoryOrder::Release) == (int)exec_->reactors_.length()) {
         char b = 1;
 
-        makeIntrusivePtr(exec_)->joinW_.write(&b, 1);
+        exec_->joinW_.write(&b, 1);
     }
 }
 
