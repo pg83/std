@@ -41,9 +41,11 @@ namespace {
     struct FdEntry: public IntrusiveList {
         u32 flags() const noexcept {
             u32 f = 0;
+
             for (auto* n = front(); n != end(); n = n->next) {
                 f |= static_cast<const PollRequest*>(n)->flags;
             }
+
             return f;
         }
     };
@@ -57,6 +59,7 @@ namespace {
         Mutex timerMutex;
         ScopedFD wakeReadFd;
         ScopedFD wakeWriteFd;
+
         ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool);
 
         ~ReactorState() noexcept override = default;
