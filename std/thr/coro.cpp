@@ -592,14 +592,13 @@ void ContImpl::run() noexcept {
     *exec_->tls() = this;
     workerCtx_ = &workerCtx;
     swapcontext(&workerCtx, &ctx_);
+    workerCtx_ = nullptr;
     *exec_->tls() = nullptr;
 
-    if (auto* as = exchange(afterSuspend_, nullptr)) {
+    if (auto* as = exchange(afterSuspend_, nullptr); as) {
         // after as->run(), cont may already be rescheduled by another thread
         return as->run();
-    }
-
-    if (runable_) {
+    } else if (runable_) {
         reSchedule();
     } else {
         delete this;
