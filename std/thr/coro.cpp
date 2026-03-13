@@ -87,10 +87,10 @@ namespace {
     struct CoroChannelImplN;
 
     struct CoroExecutorImpl: public CoroExecutor {
+        alignas(64) int inflight_ = 0;
         ObjPool::Ref opool_;
         const u64 tlsKey_;
         Vector<ReactorIface*> reactors_;
-        alignas(64) int inflight_ = 0;
         ScopedFD joinR_;
         ScopedFD joinW_;
         ThreadPool::Ref pool_;
