@@ -136,10 +136,6 @@ namespace {
             currentCont()->parkWith(afterSuspend);
         }
 
-        ThreadPool* pool() const noexcept override {
-            return (ThreadPool*)pool_.ptr();
-        }
-
         ReactorState* pickReactor() noexcept;
 
         MutexIface* createMutex() override;

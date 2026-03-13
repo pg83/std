@@ -51,7 +51,6 @@ namespace stl {
         virtual MutexIface* createMutex() = 0;
         virtual CondVarIface* createCondVar() = 0;
         virtual Cont* spawnRun(SpawnParams params) = 0;
-        virtual ThreadPool* pool() const noexcept = 0;
         virtual ChannelIface* createChannel(size_t cap) = 0;
         virtual u32 poll(int fd, u32 flags, u64 deadlineUs) = 0;
         virtual ThreadIface* createThread(Runable& runable) = 0;
