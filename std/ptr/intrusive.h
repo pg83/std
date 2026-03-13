@@ -18,4 +18,9 @@ namespace stl::IPP {
 namespace stl {
     template <typename T>
     using IntrusivePtr = RefCountPtr<T, IPP::Ops<T>>;
+
+    template <typename T>
+    IntrusivePtr<T> makeIntrusivePtr(T* t) noexcept {
+        return t;
+    }
 }

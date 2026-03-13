@@ -6,11 +6,13 @@
 #include <std/ios/output.h>
 #include <std/mem/obj_pool.h>
 
-#include <map>
-#include <unordered_map>
-
 #include <stdlib.h>
 #include <unistd.h>
+
+#undef noexcept
+
+#include <map>
+#include <unordered_map>
 
 using namespace stl;
 

@@ -11,6 +11,8 @@
 #include <errno.h>
 #include <unistd.h>
 
+#undef noexcept
+
 #include <functional>
 
 using namespace stl;

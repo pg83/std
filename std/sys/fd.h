@@ -38,7 +38,11 @@ namespace stl {
     struct ScopedFD: public FD {
         using FD::FD;
 
+#if defined(noexcept)
+        ~ScopedFD();
+#else
         ~ScopedFD() noexcept(false);
+#endif
     };
 
     void createPipeFD(ScopedFD& in, ScopedFD& out);

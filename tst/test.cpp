@@ -1,6 +1,8 @@
 #include <std/tst/ut.h>
 #include <std/tst/ctx.h>
 
+#undef noexcept
+
 #include <cpptrace/cpptrace.hpp>
 
 using namespace stl;
