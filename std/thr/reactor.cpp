@@ -71,7 +71,7 @@ namespace {
         void drainWakeup() noexcept;
         void run() noexcept override;
         void join() noexcept override;
-        void registerRequest(PollRequest* req) override;
+        void processRequest(PollRequest* req) override;
     };
 }
 
@@ -98,7 +98,7 @@ void ReactorState::rearmOrDisarm(int fd) {
     }
 }
 
-void ReactorState::registerRequest(PollRequest* req) {
+void ReactorState::processRequest(PollRequest* req) {
     timerMutex.lock();
 
     const auto prevEarliest = timers.earliest();

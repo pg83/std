@@ -391,7 +391,7 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
     req.result = 0;
     req.deadline = deadlineUs;
 
-    req.reactor->registerRequest(&req);
+    req.reactor->processRequest(&req);
 
     return req.result;
 }

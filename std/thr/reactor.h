@@ -28,7 +28,7 @@ namespace stl {
 
         virtual void run() noexcept = 0;
         virtual void join() noexcept = 0;
-        virtual void registerRequest(PollRequest* req) = 0;
+        virtual void processRequest(PollRequest* req) = 0;
 
         static ReactorIface* create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool);
     };
