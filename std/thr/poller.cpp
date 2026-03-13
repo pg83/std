@@ -379,9 +379,7 @@ PollerIface* PollerIface::create(ObjPool* pool) {
 }
 
 void PollerIface::waitBase(VisitorFace&& v, u64 deadlineUs) {
-    auto now = monotonicNowUs();
-
-    if (now >= deadlineUs) {
+    if (auto now = monotonicNowUs(); now >= deadlineUs) {
         waitImpl(v, 0);
     } else {
         waitImpl(v, min(deadlineUs - now, (u64)30000000));
