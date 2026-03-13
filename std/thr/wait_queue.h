@@ -5,8 +5,7 @@
 #include <std/ptr/intrusive.h>
 
 namespace stl {
-    class WaitQueue: public ARC {
-    public:
+    struct WaitQueue: public ARC {
         using Ref = IntrusivePtr<WaitQueue>;
 
         struct Item {
