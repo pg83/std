@@ -15,8 +15,8 @@ namespace stl {
 
         ~WaitGroup() noexcept;
 
-        void add(size_t n) noexcept;
         void done() noexcept;
         void wait() noexcept;
+        void add(size_t n) noexcept;
     };
 }
