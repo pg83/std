@@ -374,7 +374,7 @@ PollerIface* PollerIface::create(ObjPool* pool) {
 #elif defined(__APPLE__) || defined(__FreeBSD__)
     return pool->make<KqueuePoller>();
 #else
-    return new pool-><PollPoller>();
+    return pool->make<PollPoller>();
 #endif
 }
 
