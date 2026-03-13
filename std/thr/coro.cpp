@@ -334,13 +334,11 @@ ReactorState::~ReactorState() noexcept {
 }
 
 void ReactorState::rearmOrDisarm(int fd) {
-    auto* entry = fdMap_.find(fd);
-
-    if (!entry || entry->empty()) {
+    if (auto* entry = fdMap_.find(fd); !entry) {
         poller->disarm(fd);
-        if (entry) {
-            fdMap_.erase(fd);
-        }
+    } else if (entry->empty()) {
+        poller->disarm(fd);
+        fdMap_.erase(fd);
     } else {
         poller->arm(fd, entry->flags(), (void*)(uintptr_t)(fd + 1));
     }
