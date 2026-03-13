@@ -1,10 +1,12 @@
 #include "reactor.h"
-#include "mutex.h"
+
 #include "pool.h"
-#include "poller.h"
 #include "coro.h"
+#include "mutex.h"
+#include "poller.h"
 
 #include <std/sys/fd.h>
+#include <std/mem/new.h>
 #include <std/sys/crt.h>
 #include <std/lib/list.h>
 #include <std/map/treap.h>
@@ -53,7 +55,7 @@ namespace {
         }
     };
 
-    struct ReactorState: public ReactorIface {
+    struct ReactorState: public ReactorIface, public Newable {
         CoroExecutor* exec;
         ThreadPool* pool;
         PollerIface* poller;
@@ -65,14 +67,15 @@ namespace {
         bool done;
 
         ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool);
+
         ~ReactorState() noexcept override = default;
 
+        void wakeup() noexcept;
+        void rearmOrDisarm(int fd);
+        void drainWakeup() noexcept;
         void run() noexcept override;
         void join() noexcept override;
         void registerRequest(PollRequest* req) override;
-        void wakeup() noexcept;
-        void drainWakeup() noexcept;
-        void rearmOrDisarm(int fd);
     };
 }
 

@@ -2,13 +2,13 @@
 
 #include "runable.h"
 
-#include <std/mem/new.h>
-#include <std/sys/types.h>
 #include <std/lib/node.h>
+#include <std/sys/types.h>
 #include <std/map/treap_node.h>
 
 namespace stl {
     class ObjPool;
+
     struct ThreadPool;
     struct CoroExecutor;
     struct ReactorIface;
@@ -21,11 +21,12 @@ namespace stl {
         u64 deadline;
 
         void* key() const noexcept override;
-        virtual void parkWith(Runable* afterSuspend) noexcept = 0;
+
         virtual void reSchedule() noexcept = 0;
+        virtual void parkWith(Runable* afterSuspend) noexcept = 0;
     };
 
-    struct ReactorIface: public Newable {
+    struct ReactorIface {
         virtual ~ReactorIface() noexcept;
 
         virtual void run() noexcept = 0;
