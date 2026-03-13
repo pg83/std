@@ -2,8 +2,8 @@
 #include "task.h"
 #include "pool.h"
 #include "mutex.h"
-#include "poller.h"
 #include "thread.h"
+#include "reactor.h"
 #include "cond_var.h"
 #include "mutex_iface.h"
 #include "thread_iface.h"
@@ -14,7 +14,6 @@
 #include <std/sys/crt.h>
 #include <std/rng/pcg.h>
 #include <std/lib/list.h>
-#include <std/map/treap.h>
 #include <std/sym/i_map.h>
 #include <std/sys/atomic.h>
 #include <std/lib/vector.h>
@@ -24,7 +23,6 @@
 #include <std/alg/destruct.h>
 #include <std/lib/ring_buf.h>
 #include <std/mem/obj_pool.h>
-#include <std/map/treap_node.h>
 
 #include <time.h>
 #include <fcntl.h>
@@ -36,7 +34,6 @@ using namespace stl;
 
 namespace {
     struct CoroExecutorImpl;
-    struct ReactorState;
 
     struct ContImpl: public Cont, public Task {
         CoroExecutorImpl* exec_;
@@ -92,7 +89,7 @@ namespace {
     struct CoroExecutorImpl: public CoroExecutor {
         ObjPool::Ref opool_;
         const u64 tlsKey_;
-        Vector<ReactorState*> reactors_;
+        Vector<ReactorIface*> reactors_;
         alignas(64) int inflight_ = 0;
         ScopedFD joinR_;
         ScopedFD joinW_;
@@ -136,7 +133,7 @@ namespace {
             currentCont()->parkWith(afterSuspend);
         }
 
-        ReactorState* pickReactor() noexcept;
+        ReactorIface* pickReactor() noexcept;
 
         MutexIface* createMutex() override;
         CondVarIface* createCondVar() override;
@@ -240,66 +237,16 @@ namespace {
         CoroChannelImpl0(CoroExecutorImpl* exec) noexcept;
     };
 
-    struct PollRequest: public TreapNode, public IntrusiveNode {
+    struct PollRequestImpl: public PollRequest {
         ContImpl* cont;
-        ReactorState* reactor;
-        int fd;
-        u32 flags;
-        u32 result;   // readiness flags returned, 0 = timeout
-        u64 deadline; // absolute monotonic us
 
-        void* key() const noexcept override {
-            return (void*)this;
-        }
-    };
-
-    struct DeadlineTreap: public Treap {
-        bool cmp(void* a, void* b) const noexcept override {
-            auto* ra = (PollRequest*)a;
-            auto* rb = (PollRequest*)b;
-
-            if (ra->deadline != rb->deadline) {
-                return ra->deadline < rb->deadline;
-            }
-
-            return ra < rb;
+        void parkWith(Runable* afterSuspend) noexcept override {
+            cont->parkWith(afterSuspend);
         }
 
-        u64 earliest() const noexcept {
-            auto* n = min();
-
-            return n ? ((PollRequest*)n)->deadline : UINT64_MAX;
+        void reSchedule() noexcept override {
+            cont->reSchedule();
         }
-    };
-
-    struct FdEntry: public IntrusiveList {
-        u32 flags() const noexcept {
-            u32 f = 0;
-            for (auto* n = front(); n != end(); n = n->next) {
-                f |= static_cast<const PollRequest*>(n)->flags;
-            }
-            return f;
-        }
-    };
-
-    struct ReactorState {
-        CoroExecutorImpl* exec;
-        PollerIface* poller;
-        DeadlineTreap timers;
-        IntMap<FdEntry> fdMap_;
-        Mutex timerMutex;
-        ScopedFD wakeReadFd;
-        ScopedFD wakeWriteFd;
-        bool done;
-
-        ReactorState(CoroExecutorImpl* e);
-        ~ReactorState() noexcept;
-
-        void run() noexcept;
-        void wakeup() noexcept;
-        void drainWakeup() noexcept;
-        void registerRequest(PollRequest* req);
-        void rearmOrDisarm(int fd);
     };
 }
 
@@ -315,122 +262,6 @@ ContImpl::~ContImpl() {
     }
 }
 
-ReactorState::ReactorState(CoroExecutorImpl* e)
-    : exec(e)
-    , poller(PollerIface::create(e->opool_.mutPtr()))
-    , timerMutex(e)
-    , done(false)
-{
-    createPipeFD(wakeReadFd, wakeWriteFd);
-    wakeReadFd.setNonBlocking();
-    poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
-}
-
-ReactorState::~ReactorState() noexcept {
-}
-
-void ReactorState::rearmOrDisarm(int fd) {
-    if (auto* entry = fdMap_.find(fd); !entry) {
-        poller->disarm(fd);
-    } else if (entry->empty()) {
-        poller->disarm(fd);
-        fdMap_.erase(fd);
-    } else {
-        poller->arm(fd, entry->flags(), (void*)(uintptr_t)(fd + 1));
-    }
-}
-
-void ReactorState::registerRequest(PollRequest* req) {
-    timerMutex.lock();
-
-    const auto prevEarliest = timers.earliest();
-    timers.insert(req);
-    auto& entry = fdMap_[req->fd];
-    entry.pushBack(req);
-    const auto fl = entry.flags();
-    const auto fd = req->fd;
-    const auto needsWakeup = req->deadline < prevEarliest;
-
-    req->cont->parkWith(makeRunablePtr([this, fd, fl, needsWakeup]() {
-        poller->arm(fd, fl, (void*)(uintptr_t)(fd + 1));
-        timerMutex.unlock();
-        if (needsWakeup) {
-            wakeup();
-        }
-    }));
-}
-
-void ReactorState::wakeup() noexcept {
-    char b = 1;
-
-    ::write(wakeWriteFd.get(), &b, 1);
-}
-
-void ReactorState::drainWakeup() noexcept {
-    char buf[64];
-
-    while (::read(wakeReadFd.get(), buf, sizeof(buf)) > 0) {
-    }
-}
-
-void ReactorState::run() noexcept {
-    while (!done) {
-        const u64 earliest = LockGuard(timerMutex).run([this]() {
-            return timers.earliest();
-        });
-
-        exec->pool_->beforeBlock();
-
-        poller->wait([this](PollEvent* ev) {
-            if (ev->data == nullptr) {
-                drainWakeup();
-                poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
-            } else {
-                int fd = (uintptr_t)ev->data - 1;
-
-                LockGuard(timerMutex).run([this, fd, evFlags = ev->flags]() {
-                    if (auto* entry = fdMap_.find(fd); entry) {
-                        for (auto n = entry->mutFront(), e = entry->mutEnd(); n != e;) {
-                            auto* next = n->next;
-
-                            if (auto* req = (PollRequest*)n; req->flags & evFlags) {
-                                req->result = evFlags;
-                                n->remove();
-                                timers.remove(req);
-                                req->cont->reSchedule();
-                            }
-
-                            n = next;
-                        }
-
-                        rearmOrDisarm(fd);
-                    }
-                });
-            }
-        }, earliest);
-
-        LockGuard(timerMutex).run([this, now = monotonicNowUs()]() {
-            while (auto* node = timers.min()) {
-                auto* req = (PollRequest*)node;
-
-                if (req->deadline > now) {
-                    break;
-                }
-
-                timers.remove(req);
-                req->remove();
-
-                rearmOrDisarm(req->fd);
-
-                req->result = 0;
-                req->cont->reSchedule();
-            }
-        });
-
-        exec->yield();
-    }
-}
-
 CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     : opool_(ObjPool::fromMemory())
     , tlsKey_(registerTlsKey())
@@ -439,7 +270,7 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     createPipeFD(joinR_, joinW_);
 
     for (size_t i = 0; i < reactors; ++i) {
-        reactors_.pushBack(opool_->make<ReactorState>(this));
+        reactors_.pushBack(ReactorIface::create(this, pool_.mutPtr(), opool_.mutPtr()));
     }
 
     for (auto* r : reactors_) {
@@ -453,8 +284,7 @@ CoroExecutorImpl::~CoroExecutorImpl() noexcept {
     join();
 
     for (auto* r : reactors_) {
-        r->done = true;
-        r->wakeup();
+        r->join();
     }
 
     while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) != 0) {
@@ -470,7 +300,7 @@ void CoroExecutorImpl::join() noexcept {
     }
 }
 
-ReactorState* CoroExecutorImpl::pickReactor() noexcept {
+ReactorIface* CoroExecutorImpl::pickReactor() noexcept {
     return reactors_[pool_->random().uniformBiased((u32)reactors_.length())];
 }
 
@@ -552,7 +382,7 @@ CoroExecutor* ContImpl::executor() noexcept {
 }
 
 u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
-    PollRequest req;
+    PollRequestImpl req;
 
     req.cont = currentCont();
     req.reactor = pickReactor();
