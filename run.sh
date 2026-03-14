@@ -3,7 +3,7 @@
 set -xue
 
 EXTRA=
-#EXTRA=lib/build/opt/O0
+EXTRA=lib/build/opt/O0
 
 ~/ix/ix run \
     set/dev/cc \
