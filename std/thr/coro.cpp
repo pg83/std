@@ -377,15 +377,9 @@ void ContImpl::parkWith(Runable* afterSuspend) noexcept {
 
 void ContImpl::run() noexcept {
     alignas(max_align_t) char workerBuf[Context::kBufSize];
-    auto* wctx = Context::create(workerBuf);
 
     *exec_->tls() = this;
-    workerCtx_ = wctx;
-
-    wctx->switchTo(*ctx_);
-
-    workerCtx_ = nullptr;
-    *exec_->tls() = nullptr;
+    (workerCtx_ = Context::create(workerBuf))->switchTo(*ctx_);
 
     if (auto* as = exchange(afterSuspend_, nullptr); as) {
         // after as->run(), cont may already be rescheduled by another thread
