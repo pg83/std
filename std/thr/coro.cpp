@@ -416,7 +416,6 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
     req.reactor = pickReactor();
     req.fd = fd;
     req.flags = flags;
-    req.result = 0;
     req.deadline = deadlineUs;
 
     req.reactor->processRequest(&req);
@@ -456,7 +455,6 @@ void CoroCondVarImpl::signal() noexcept {
 
     if (auto* node = waiters_.popFrontOrNull(); node) {
         ((ContImpl*)(Task*)node)->reSchedule();
-        ;
     }
 }
 

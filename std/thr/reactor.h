@@ -14,7 +14,7 @@ namespace stl {
 
     struct PollRequest: public TreapNode, public IntrusiveNode {
         ReactorIface* reactor;
-        int fd;
+        u32 fd;
         u32 flags;
         u64 deadline;
 
