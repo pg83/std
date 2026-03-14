@@ -5,6 +5,8 @@
 #include <std/mem/new.h>
 #include <ucontext.h>
 
+using namespace stl;
+
 namespace __cxxabiv1 {
     struct __cxa_eh_globals {
         void* caughtExceptions;
@@ -24,29 +26,29 @@ namespace stl {
     };
 
     static_assert(sizeof(ContextImpl) <= Context::kBufSize);
+}
 
-    Context* Context::create(void* buf) noexcept {
-        return new (buf) ContextImpl();
-    }
+Context* Context::create(void* buf) noexcept {
+    return new (buf) ContextImpl();
+}
 
-    Context* Context::create(void* buf, void* stackPtr, size_t stackSize, void (*fn)(u32, u32), uintptr_t p) noexcept {
-        auto* impl = new (buf) ContextImpl();
+Context* Context::create(void* buf, void* stackPtr, size_t stackSize, void (*fn)(u32, u32), uintptr_t p) noexcept {
+    auto* impl = new (buf) ContextImpl();
 
-        getcontext(&impl->uctx);
-        impl->uctx.uc_stack.ss_sp = stackPtr;
-        impl->uctx.uc_stack.ss_size = stackSize;
-        impl->uctx.uc_link = nullptr;
-        makecontext(&impl->uctx, (void (*)())fn, 2, (u32)p, (u32)(p >> 32));
+    getcontext(&impl->uctx);
+    impl->uctx.uc_stack.ss_sp = stackPtr;
+    impl->uctx.uc_stack.ss_size = stackSize;
+    impl->uctx.uc_link = nullptr;
+    makecontext(&impl->uctx, (void (*)())fn, 2, (u32)p, (u32)(p >> 32));
 
-        return impl;
-    }
+    return impl;
+}
 
-    void ContextImpl::switchTo(Context& target) noexcept {
-        auto& t = (ContextImpl&)target;
-        auto* ehg = __cxxabiv1::__cxa_get_globals();
+void ContextImpl::switchTo(Context& target) noexcept {
+    auto& t = (ContextImpl&)target;
+    auto* ehg = __cxxabiv1::__cxa_get_globals();
 
-        ehCaughtExceptions = exchange(ehg->caughtExceptions, t.ehCaughtExceptions);
-        ehUncaughtExceptions = exchange(ehg->uncaughtExceptions, t.ehUncaughtExceptions);
-        swapcontext(&uctx, &t.uctx);
-    }
+    ehCaughtExceptions = exchange(ehg->caughtExceptions, t.ehCaughtExceptions);
+    ehUncaughtExceptions = exchange(ehg->uncaughtExceptions, t.ehUncaughtExceptions);
+    swapcontext(&uctx, &t.uctx);
 }

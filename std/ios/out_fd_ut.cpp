@@ -160,7 +160,9 @@ STD_TEST_SUITE(FDRegular) {
 
         const size_t bufSize = 65536;
         u8* writeBuf = new u8[bufSize];
-        STD_DEFER { delete[] writeBuf; };
+        STD_DEFER {
+            delete[] writeBuf;
+        };
         for (size_t i = 0; i < bufSize; ++i) {
             writeBuf[i] = (u8)(i % 256);
         }
@@ -171,7 +173,9 @@ STD_TEST_SUITE(FDRegular) {
         lseek(fd, 0, SEEK_SET);
 
         u8* readBuf = new u8[bufSize];
-        STD_DEFER { delete[] readBuf; };
+        STD_DEFER {
+            delete[] readBuf;
+        };
         ssize_t readBytes = ::read(fd, readBuf, bufSize);
         STD_INSIST(readBytes == (ssize_t)bufSize);
 
@@ -458,7 +462,9 @@ STD_TEST_SUITE(FDPipe) {
 
         const size_t bufSize = 8192;
         u8* writeBuf = new u8[bufSize];
-        STD_DEFER { delete[] writeBuf; };
+        STD_DEFER {
+            delete[] writeBuf;
+        };
         for (size_t i = 0; i < bufSize; ++i) {
             writeBuf[i] = (u8)(i % 256);
         }
@@ -467,7 +473,9 @@ STD_TEST_SUITE(FDPipe) {
         fdPipe.finish();
 
         u8* readBuf = new u8[bufSize];
-        STD_DEFER { delete[] readBuf; };
+        STD_DEFER {
+            delete[] readBuf;
+        };
         size_t totalRead = 0;
         while (totalRead < bufSize) {
             size_t bytesRead = readEnd.read(readBuf + totalRead, bufSize - totalRead);

@@ -88,13 +88,17 @@ STD_TEST_SUITE(MemoryInputAsInput) {
     STD_TEST(LargeRead) {
         const size_t bufSize = 100000;
         u8* data = new u8[bufSize];
-        STD_DEFER { delete[] data; };
+        STD_DEFER {
+            delete[] data;
+        };
         for (size_t i = 0; i < bufSize; ++i) {
             data[i] = (u8)(i % 256);
         }
         MemoryInput input(data, bufSize);
         u8* buffer = new u8[bufSize];
-        STD_DEFER { delete[] buffer; };
+        STD_DEFER {
+            delete[] buffer;
+        };
         size_t bytesRead = input.read(buffer, bufSize);
         STD_INSIST(bytesRead == bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
@@ -221,7 +225,9 @@ STD_TEST_SUITE(MemoryInputAsZeroCopy) {
     STD_TEST(LargeNext) {
         const size_t bufSize = 100000;
         u8* data = new u8[bufSize];
-        STD_DEFER { delete[] data; };
+        STD_DEFER {
+            delete[] data;
+        };
         for (size_t i = 0; i < bufSize; ++i) {
             data[i] = (u8)(i % 256);
         }
@@ -324,7 +330,9 @@ STD_TEST_SUITE(MemoryInputWithCopy) {
     STD_TEST(CopyLarge) {
         const size_t bufSize = 100000;
         u8* data = new u8[bufSize];
-        STD_DEFER { delete[] data; };
+        STD_DEFER {
+            delete[] data;
+        };
         for (size_t i = 0; i < bufSize; ++i) {
             data[i] = (u8)(i % 256);
         }
@@ -406,7 +414,9 @@ STD_TEST_SUITE(MemoryInputWithCopy) {
         const size_t repeats = 500;
         const size_t totalSize = patternLen * repeats;
         u8* data = new u8[totalSize];
-        STD_DEFER { delete[] data; };
+        STD_DEFER {
+            delete[] data;
+        };
         for (size_t i = 0; i < totalSize; ++i) {
             data[i] = (u8)(i % patternLen);
         }

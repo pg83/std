@@ -89,7 +89,9 @@ STD_TEST_SUITE(FDInput) {
 
         const size_t bufSize = 8192;
         u8* writeBuf = new u8[bufSize];
-        STD_DEFER { delete[] writeBuf; };
+        STD_DEFER {
+            delete[] writeBuf;
+        };
         for (size_t i = 0; i < bufSize; ++i) {
             writeBuf[i] = (u8)(i % 256);
         }
@@ -98,7 +100,9 @@ STD_TEST_SUITE(FDInput) {
         fdPipe.finish();
 
         u8* readBuf = new u8[bufSize];
-        STD_DEFER { delete[] readBuf; };
+        STD_DEFER {
+            delete[] readBuf;
+        };
         size_t totalRead = 0;
         while (totalRead < bufSize) {
             size_t bytesRead = fdInput.read(readBuf + totalRead, bufSize - totalRead);

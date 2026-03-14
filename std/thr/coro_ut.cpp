@@ -479,7 +479,9 @@ STD_TEST_SUITE(CoroPoll) {
         };
 
         Pipe* pipes = new Pipe[N];
-        STD_DEFER { delete[] pipes; };
+        STD_DEFER {
+            delete[] pipes;
+        };
 
         for (int i = 0; i < N; i++) {
             createPipeFD(pipes[i].r, pipes[i].w);
@@ -545,7 +547,7 @@ STD_TEST_SUITE(CoroPoll) {
                     throw 42;
                 } catch (...) {
                     void* dummy = nullptr;
-                    ch.enqueue(&dummy);  // park; B will wake us on another thread
+                    ch.enqueue(&dummy); // park; B will wake us on another thread
                     throw;
                 }
             } catch (int v) {
@@ -558,7 +560,7 @@ STD_TEST_SUITE(CoroPoll) {
         exec->spawn([&]() {
             void* v;
             ch.dequeue(&v);  // wake A (reschedules it into pool)
-            doW(1000000000);   // keep this thread busy so the other thread picks up A
+            doW(1000000000); // keep this thread busy so the other thread picks up A
         });
 
         exec->join();

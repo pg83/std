@@ -248,7 +248,6 @@ namespace {
     };
 }
 
-
 u8 ContImpl::priority() const noexcept {
     return priority_;
 }
@@ -455,7 +454,8 @@ void CoroCondVarImpl::signal() noexcept {
     LockGuard guard(queueMutex_);
 
     if (auto* node = waiters_.popFrontOrNull(); node) {
-        ((ContImpl*)(Task*)node)->reSchedule();;
+        ((ContImpl*)(Task*)node)->reSchedule();
+        ;
     }
 }
 

@@ -41,7 +41,9 @@ STD_TEST_SUITE(InputReadAll) {
     STD_TEST(LargeInput) {
         const size_t bufSize = 100000;
         u8* data = new u8[bufSize];
-        STD_DEFER { delete[] data; };
+        STD_DEFER {
+            delete[] data;
+        };
         for (size_t i = 0; i < bufSize; ++i) {
             data[i] = (u8)(i % 256);
         }
@@ -106,7 +108,9 @@ STD_TEST_SUITE(InputReadAll) {
     STD_TEST(LargeChunkBoundary) {
         const size_t size = 65536;
         u8* data = new u8[size];
-        STD_DEFER { delete[] data; };
+        STD_DEFER {
+            delete[] data;
+        };
         for (size_t i = 0; i < size; ++i) {
             data[i] = (u8)(i % 256);
         }
@@ -133,7 +137,9 @@ STD_TEST_SUITE(InputReadAll) {
         const size_t repeats = 1000;
         const size_t totalSize = patternLen * repeats;
         u8* data = new u8[totalSize];
-        STD_DEFER { delete[] data; };
+        STD_DEFER {
+            delete[] data;
+        };
         for (size_t i = 0; i < totalSize; ++i) {
             data[i] = (u8)(i % patternLen);
         }

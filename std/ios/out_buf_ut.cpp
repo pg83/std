@@ -44,7 +44,9 @@ STD_TEST_SUITE(OutBufBasicWrite) {
         OutBuf buf(slave);
         const size_t size = 100000;
         u8* data = new u8[size];
-        STD_DEFER { delete[] data; };
+        STD_DEFER {
+            delete[] data;
+        };
         for (size_t i = 0; i < size; ++i) {
             data[i] = (u8)(i % 256);
         }
@@ -63,7 +65,9 @@ STD_TEST_SUITE(OutBufBasicWrite) {
         buf.write("small", 5);
         const size_t largeSize = 5000;
         u8* largeData = new u8[largeSize];
-        STD_DEFER { delete[] largeData; };
+        STD_DEFER {
+            delete[] largeData;
+        };
         memset(largeData, 'X', largeSize);
         buf.write(largeData, largeSize);
         buf.write("end", 3);
@@ -173,7 +177,9 @@ STD_TEST_SUITE(OutBufChunkSize) {
         OutBuf buf(slave, 65536);
         const size_t testSize = 10000;
         u8* data = new u8[testSize];
-        STD_DEFER { delete[] data; };
+        STD_DEFER {
+            delete[] data;
+        };
         memset(data, 'A', testSize);
         buf.write(data, testSize);
         buf.finish();
@@ -429,7 +435,9 @@ STD_TEST_SUITE(OutBufBinaryData) {
         OutBuf buf(slave);
         const size_t size = 1000;
         u8* data = new u8[size];
-        STD_DEFER { delete[] data; };
+        STD_DEFER {
+            delete[] data;
+        };
         for (size_t i = 0; i < size; ++i) {
             data[i] = (u8)(i % 256);
         }

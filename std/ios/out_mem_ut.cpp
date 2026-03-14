@@ -78,11 +78,15 @@ STD_TEST_SUITE(MemoryOutputAsOutput) {
     STD_TEST(LargeWrite) {
         const size_t bufSize = 100000;
         u8* buffer = new u8[bufSize];
-        STD_DEFER { delete[] buffer; };
+        STD_DEFER {
+            delete[] buffer;
+        };
         memset(buffer, 0, bufSize);
         MemoryOutput output(buffer);
         u8* data = new u8[bufSize];
-        STD_DEFER { delete[] data; };
+        STD_DEFER {
+            delete[] data;
+        };
         for (size_t i = 0; i < bufSize; ++i) {
             data[i] = (u8)(i % 256);
         }
@@ -204,7 +208,9 @@ STD_TEST_SUITE(MemoryOutputAsZeroCopy) {
     STD_TEST(LargeImbue) {
         const size_t bufSize = 100000;
         u8* buffer = new u8[bufSize];
-        STD_DEFER { delete[] buffer; };
+        STD_DEFER {
+            delete[] buffer;
+        };
         memset(buffer, 0, bufSize);
         MemoryOutput output(buffer);
         size_t avail;
@@ -277,13 +283,17 @@ STD_TEST_SUITE(MemoryOutputWithMemoryInput) {
     STD_TEST(CopyLarge) {
         const size_t bufSize = 100000;
         u8* inputData = new u8[bufSize];
-        STD_DEFER { delete[] inputData; };
+        STD_DEFER {
+            delete[] inputData;
+        };
         for (size_t i = 0; i < bufSize; ++i) {
             inputData[i] = (u8)(i % 256);
         }
         MemoryInput input(inputData, bufSize);
         u8* buffer = new u8[bufSize];
-        STD_DEFER { delete[] buffer; };
+        STD_DEFER {
+            delete[] buffer;
+        };
         memset(buffer, 0, bufSize);
         MemoryOutput output(buffer);
         copy(input, output);
@@ -345,13 +355,17 @@ STD_TEST_SUITE(MemoryOutputWithMemoryInput) {
         const size_t repeats = 500;
         const size_t totalSize = patternLen * repeats;
         u8* inputData = new u8[totalSize];
-        STD_DEFER { delete[] inputData; };
+        STD_DEFER {
+            delete[] inputData;
+        };
         for (size_t i = 0; i < totalSize; ++i) {
             inputData[i] = (u8)(i % patternLen);
         }
         MemoryInput input(inputData, totalSize);
         u8* buffer = new u8[totalSize];
-        STD_DEFER { delete[] buffer; };
+        STD_DEFER {
+            delete[] buffer;
+        };
         memset(buffer, 0, totalSize);
         MemoryOutput output(buffer);
         copy(input, output);
@@ -429,7 +443,9 @@ STD_TEST_SUITE(MemoryOutputWithFDInput) {
         createPipeFD(readEnd, writeEnd);
         const size_t bufSize = 8192;
         u8* testData = new u8[bufSize];
-        STD_DEFER { delete[] testData; };
+        STD_DEFER {
+            delete[] testData;
+        };
         for (size_t i = 0; i < bufSize; ++i) {
             testData[i] = (u8)(i % 256);
         }
@@ -437,7 +453,9 @@ STD_TEST_SUITE(MemoryOutputWithFDInput) {
         writeEnd.close();
         FDInput fdInput(readEnd);
         u8* buffer = new u8[bufSize];
-        STD_DEFER { delete[] buffer; };
+        STD_DEFER {
+            delete[] buffer;
+        };
         memset(buffer, 0, bufSize);
         MemoryOutput output(buffer);
         copy(fdInput, output);
