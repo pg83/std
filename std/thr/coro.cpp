@@ -50,23 +50,8 @@ namespace {
         unsigned int ehUncaughtExceptions = 0;
 
         Context() = default;
-
-        Context(void* stackPtr, size_t stackSize, void (*fn)(u32, u32), uintptr_t p) {
-            getcontext(&uctx);
-            uctx.uc_stack.ss_sp = stackPtr;
-            uctx.uc_stack.ss_size = stackSize;
-            uctx.uc_link = nullptr;
-            makecontext(&uctx, (void (*)())fn, 2, (u32)p, (u32)(p >> 32));
-        }
-
-        void switchTo(Context& target) {
-            auto* ehg = __cxxabiv1::__cxa_get_globals();
-            ehCaughtExceptions = ehg->caughtExceptions;
-            ehUncaughtExceptions = ehg->uncaughtExceptions;
-            ehg->caughtExceptions = target.ehCaughtExceptions;
-            ehg->uncaughtExceptions = target.ehUncaughtExceptions;
-            swapcontext(&uctx, &target.uctx);
-        }
+        Context(void* stackPtr, size_t stackSize, void (*fn)(u32, u32), uintptr_t p) noexcept;
+        void switchTo(Context& target) noexcept;
     };
 
     struct ContImpl: public Cont, public Task {
@@ -280,6 +265,21 @@ namespace {
             cont->reSchedule();
         }
     };
+}
+
+Context::Context(void* stackPtr, size_t stackSize, void (*fn)(u32, u32), uintptr_t p) noexcept {
+    getcontext(&uctx);
+    uctx.uc_stack.ss_sp = stackPtr;
+    uctx.uc_stack.ss_size = stackSize;
+    uctx.uc_link = nullptr;
+    makecontext(&uctx, (void (*)())fn, 2, (u32)p, (u32)(p >> 32));
+}
+
+void Context::switchTo(Context& target) noexcept {
+    auto* ehg = __cxxabiv1::__cxa_get_globals();
+    ehCaughtExceptions = exchange(ehg->caughtExceptions, target.ehCaughtExceptions);
+    ehUncaughtExceptions = exchange(ehg->uncaughtExceptions, target.ehUncaughtExceptions);
+    swapcontext(&uctx, &target.uctx);
 }
 
 u8 ContImpl::priority() const noexcept {
