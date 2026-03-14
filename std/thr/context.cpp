@@ -102,11 +102,9 @@ namespace {
         ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
 
         void switchTo(Context& target) noexcept override;
-    };
-}
 
-static void runableTrampoline(u32 lo, u32 hi) {
-    ((Runable*)(uintptr_t)(((uintptr_t)hi << 32) | lo))->run();
+        static void trampoline(u32 lo, u32 hi);
+    };
 }
 
 ContextImpl::ContextImpl() noexcept {
@@ -121,7 +119,11 @@ ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexc
 
     auto p = (uintptr_t)&entry;
 
-    makecontext(&uctx, (void (*)())runableTrampoline, 2, (u32)p, (u32)(p >> 32));
+    makecontext(&uctx, (void (*)())trampoline, 2, (u32)p, (u32)(p >> 32));
+}
+
+void ContextImpl::trampoline(u32 lo, u32 hi) {
+    ((Runable*)(uintptr_t)(((uintptr_t)hi << 32) | lo))->run();
 }
 
 void ContextImpl::switchTo(Context& target) noexcept {
