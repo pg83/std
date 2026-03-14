@@ -1,9 +1,8 @@
 #include "context.h"
 
-#include <std/alg/exchange.h>
-#include <std/thr/runable.h>
-
 #include <std/mem/new.h>
+#include <std/thr/runable.h>
+#include <std/alg/exchange.h>
 
 using namespace stl;
 
