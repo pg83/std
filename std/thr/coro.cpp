@@ -50,6 +50,10 @@ namespace {
 
         virtual ~ContImpl();
 
+        void operator delete(void* p) noexcept {
+            freeMemory(p);
+        }
+
         void parkWith(Runable* afterSuspend) noexcept;
         void run() noexcept override;
         void reSchedule() noexcept;
@@ -58,10 +62,6 @@ namespace {
     struct alignas(max_align_t) HeapContImpl: public ContImpl {
         void* operator new(size_t, size_t stackSize) {
             return allocateMemory(sizeof(HeapContImpl) + Context::implSize() + stackSize);
-        }
-
-        void operator delete(void* p) noexcept {
-            freeMemory(p);
         }
 
         HeapContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
@@ -73,10 +73,6 @@ namespace {
     struct alignas(max_align_t) ExtStackContImpl: public ContImpl {
         void* operator new(size_t sz) {
             return allocateMemory(sz + Context::implSize());
-        }
-
-        void operator delete(void* p) noexcept {
-            freeMemory(p);
         }
 
         ExtStackContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
