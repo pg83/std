@@ -18,8 +18,6 @@ namespace stl {
 
     struct Cont {
         u64 id() const noexcept;
-
-        virtual CoroExecutor* executor() noexcept = 0;
     };
 
     struct SpawnParams {

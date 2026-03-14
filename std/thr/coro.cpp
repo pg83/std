@@ -50,7 +50,6 @@ namespace {
         virtual ~ContImpl();
 
         void parkWith(Runable* afterSuspend) noexcept;
-        CoroExecutor* executor() noexcept override;
         void run() noexcept override;
         void reSchedule() noexcept;
         void entryX() noexcept;
@@ -374,10 +373,6 @@ SpawnParams::SpawnParams() noexcept
     , runable(nullptr)
     , priority(0)
 {
-}
-
-CoroExecutor* ContImpl::executor() noexcept {
-    return exec_;
 }
 
 u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
