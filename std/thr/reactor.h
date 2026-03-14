@@ -16,10 +16,9 @@ namespace stl {
         ReactorIface* reactor;
         int fd;
         u32 flags;
-        u32 result;
         u64 deadline;
 
-        virtual void reSchedule() noexcept = 0;
+        virtual void complete(u32 result) noexcept = 0;
         virtual void parkWith(Runable* afterSuspend) noexcept = 0;
     };
 

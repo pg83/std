@@ -246,12 +246,14 @@ namespace {
 
     struct PollRequestImpl: public PollRequest {
         ContImpl* cont;
+        u32 result = 0;
 
         void parkWith(Runable* afterSuspend) noexcept override {
             cont->parkWith(afterSuspend);
         }
 
-        void reSchedule() noexcept override {
+        void complete(u32 res) noexcept override {
+            result = res;
             cont->reSchedule();
         }
     };

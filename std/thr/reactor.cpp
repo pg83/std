@@ -160,10 +160,9 @@ void ReactorState::run() noexcept {
                             auto* next = n->next;
 
                             if (auto* req = (PollRequest*)n; req->flags & evFlags) {
-                                req->result = evFlags;
                                 n->remove();
                                 timers.remove(req);
-                                req->reSchedule();
+                                req->complete(evFlags);
                             }
 
                             n = next;
@@ -188,8 +187,7 @@ void ReactorState::run() noexcept {
 
                 rearmOrDisarm(req->fd);
 
-                req->result = 0;
-                req->reSchedule();
+                req->complete(0);
             }
         });
 
