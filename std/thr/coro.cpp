@@ -602,8 +602,8 @@ void CoroChannelImpl::close() {
 
     closed_ = true;
 
-    while (!receivers_.empty()) {
-        ((Waiter*)receivers_.popFront())->cont->reSchedule();
+    while (auto w = (Waiter*)receivers_.popFrontOrNull()) {
+        w->cont->reSchedule();
     }
 }
 
