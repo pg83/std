@@ -26,15 +26,15 @@ namespace stl {
         void switchTo(Context& target) noexcept override;
     };
 
+    static void runableTrampoline(u32 lo, u32 hi) {
+        ((Runable*)(uintptr_t)(((uintptr_t)hi << 32) | lo))->run();
+    }
+
     static_assert(sizeof(ContextImpl) <= Context::kBufSize);
 }
 
 Context* Context::create(void* buf) noexcept {
     return new (buf) ContextImpl();
-}
-
-static void runableTrampoline(u32 lo, u32 hi) {
-    ((Runable*)(uintptr_t)(((uintptr_t)hi << 32) | lo))->run();
 }
 
 Context* Context::create(void* buf, void* stackPtr, size_t stackSize, Runable& entry) noexcept {
