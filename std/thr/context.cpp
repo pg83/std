@@ -24,6 +24,7 @@ namespace stl {
 
         ContextImpl() = default;
         ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
+
         void switchTo(Context& target) noexcept override;
 
         __attribute__((naked, noinline))
@@ -32,7 +33,6 @@ namespace stl {
         [[noreturn]]
         static void trampoline();
     };
-
 }
 
 void ContextImpl::swapContext(u64*, u64*) {
@@ -100,6 +100,7 @@ namespace stl {
 
         ContextImpl() noexcept;
         ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
+
         void switchTo(Context& target) noexcept override;
     };
 }
@@ -112,13 +113,13 @@ ContextImpl::ContextImpl() noexcept {
 }
 
 ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept {
-    auto p = (uintptr_t)&entry;
-
     getcontext(&uctx);
 
     uctx.uc_stack.ss_sp = stackPtr;
     uctx.uc_stack.ss_size = stackSize;
     uctx.uc_link = nullptr;
+
+    auto p = (uintptr_t)&entry;
 
     makecontext(&uctx, (void (*)())runableTrampoline, 2, (u32)p, (u32)(p >> 32));
 }
