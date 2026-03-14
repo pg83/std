@@ -35,6 +35,10 @@ namespace {
     struct CoroExecutorImpl;
 
     struct ContImpl: public Cont, public Task {
+        struct EntryRunable: public Runable {
+            void run() noexcept override;
+        };
+
         CoroExecutorImpl* exec_;
         alignas(max_align_t) char ctxBuf_[Context::kBufSize];
         Context* ctx_;
@@ -42,6 +46,7 @@ namespace {
         Runable* runable_;
         Runable* afterSuspend_;
         u8 priority_;
+        EntryRunable entryRunable_;
 
         u8 priority() const noexcept override;
 
@@ -53,8 +58,6 @@ namespace {
         void run() noexcept override;
         void reSchedule() noexcept;
         void entryX() noexcept;
-
-        static void entry(u32 lo, u32 hi) noexcept;
     };
 
     struct alignas(max_align_t) HeapContImpl: public ContImpl {
@@ -350,7 +353,7 @@ bool CoroMutexImpl::tryLock() noexcept {
 
 ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
     : exec_(exec)
-    , ctx_(Context::create(ctxBuf_, params.stackPtr, params.stackSize, ContImpl::entry, (uintptr_t)this))
+    , ctx_(Context::create(ctxBuf_, params.stackPtr, params.stackSize, entryRunable_))
     , workerCtx_(nullptr)
     , runable_(params.runable)
     , afterSuspend_(nullptr)
@@ -386,14 +389,15 @@ u64 Cont::id() const noexcept {
     return (u64)(size_t)this;
 }
 
+void ContImpl::EntryRunable::run() noexcept {
+    auto* cont = (ContImpl*)((char*)this - offsetof(ContImpl, entryRunable_));
+    cont->entryX();
+}
+
 void ContImpl::entryX() noexcept {
     runable_->run();
     runable_ = nullptr;
     ctx_->switchTo(*workerCtx_);
-}
-
-void ContImpl::entry(u32 lo, u32 hi) noexcept {
-    ((ContImpl*)(((uintptr_t)hi << 32) | lo))->entryX();
 }
 
 void ContImpl::reSchedule() noexcept {

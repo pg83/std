@@ -1,6 +1,7 @@
 #include "context.h"
 
 #include <std/alg/exchange.h>
+#include <std/thr/runable.h>
 
 #include <std/mem/new.h>
 #include <ucontext.h>
@@ -32,14 +33,19 @@ Context* Context::create(void* buf) noexcept {
     return new (buf) ContextImpl();
 }
 
-Context* Context::create(void* buf, void* stackPtr, size_t stackSize, void (*fn)(u32, u32), uintptr_t p) noexcept {
+static void runableTrampoline(u32 lo, u32 hi) {
+    ((Runable*)(uintptr_t)(((uintptr_t)hi << 32) | lo))->run();
+}
+
+Context* Context::create(void* buf, void* stackPtr, size_t stackSize, Runable& entry) noexcept {
     auto* impl = new (buf) ContextImpl();
+    auto p = (uintptr_t)&entry;
 
     getcontext(&impl->uctx);
     impl->uctx.uc_stack.ss_sp = stackPtr;
     impl->uctx.uc_stack.ss_size = stackSize;
     impl->uctx.uc_link = nullptr;
-    makecontext(&impl->uctx, (void (*)())fn, 2, (u32)p, (u32)(p >> 32));
+    makecontext(&impl->uctx, (void (*)())runableTrampoline, 2, (u32)p, (u32)(p >> 32));
 
     return impl;
 }

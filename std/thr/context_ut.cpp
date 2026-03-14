@@ -1,5 +1,6 @@
 #include "context.h"
 
+#include <std/thr/runable.h>
 #include <std/tst/ut.h>
 
 using namespace stl;
@@ -15,20 +16,25 @@ namespace {
         int counter = 0;
     };
 
-    static void switchFn(u32 lo, u32 hi) {
-        auto* s = (SwitchState*)(((uintptr_t)hi << 32) | lo);
-        ++s->counter;
-        s->worker->switchTo(*s->main);
-    }
-
-    static void multiSwitchFn(u32 lo, u32 hi) {
-        auto* s = (SwitchState*)(((uintptr_t)hi << 32) | lo);
-
-        for (int i = 0; i < 5; ++i) {
+    struct SwitchFn: public Runable {
+        SwitchState* s;
+        SwitchFn(SwitchState* s) : s(s) {}
+        void run() noexcept override {
             ++s->counter;
             s->worker->switchTo(*s->main);
         }
-    }
+    };
+
+    struct MultiSwitchFn: public Runable {
+        SwitchState* s;
+        MultiSwitchFn(SwitchState* s) : s(s) {}
+        void run() noexcept override {
+            for (int i = 0; i < 5; ++i) {
+                ++s->counter;
+                s->worker->switchTo(*s->main);
+            }
+        }
+    };
 }
 
 STD_TEST_SUITE(Context) {
@@ -36,9 +42,10 @@ STD_TEST_SUITE(Context) {
         alignas(max_align_t) char mainBuf[Context::kBufSize];
         alignas(max_align_t) char workerBuf[Context::kBufSize];
         SwitchState s;
+        SwitchFn fn(&s);
 
         s.main = Context::create(mainBuf);
-        s.worker = Context::create(workerBuf, gStack, kStackSize, switchFn, (uintptr_t)&s);
+        s.worker = Context::create(workerBuf, gStack, kStackSize, fn);
 
         s.main->switchTo(*s.worker);
 
@@ -49,9 +56,10 @@ STD_TEST_SUITE(Context) {
         alignas(max_align_t) char mainBuf[Context::kBufSize];
         alignas(max_align_t) char workerBuf[Context::kBufSize];
         SwitchState s;
+        MultiSwitchFn fn(&s);
 
         s.main = Context::create(mainBuf);
-        s.worker = Context::create(workerBuf, gStack, kStackSize, multiSwitchFn, (uintptr_t)&s);
+        s.worker = Context::create(workerBuf, gStack, kStackSize, fn);
 
         for (int i = 0; i < 5; ++i) {
             s.main->switchTo(*s.worker);
@@ -61,8 +69,6 @@ STD_TEST_SUITE(Context) {
     }
 
     STD_TEST(EhStatePreserved) {
-        // Exception state (caughtExceptions) must survive a context switch:
-        // throw in worker, switch back to main mid-catch, switch back, rethrow.
         alignas(max_align_t) char mainBuf[Context::kBufSize];
         alignas(max_align_t) char workerBuf[Context::kBufSize];
 
@@ -72,28 +78,32 @@ STD_TEST_SUITE(Context) {
             int caught = 0;
         } s;
 
+        struct EhFn: public Runable {
+            State* s;
+            EhFn(State* s) : s(s) {}
+            void run() noexcept override {
+                try {
+                    throw 42;
+                } catch (...) {
+                    s->worker->switchTo(*s->main);
+                    try {
+                        throw;
+                    } catch (int v) {
+                        s->caught = v;
+                    }
+                }
+                s->worker->switchTo(*s->main);
+            }
+        };
+
         static char stack[kStackSize];
+        EhFn fn(&s);
 
         s.main = Context::create(mainBuf);
-        s.worker = Context::create(workerBuf, stack, kStackSize, [](u32 lo, u32 hi) {
-            auto* s = (State*)(((uintptr_t)hi << 32) | lo);
+        s.worker = Context::create(workerBuf, stack, kStackSize, fn);
 
-            try {
-                throw 42;
-            } catch (...) {
-                s->worker->switchTo(*s->main); // yield mid-catch
-                try {
-                    throw;
-                } catch (int v) {
-                    s->caught = v;
-                }
-            }
-
-            s->worker->switchTo(*s->main);
-        }, (uintptr_t)&s);
-
-        s.main->switchTo(*s.worker); // enter worker, stops mid-catch
-        s.main->switchTo(*s.worker); // resume, rethrow
+        s.main->switchTo(*s.worker);
+        s.main->switchTo(*s.worker);
 
         STD_INSIST(s.caught == 42);
     }

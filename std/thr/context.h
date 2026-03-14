@@ -2,6 +2,8 @@
 #include <std/sys/types.h>
 
 namespace stl {
+    struct Runable;
+
     struct Context {
         static constexpr size_t kBufSize = 1024;
 
@@ -9,6 +11,6 @@ namespace stl {
 
         static Context* create(void* buf) noexcept;
         static Context* create(void* buf, void* stackPtr, size_t stackSize,
-                               void (*fn)(u32, u32), uintptr_t p) noexcept;
+                               Runable& entry) noexcept;
     };
 }
