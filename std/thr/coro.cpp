@@ -618,9 +618,7 @@ CoroChannelImplN::CoroChannelImplN(CoroExecutorImpl* exec, size_t capacity) noex
 }
 
 bool CoroChannelImpl::sendOne(void* v) noexcept {
-    if (!receivers_.empty()) {
-        auto* w = (Waiter*)receivers_.popFront();
-
+    if (auto* w = (Waiter*)receivers_.popFrontOrNull(); w) {
         w->value = v;
         w->valueSet = true;
         w->cont->reSchedule();
@@ -640,9 +638,7 @@ bool CoroChannelImpl::recvOne(void** out) noexcept {
         return true;
     }
 
-    if (!senders_.empty()) {
-        auto* w = (Waiter*)senders_.popFront();
-
+    if (auto* w = (Waiter*)senders_.popFrontOrNull(); w) {
         *out = w->value;
         w->cont->reSchedule();
 
@@ -670,9 +666,7 @@ bool CoroChannelImplN::unbufferOne(void** out) noexcept {
     if (!buf_.empty()) {
         *out = buf_.pop();
 
-        if (!senders_.empty()) {
-            auto* w = (Waiter*)senders_.popFront();
-
+        if (auto* w = (Waiter*)senders_.popFrontOrNull(); w) {
             buf_.push(w->value);
             w->cont->reSchedule();
         }
