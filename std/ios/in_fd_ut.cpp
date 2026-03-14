@@ -3,6 +3,7 @@
 
 #include <std/sys/fd.h>
 #include <std/tst/ut.h>
+#include <std/alg/defer.h>
 
 #include <sys/uio.h>
 #include <cstring>
@@ -88,6 +89,7 @@ STD_TEST_SUITE(FDInput) {
 
         const size_t bufSize = 8192;
         u8* writeBuf = new u8[bufSize];
+        STD_DEFER { delete[] writeBuf; };
         for (size_t i = 0; i < bufSize; ++i) {
             writeBuf[i] = (u8)(i % 256);
         }
@@ -96,6 +98,7 @@ STD_TEST_SUITE(FDInput) {
         fdPipe.finish();
 
         u8* readBuf = new u8[bufSize];
+        STD_DEFER { delete[] readBuf; };
         size_t totalRead = 0;
         while (totalRead < bufSize) {
             size_t bytesRead = fdInput.read(readBuf + totalRead, bufSize - totalRead);
@@ -109,9 +112,6 @@ STD_TEST_SUITE(FDInput) {
         for (size_t i = 0; i < bufSize; ++i) {
             STD_INSIST(readBuf[i] == writeBuf[i]);
         }
-
-        delete[] writeBuf;
-        delete[] readBuf;
     }
 
     STD_TEST(ReadSmallChunks) {

@@ -2,6 +2,7 @@
 
 #include <std/tst/ut.h>
 #include <std/rng/pcg.h>
+#include <std/alg/defer.h>
 
 #include <string.h>
 
@@ -68,6 +69,7 @@ STD_TEST_SUITE(HashTable) {
 
         const size_t count = 10000;
         TestNode* nodes = new TestNode[count];
+        STD_DEFER { delete[] nodes; };
 
         for (size_t i = 0; i < count; ++i) {
             nodes[i] = {{i + 1, nullptr}, (int)(i * 7)};
@@ -84,8 +86,6 @@ STD_TEST_SUITE(HashTable) {
             STD_INSIST(found != nullptr);
             STD_INSIST(found->value == i * 7);
         }
-
-        delete[] nodes;
     }
 
     STD_TEST(RehashWorks) {
@@ -363,6 +363,7 @@ STD_TEST_SUITE(HashTable) {
         const size_t iterations = 10000;
         const size_t keyRange = 1000;
         TestNode* nodes = new TestNode[keyRange * 2];
+        STD_DEFER { delete[] nodes; };
         TestNode* expectedNodes[keyRange];
         bool shouldExist[keyRange];
 
@@ -443,8 +444,6 @@ STD_TEST_SUITE(HashTable) {
                 STD_INSIST(result == nullptr);
             }
         }
-
-        delete[] nodes;
     }
 
     STD_TEST(StressTestGrowthAndShrinkage) {
@@ -452,6 +451,7 @@ STD_TEST_SUITE(HashTable) {
 
         const size_t maxSize = 2000;
         TestNode* nodes = new TestNode[maxSize];
+        STD_DEFER { delete[] nodes; };
 
         for (size_t i = 0; i < maxSize; ++i) {
             nodes[i] = {{i + 1, nullptr}, (int)i};
@@ -476,8 +476,6 @@ STD_TEST_SUITE(HashTable) {
 
             STD_INSIST(ht.size() == 0);
         }
-
-        delete[] nodes;
     }
 
     STD_TEST(StressTestDeepCollisionChains) {
@@ -486,6 +484,7 @@ STD_TEST_SUITE(HashTable) {
         const size_t capacity = ht.capacity();
         const size_t chainLength = 30;
         TestNode* nodes = new TestNode[chainLength];
+        STD_DEFER { delete[] nodes; };
 
         for (size_t i = 0; i < chainLength; ++i) {
             nodes[i] = {{i * capacity, nullptr}, (int)i};
@@ -521,8 +520,6 @@ STD_TEST_SUITE(HashTable) {
             u64 key = i * capacity;
             STD_INSIST(ht.find(key) == &nodes[i]);
         }
-
-        delete[] nodes;
     }
 
     STD_TEST(StressTestHeavyLoad) {
@@ -532,6 +529,7 @@ STD_TEST_SUITE(HashTable) {
         const size_t keyRange = 2000;
         const size_t operations = 20000;
         TestNode* nodes = new TestNode[keyRange];
+        STD_DEFER { delete[] nodes; };
 
         for (size_t i = 0; i < keyRange; ++i) {
             nodes[i] = {{i + 1, nullptr}, (int)i};
@@ -557,7 +555,5 @@ STD_TEST_SUITE(HashTable) {
             u64 key = rng.uniformBiased(keyRange) + 1;
             ht.find(key);
         }
-
-        delete[] nodes;
     }
 }

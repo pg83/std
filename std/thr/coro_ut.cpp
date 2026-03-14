@@ -7,6 +7,7 @@
 #include <std/tst/ut.h>
 #include <std/sys/atomic.h>
 #include <std/sys/fd.h>
+#include <std/alg/defer.h>
 
 #include <errno.h>
 #include <unistd.h>
@@ -477,6 +478,7 @@ STD_TEST_SUITE(CoroPoll) {
         };
 
         Pipe* pipes = new Pipe[N];
+        STD_DEFER { delete[] pipes; };
 
         for (int i = 0; i < N; i++) {
             createPipeFD(pipes[i].r, pipes[i].w);
@@ -522,6 +524,5 @@ STD_TEST_SUITE(CoroPoll) {
         }
 
         exec->join();
-        delete[] pipes;
     }
 }

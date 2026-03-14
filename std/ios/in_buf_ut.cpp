@@ -3,6 +3,7 @@
 
 #include <std/tst/ut.h>
 #include <std/lib/buffer.h>
+#include <std/alg/defer.h>
 
 #include <cstring>
 
@@ -45,6 +46,7 @@ STD_TEST_SUITE(InBufBasicRead) {
     STD_TEST(LargeRead) {
         const size_t size = 100000;
         u8* data = new u8[size];
+        STD_DEFER { delete[] data; };
         for (size_t i = 0; i < size; ++i) {
             data[i] = (u8)(i % 256);
         }
@@ -60,7 +62,6 @@ STD_TEST_SUITE(InBufBasicRead) {
         for (size_t i = 0; i < size; ++i) {
             STD_INSIST(((u8*)result.data())[i] == (u8)(i % 256));
         }
-        delete[] data;
     }
 
     STD_TEST(ReadWithCommit) {
@@ -125,6 +126,7 @@ STD_TEST_SUITE(InBufChunkSize) {
     STD_TEST(CustomChunkSize) {
         const size_t totalSize = 2000;
         u8* data = new u8[totalSize];
+        STD_DEFER { delete[] data; };
         for (size_t i = 0; i < totalSize; ++i) {
             data[i] = (u8)(i % 256);
         }
@@ -140,7 +142,6 @@ STD_TEST_SUITE(InBufChunkSize) {
         for (size_t i = 0; i < totalSize; ++i) {
             STD_INSIST(((u8*)result.data())[i] == (u8)(i % 256));
         }
-        delete[] data;
     }
 
     STD_TEST(SmallChunkSize) {
@@ -161,6 +162,7 @@ STD_TEST_SUITE(InBufChunkSize) {
     STD_TEST(LargeChunkSize) {
         const size_t testSize = 10000;
         u8* data = new u8[testSize];
+        STD_DEFER { delete[] data; };
         memset(data, 'A', testSize);
         MemoryInput slave(data, testSize);
         InBuf buf(slave, 65536);
@@ -168,7 +170,6 @@ STD_TEST_SUITE(InBufChunkSize) {
         size_t len = buf.next(&chunk);
         STD_INSIST(len == testSize);
         buf.commit(testSize);
-        delete[] data;
     }
 }
 
@@ -293,6 +294,7 @@ STD_TEST_SUITE(InBufBinaryData) {
     STD_TEST(BinaryPattern) {
         const size_t size = 1000;
         u8* data = new u8[size];
+        STD_DEFER { delete[] data; };
         for (size_t i = 0; i < size; ++i) {
             data[i] = (u8)(i % 256);
         }
@@ -308,7 +310,6 @@ STD_TEST_SUITE(InBufBinaryData) {
         for (size_t i = 0; i < size; ++i) {
             STD_INSIST(((u8*)result.data())[i] == (u8)(i % 256));
         }
-        delete[] data;
     }
 }
 

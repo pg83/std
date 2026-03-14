@@ -3,6 +3,7 @@
 
 #include <std/tst/ut.h>
 #include <std/lib/buffer.h>
+#include <std/alg/defer.h>
 
 #include <cstring>
 
@@ -97,6 +98,7 @@ STD_TEST_SUITE(ZeroCopyInputReadLine) {
     STD_TEST(LongLine) {
         const size_t lineLen = 10000;
         u8* data = new u8[lineLen + 1];
+        STD_DEFER { delete[] data; };
         for (size_t i = 0; i < lineLen; ++i) {
             data[i] = 'A' + (i % 26);
         }
@@ -109,7 +111,6 @@ STD_TEST_SUITE(ZeroCopyInputReadLine) {
         for (size_t i = 0; i < lineLen; ++i) {
             STD_INSIST(((u8*)buf.data())[i] == 'A' + (i % 26));
         }
-        delete[] data;
     }
 
     STD_TEST(BinaryDataWithNewline) {
@@ -236,6 +237,7 @@ STD_TEST_SUITE(ZeroCopyInputReadLine) {
     STD_TEST(VeryLongLineWithoutNewline) {
         const size_t lineLen = 50000;
         u8* data = new u8[lineLen];
+        STD_DEFER { delete[] data; };
         for (size_t i = 0; i < lineLen; ++i) {
             data[i] = 'X';
         }
@@ -247,7 +249,6 @@ STD_TEST_SUITE(ZeroCopyInputReadLine) {
         for (size_t i = 0; i < lineLen; ++i) {
             STD_INSIST(((u8*)buf.data())[i] == 'X');
         }
-        delete[] data;
     }
 
     STD_TEST(CarriageReturnInLine) {
@@ -488,6 +489,7 @@ STD_TEST_SUITE(ZeroCopyInputReadTo) {
     STD_TEST(ReadToLongString) {
         const size_t wordLen = 5000;
         u8* data = new u8[wordLen + 5];
+        STD_DEFER { delete[] data; };
         for (size_t i = 0; i < wordLen; ++i) {
             data[i] = 'A' + (i % 26);
         }
@@ -502,7 +504,6 @@ STD_TEST_SUITE(ZeroCopyInputReadTo) {
         STD_INSIST(buf2.length() == 4);
         STD_INSIST(memcmp(buf2.data(), "test", 4) == 0);
         STD_INSIST(hasData2);
-        delete[] data;
     }
 
     STD_TEST(ReadToBinaryDelimiter) {
