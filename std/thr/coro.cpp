@@ -39,8 +39,9 @@ namespace {
             void run() noexcept override;
         };
 
-        CoroExecutorImpl* exec_;
         alignas(max_align_t) char ctxBuf_[Context::kBufSize];
+
+        CoroExecutorImpl* exec_;
         Context* ctx_;
         Context* workerCtx_;
         Runable* runable_;
@@ -251,18 +252,6 @@ namespace {
     };
 }
 
-u8 ContImpl::priority() const noexcept {
-    return priority_;
-}
-
-ContImpl::~ContImpl() {
-    if (stdAtomicAddAndFetch(&exec_->inflight_, -1, MemoryOrder::Release) == (int)exec_->reactors_.length()) {
-        char b = 1;
-
-        exec_->joinW_.write(&b, 1);
-    }
-}
-
 CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     : opool_(ObjPool::fromMemory())
     , tlsKey_(registerTlsKey())
@@ -362,31 +351,8 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
     stdAtomicAddAndFetch(&exec_->inflight_, 1, MemoryOrder::Relaxed);
 }
 
-SpawnParams::SpawnParams() noexcept
-    : stackSize(16 * 1024)
-    , stackPtr(nullptr)
-    , runable(nullptr)
-    , priority(0)
-{
-}
-
-u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
-    PollRequestImpl req;
-
-    req.cont = currentCont();
-    req.reactor = pickReactor();
-    req.fd = fd;
-    req.flags = flags;
-    req.result = 0;
-    req.deadline = deadlineUs;
-
-    req.reactor->processRequest(&req);
-
-    return req.result;
-}
-
-u64 Cont::id() const noexcept {
-    return (u64)(size_t)this;
+u8 ContImpl::priority() const noexcept {
+    return priority_;
 }
 
 void ContImpl::EntryRunable::run() noexcept {
@@ -429,6 +395,41 @@ void ContImpl::run() noexcept {
     } else {
         delete this;
     }
+}
+
+ContImpl::~ContImpl() {
+    if (stdAtomicAddAndFetch(&exec_->inflight_, -1, MemoryOrder::Release) == (int)exec_->reactors_.length()) {
+        char b = 1;
+
+        exec_->joinW_.write(&b, 1);
+    }
+}
+
+SpawnParams::SpawnParams() noexcept
+    : stackSize(16 * 1024)
+    , stackPtr(nullptr)
+    , runable(nullptr)
+    , priority(0)
+{
+}
+
+u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
+    PollRequestImpl req;
+
+    req.cont = currentCont();
+    req.reactor = pickReactor();
+    req.fd = fd;
+    req.flags = flags;
+    req.result = 0;
+    req.deadline = deadlineUs;
+
+    req.reactor->processRequest(&req);
+
+    return req.result;
+}
+
+u64 Cont::id() const noexcept {
+    return (u64)(size_t)this;
 }
 
 MutexIface* CoroExecutorImpl::createMutex() {
