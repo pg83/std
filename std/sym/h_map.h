@@ -61,7 +61,7 @@ namespace stl {
         T* insertKeyed(A&&... a) {
             auto value = ol.make(forward<A>(a)...);
 
-            return (value->key = value->t.key(), insertNode(value));
+            return (value->key = H::hash(value->t.key()), insertNode(value));
         }
 
         T& operator[](K key) {
