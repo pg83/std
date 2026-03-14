@@ -279,9 +279,7 @@ void WorkStealingThreadPool::Worker::push(IntrusiveList* tasks) noexcept {
 void WorkStealingThreadPool::Worker::beforeBlock() noexcept {
     if (local_.empty()) {
         return;
-    }
-
-    if (auto* idle = (Worker*)pool_->wq->dequeue(); idle) {
+    } else if (auto* idle = (Worker*)pool_->wq->dequeue(); idle) {
         idle->push(&local_);
     } else {
         LockGuard lock(mutex_);
@@ -293,7 +291,7 @@ void WorkStealingThreadPool::Worker::beforeBlock() noexcept {
 WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
     : wq(WaitQueue::construct(numThreads))
 {
-    PCG32 rng{(size_t)this};
+    PCG32 rng(this);
 
     for (size_t i = 0; i < numThreads; ++i) {
         workerIndex_.insertKeyed(this, i, rng.nextU64());
