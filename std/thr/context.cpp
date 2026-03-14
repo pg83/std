@@ -102,7 +102,6 @@ namespace stl {
         ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
         void switchTo(Context& target) noexcept override;
     };
-
 }
 
 static void runableTrampoline(u32 lo, u32 hi) {
@@ -134,6 +133,8 @@ void ContextImpl::switchTo(Context& target) noexcept {
     swapcontext(&uctx, &t.uctx);
 }
 #endif
+
+static_assert(sizeof(ContextImpl) % sizeof(max_align_t) == 0);
 
 size_t Context::implSize() noexcept {
     return sizeof(ContextImpl);
