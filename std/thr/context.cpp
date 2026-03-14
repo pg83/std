@@ -16,7 +16,7 @@ namespace __cxxabiv1 {
 }
 
 #if defined(__linux__) && defined(__x86_64__)
-namespace stl {
+namespace {
     struct alignas(max_align_t) ContextImpl: public Context, public Newable {
         u64 rsp = 0;
         void* caughtExceptions = nullptr;
@@ -92,7 +92,7 @@ void ContextImpl::switchTo(Context& target) noexcept {
 #else
 #include <ucontext.h>
 
-namespace stl {
+namespace {
     struct alignas(max_align_t) ContextImpl: public Context, public Newable {
         ucontext_t uctx;
         void* caughtExceptions = nullptr;
