@@ -32,13 +32,47 @@
 
 using namespace stl;
 
+namespace __cxxabiv1 {
+    struct __cxa_eh_globals {
+        void* caughtExceptions;
+        unsigned int uncaughtExceptions;
+    };
+
+    extern "C" __cxa_eh_globals* __cxa_get_globals() noexcept;
+}
+
 namespace {
     struct CoroExecutorImpl;
 
+    struct Context {
+        ucontext_t uctx;
+        void* ehCaughtExceptions = nullptr;
+        unsigned int ehUncaughtExceptions = 0;
+
+        Context() = default;
+
+        Context(void* stackPtr, size_t stackSize, void (*fn)(u32, u32), uintptr_t p) {
+            getcontext(&uctx);
+            uctx.uc_stack.ss_sp = stackPtr;
+            uctx.uc_stack.ss_size = stackSize;
+            uctx.uc_link = nullptr;
+            makecontext(&uctx, (void (*)())fn, 2, (u32)p, (u32)(p >> 32));
+        }
+
+        void switchTo(Context& target) {
+            auto* ehg = __cxxabiv1::__cxa_get_globals();
+            ehCaughtExceptions = ehg->caughtExceptions;
+            ehUncaughtExceptions = ehg->uncaughtExceptions;
+            ehg->caughtExceptions = target.ehCaughtExceptions;
+            ehg->uncaughtExceptions = target.ehUncaughtExceptions;
+            swapcontext(&uctx, &target.uctx);
+        }
+    };
+
     struct ContImpl: public Cont, public Task {
         CoroExecutorImpl* exec_;
-        ucontext_t ctx_;
-        ucontext_t* workerCtx_;
+        Context ctx_;
+        Context* workerCtx_;
         Runable* runable_;
         Runable* afterSuspend_;
         u8 priority_;
@@ -350,21 +384,13 @@ bool CoroMutexImpl::tryLock() noexcept {
 
 ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
     : exec_(exec)
+    , ctx_(params.stackPtr, params.stackSize, ContImpl::entry, (uintptr_t)this)
     , workerCtx_(nullptr)
     , runable_(params.runable)
     , afterSuspend_(nullptr)
     , priority_(params.priority)
 {
     stdAtomicAddAndFetch(&exec_->inflight_, 1, MemoryOrder::Relaxed);
-    getcontext(&ctx_);
-
-    ctx_.uc_stack.ss_sp = params.stackPtr;
-    ctx_.uc_stack.ss_size = params.stackSize;
-    ctx_.uc_link = nullptr;
-
-    auto p = (uintptr_t)this;
-
-    makecontext(&ctx_, (void (*)())ContImpl::entry, 2, (u32)p, (u32)(p >> 32));
 }
 
 SpawnParams::SpawnParams() noexcept
@@ -397,7 +423,7 @@ u64 Cont::id() const noexcept {
 void ContImpl::entryX() noexcept {
     runable_->run();
     runable_ = nullptr;
-    swapcontext(&ctx_, workerCtx_);
+    ctx_.switchTo(*workerCtx_);
 }
 
 void ContImpl::entry(u32 lo, u32 hi) noexcept {
@@ -410,15 +436,17 @@ void ContImpl::reSchedule() noexcept {
 
 void ContImpl::parkWith(Runable* afterSuspend) noexcept {
     afterSuspend_ = afterSuspend;
-    swapcontext(&ctx_, workerCtx_);
+    ctx_.switchTo(*workerCtx_);
 }
 
 void ContImpl::run() noexcept {
-    ucontext_t workerCtx;
+    Context workerCtx;
 
     *exec_->tls() = this;
     workerCtx_ = &workerCtx;
-    swapcontext(&workerCtx, &ctx_);
+
+    workerCtx.switchTo(ctx_);
+
     workerCtx_ = nullptr;
     *exec_->tls() = nullptr;
 
