@@ -1,6 +1,7 @@
 #include "context.h"
 
 #include <std/mem/new.h>
+#include <std/dbg/insist.h>
 #include <std/thr/runable.h>
 #include <std/alg/exchange.h>
 
@@ -58,8 +59,10 @@ void ContextImpl::trampoline() {
     Runable* r;
 
     __asm__ volatile("movq %%rbx, %0" : "=r"(r));
+
     r->run();
-    __builtin_unreachable();
+
+    STD_INSIST(false);
 }
 
 ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept {
