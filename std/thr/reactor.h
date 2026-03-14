@@ -10,10 +10,8 @@ namespace stl {
     struct Runable;
     struct ThreadPool;
     struct CoroExecutor;
-    struct ReactorIface;
 
     struct PollRequest: public TreapNode, public IntrusiveNode {
-        ReactorIface* reactor;
         u32 fd;
         u32 flags;
         u64 deadline;

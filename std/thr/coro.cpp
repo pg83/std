@@ -413,12 +413,11 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
     PollRequestImpl req;
 
     req.cont = currentCont();
-    req.reactor = pickReactor();
     req.fd = fd;
     req.flags = flags;
     req.deadline = deadlineUs;
 
-    req.reactor->processRequest(&req);
+    pickReactor()->processRequest(&req);
 
     return req.result;
 }
