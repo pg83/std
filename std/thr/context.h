@@ -1,4 +1,5 @@
 #pragma once
+
 #include <std/sys/types.h>
 
 namespace stl {
@@ -10,7 +11,6 @@ namespace stl {
         virtual void switchTo(Context& target) noexcept = 0;
 
         static Context* create(void* buf) noexcept;
-        static Context* create(void* buf, void* stackPtr, size_t stackSize,
-                               Runable& entry) noexcept;
+        static Context* create(void* buf, void* stackPtr, size_t stackSize, Runable& entry) noexcept;
     };
 }

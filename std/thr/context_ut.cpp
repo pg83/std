@@ -18,7 +18,10 @@ namespace {
 
     struct SwitchFn: public Runable {
         SwitchState* s;
-        SwitchFn(SwitchState* s) : s(s) {}
+        SwitchFn(SwitchState* s)
+            : s(s)
+        {
+        }
         void run() noexcept override {
             ++s->counter;
             s->worker->switchTo(*s->main);
@@ -27,7 +30,10 @@ namespace {
 
     struct MultiSwitchFn: public Runable {
         SwitchState* s;
-        MultiSwitchFn(SwitchState* s) : s(s) {}
+        MultiSwitchFn(SwitchState* s)
+            : s(s)
+        {
+        }
         void run() noexcept override {
             for (int i = 0; i < 5; ++i) {
                 ++s->counter;
@@ -80,7 +86,10 @@ STD_TEST_SUITE(Context) {
 
         struct EhFn: public Runable {
             State* s;
-            EhFn(State* s) : s(s) {}
+            EhFn(State* s)
+                : s(s)
+            {
+            }
             void run() noexcept override {
                 try {
                     throw 42;
