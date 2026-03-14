@@ -493,17 +493,18 @@ void CoroThreadImpl::notifyDone() noexcept {
 }
 
 void CoroThreadImpl::join() noexcept {
-    LockGuard guard(mtx_);
+    LockGuard(mtx_).run([this]() {
+        while (runable_) {
+            cv_.wait(mtx_);
+        }
+    });
 
-    while (runable_) {
-        cv_.wait(mtx_);
-    }
+    delete this;
 }
 
 void CoroThreadImpl::detach() noexcept {
     exec_->spawn([this]() {
         join();
-        delete this;
     });
 }
 

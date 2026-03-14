@@ -32,6 +32,7 @@ namespace {
 
         void join() noexcept override {
             STD_INSIST(pthread_join(thread, nullptr) == 0);
+            delete this;
         }
 
         void detach() noexcept override {
@@ -73,7 +74,7 @@ Thread::~Thread() noexcept {
 }
 
 void Thread::join() noexcept {
-    impl->join();
+    exchange(impl, nullptr)->join();
 }
 
 void Thread::detach() noexcept {
