@@ -1,4 +1,5 @@
 #include "coro.h"
+#include "context.h"
 #include "task.h"
 #include "pool.h"
 #include "mutex.h"
@@ -28,35 +29,15 @@
 #include <fcntl.h>
 #include <sched.h>
 #include <unistd.h>
-#include <ucontext.h>
-
 using namespace stl;
-
-namespace __cxxabiv1 {
-    struct __cxa_eh_globals {
-        void* caughtExceptions;
-        unsigned int uncaughtExceptions;
-    };
-
-    extern "C" __cxa_eh_globals* __cxa_get_globals() noexcept;
-}
 
 namespace {
     struct CoroExecutorImpl;
 
-    struct Context {
-        ucontext_t uctx;
-        void* ehCaughtExceptions = nullptr;
-        unsigned int ehUncaughtExceptions = 0;
-
-        Context() = default;
-        Context(void* stackPtr, size_t stackSize, void (*fn)(u32, u32), uintptr_t p) noexcept;
-        void switchTo(Context& target) noexcept;
-    };
-
     struct ContImpl: public Cont, public Task {
         CoroExecutorImpl* exec_;
-        Context ctx_;
+        alignas(max_align_t) char ctxBuf_[Context::kBufSize];
+        Context* ctx_;
         Context* workerCtx_;
         Runable* runable_;
         Runable* afterSuspend_;
@@ -267,20 +248,6 @@ namespace {
     };
 }
 
-Context::Context(void* stackPtr, size_t stackSize, void (*fn)(u32, u32), uintptr_t p) noexcept {
-    getcontext(&uctx);
-    uctx.uc_stack.ss_sp = stackPtr;
-    uctx.uc_stack.ss_size = stackSize;
-    uctx.uc_link = nullptr;
-    makecontext(&uctx, (void (*)())fn, 2, (u32)p, (u32)(p >> 32));
-}
-
-void Context::switchTo(Context& target) noexcept {
-    auto* ehg = __cxxabiv1::__cxa_get_globals();
-    ehCaughtExceptions = exchange(ehg->caughtExceptions, target.ehCaughtExceptions);
-    ehUncaughtExceptions = exchange(ehg->uncaughtExceptions, target.ehUncaughtExceptions);
-    swapcontext(&uctx, &target.uctx);
-}
 
 u8 ContImpl::priority() const noexcept {
     return priority_;
@@ -384,7 +351,7 @@ bool CoroMutexImpl::tryLock() noexcept {
 
 ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
     : exec_(exec)
-    , ctx_(params.stackPtr, params.stackSize, ContImpl::entry, (uintptr_t)this)
+    , ctx_(Context::create(ctxBuf_, params.stackPtr, params.stackSize, ContImpl::entry, (uintptr_t)this))
     , workerCtx_(nullptr)
     , runable_(params.runable)
     , afterSuspend_(nullptr)
@@ -423,7 +390,7 @@ u64 Cont::id() const noexcept {
 void ContImpl::entryX() noexcept {
     runable_->run();
     runable_ = nullptr;
-    ctx_.switchTo(*workerCtx_);
+    ctx_->switchTo(*workerCtx_);
 }
 
 void ContImpl::entry(u32 lo, u32 hi) noexcept {
@@ -436,16 +403,17 @@ void ContImpl::reSchedule() noexcept {
 
 void ContImpl::parkWith(Runable* afterSuspend) noexcept {
     afterSuspend_ = afterSuspend;
-    ctx_.switchTo(*workerCtx_);
+    ctx_->switchTo(*workerCtx_);
 }
 
 void ContImpl::run() noexcept {
-    Context workerCtx;
+    alignas(max_align_t) char workerBuf[Context::kBufSize];
+    auto* wctx = Context::create(workerBuf);
 
     *exec_->tls() = this;
-    workerCtx_ = &workerCtx;
+    workerCtx_ = wctx;
 
-    workerCtx.switchTo(ctx_);
+    wctx->switchTo(*ctx_);
 
     workerCtx_ = nullptr;
     *exec_->tls() = nullptr;
