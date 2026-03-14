@@ -6,10 +6,9 @@ namespace stl {
     struct Runable;
 
     struct Context {
-        static constexpr size_t kBufSize = 1024;
-
         virtual void switchTo(Context& target) noexcept = 0;
 
+        static size_t implSize() noexcept;
         static Context* create(void* buf) noexcept;
         static Context* create(void* buf, void* stackPtr, size_t stackSize, Runable& entry) noexcept;
     };

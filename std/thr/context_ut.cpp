@@ -3,6 +3,8 @@
 #include <std/thr/runable.h>
 #include <std/tst/ut.h>
 
+#include <alloca.h>
+
 using namespace stl;
 
 namespace {
@@ -45,8 +47,8 @@ namespace {
 
 STD_TEST_SUITE(Context) {
     STD_TEST(SwitchBack) {
-        alignas(max_align_t) char mainBuf[Context::kBufSize];
-        alignas(max_align_t) char workerBuf[Context::kBufSize];
+        auto* mainBuf = alloca(Context::implSize());
+        auto* workerBuf = alloca(Context::implSize());
         SwitchState s;
         SwitchFn fn(&s);
 
@@ -59,8 +61,8 @@ STD_TEST_SUITE(Context) {
     }
 
     STD_TEST(MultiSwitch) {
-        alignas(max_align_t) char mainBuf[Context::kBufSize];
-        alignas(max_align_t) char workerBuf[Context::kBufSize];
+        auto* mainBuf = alloca(Context::implSize());
+        auto* workerBuf = alloca(Context::implSize());
         SwitchState s;
         MultiSwitchFn fn(&s);
 
@@ -75,8 +77,8 @@ STD_TEST_SUITE(Context) {
     }
 
     STD_TEST(EhStatePreserved) {
-        alignas(max_align_t) char mainBuf[Context::kBufSize];
-        alignas(max_align_t) char workerBuf[Context::kBufSize];
+        auto* mainBuf = alloca(Context::implSize());
+        auto* workerBuf = alloca(Context::implSize());
 
         struct State {
             Context* main;

@@ -17,7 +17,7 @@ namespace __cxxabiv1 {
 
 #if defined(__linux__) && defined(__x86_64__)
 namespace stl {
-    struct ContextImpl: public Context, public Newable {
+    struct alignas(max_align_t) ContextImpl: public Context, public Newable {
         u64 rsp = 0;
         void* ehCaughtExceptions = nullptr;
         unsigned int ehUncaughtExceptions = 0;
@@ -33,7 +33,6 @@ namespace stl {
         static void trampoline();
     };
 
-    static_assert(sizeof(ContextImpl) <= Context::kBufSize);
 }
 
 void ContextImpl::swapContext(u64*, u64*) {
@@ -94,7 +93,7 @@ void ContextImpl::switchTo(Context& target) noexcept {
 #include <ucontext.h>
 
 namespace stl {
-    struct ContextImpl: public Context, public Newable {
+    struct alignas(max_align_t) ContextImpl: public Context, public Newable {
         ucontext_t uctx;
         void* ehCaughtExceptions = nullptr;
         unsigned int ehUncaughtExceptions = 0;
@@ -104,7 +103,6 @@ namespace stl {
         void switchTo(Context& target) noexcept override;
     };
 
-    static_assert(sizeof(ContextImpl) <= Context::kBufSize);
 }
 
 static void runableTrampoline(u32 lo, u32 hi) {
@@ -136,6 +134,10 @@ void ContextImpl::switchTo(Context& target) noexcept {
     swapcontext(&uctx, &t.uctx);
 }
 #endif
+
+size_t Context::implSize() noexcept {
+    return sizeof(ContextImpl);
+}
 
 Context* Context::create(void* buf) noexcept {
     return new (buf) ContextImpl();

@@ -37,8 +37,6 @@ namespace {
     struct CoroExecutorImpl;
 
     struct ContImpl: public Cont, public Task {
-        alignas(max_align_t) char ctxBuf_[Context::kBufSize];
-
         CoroExecutorImpl* exec_;
         Context* ctx_;
         Context* workerCtx_;
@@ -48,7 +46,7 @@ namespace {
 
         u8 priority() const noexcept override;
 
-        ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept;
+        ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noexcept;
 
         virtual ~ContImpl();
 
@@ -59,7 +57,7 @@ namespace {
 
     struct alignas(max_align_t) HeapContImpl: public ContImpl {
         void* operator new(size_t, size_t stackSize) {
-            return allocateMemory(sizeof(HeapContImpl) + stackSize);
+            return allocateMemory(sizeof(HeapContImpl) + Context::implSize() + stackSize);
         }
 
         void operator delete(void* p) noexcept {
@@ -67,14 +65,29 @@ namespace {
         }
 
         HeapContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
-            : ContImpl(exec, params.setStackPtr((char*)(this + 1)))
+            : ContImpl(exec, (char*)(this + 1), params.setStackPtr((char*)(this + 1) + Context::implSize()))
+        {
+        }
+    };
+
+    struct alignas(max_align_t) ExtStackContImpl: public ContImpl {
+        void* operator new(size_t sz) {
+            return allocateMemory(sz + Context::implSize());
+        }
+
+        void operator delete(void* p) noexcept {
+            freeMemory(p);
+        }
+
+        ExtStackContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
+            : ContImpl(exec, (char*)(this + 1), params)
         {
         }
     };
 
     ContImpl* makeContImpl(CoroExecutorImpl* exec, SpawnParams params) {
         if (params.stackPtr) {
-            return new ContImpl(exec, params);
+            return new ExtStackContImpl(exec, params);
         } else {
             return new (params.stackSize) HeapContImpl(exec, params);
         }
@@ -336,9 +349,9 @@ bool CoroMutexImpl::tryLock() noexcept {
     return false;
 }
 
-ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
+ContImpl::ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noexcept
     : exec_(exec)
-    , ctx_(Context::create(ctxBuf_, params.stackPtr, params.stackSize, *this))
+    , ctx_(Context::create(ctxBuf, params.stackPtr, params.stackSize, *this))
     , workerCtx_(nullptr)
     , runable_(params.runable)
     , afterSuspend_(nullptr)
@@ -370,7 +383,7 @@ void ContImpl::run() noexcept {
     }
 
     *exec_->tls() = this;
-    (workerCtx_ = Context::create(alloca(Context::kBufSize)))->switchTo(*ctx_);
+    (workerCtx_ = Context::create(alloca(Context::implSize())))->switchTo(*ctx_);
     workerCtx_ = nullptr;
 
     if (auto* as = exchange(afterSuspend_, nullptr); as) {
