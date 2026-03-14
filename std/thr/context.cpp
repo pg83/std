@@ -19,8 +19,8 @@ namespace __cxxabiv1 {
 namespace stl {
     struct alignas(max_align_t) ContextImpl: public Context, public Newable {
         u64 rsp = 0;
-        void* ehCaughtExceptions = nullptr;
-        unsigned int ehUncaughtExceptions = 0;
+        void* caughtExceptions = nullptr;
+        unsigned int uncaughtExceptions = 0;
 
         ContextImpl() = default;
         ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
@@ -84,8 +84,8 @@ void ContextImpl::switchTo(Context& target) noexcept {
     auto& t = (ContextImpl&)target;
     auto* ehg = __cxxabiv1::__cxa_get_globals();
 
-    ehCaughtExceptions = exchange(ehg->caughtExceptions, t.ehCaughtExceptions);
-    ehUncaughtExceptions = exchange(ehg->uncaughtExceptions, t.ehUncaughtExceptions);
+    caughtExceptions = exchange(ehg->caughtExceptions, t.caughtExceptions);
+    uncaughtExceptions = exchange(ehg->uncaughtExceptions, t.uncaughtExceptions);
 
     swapContext(&rsp, &t.rsp);
 }
@@ -95,8 +95,8 @@ void ContextImpl::switchTo(Context& target) noexcept {
 namespace stl {
     struct alignas(max_align_t) ContextImpl: public Context, public Newable {
         ucontext_t uctx;
-        void* ehCaughtExceptions = nullptr;
-        unsigned int ehUncaughtExceptions = 0;
+        void* caughtExceptions = nullptr;
+        unsigned int uncaughtExceptions = 0;
 
         ContextImpl() noexcept;
         ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
@@ -127,8 +127,8 @@ void ContextImpl::switchTo(Context& target) noexcept {
     auto& t = (ContextImpl&)target;
     auto* ehg = __cxxabiv1::__cxa_get_globals();
 
-    ehCaughtExceptions = exchange(ehg->caughtExceptions, t.ehCaughtExceptions);
-    ehUncaughtExceptions = exchange(ehg->uncaughtExceptions, t.ehUncaughtExceptions);
+    caughtExceptions = exchange(ehg->caughtExceptions, t.caughtExceptions);
+    uncaughtExceptions = exchange(ehg->uncaughtExceptions, t.uncaughtExceptions);
 
     swapcontext(&uctx, &t.uctx);
 }
