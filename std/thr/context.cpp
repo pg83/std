@@ -134,9 +134,9 @@ void ContextImpl::switchTo(Context& target) noexcept {
 }
 #endif
 
-static_assert(sizeof(ContextImpl) % sizeof(max_align_t) == 0);
-
 size_t Context::implSize() noexcept {
+    static_assert(sizeof(ContextImpl) % sizeof(max_align_t) == 0);
+
     return sizeof(ContextImpl);
 }
 
