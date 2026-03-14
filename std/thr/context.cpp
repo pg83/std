@@ -84,10 +84,7 @@ ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexc
 
 void ContextImpl::switchTo(Context& target) noexcept {
     auto& t = (ContextImpl&)target;
-    auto* ehg = __cxxabiv1::__cxa_get_globals();
-
-    ehg_ = exchange(*ehg, t.ehg_);
-
+    ehg_ = exchange(*__cxxabiv1::__cxa_get_globals(), t.ehg_);
     swapContext(&rsp, &t.rsp);
 }
 #else
@@ -128,10 +125,7 @@ void ContextImpl::trampoline(u32 lo, u32 hi) {
 
 void ContextImpl::switchTo(Context& target) noexcept {
     auto& t = (ContextImpl&)target;
-    auto* ehg = __cxxabiv1::__cxa_get_globals();
-
-    ehg_ = exchange(*ehg, t.ehg_);
-
+    ehg_ = exchange(*__cxxabiv1::__cxa_get_globals(), t.ehg_);
     swapcontext(&uctx, &t.uctx);
 }
 #endif
