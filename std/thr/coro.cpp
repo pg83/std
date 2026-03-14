@@ -28,17 +28,15 @@
 #include <time.h>
 #include <fcntl.h>
 #include <sched.h>
+#include <alloca.h>
 #include <unistd.h>
+
 using namespace stl;
 
 namespace {
     struct CoroExecutorImpl;
 
     struct ContImpl: public Cont, public Task {
-        struct EntryRunable: public Runable {
-            void run() noexcept override;
-        };
-
         alignas(max_align_t) char ctxBuf_[Context::kBufSize];
 
         CoroExecutorImpl* exec_;
@@ -47,7 +45,6 @@ namespace {
         Runable* runable_;
         Runable* afterSuspend_;
         u8 priority_;
-        EntryRunable entryRunable_;
 
         u8 priority() const noexcept override;
 
@@ -58,7 +55,6 @@ namespace {
         void parkWith(Runable* afterSuspend) noexcept;
         void run() noexcept override;
         void reSchedule() noexcept;
-        void entryX() noexcept;
     };
 
     struct alignas(max_align_t) HeapContImpl: public ContImpl {
@@ -342,7 +338,7 @@ bool CoroMutexImpl::tryLock() noexcept {
 
 ContImpl::ContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
     : exec_(exec)
-    , ctx_(Context::create(ctxBuf_, params.stackPtr, params.stackSize, entryRunable_))
+    , ctx_(Context::create(ctxBuf_, params.stackPtr, params.stackSize, *this))
     , workerCtx_(nullptr)
     , runable_(params.runable)
     , afterSuspend_(nullptr)
@@ -355,17 +351,6 @@ u8 ContImpl::priority() const noexcept {
     return priority_;
 }
 
-void ContImpl::EntryRunable::run() noexcept {
-    auto* cont = (ContImpl*)((char*)this - offsetof(ContImpl, entryRunable_));
-    cont->entryX();
-}
-
-void ContImpl::entryX() noexcept {
-    runable_->run();
-    runable_ = nullptr;
-    ctx_->switchTo(*workerCtx_);
-}
-
 void ContImpl::reSchedule() noexcept {
     exec_->pool_->submitTask(this);
 }
@@ -376,14 +361,20 @@ void ContImpl::parkWith(Runable* afterSuspend) noexcept {
 }
 
 void ContImpl::run() noexcept {
-    alignas(max_align_t) char workerBuf[Context::kBufSize];
+    if (workerCtx_) {
+        runable_->run();
+        runable_ = nullptr;
+        ctx_->switchTo(*workerCtx_);
+
+        return;
+    }
 
     *exec_->tls() = this;
-    (workerCtx_ = Context::create(workerBuf))->switchTo(*ctx_);
+    (workerCtx_ = Context::create(alloca(Context::kBufSize)))->switchTo(*ctx_);
+    workerCtx_ = nullptr;
 
     if (auto* as = exchange(afterSuspend_, nullptr); as) {
-        // after as->run(), cont may already be rescheduled by another thread
-        return as->run();
+        as->run();
     } else if (runable_) {
         reSchedule();
     } else {
