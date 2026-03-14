@@ -26,13 +26,18 @@ namespace stl {
         ContextImpl() = default;
         ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
         void switchTo(Context& target) noexcept override;
+
+        __attribute__((naked, noinline))
+        static void swapContext(u64*, u64*);
+
+        [[noreturn]]
+        static void trampoline();
     };
 
     static_assert(sizeof(ContextImpl) <= Context::kBufSize);
 }
 
-__attribute__((naked, noinline))
-static void swapContext(u64*, u64*) {
+void ContextImpl::swapContext(u64*, u64*) {
     __asm__(
         "pushq %rbx\n\t"
         "pushq %rbp\n\t"
@@ -52,7 +57,7 @@ static void swapContext(u64*, u64*) {
     );
 }
 
-[[noreturn]] static void contextTrampoline() {
+void ContextImpl::trampoline() {
     Runable* r;
 
     __asm__ volatile("movq %%rbx, %0" : "=r"(r));
@@ -66,7 +71,7 @@ ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexc
     // after swapContext pops 6 regs and does ret (7 * 8 = 56 bytes),
     // rsp = top - 8 which is 8-mod-16, matching the ABI for function entry
     *--top = 0;
-    *--top = (u64)contextTrampoline;
+    *--top = (u64)trampoline;
     *--top = (u64)&entry; // rbx
     *--top = 0;           // rbp
     *--top = 0;           // r12
