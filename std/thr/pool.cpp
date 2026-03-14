@@ -242,9 +242,9 @@ namespace {
         Worker* localWorker() noexcept;
         Worker* dequeueWorker() noexcept;
         PCG32& random() noexcept override;
+        void beforeBlock() noexcept override;
         void** tls(u64 key) noexcept override;
         void submitTask(Task* task) noexcept override;
-        void beforeBlock() noexcept override;
     };
 }
 
