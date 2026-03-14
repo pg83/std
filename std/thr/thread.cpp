@@ -73,7 +73,7 @@ Thread::~Thread() noexcept {
 }
 
 void Thread::join() noexcept {
-    impl->join();
+    exchange(impl, nullptr)->join();
 }
 
 void Thread::detach() noexcept {
