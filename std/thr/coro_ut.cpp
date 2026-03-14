@@ -1,6 +1,7 @@
 #include "coro.h"
 #include "pool.h"
 #include "mutex.h"
+#include "channel.h"
 #include "cond_var.h"
 #include "poller.h"
 
@@ -524,5 +525,43 @@ STD_TEST_SUITE(CoroPoll) {
         }
 
         exec->join();
+    }
+
+    STD_TEST(_ExceptionAcrossYield) {
+        // yield() may resume the coroutine on a different OS thread.
+        // throw; relies on thread-local exception state (__cxa_get_globals),
+        // so on a different thread it will call std::terminate().
+        //
+        // To force a thread switch: coro A parks via a rendezvous channel,
+        // coro B receives (waking A into the pool) then keeps its thread
+        // busy with doW — leaving the other thread to pick up A.
+        auto exec = CoroExecutor::create(2);
+        Channel ch(&*exec, 0);
+        int caught = 0;
+
+        exec->spawn([&]() {
+            try {
+                try {
+                    throw 42;
+                } catch (...) {
+                    void* dummy = nullptr;
+                    ch.enqueue(&dummy);  // park; B will wake us on another thread
+                    throw;
+                }
+            } catch (int v) {
+                if (v == 42) {
+                    caught = 1;
+                }
+            }
+        });
+
+        exec->spawn([&]() {
+            void* v;
+            ch.dequeue(&v);  // wake A (reschedules it into pool)
+            doW(1000000000);   // keep this thread busy so the other thread picks up A
+        });
+
+        exec->join();
+        STD_INSIST(caught == 1);
     }
 }
