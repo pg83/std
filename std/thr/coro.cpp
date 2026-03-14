@@ -464,9 +464,7 @@ void CoroCondVarImpl::signal() noexcept {
     LockGuard guard(queueMutex_);
 
     if (auto* node = waiters_.popFrontOrNull(); node) {
-        auto* cont = (ContImpl*)(Task*)node;
-
-        cont->reSchedule();
+        ((ContImpl*)(Task*)node)->reSchedule();;
     }
 }
 
@@ -474,9 +472,7 @@ void CoroCondVarImpl::broadcast() noexcept {
     LockGuard guard(queueMutex_);
 
     while (auto* node = waiters_.popFrontOrNull()) {
-        auto* cont = (ContImpl*)(Task*)node;
-
-        cont->reSchedule();
+        ((ContImpl*)(Task*)node)->reSchedule();
     }
 }
 
