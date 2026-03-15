@@ -4,6 +4,7 @@
 #include "coro.h"
 #include "mutex.h"
 #include "poller.h"
+#include "event.h"
 
 #include <std/sys/fd.h>
 #include <std/mem/new.h>
@@ -58,7 +59,7 @@ namespace {
         IntMap<FdEntry> fdMap_;
         Mutex queueMutex_;
         DeadlineTreap queue_;
-        Mutex done_;
+        Event done_;
         ScopedFD wakeReadFd;
         ScopedFD wakeWriteFd;
 
@@ -123,7 +124,7 @@ void ReactorState::wakeup() noexcept {
 void ReactorState::join() noexcept {
     exec = nullptr;
     wakeup();
-    done_.lock();
+    done_.wait();
 }
 
 void ReactorState::drainWakeup() noexcept {
@@ -176,8 +177,6 @@ void ReactorState::processEvent(PollEvent* ev) noexcept {
 }
 
 void ReactorState::run() noexcept {
-    LockGuard lock(done_);
-
     while (auto* e = exec) {
         drainQueue();
 
@@ -207,6 +206,8 @@ void ReactorState::run() noexcept {
 
         e->yield();
     }
+
+    done_.set();
 }
 
 ReactorIface::~ReactorIface() noexcept {
