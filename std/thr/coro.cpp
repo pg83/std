@@ -8,9 +8,9 @@
 #include "cond_var.h"
 #include "mutex_iface.h"
 #include "thread_iface.h"
+#include "signal_iface.h"
 #include "channel_iface.h"
 #include "cond_var_iface.h"
-#include "signal_iface.h"
 
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
