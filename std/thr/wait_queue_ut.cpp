@@ -1,6 +1,6 @@
 #include "wait_queue.h"
 #include "thread.h"
-#include "barrier.h"
+#include "wait_group.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/atomic.h>
@@ -72,7 +72,7 @@ STD_TEST_SUITE(WaitQueue) {
         const int N = 8;
         auto opool = ObjPool::fromMemory();
         auto* wq = WaitQueue::construct(opool.mutPtr(), N);
-        Barrier ready(N);
+        WaitGroup ready(N);
 
         WaitQueue::Item items[N];
         for (int i = 0; i < N; ++i) {
@@ -81,6 +81,7 @@ STD_TEST_SUITE(WaitQueue) {
 
         auto worker = [&](int i) {
             return [&, i] {
+                ready.done();
                 ready.wait();
                 wq->enqueue(&items[i]);
             };
@@ -103,7 +104,7 @@ STD_TEST_SUITE(WaitQueue) {
         const int N = 8;
         auto opool = ObjPool::fromMemory();
         auto* wq = WaitQueue::construct(opool.mutPtr(), 65);
-        Barrier ready(N);
+        WaitGroup ready(N);
         int enqueued = 0;
 
         WaitQueue::Item items[N];
@@ -113,6 +114,7 @@ STD_TEST_SUITE(WaitQueue) {
 
         auto worker = [&](int i) {
             return [&, i] {
+                ready.done();
                 ready.wait();
                 wq->enqueue(&items[i]);
                 stdAtomicAddAndFetch(&enqueued, 1, MemoryOrder::Release);

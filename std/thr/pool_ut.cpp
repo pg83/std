@@ -1,6 +1,6 @@
 #include "pool.h"
 #include "mutex.h"
-#include "barrier.h"
+#include "wait_group.h"
 #include "cond_var.h"
 
 #include <std/tst/ut.h>
@@ -495,15 +495,16 @@ STD_TEST_SUITE(SimplePoolTls) {
     STD_TEST(WorkerIsolation) {
         const int N = 2;
         u64 key = ThreadPool::registerTlsKey();
-        Barrier barrier(N);
+        WaitGroup wg(N);
         bool correct = true;
 
         auto opool = ObjPool::fromMemory();
         auto* pool = ThreadPool::simple(opool.mutPtr(), N);
         for (int i = 0; i < N; ++i) {
-            pool->submit([pool, key, &barrier, id = i + 1, &correct] {
+            pool->submit([pool, key, &wg, id = i + 1, &correct] {
                 *pool->tls(key) = (void*)(uintptr_t)id;
-                barrier.wait();
+                wg.done();
+                wg.wait();
                 if ((uintptr_t)*pool->tls(key) != (uintptr_t)id) {
                     correct = false;
                 }
@@ -558,15 +559,16 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
     STD_TEST(_WorkerIsolation) {
         const int N = 2;
         u64 key = ThreadPool::registerTlsKey();
-        Barrier barrier(N);
+        WaitGroup wg(N);
         bool correct = true;
 
         auto opool = ObjPool::fromMemory();
         auto* pool = ThreadPool::workStealing(opool.mutPtr(), N);
         for (int i = 0; i < N; ++i) {
-            pool->submit([pool, key, &barrier, id = i + 1, &correct] {
+            pool->submit([pool, key, &wg, id = i + 1, &correct] {
                 *pool->tls(key) = (void*)(uintptr_t)id;
-                barrier.wait();
+                wg.done();
+                wg.wait();
                 if ((uintptr_t)*pool->tls(key) != (uintptr_t)id) {
                     correct = false;
                 }
