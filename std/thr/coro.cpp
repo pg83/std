@@ -483,9 +483,8 @@ void CoroCondVarImpl::run() {
 }
 
 void CoroCondVarImpl::wait(MutexIface* mutex) noexcept {
-    auto* cont = exec()->currentCont();
-
     queueMutex_.lock();
+    auto* cont = exec()->currentCont();
     waiters_.pushBack(cont);
     mutex->unlock();
     cont->parkWith(this);
@@ -540,8 +539,7 @@ void CoroSignalImpl::wait() noexcept {
         return;
     }
 
-    waiter_ = exec()->currentCont();
-    waiter_->parkWith(this);
+    (waiter_ = exec()->currentCont())->parkWith(this);
 }
 
 SignalIface* CoroExecutorImpl::createSignal() {
@@ -605,8 +603,6 @@ void CoroChannelImpl::run() {
 }
 
 void CoroChannelImpl::enqueue(void* v) {
-    auto* cont = exec()->currentCont();
-
     LockGuard guard(queueMutex_);
 
     STD_INSIST(!closed_);
@@ -617,18 +613,16 @@ void CoroChannelImpl::enqueue(void* v) {
 
     Waiter w;
 
-    w.cont = cont;
+    w.cont = exec()->currentCont();
     w.value = v;
     w.valueSet = true;
 
     senders_.pushBack(&w);
     guard.drop();
-    cont->parkWith(this);
+    w.cont->parkWith(this);
 }
 
 bool CoroChannelImpl::dequeue(void** out) {
-    auto* cont = exec()->currentCont();
-
     LockGuard guard(queueMutex_);
 
     if (recvOne(out)) {
@@ -641,13 +635,13 @@ bool CoroChannelImpl::dequeue(void** out) {
 
     Waiter w;
 
-    w.cont = cont;
+    w.cont = exec()->currentCont();
     w.value = nullptr;
     w.valueSet = false;
 
     receivers_.pushBack(&w);
     guard.drop();
-    cont->parkWith(this);
+    w.cont->parkWith(this);
 
     if (w.valueSet) {
         *out = w.value;
