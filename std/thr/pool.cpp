@@ -17,6 +17,7 @@
 #include <std/sys/atomic.h>
 #include <std/alg/shuffle.h>
 #include <std/alg/exchange.h>
+#include <std/mem/obj_pool.h>
 
 #include <stdlib.h>
 #include <sched.h>
@@ -172,16 +173,16 @@ void ThreadPoolImpl::workerLoop() {
 ThreadPool::~ThreadPool() noexcept {
 }
 
-ThreadPool::Ref ThreadPool::sync() {
-    return new SyncThreadPool();
+ThreadPool* ThreadPool::sync(ObjPool* pool) {
+    return pool->make<SyncThreadPool>();
 }
 
-ThreadPool::Ref ThreadPool::simple(size_t threads) {
+ThreadPool* ThreadPool::simple(ObjPool* pool, size_t threads) {
     if (threads == 0) {
-        return sync();
+        return sync(pool);
     }
 
-    return new ThreadPoolImpl(threads);
+    return pool->make<ThreadPoolImpl>(threads);
 }
 
 namespace {
@@ -448,12 +449,12 @@ void WorkStealingThreadPool::Worker::steal(IntrusiveList* stolen) noexcept {
     }
 }
 
-ThreadPool::Ref ThreadPool::workStealing(size_t threads) {
+ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads) {
     if (threads <= 1) {
-        return simple(threads);
+        return simple(pool, threads);
     }
 
-    return new WorkStealingThreadPool(threads);
+    return pool->make<WorkStealingThreadPool>(threads);
 }
 
 void ThreadPool::beforeBlock() noexcept {

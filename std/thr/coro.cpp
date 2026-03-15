@@ -102,7 +102,7 @@ namespace {
         Vector<ReactorIface*> reactors_;
         ScopedFD joinR_;
         ScopedFD joinW_;
-        ThreadPool::Ref pool_;
+        ThreadPool* pool_;
 
         CoroExecutorImpl(size_t threads, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
@@ -263,12 +263,12 @@ namespace {
 CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     : opool_(ObjPool::fromMemory())
     , tlsKey_(registerTlsKey())
-    , pool_(ThreadPool::workStealing(threads + reactors))
+    , pool_(ThreadPool::workStealing(opool_.mutPtr(), threads + reactors))
 {
     createPipeFD(joinR_, joinW_);
 
     for (size_t i = 0; i < reactors; ++i) {
-        reactors_.pushBack(ReactorIface::create(this, pool_.mutPtr(), opool_.mutPtr()));
+        reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr()));
     }
 
     for (auto* r : reactors_) {

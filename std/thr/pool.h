@@ -3,16 +3,15 @@
 #include "task.h"
 #include "runable.h"
 
-#include <std/ptr/arc.h>
 #include <std/sys/types.h>
-#include <std/ptr/intrusive.h>
 
 namespace stl {
     u64 registerTlsKey() noexcept;
 
+    class ObjPool;
     class PCG32;
 
-    struct ThreadPool: public ARC {
+    struct ThreadPool {
         virtual ~ThreadPool() noexcept;
 
         virtual void join() noexcept = 0;
@@ -26,10 +25,8 @@ namespace stl {
             submitTask(makeTask(f));
         }
 
-        using Ref = IntrusivePtr<ThreadPool>;
-
-        static Ref sync();
-        static Ref simple(size_t threads);
-        static Ref workStealing(size_t threads);
+        static ThreadPool* sync(ObjPool* pool);
+        static ThreadPool* simple(ObjPool* pool, size_t threads);
+        static ThreadPool* workStealing(ObjPool* pool, size_t threads);
     };
 }
