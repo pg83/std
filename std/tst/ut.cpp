@@ -11,6 +11,9 @@
 #include <std/lib/vector.h>
 #include <std/str/builder.h>
 #include <std/sym/s_map.h>
+#include <std/thr/pool.h>
+#include <std/thr/mutex.h>
+#include <std/mem/obj_pool.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +22,14 @@ using namespace stl;
 
 namespace {
     struct Exc {
+    };
+
+    struct BufferedExecContext: public ExecContext {
+        mutable StringBuilder buf_;
+
+        ZeroCopyOutput& output() const override {
+            return buf_;
+        }
     };
 
     static bool execute(TestFunc* func, ExecContext& ctx) {
@@ -65,9 +76,17 @@ namespace {
         bool matchesFilter(StringView testName) const noexcept;
         bool matchesFilterStrong(StringView testName) const noexcept;
         bool matchesExclude(StringView testName) const noexcept;
+
+        size_t threads() const noexcept {
+            if (auto* sv = opts.find(StringView(u8"threads")); sv) {
+                return (size_t)sv->stou();
+            }
+
+            return 0;
+        }
     };
 
-    struct Tests: public ExecContext, public Treap {
+    struct Tests: public Treap {
         Ctx* ctx = 0;
         OutBuf* outbuf = 0;
         GetOpt* opt = 0;
@@ -75,10 +94,6 @@ namespace {
         size_t err = 0;
         size_t skip = 0;
         size_t mute = 0;
-
-        ZeroCopyOutput& output() const override {
-            return *outbuf;
-        }
 
         bool cmp(void* l, void* r) const noexcept override {
             return compare(*(const TestFunc*)(l), *(const TestFunc*)(r));
@@ -100,26 +115,34 @@ namespace {
             setPanicHandler1(panicHandler1);
             setPanicHandler2(panicHandler2);
 
-            StringBuilder sb;
+            auto opool = ObjPool::fromMemory();
+            auto pool = ThreadPool::simple(opool.mutPtr(), opt->threads());
+
+            Mutex mutex;
 
             visit([&](void* el) {
                 auto test = (TestFunc*)el;
 
-                sb.reset();
-                sb << *test;
+                pool->submit([&, test] {
+                    StringBuilder sb;
+                    sb << *test;
 
-                if (test->name().startsWith(u8"_") && !opt->matchesFilterStrong(sb)) {
-                    ++mute;
-                } else if (!opt->matchesFilter(sb)) {
-                    ++skip;
-                } else if (::execute(test, *this)) {
-                    ++ok;
-                } else {
-                    ++err;
-                }
+                    LockGuard lock(mutex);
 
-                // outb.flush();
+                    if (test->name().startsWith(u8"_") && !opt->matchesFilterStrong(StringView(sb))) {
+                        ++mute;
+                    } else if (!opt->matchesFilter(StringView(sb))) {
+                        ++skip;
+                    } else {
+                        BufferedExecContext bctx;
+                        bool ok_ = UnlockGuard(mutex).run([&] { return ::execute(test, bctx); });
+                        outb << StringView(bctx.buf_);
+                        if (ok_) { ++ok; } else { ++err; }
+                    }
+                });
             });
+
+            pool->join();
 
             outb << Color::bright(AnsiColor::Green)
                  << StringView(u8"OK: ")
@@ -222,6 +245,7 @@ void GetOpt::help() const noexcept {
         << endL
         << StringView(u8"Options:") << endL
         << StringView(u8"  --help         print this help") << endL
+        << StringView(u8"  --threads=N    run tests in parallel using N threads") << endL
         << StringView(u8"  --OPT          equivalent to --OPT=1") << endL
         << StringView(u8"  --OPT=VALUE    set option OPT to VALUE") << endL
         << flsH;
