@@ -1,15 +1,13 @@
 #pragma once
 
 #include "task.h"
-#include "runable.h"
 
 #include <std/sys/types.h>
 
 namespace stl {
-    u64 registerTlsKey() noexcept;
 
-    class ObjPool;
     class PCG32;
+    class ObjPool;
 
     struct ThreadPool {
         virtual ~ThreadPool() noexcept;
@@ -28,5 +26,7 @@ namespace stl {
         static ThreadPool* sync(ObjPool* pool);
         static ThreadPool* simple(ObjPool* pool, size_t threads);
         static ThreadPool* workStealing(ObjPool* pool, size_t threads);
+
+        static u64 registerTlsKey() noexcept;
     };
 }

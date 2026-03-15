@@ -359,17 +359,17 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
 
 STD_TEST_SUITE(TlsKeys) {
     STD_TEST(Unique) {
-        u64 k1 = registerTlsKey();
-        u64 k2 = registerTlsKey();
-        u64 k3 = registerTlsKey();
+        u64 k1 = ThreadPool::registerTlsKey();
+        u64 k2 = ThreadPool::registerTlsKey();
+        u64 k3 = ThreadPool::registerTlsKey();
         STD_INSIST(k1 != k2);
         STD_INSIST(k2 != k3);
         STD_INSIST(k1 != k3);
     }
 
     STD_TEST(Monotone) {
-        u64 k1 = registerTlsKey();
-        u64 k2 = registerTlsKey();
+        u64 k1 = ThreadPool::registerTlsKey();
+        u64 k2 = ThreadPool::registerTlsKey();
         STD_INSIST(k2 > k1);
     }
 
@@ -383,7 +383,7 @@ STD_TEST_SUITE(TlsKeys) {
         for (int i = 0; i < N; ++i) {
             pool->submit([&keys, &idx] {
                 int i = stdAtomicAddAndFetch(&idx, 1, MemoryOrder::Relaxed) - 1;
-                keys[i] = registerTlsKey();
+                keys[i] = ThreadPool::registerTlsKey();
             });
         }
         pool->join();
@@ -400,14 +400,14 @@ STD_TEST_SUITE(SyncPoolTls) {
     STD_TEST(NotNull) {
         auto opool = ObjPool::fromMemory();
         auto* pool = ThreadPool::sync(opool.mutPtr());
-        u64 key = registerTlsKey();
+        u64 key = ThreadPool::registerTlsKey();
         STD_INSIST(pool->tls(key) != nullptr);
     }
 
     STD_TEST(StoreAndRetrieve) {
         auto opool = ObjPool::fromMemory();
         auto* pool = ThreadPool::sync(opool.mutPtr());
-        u64 key = registerTlsKey();
+        u64 key = ThreadPool::registerTlsKey();
         int sentinel = 42;
         *pool->tls(key) = &sentinel;
         STD_INSIST(*pool->tls(key) == &sentinel);
@@ -416,8 +416,8 @@ STD_TEST_SUITE(SyncPoolTls) {
     STD_TEST(MultipleKeysIndependent) {
         auto opool = ObjPool::fromMemory();
         auto* pool = ThreadPool::sync(opool.mutPtr());
-        u64 k1 = registerTlsKey();
-        u64 k2 = registerTlsKey();
+        u64 k1 = ThreadPool::registerTlsKey();
+        u64 k2 = ThreadPool::registerTlsKey();
         int v1 = 1, v2 = 2;
         *pool->tls(k1) = &v1;
         *pool->tls(k2) = &v2;
@@ -428,7 +428,7 @@ STD_TEST_SUITE(SyncPoolTls) {
     STD_TEST(PersistAcrossTasks) {
         auto opool = ObjPool::fromMemory();
         auto* pool = ThreadPool::sync(opool.mutPtr());
-        u64 key = registerTlsKey();
+        u64 key = ThreadPool::registerTlsKey();
         int sentinel = 77;
         void* result = nullptr;
 
@@ -441,7 +441,7 @@ STD_TEST_SUITE(SyncPoolTls) {
 
 STD_TEST_SUITE(SimplePoolTls) {
     STD_TEST(NullFromOutside) {
-        u64 key = registerTlsKey();
+        u64 key = ThreadPool::registerTlsKey();
         auto opool = ObjPool::fromMemory();
         auto* pool = ThreadPool::simple(opool.mutPtr(), 2);
         STD_INSIST(pool->tls(key) == nullptr);
@@ -449,7 +449,7 @@ STD_TEST_SUITE(SimplePoolTls) {
     }
 
     STD_TEST(NotNullFromTask) {
-        u64 key = registerTlsKey();
+        u64 key = ThreadPool::registerTlsKey();
         bool notNull = false;
 
         auto opool = ObjPool::fromMemory();
@@ -460,7 +460,7 @@ STD_TEST_SUITE(SimplePoolTls) {
     }
 
     STD_TEST(StoreAndRetrieve) {
-        u64 key = registerTlsKey();
+        u64 key = ThreadPool::registerTlsKey();
         int sentinel = 123;
         void* result = nullptr;
 
@@ -474,8 +474,8 @@ STD_TEST_SUITE(SimplePoolTls) {
     }
 
     STD_TEST(MultipleKeysIndependent) {
-        u64 k1 = registerTlsKey();
-        u64 k2 = registerTlsKey();
+        u64 k1 = ThreadPool::registerTlsKey();
+        u64 k2 = ThreadPool::registerTlsKey();
         int v1 = 1, v2 = 2;
         bool correct = true;
 
@@ -494,7 +494,7 @@ STD_TEST_SUITE(SimplePoolTls) {
 
     STD_TEST(WorkerIsolation) {
         const int N = 2;
-        u64 key = registerTlsKey();
+        u64 key = ThreadPool::registerTlsKey();
         Barrier barrier(N);
         bool correct = true;
 
@@ -516,7 +516,7 @@ STD_TEST_SUITE(SimplePoolTls) {
 
 STD_TEST_SUITE(WorkStealingPoolTls) {
     STD_TEST(NullFromOutside) {
-        u64 key = registerTlsKey();
+        u64 key = ThreadPool::registerTlsKey();
         auto opool = ObjPool::fromMemory();
         auto* pool = ThreadPool::workStealing(opool.mutPtr(), 2);
         STD_INSIST(pool->tls(key) == nullptr);
@@ -524,7 +524,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
     }
 
     STD_TEST(NotNullFromTask) {
-        u64 key = registerTlsKey();
+        u64 key = ThreadPool::registerTlsKey();
         bool notNull = false;
 
         auto opool = ObjPool::fromMemory();
@@ -537,8 +537,8 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
     }
 
     STD_TEST(MultipleKeysIndependent) {
-        u64 k1 = registerTlsKey();
-        u64 k2 = registerTlsKey();
+        u64 k1 = ThreadPool::registerTlsKey();
+        u64 k2 = ThreadPool::registerTlsKey();
         int v1 = 10, v2 = 20;
         bool correct = true;
 
@@ -557,7 +557,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
 
     STD_TEST(_WorkerIsolation) {
         const int N = 2;
-        u64 key = registerTlsKey();
+        u64 key = ThreadPool::registerTlsKey();
         Barrier barrier(N);
         bool correct = true;
 

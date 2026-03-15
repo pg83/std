@@ -24,12 +24,6 @@
 
 using namespace stl;
 
-u64 stl::registerTlsKey() noexcept {
-    static u64 g_tlsKeyCounter = 0;
-
-    return stdAtomicAddAndFetch(&g_tlsKeyCounter, 1, MemoryOrder::Relaxed);
-}
-
 namespace {
     struct ShutDown: public Task {
         ~ShutDown() noexcept {
@@ -458,4 +452,10 @@ ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads) {
 }
 
 void ThreadPool::beforeBlock() noexcept {
+}
+
+u64 ThreadPool::registerTlsKey() noexcept {
+    static u64 tlsKeyCounter = 0;
+
+    return stdAtomicAddAndFetch(&tlsKeyCounter, 1, MemoryOrder::Relaxed);
 }
