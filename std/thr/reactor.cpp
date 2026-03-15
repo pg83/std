@@ -73,6 +73,7 @@ namespace {
         void drainQueue();
         void run() noexcept override;
         void join() noexcept override;
+        void processEvent(PollEvent* ev) noexcept;
         void processRequest(PollRequest* req) override;
     };
 }
@@ -154,6 +155,26 @@ void ReactorState::drainQueue() {
     });
 }
 
+void ReactorState::processEvent(PollEvent* ev) noexcept {
+    int fd = (uintptr_t)ev->data - 1;
+
+    if (auto* entry = fdMap_.find(fd); entry) {
+        for (auto n = entry->mutFront(), e = entry->mutEnd(); n != e;) {
+            auto* next = n->next;
+
+            if (auto* req = (PollRequest*)n; req->flags & ev->flags) {
+                n->remove();
+                timers.remove(req);
+                req->complete(ev->flags);
+            }
+
+            n = next;
+        }
+
+        rearmOrDisarm(fd);
+    }
+}
+
 void ReactorState::run() noexcept {
     while (auto* e = exec) {
         drainQueue();
@@ -165,23 +186,7 @@ void ReactorState::run() noexcept {
                 drainWakeup();
                 poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
             } else {
-                int fd = (uintptr_t)ev->data - 1;
-
-                if (auto* entry = fdMap_.find(fd); entry) {
-                    for (auto n = entry->mutFront(), e = entry->mutEnd(); n != e;) {
-                        auto* next = n->next;
-
-                        if (auto* req = (PollRequest*)n; req->flags & ev->flags) {
-                            n->remove();
-                            timers.remove(req);
-                            req->complete(ev->flags);
-                        }
-
-                        n = next;
-                    }
-
-                    rearmOrDisarm(fd);
-                }
+                processEvent(ev);
             }
         }, timers.earliest());
 
