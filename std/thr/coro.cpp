@@ -271,10 +271,8 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
         reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr()));
     }
 
-    for (auto* r : reactors_) {
-        spawnRun(SpawnParams().setStack(opool_.mutPtr(), 16 * 1024).setPriority(1).setSystem(true).setRunable([r]() {
-            r->run();
-        }));
+    for (auto r : reactors_) {
+        spawnRun(SpawnParams().setStack(opool_.mutPtr(), 16 * 1024).setPriority(1).setSystem(true).setRunablePtr(r));
     }
 }
 

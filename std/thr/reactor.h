@@ -1,5 +1,7 @@
 #pragma once
 
+#include "runable.h"
+
 #include <std/lib/node.h>
 #include <std/sys/types.h>
 #include <std/map/treap_node.h>
@@ -20,10 +22,9 @@ namespace stl {
         virtual void parkWith(Runable&& afterSuspend) noexcept = 0;
     };
 
-    struct ReactorIface {
+    struct ReactorIface: public Runable {
         virtual ~ReactorIface() noexcept;
 
-        virtual void run() noexcept = 0;
         virtual void join() noexcept = 0;
         virtual void processRequest(PollRequest* req) = 0;
 
