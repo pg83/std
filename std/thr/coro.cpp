@@ -22,6 +22,7 @@
 #include <std/dbg/insist.h>
 #include <std/ptr/scoped.h>
 #include <std/alg/minmax.h>
+#include <std/dbg/assert.h>
 #include <std/alg/exchange.h>
 #include <std/alg/destruct.h>
 #include <std/lib/ring_buf.h>
@@ -405,6 +406,7 @@ void ContImpl::reSchedule() noexcept {
 
 void ContImpl::parkWith(Runable* afterSuspend) noexcept {
     afterSuspend_ = afterSuspend;
+    STD_ASSERT(exec_->currentCont() == this);
     ctx_->switchTo(*workerCtx_);
 }
 
