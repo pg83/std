@@ -292,7 +292,7 @@ namespace {
 
         // Read all pending Cmds from pipe, apply to armed_. Returns true if any read.
         void drainCmds() {
-            Cmd batch[16];
+            Cmd batch[1024];
             ssize_t n;
 
             while ((n = ::read(wakeReadFd_.get(), batch, sizeof(batch))) > 0) {
