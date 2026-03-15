@@ -144,21 +144,19 @@ void ReactorState::drainQueue() {
         queue_.xchg(local);
     });
 
-    IntrusiveList tmp;
+    local.visit([&](TreapNode* node) {
+        auto req = (PollRequest*)node;
 
-    local.visit([&tmp](TreapNode* node) {
-        tmp.pushBack((PollRequest*)node);
-        node->left = node->right = nullptr;
-    });
+        req->left = nullptr;
+        req->right = nullptr;
 
-    while (auto* req = (PollRequest*)tmp.popFrontOrNull()) {
         timers.insert(req);
 
         auto& entry = fdMap_[req->fd];
 
         entry.pushBack(req);
         poller->arm(req->fd, entry.flags(), (void*)(uintptr_t)(req->fd + 1));
-    }
+    });
 }
 
 void ReactorState::run() noexcept {
