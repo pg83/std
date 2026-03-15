@@ -1,13 +1,14 @@
 #pragma once
 
+#include "wait_group.h"
+
 #include <std/sys/types.h>
 
 namespace stl {
     struct CoroExecutor;
 
     class Barrier {
-        struct Impl;
-        Impl* impl;
+        WaitGroup wg;
 
     public:
         explicit Barrier(size_t n);
