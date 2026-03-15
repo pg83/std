@@ -11,6 +11,7 @@
 #include <std/dbg/panic.h>
 #include <std/alg/range.h>
 #include <std/map/treap.h>
+#include <std/sys/atomic.h>
 #include <std/lib/vector.h>
 #include <std/str/builder.h>
 #include <std/mem/obj_pool.h>
@@ -142,40 +143,33 @@ void Tests::execute() {
     auto opool = ObjPool::fromMemory();
     auto pool = ThreadPool::simple(opool.mutPtr(), opt->threads());
 
-    Mutex mutex;
+    StringBuilder sb;
 
     visit([&](void* el) {
         auto test = (TestFunc*)el;
 
-        pool->submit([&, test] {
-            StringBuilder sb;
+        sb.reset();
+        sb << *test;
 
-            sb << *test;
-
-            LockGuard lock(mutex);
-
-            if (test->name().startsWith(u8"_") && !opt->matchesFilterStrong(StringView(sb))) {
-                ++mute;
-            } else if (!opt->matchesFilter(StringView(sb))) {
-                ++skip;
-            } else {
+        if (test->name().startsWith(u8"_") && !opt->matchesFilterStrong(StringView(sb))) {
+            ++mute;
+        } else if (!opt->matchesFilter(StringView(sb))) {
+            ++skip;
+        } else {
+            pool->submit([&, test] {
                 BufferedExecContext bctx;
 
                 bctx.opts = &opt->opts;
 
-                bool ok_ = UnlockGuard(mutex).run([&] {
-                    return ::execute(test, bctx);
-                });
+                if (::execute(test, bctx)) {
+                    stdAtomicAddAndFetch(&ok, 1, MemoryOrder::Relaxed);
+                } else {
+                    stdAtomicAddAndFetch(&err, 1, MemoryOrder::Relaxed);
+                }
 
                 stdoutStream().write(bctx.buf_.data(), bctx.buf_.length());
-
-                if (ok_) {
-                    ++ok;
-                } else {
-                    ++err;
-                }
-            }
-        });
+            });
+        }
     });
 
     pool->join();

@@ -34,8 +34,7 @@ namespace {
 
         void switchTo(Context& target) noexcept override;
 
-        __attribute__((naked, noinline))
-        static void swapContext(u64*, u64*);
+        __attribute__((naked, noinline)) static void swapContext(u64*, u64*);
 
         [[noreturn]]
         static void trampoline();
@@ -58,8 +57,7 @@ void ContextImpl::swapContext(u64*, u64*) {
         "popq %r12\n\t"
         "popq %rbp\n\t"
         "popq %rbx\n\t"
-        "retq\n\t"
-    );
+        "retq\n\t");
 }
 
 void ContextImpl::trampoline() {
@@ -95,7 +93,7 @@ void ContextImpl::switchTo(Context& target) noexcept {
     swapContext(&rsp, &t.rsp);
 }
 #else
-#include <ucontext.h>
+    #include <ucontext.h>
 
 namespace {
     struct ContextImpl: public ContextBase {
