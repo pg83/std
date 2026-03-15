@@ -25,10 +25,12 @@ namespace stl {
         void* stackPtr;
         Runable* runable;
         u8 priority;
+        bool system;
 
         SpawnParams() noexcept;
 
         SpawnParams& setPriority(u8 v) noexcept;
+        SpawnParams& setSystem(bool v) noexcept;
         SpawnParams& setStackPtr(void* v) noexcept;
         SpawnParams& setStackSize(size_t v) noexcept;
         SpawnParams& setRunablePtr(Runable* v) noexcept;

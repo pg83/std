@@ -44,6 +44,7 @@ namespace {
         Runable* runable_;
         Runable* afterSuspend_;
         u8 priority_;
+        bool system_;
 
         u8 priority() const noexcept override;
 
@@ -97,6 +98,7 @@ namespace {
 
     struct CoroExecutorImpl: public CoroExecutor {
         alignas(64) int inflight_ = 0;
+        alignas(64) int sysInflight_ = 0;
         ObjPool::Ref opool_;
         const u64 tlsKey_;
         Vector<ReactorIface*> reactors_;
@@ -272,7 +274,7 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     }
 
     for (auto* r : reactors_) {
-        spawnRun(SpawnParams().setStack(opool_.mutPtr(), 16 * 1024).setPriority(1).setRunable([r]() {
+        spawnRun(SpawnParams().setStack(opool_.mutPtr(), 16 * 1024).setPriority(1).setSystem(true).setRunable([r]() {
             r->run();
         }));
     }
@@ -285,13 +287,13 @@ CoroExecutorImpl::~CoroExecutorImpl() noexcept {
         r->join();
     }
 
-    while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) != 0) {
+    while (stdAtomicFetch(&sysInflight_, MemoryOrder::Acquire) != 0) {
         sched_yield();
     }
 }
 
 void CoroExecutorImpl::join() noexcept {
-    while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) > reactors_.length()) {
+    while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) > 0) {
         char b;
 
         joinR_.read(&b, 1);
@@ -355,8 +357,13 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noe
     , runable_(params.runable)
     , afterSuspend_(nullptr)
     , priority_(params.priority)
+    , system_(params.system)
 {
-    stdAtomicAddAndFetch(&exec_->inflight_, 1, MemoryOrder::Relaxed);
+    if (!system_) {
+        stdAtomicAddAndFetch(&exec_->inflight_, 1, MemoryOrder::Relaxed);
+    } else {
+        stdAtomicAddAndFetch(&exec_->sysInflight_, 1, MemoryOrder::Relaxed);
+    }
 }
 
 u8 ContImpl::priority() const noexcept {
@@ -396,10 +403,14 @@ void ContImpl::run() noexcept {
 }
 
 ContImpl::~ContImpl() {
-    if (stdAtomicAddAndFetch(&exec_->inflight_, -1, MemoryOrder::Release) == (int)exec_->reactors_.length()) {
-        char b = 1;
+    if (!system_) {
+        if (stdAtomicAddAndFetch(&exec_->inflight_, -1, MemoryOrder::Release) == 0) {
+            char b = 1;
 
-        exec_->joinW_.write(&b, 1);
+            exec_->joinW_.write(&b, 1);
+        }
+    } else {
+        stdAtomicSubAndFetch(&exec_->sysInflight_, 1, MemoryOrder::Release);
     }
 }
 
@@ -408,6 +419,7 @@ SpawnParams::SpawnParams() noexcept
     , stackPtr(nullptr)
     , runable(nullptr)
     , priority(0)
+    , system(false)
 {
 }
 
@@ -725,6 +737,12 @@ SpawnParams& SpawnParams::setStackPtr(void* v) noexcept {
 
 SpawnParams& SpawnParams::setPriority(u8 v) noexcept {
     priority = v;
+
+    return *this;
+}
+
+SpawnParams& SpawnParams::setSystem(bool v) noexcept {
+    system = v;
 
     return *this;
 }
