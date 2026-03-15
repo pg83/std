@@ -135,9 +135,7 @@ void ReactorState::drainQueue() {
         queue_.xchgWithEmptyList(local);
     });
 
-    while (auto* node = local.popFrontOrNull()) {
-        auto* req = (PollRequest*)node;
-
+    while (auto* req = (PollRequest*)local.popFrontOrNull()) {
         timers.insert(req);
 
         auto& entry = fdMap_[req->fd];
@@ -189,9 +187,7 @@ void ReactorState::run() noexcept {
 
             timers.remove(req);
             req->remove();
-
             rearmOrDisarm(req->fd);
-
             req->complete(0);
         }
 
