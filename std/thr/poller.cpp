@@ -249,83 +249,35 @@ namespace {
     }
 
     struct PollPoller: public PollerIface {
-        ScopedFD wakeReadFd_;
-        ScopedFD wakeWriteFd_;
-
-        struct Cmd {
+        struct Entry {
             int fd;
-            u32 flags; // 0 = disarm
+            u32 flags;
             void* data;
         };
 
-        // reactor-thread-only
-        IntMap<Cmd> armed_;
+        IntMap<Entry> armed_;
         Vector<struct pollfd> fds_; // rebuilt each wait()
 
-        PollPoller() {
-            createPipeFD(wakeReadFd_, wakeWriteFd_);
-            wakeReadFd_.setNonBlocking();
-        }
-
-        ~PollPoller() noexcept {
-        }
-
         void arm(int fd, u32 flags, void* data) override {
-            Cmd cmd{
-                .fd = fd,
-                .flags = flags,
-                .data = data,
-            };
-
-            wakeWriteFd_.write(&cmd, sizeof(cmd));
+            armed_[fd] = {fd, flags, data};
         }
 
         void disarm(int fd) override {
-            Cmd cmd{
-                .fd = fd,
-                .flags = 0,
-                .data = nullptr,
-            };
-
-            wakeWriteFd_.write(&cmd, sizeof(cmd));
-        }
-
-        // Read all pending Cmds from pipe, apply to armed_. Returns true if any read.
-        void drainCmds() {
-            Cmd batch[1024];
-            ssize_t n;
-
-            while ((n = ::read(wakeReadFd_.get(), batch, sizeof(batch))) > 0) {
-                STD_INSIST((size_t)n % sizeof(Cmd) == 0);
-
-                for (const Cmd& cmd : range(batch, batch + (size_t)n / sizeof(Cmd))) {
-                    if (cmd.flags != 0) {
-                        armed_[cmd.fd] = cmd;
-                    } else {
-                        armed_.erase(cmd.fd);
-                    }
-                }
-            }
+            armed_.erase(fd);
         }
 
         void buildFds() {
             fds_.clear();
 
-            fds_.pushBack({
-                .fd = wakeReadFd_.get(),
-                .events = POLLIN,
-            });
-
-            armed_.visit([&](const Cmd& cmd) {
+            armed_.visit([&](const Entry& e) {
                 fds_.pushBack({
-                    .fd = cmd.fd,
-                    .events = toPollEvents(cmd.flags),
+                    .fd = e.fd,
+                    .events = toPollEvents(e.flags),
                 });
             });
         }
 
         void waitImpl(VisitorFace& v, u32 timeoutUs) override {
-            drainCmds();
             buildFds();
 
             int n = STD_POLL(fds_.mutData(), (int)fds_.length(), (int)((timeoutUs + 999) / 1000));
@@ -334,17 +286,24 @@ namespace {
                 return;
             }
 
-            for (auto& pfd : range(fds_.mutData() + 1, fds_.mutData() + fds_.length())) {
+            for (auto& pfd : range(fds_.mutData(), fds_.mutData() + fds_.length())) {
                 if (pfd.revents == 0) {
                     continue;
                 }
 
-                if (Cmd* cmd = armed_.find(pfd.fd); cmd) {
-                    PollEvent ev{cmd->data, fromPollEvents(pfd.revents)};
+                Entry* ep = armed_.find(pfd.fd);
 
-                    v.visit(&ev);
-                    armed_.erase((u64)pfd.fd); // ONESHOT
+                if (!ep) {
+                    continue;
                 }
+
+                Entry e = *ep;
+
+                armed_.erase((u64)pfd.fd); // ONESHOT before visit, which may re-arm
+
+                PollEvent ev{e.data, fromPollEvents(pfd.revents)};
+
+                v.visit(&ev);
             }
         }
     };
