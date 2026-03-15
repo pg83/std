@@ -350,20 +350,6 @@ namespace {
     };
 }
 
-PollerIface* PollerIface::create() {
-    if (getenv("USE_POLL_POLLER")) {
-        return new PollPoller();
-    }
-
-#if defined(__linux__)
-    return new EpollPoller();
-#elif defined(__APPLE__) || defined(__FreeBSD__)
-    return new KqueuePoller();
-#else
-    return new PollPoller();
-#endif
-}
-
 PollerIface* PollerIface::create(ObjPool* pool) {
     if (getenv("USE_POLL_POLLER")) {
         return pool->make<PollPoller>();

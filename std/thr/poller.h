@@ -37,7 +37,6 @@ namespace stl {
                      }), deadlineUs);
         }
 
-        static PollerIface* create();
         static PollerIface* create(ObjPool* pool);
     };
 }
