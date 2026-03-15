@@ -10,6 +10,7 @@
 #include <std/map/treap.h>
 #include <std/lib/vector.h>
 #include <std/str/builder.h>
+#include <std/sym/s_map.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,54 +58,13 @@ namespace {
     struct GetOpt {
         Vector<StringView> includes;
         Vector<StringView> excludes;
+        SymbolMap<StringView> opts;
 
-        GetOpt(Ctx& ctx) noexcept {
-            for (int i = 1; i < ctx.argc; ++i) {
-                StringView arg(ctx.argv[i]);
-
-                if (arg.startsWith(u8"-") && arg.length() > 1) {
-                    excludes.pushBack(StringView(arg.data() + 1, arg.length() - 1));
-                } else {
-                    includes.pushBack(arg);
-                }
-            }
-        }
-
-        bool matchesFilter(StringView testName) const noexcept {
-            if (matchesExclude(testName)) {
-                return false;
-            }
-
-            if (includes.empty()) {
-                return true;
-            }
-
-            return matchesFilterStrong(testName);
-        }
-
-        bool matchesFilterStrong(StringView testName) const noexcept {
-            if (matchesExclude(testName)) {
-                return false;
-            }
-
-            for (auto prefix : range(includes)) {
-                if (testName.startsWith(prefix)) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        bool matchesExclude(StringView testName) const noexcept {
-            for (auto prefix : range(excludes)) {
-                if (testName.startsWith(prefix)) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
+        GetOpt(Ctx& ctx) noexcept;
+        void help() const noexcept;
+        bool matchesFilter(StringView testName) const noexcept;
+        bool matchesFilterStrong(StringView testName) const noexcept;
+        bool matchesExclude(StringView testName) const noexcept;
     };
 
     struct Tests: public ExecContext, public Treap {
@@ -220,6 +180,89 @@ namespace {
             instance().handlePanic2();
         }
     };
+}
+
+GetOpt::GetOpt(Ctx& ctx) noexcept {
+    for (int i = 1; i < ctx.argc; ++i) {
+        StringView arg(ctx.argv[i]);
+
+        if (arg.startsWith(u8"--") && arg.length() > 2) {
+            StringView key(arg.data() + 2, arg.length() - 2);
+            StringView value(u8"1");
+
+            if (auto* eq = key.memChr('='); eq) {
+                value = StringView(eq + 1, key.end());
+                key = StringView(key.begin(), eq);
+            }
+
+            opts[key] = value;
+        } else if (arg.startsWith(u8"-") && arg.length() > 1) {
+            excludes.pushBack(StringView(arg.data() + 1, arg.length() - 1));
+        } else {
+            includes.pushBack(arg);
+        }
+    }
+
+    help();
+}
+
+void GetOpt::help() const noexcept {
+    if (!opts.find(StringView(u8"help"))) {
+        return;
+    }
+
+    auto out = sysE;
+
+    out << StringView(u8"Usage: test-binary [FILTER...] [--OPTION[=VALUE]]") << endL
+        << endL
+        << StringView(u8"Filters:") << endL
+        << StringView(u8"  Suite::Test    run tests whose full name starts with the prefix") << endL
+        << StringView(u8"  -Suite::Test   exclude tests matching the prefix") << endL
+        << StringView(u8"  (tests prefixed with _ are muted unless explicitly included)") << endL
+        << endL
+        << StringView(u8"Options:") << endL
+        << StringView(u8"  --help         print this help") << endL
+        << StringView(u8"  --OPT          equivalent to --OPT=1") << endL
+        << StringView(u8"  --OPT=VALUE    set option OPT to VALUE") << endL
+        << flsH;
+
+    exit(0);
+}
+
+bool GetOpt::matchesFilter(StringView testName) const noexcept {
+    if (matchesExclude(testName)) {
+        return false;
+    }
+
+    if (includes.empty()) {
+        return true;
+    }
+
+    return matchesFilterStrong(testName);
+}
+
+bool GetOpt::matchesFilterStrong(StringView testName) const noexcept {
+    if (matchesExclude(testName)) {
+        return false;
+    }
+
+    for (auto prefix : range(includes)) {
+        if (testName.startsWith(prefix)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool GetOpt::matchesExclude(StringView testName) const noexcept {
+    for (auto prefix : range(excludes)) {
+        if (testName.startsWith(prefix)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 template <>
