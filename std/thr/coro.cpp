@@ -10,6 +10,7 @@
 #include "thread_iface.h"
 #include "channel_iface.h"
 #include "cond_var_iface.h"
+#include "signal_iface.h"
 
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
@@ -92,6 +93,7 @@ namespace {
     }
 
     struct CoroMutexImpl;
+    struct CoroSignalImpl;
     struct CoroCondVarImpl;
     struct CoroChannelImpl;
     struct CoroChannelImplN;
@@ -145,6 +147,7 @@ namespace {
         ReactorIface* pickReactor() noexcept;
 
         MutexIface* createMutex() override;
+        SignalIface* createSignal() override;
         CondVarIface* createCondVar() override;
         ChannelIface* createChannel(size_t cap) override;
         ThreadIface* createThread(Runable& runable) override;
@@ -176,9 +179,22 @@ namespace {
         CoroCondVarImpl(CoroExecutorImpl* exec) noexcept;
 
         void run() override;
-        void wait(MutexIface* mutex) noexcept override;
         void signal() noexcept override;
         void broadcast() noexcept override;
+        void wait(MutexIface* mutex) noexcept override;
+    };
+
+    struct CoroSignalImpl: public SignalIface, public Runable {
+        CoroExecutorImpl* exec_;
+        Mutex queueMutex_;
+        ContImpl* waiter_ = nullptr;
+        int count_ = 0;
+
+        CoroSignalImpl(CoroExecutorImpl* exec) noexcept;
+
+        void run() override;
+        void set() noexcept override;
+        void wait() noexcept override;
     };
 
     struct CoroMutexImpl: public MutexIface, public Runable {
@@ -478,6 +494,43 @@ void CoroCondVarImpl::broadcast() noexcept {
 
 CondVarIface* CoroExecutorImpl::createCondVar() {
     return new CoroCondVarImpl(this);
+}
+
+CoroSignalImpl::CoroSignalImpl(CoroExecutorImpl* exec) noexcept
+    : exec_(exec)
+    , queueMutex_(exec)
+{
+}
+
+void CoroSignalImpl::run() {
+    queueMutex_.unlock();
+}
+
+void CoroSignalImpl::set() noexcept {
+    LockGuard guard(queueMutex_);
+
+    if (waiter_) {
+        exchange(waiter_, nullptr)->reSchedule();
+    } else {
+        ++count_;
+    }
+}
+
+void CoroSignalImpl::wait() noexcept {
+    queueMutex_.lock();
+
+    if (count_ > 0) {
+        --count_;
+        queueMutex_.unlock();
+        return;
+    }
+
+    waiter_ = exec_->currentCont();
+    waiter_->parkWith(this);
+}
+
+SignalIface* CoroExecutorImpl::createSignal() {
+    return new CoroSignalImpl(this);
 }
 
 CoroThreadImpl::CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable)

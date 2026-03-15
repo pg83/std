@@ -14,6 +14,7 @@ namespace stl {
     struct ThreadIface;
     struct CondVarIface;
     struct ChannelIface;
+    struct SignalIface;
     struct CoroExecutor;
 
     struct Cont {
@@ -54,6 +55,7 @@ namespace stl {
         virtual Cont* me() const noexcept = 0;
         virtual MutexIface* createMutex() = 0;
         virtual CondVarIface* createCondVar() = 0;
+        virtual SignalIface* createSignal() = 0;
         virtual Cont* spawnRun(SpawnParams params) = 0;
         virtual ChannelIface* createChannel(size_t cap) = 0;
         virtual u32 poll(int fd, u32 flags, u64 deadlineUs) = 0;
