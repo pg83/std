@@ -11,7 +11,10 @@ namespace stl {
 
     public:
         WaitGroup();
-        explicit WaitGroup(CoroExecutor* exec);
+        WaitGroup(CoroExecutor* exec);
+
+        WaitGroup(size_t init);
+        WaitGroup(size_t init, CoroExecutor* exec);
 
         ~WaitGroup() noexcept;
 

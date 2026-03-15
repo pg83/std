@@ -12,15 +12,15 @@ struct WaitGroup::Impl {
     CondVar cv;
     size_t counter;
 
-    Impl()
-        : counter(0)
+    Impl(size_t init)
+        : counter(init)
     {
     }
 
-    Impl(CoroExecutor* exec)
+    Impl(size_t init, CoroExecutor* exec)
         : mutex(exec)
         , cv(exec)
-        , counter(0)
+        , counter(init)
     {
     }
 
@@ -47,12 +47,22 @@ struct WaitGroup::Impl {
 };
 
 WaitGroup::WaitGroup()
-    : impl(new Impl())
+    : WaitGroup((size_t)0)
 {
 }
 
 WaitGroup::WaitGroup(CoroExecutor* exec)
-    : impl(new Impl(exec))
+    : WaitGroup(0, exec)
+{
+}
+
+WaitGroup::WaitGroup(size_t init)
+    : impl(new Impl(init))
+{
+}
+
+WaitGroup::WaitGroup(size_t init, CoroExecutor* exec)
+    : impl(new Impl(init, exec))
 {
 }
 

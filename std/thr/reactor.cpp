@@ -4,7 +4,7 @@
 #include "coro.h"
 #include "mutex.h"
 #include "poller.h"
-#include "signal.h"
+#include "wait_group.h"
 
 #include <std/sys/fd.h>
 #include <std/mem/new.h>
@@ -59,7 +59,7 @@ namespace {
         IntMap<FdEntry> fdMap_;
         Mutex queueMutex_;
         DeadlineTreap queue_;
-        Signal done_;
+        WaitGroup done_;
         ScopedFD wakeReadFd;
         ScopedFD wakeWriteFd;
 
@@ -83,7 +83,7 @@ ReactorState::ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool)
     , pool(p)
     , poller(PollerIface::create(opool))
     , queueMutex_(e)
-    , done_(e)
+    , done_(1, e)
 {
     createPipeFD(wakeReadFd, wakeWriteFd);
     wakeReadFd.setNonBlocking();
@@ -207,7 +207,7 @@ void ReactorState::run() noexcept {
         e->yield();
     }
 
-    done_.set();
+    done_.done();
 }
 
 ReactorIface::~ReactorIface() noexcept {
