@@ -12,14 +12,7 @@ namespace stl {
         size_t size_;
 
     public:
-        RingBuffer(void** buf, size_t capacity) noexcept
-            : buf_(buf)
-            , capa_(capacity)
-            , head_(0)
-            , tail_(0)
-            , size_(0)
-        {
-        }
+        RingBuffer(void** buf, size_t capacity) noexcept;
 
         bool empty() const noexcept {
             return size_ == 0;
