@@ -4,6 +4,7 @@
 #include <std/sys/types.h>
 #include <std/dbg/assert.h>
 #include <std/sys/atomic.h>
+#include <std/mem/obj_pool.h>
 
 using namespace stl;
 
@@ -160,18 +161,18 @@ namespace {
 WaitQueue::~WaitQueue() noexcept {
 }
 
-WaitQueue::Ref WaitQueue::construct(size_t maxWaiters) {
+WaitQueue* WaitQueue::construct(ObjPool* pool, size_t maxWaiters) {
 #if __SIZEOF_POINTER__ == 8
     if (maxWaiters <= 64) {
-        return new BitmaskImpl<u64>();
+        return pool->make<BitmaskImpl<u64>>();
     }
 
-    return new PointerImpl();
+    return pool->make<PointerImpl>();
 #else
     if (maxWaiters <= 32) {
-        return new BitmaskImpl<u32>();
+        return pool->make<BitmaskImpl<u32>>();
     }
 
-    return new MutexImpl();
+    return pool->make<MutexImpl>();
 #endif
 }

@@ -234,9 +234,9 @@ namespace {
         };
 
         IntMap<Worker> workerIndex_;
-        WaitQueue::Ref wq;
+        WaitQueue* wq;
 
-        WorkStealingThreadPool(size_t numThreads);
+        WorkStealingThreadPool(ObjPool* pool, size_t numThreads);
         ~WorkStealingThreadPool() noexcept;
 
         void join() noexcept override;
@@ -289,8 +289,8 @@ void WorkStealingThreadPool::Worker::beforeBlock() noexcept {
     }
 }
 
-WorkStealingThreadPool::WorkStealingThreadPool(size_t numThreads)
-    : wq(WaitQueue::construct(numThreads))
+WorkStealingThreadPool::WorkStealingThreadPool(ObjPool* pool, size_t numThreads)
+    : wq(WaitQueue::construct(pool, numThreads))
 {
     PCG32 rng(this);
 
@@ -454,7 +454,7 @@ ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads) {
         return simple(pool, threads);
     }
 
-    return pool->make<WorkStealingThreadPool>(threads);
+    return pool->make<WorkStealingThreadPool>(pool, threads);
 }
 
 void ThreadPool::beforeBlock() noexcept {

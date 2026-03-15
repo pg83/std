@@ -4,17 +4,20 @@
 
 #include <std/tst/ut.h>
 #include <std/sys/atomic.h>
+#include <std/mem/obj_pool.h>
 
 using namespace stl;
 
 STD_TEST_SUITE(WaitQueue) {
     STD_TEST(DequeueEmpty) {
-        auto wq = WaitQueue::construct(4);
+        auto opool = ObjPool::fromMemory();
+        auto* wq = WaitQueue::construct(opool.mutPtr(), 4);
         STD_INSIST(wq->dequeue() == nullptr);
     }
 
     STD_TEST(EnqueueDequeue) {
-        auto wq = WaitQueue::construct(4);
+        auto opool = ObjPool::fromMemory();
+        auto* wq = WaitQueue::construct(opool.mutPtr(), 4);
 
         WaitQueue::Item item;
         item.index = 0;
@@ -25,7 +28,8 @@ STD_TEST_SUITE(WaitQueue) {
     }
 
     STD_TEST(MultipleItems) {
-        auto wq = WaitQueue::construct(4);
+        auto opool = ObjPool::fromMemory();
+        auto* wq = WaitQueue::construct(opool.mutPtr(), 4);
 
         WaitQueue::Item a, b, c;
         a.index = 0;
@@ -46,7 +50,8 @@ STD_TEST_SUITE(WaitQueue) {
 
     // construct(65) даёт PointerImpl / MutexImpl вместо BitmaskImpl
     STD_TEST(LargeCapacity) {
-        auto wq = WaitQueue::construct(65);
+        auto opool = ObjPool::fromMemory();
+        auto* wq = WaitQueue::construct(opool.mutPtr(), 65);
 
         WaitQueue::Item a, b;
         a.index = 0;
@@ -65,7 +70,8 @@ STD_TEST_SUITE(WaitQueue) {
 
     STD_TEST(ConcurrentEnqueue) {
         const int N = 8;
-        auto wq = WaitQueue::construct(N);
+        auto opool = ObjPool::fromMemory();
+        auto* wq = WaitQueue::construct(opool.mutPtr(), N);
         Barrier ready(N);
 
         WaitQueue::Item items[N];
@@ -95,7 +101,8 @@ STD_TEST_SUITE(WaitQueue) {
 
     STD_TEST(ConcurrentEnqueueDequeue) {
         const int N = 8;
-        auto wq = WaitQueue::construct(65);
+        auto opool = ObjPool::fromMemory();
+        auto* wq = WaitQueue::construct(opool.mutPtr(), 65);
         Barrier ready(N);
         int enqueued = 0;
 
@@ -125,7 +132,8 @@ STD_TEST_SUITE(WaitQueue) {
     }
 
     STD_TEST(EnqueueDequeueOrdering) {
-        auto wq = WaitQueue::construct(65);
+        auto opool = ObjPool::fromMemory();
+        auto* wq = WaitQueue::construct(opool.mutPtr(), 65);
 
         WaitQueue::Item items[4];
         for (int i = 0; i < 4; ++i) {
