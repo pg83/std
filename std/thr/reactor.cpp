@@ -194,9 +194,7 @@ void ReactorState::run() noexcept {
 
         auto now = monotonicNowUs();
 
-        while (auto* node = timers.min()) {
-            auto* req = (PollRequest*)node;
-
+        while (auto* req = (PollRequest*)timers.min()) {
             if (req->deadline > now) {
                 break;
             }

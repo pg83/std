@@ -1,6 +1,7 @@
 #include "treap.h"
 #include "treap_node.h"
 
+#include <std/alg/xchg.h>
 #include <std/lib/vector.h>
 #include <std/rng/split_mix_64.h>
 
@@ -108,10 +109,7 @@ TreapNode* Treap::min() const noexcept {
 }
 
 void Treap::xchg(Treap& other) noexcept {
-    auto* tmp = root;
-
-    root = other.root;
-    other.root = tmp;
+    stl::xchg(root, other.root);
 }
 
 size_t Treap::height() const noexcept {
