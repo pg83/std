@@ -172,11 +172,14 @@ namespace {
     };
 
     struct CoroCondVarImpl: public CondVarIface, public Runable {
-        CoroExecutorImpl* exec_;
         Mutex queueMutex_;
         IntrusiveList waiters_;
 
         CoroCondVarImpl(CoroExecutorImpl* exec) noexcept;
+
+        CoroExecutorImpl* exec() noexcept {
+            return (CoroExecutorImpl*)queueMutex_.nativeHandle();
+        }
 
         void run() override;
         void signal() noexcept override;
@@ -185,12 +188,15 @@ namespace {
     };
 
     struct CoroSignalImpl: public SignalIface, public Runable {
-        CoroExecutorImpl* exec_;
         Mutex queueMutex_;
         ContImpl* waiter_ = nullptr;
         int count_ = 0;
 
         CoroSignalImpl(CoroExecutorImpl* exec) noexcept;
+
+        CoroExecutorImpl* exec() noexcept {
+            return (CoroExecutorImpl*)queueMutex_.nativeHandle();
+        }
 
         void run() override;
         void set() noexcept override;
@@ -205,6 +211,7 @@ namespace {
 
         CoroMutexImpl(CoroExecutorImpl* exec) noexcept;
 
+        void* nativeHandle() noexcept override;
         void run() override;
         void lock() noexcept override;
         void unlock() noexcept override;
@@ -218,13 +225,16 @@ namespace {
     };
 
     struct CoroChannelImpl: public ChannelIface, public Runable {
-        CoroExecutorImpl* exec_;
         Mutex queueMutex_;
         IntrusiveList senders_;
         IntrusiveList receivers_;
         bool closed_;
 
         CoroChannelImpl(CoroExecutorImpl* exec) noexcept;
+
+        CoroExecutorImpl* exec() noexcept {
+            return (CoroExecutorImpl*)queueMutex_.nativeHandle();
+        }
 
         bool sendOne(void* v) noexcept;
         bool recvOne(void** out) noexcept;
@@ -325,6 +335,10 @@ CoroMutexImpl::CoroMutexImpl(CoroExecutorImpl* exec) noexcept
     : exec_(exec)
     , locked_(false)
 {
+}
+
+void* CoroMutexImpl::nativeHandle() noexcept {
+    return exec_;
 }
 
 void CoroMutexImpl::run() {
@@ -458,7 +472,7 @@ MutexIface* CoroExecutorImpl::createMutex() {
 }
 
 CoroCondVarImpl::CoroCondVarImpl(CoroExecutorImpl* exec) noexcept
-    : exec_(exec)
+    : queueMutex_(exec)
 {
 }
 
@@ -467,7 +481,7 @@ void CoroCondVarImpl::run() {
 }
 
 void CoroCondVarImpl::wait(MutexIface* mutex) noexcept {
-    auto* cont = exec_->currentCont();
+    auto* cont = exec()->currentCont();
 
     queueMutex_.lock();
     waiters_.pushBack(cont);
@@ -497,8 +511,7 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
 }
 
 CoroSignalImpl::CoroSignalImpl(CoroExecutorImpl* exec) noexcept
-    : exec_(exec)
-    , queueMutex_(exec)
+    : queueMutex_(exec)
 {
 }
 
@@ -525,7 +538,7 @@ void CoroSignalImpl::wait() noexcept {
         return;
     }
 
-    waiter_ = exec_->currentCont();
+    waiter_ = exec()->currentCont();
     waiter_->parkWith(this);
 }
 
@@ -580,8 +593,7 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
 }
 
 CoroChannelImpl::CoroChannelImpl(CoroExecutorImpl* exec) noexcept
-    : exec_(exec)
-    , queueMutex_(exec)
+    : queueMutex_(exec)
     , closed_(false)
 {
 }
@@ -591,7 +603,7 @@ void CoroChannelImpl::run() {
 }
 
 void CoroChannelImpl::enqueue(void* v) {
-    auto* cont = exec_->currentCont();
+    auto* cont = exec()->currentCont();
 
     LockGuard guard(queueMutex_);
 
@@ -613,7 +625,7 @@ void CoroChannelImpl::enqueue(void* v) {
 }
 
 bool CoroChannelImpl::dequeue(void** out) {
-    auto* cont = exec_->currentCont();
+    auto* cont = exec()->currentCont();
 
     LockGuard guard(queueMutex_);
 

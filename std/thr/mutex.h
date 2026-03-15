@@ -23,6 +23,7 @@ namespace stl {
         void lock() noexcept;
         void unlock() noexcept;
         bool tryLock() noexcept;
+        void* nativeHandle() noexcept;
     };
 
     class LockGuard {

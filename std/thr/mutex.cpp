@@ -79,3 +79,7 @@ void Mutex::unlock() noexcept {
 bool Mutex::tryLock() noexcept {
     return impl->tryLock();
 }
+
+void* Mutex::nativeHandle() noexcept {
+    return impl->nativeHandle();
+}
