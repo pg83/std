@@ -57,7 +57,8 @@ namespace {
         PollerIface* poller;
         DeadlineTreap timers;
         IntMap<FdEntry> fdMap_;
-        Mutex timerMutex;
+        Mutex queueMutex_;
+        IntrusiveList queue_;
         Event done_;
         ScopedFD wakeReadFd;
         ScopedFD wakeWriteFd;
@@ -69,6 +70,7 @@ namespace {
         void wakeup() noexcept;
         void rearmOrDisarm(int fd);
         void drainWakeup() noexcept;
+        void drainQueue();
         void run() noexcept override;
         void join() noexcept override;
         void processRequest(PollRequest* req) override;
@@ -79,7 +81,7 @@ ReactorState::ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool)
     : exec(e)
     , pool(p)
     , poller(PollerIface::create(opool))
-    , timerMutex(e)
+    , queueMutex_(e)
 {
     createPipeFD(wakeReadFd, wakeWriteFd);
     wakeReadFd.setNonBlocking();
@@ -98,28 +100,12 @@ void ReactorState::rearmOrDisarm(int fd) {
 }
 
 void ReactorState::processRequest(PollRequest* req) {
-    timerMutex.lock();
+    queueMutex_.lock();
+    queue_.pushBack(req);
 
-    const auto prevEarliest = timers.earliest();
-
-    timers.insert(req);
-
-    auto& entry = fdMap_[req->fd];
-
-    entry.pushBack(req);
-
-    const auto fl = entry.flags();
-    const auto fd = req->fd;
-    const auto needsWakeup = req->deadline < prevEarliest;
-
-    req->parkWith(makeRunablePtr([this, fd, fl, needsWakeup]() {
-        poller->arm(fd, fl, (void*)(uintptr_t)(fd + 1));
-
-        timerMutex.unlock();
-
-        if (needsWakeup) {
-            wakeup();
-        }
+    req->parkWith(makeRunablePtr([this]() {
+        queueMutex_.unlock();
+        wakeup();
     }));
 }
 
@@ -142,11 +128,28 @@ void ReactorState::drainWakeup() noexcept {
     }
 }
 
+void ReactorState::drainQueue() {
+    IntrusiveList local;
+
+    LockGuard(queueMutex_).run([this, &local]() {
+        queue_.xchgWithEmptyList(local);
+    });
+
+    while (auto* node = local.popFrontOrNull()) {
+        auto* req = (PollRequest*)node;
+
+        timers.insert(req);
+
+        auto& entry = fdMap_[req->fd];
+
+        entry.pushBack(req);
+        poller->arm(req->fd, entry.flags(), (void*)(uintptr_t)(req->fd + 1));
+    }
+}
+
 void ReactorState::run() noexcept {
     while (auto* e = exec) {
-        const u64 earliest = LockGuard(timerMutex).run([this]() {
-            return timers.earliest();
-        });
+        drainQueue();
 
         pool->beforeBlock();
 
@@ -157,42 +160,40 @@ void ReactorState::run() noexcept {
             } else {
                 int fd = (uintptr_t)ev->data - 1;
 
-                LockGuard(timerMutex).run([this, fd, evFlags = ev->flags]() {
-                    if (auto* entry = fdMap_.find(fd); entry) {
-                        for (auto n = entry->mutFront(), e = entry->mutEnd(); n != e;) {
-                            auto* next = n->next;
+                if (auto* entry = fdMap_.find(fd); entry) {
+                    for (auto n = entry->mutFront(), e = entry->mutEnd(); n != e;) {
+                        auto* next = n->next;
 
-                            if (auto* req = (PollRequest*)n; req->flags & evFlags) {
-                                n->remove();
-                                timers.remove(req);
-                                req->complete(evFlags);
-                            }
-
-                            n = next;
+                        if (auto* req = (PollRequest*)n; req->flags & ev->flags) {
+                            n->remove();
+                            timers.remove(req);
+                            req->complete(ev->flags);
                         }
 
-                        rearmOrDisarm(fd);
+                        n = next;
                     }
-                });
-            }
-        }, earliest);
 
-        LockGuard(timerMutex).run([this, now = monotonicNowUs()]() {
-            while (auto* node = timers.min()) {
-                auto* req = (PollRequest*)node;
-
-                if (req->deadline > now) {
-                    break;
+                    rearmOrDisarm(fd);
                 }
-
-                timers.remove(req);
-                req->remove();
-
-                rearmOrDisarm(req->fd);
-
-                req->complete(0);
             }
-        });
+        }, timers.earliest());
+
+        auto now = monotonicNowUs();
+
+        while (auto* node = timers.min()) {
+            auto* req = (PollRequest*)node;
+
+            if (req->deadline > now) {
+                break;
+            }
+
+            timers.remove(req);
+            req->remove();
+
+            rearmOrDisarm(req->fd);
+
+            req->complete(0);
+        }
 
         e->yield();
     }
