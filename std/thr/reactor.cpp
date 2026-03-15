@@ -83,6 +83,7 @@ ReactorState::ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool)
     , pool(p)
     , poller(PollerIface::create(opool))
     , queueMutex_(e)
+    , done_(e)
 {
     createPipeFD(wakeReadFd, wakeWriteFd);
     wakeReadFd.setNonBlocking();
