@@ -282,7 +282,7 @@ namespace {
                 return;
             }
 
-            for (auto& pfd : range(fds_.mutData(), fds_.mutData() + fds_.length())) {
+            for (const auto& pfd : range(fds_)) {
                 if (pfd.revents == 0) {
                     continue;
                 }
