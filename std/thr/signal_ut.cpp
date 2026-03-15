@@ -97,27 +97,22 @@ STD_TEST_SUITE(CoroSignal) {
     STD_TEST(ConsumedAfterWait) {
         auto exec = CoroExecutor::create(4);
         Signal s(exec.mutPtr());
-        bool second = false;
+        int counter = 0;
+
+        exec->spawn([&]() {
+            s.wait();
+            counter = 1;
+            s.wait();
+            counter = 2;
+        });
 
         exec->spawn([&]() {
             s.set();
-        });
-
-        exec->spawn([&]() {
-            s.wait();
-        });
-
-        exec->spawn([&]() {
-            s.wait();
-            second = true;
-        });
-
-        exec->spawn([&]() {
             s.set();
         });
 
         exec->join();
-        STD_INSIST(second);
+        STD_INSIST(counter == 2);
     }
 
     STD_TEST(MultipleRounds) {
