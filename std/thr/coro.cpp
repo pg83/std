@@ -272,7 +272,12 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     }
 
     for (auto r : reactors_) {
-        spawnRun(SpawnParams().setStack(opool_.mutPtr(), 16 * 1024).setPriority(1).setSystem(true).setRunablePtr(r));
+        spawnRun(
+            SpawnParams()
+                .setStack(opool_.mutPtr(), 16 * 1024)
+                .setPriority(1)
+                .setSystem(true)
+                .setRunablePtr(r));
     }
 }
 
