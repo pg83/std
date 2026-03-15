@@ -103,99 +103,17 @@ namespace {
             return l.suite() < r.suite() || (l.suite() == r.suite() && l.name() < r.name());
         }
 
-        void run(Ctx& ctx_) {
-            ctx = &ctx_;
-            opt = new GetOpt(ctx_);
-            execute(sysO);
-        }
+        void handlePanic2();
+        void execute(OutBuf&& outb);
+        void run(Ctx& ctx_) noexcept;
 
-        void execute(OutBuf&& outb) {
-            outbuf = &outb;
+        static Tests& instance() noexcept;
 
-            setPanicHandler1(panicHandler1);
-            setPanicHandler2(panicHandler2);
-
-            auto opool = ObjPool::fromMemory();
-            auto pool = ThreadPool::simple(opool.mutPtr(), opt->threads());
-
-            Mutex mutex;
-
-            visit([&](void* el) {
-                auto test = (TestFunc*)el;
-
-                pool->submit([&, test] {
-                    StringBuilder sb;
-                    sb << *test;
-
-                    LockGuard lock(mutex);
-
-                    if (test->name().startsWith(u8"_") && !opt->matchesFilterStrong(StringView(sb))) {
-                        ++mute;
-                    } else if (!opt->matchesFilter(StringView(sb))) {
-                        ++skip;
-                    } else {
-                        BufferedExecContext bctx;
-                        bool ok_ = UnlockGuard(mutex).run([&] { return ::execute(test, bctx); });
-                        outb << StringView(bctx.buf_);
-                        if (ok_) { ++ok; } else { ++err; }
-                    }
-                });
-            });
-
-            pool->join();
-
-            outb << Color::bright(AnsiColor::Green)
-                 << StringView(u8"OK: ")
-                 << ok
-                 << Color::reset();
-
-            if (err) {
-                outb << StringView(u8", ")
-                     << Color::bright(AnsiColor::Red)
-                     << StringView(u8"ERR: ")
-                     << err
-                     << Color::reset();
-            }
-
-            if (skip) {
-                outb << StringView(u8", ")
-                     << Color::bright(AnsiColor::Yellow)
-                     << StringView(u8"SKIP: ")
-                     << skip
-                     << Color::reset();
-            }
-
-            if (mute) {
-                outb << StringView(u8", ")
-                     << Color::bright(AnsiColor::Blue)
-                     << StringView(u8"MUTE: ")
-                     << mute
-                     << Color::reset();
-            }
-
-            outb << endL << flsH << finI;
-
-            exit(err);
-        }
-
-        void handlePanic1() {
+        void handlePanic1() noexcept {
             outbuf->flush();
         }
 
-        void handlePanic2() {
-            ctx->printTB();
-            fflush(stdout);
-            fflush(stderr);
-            throw Exc();
-        }
-
-        static auto& instance() noexcept {
-            static auto res = new Tests();
-
-            return *res;
-        }
-
-        static void panicHandler1() {
+        static void panicHandler1() noexcept {
             instance().handlePanic1();
         }
 
@@ -203,6 +121,94 @@ namespace {
             instance().handlePanic2();
         }
     };
+}
+
+void Tests::run(Ctx& ctx_) noexcept {
+    ctx = &ctx_;
+    opt = new GetOpt(ctx_);
+    execute(sysO);
+}
+
+void Tests::execute(OutBuf&& outb) {
+    outbuf = &outb;
+
+    setPanicHandler1(panicHandler1);
+    setPanicHandler2(panicHandler2);
+
+    auto opool = ObjPool::fromMemory();
+    auto pool = ThreadPool::simple(opool.mutPtr(), opt->threads());
+
+    Mutex mutex;
+
+    visit([&](void* el) {
+        auto test = (TestFunc*)el;
+
+        pool->submit([&, test] {
+            StringBuilder sb;
+            sb << *test;
+
+            LockGuard lock(mutex);
+
+            if (test->name().startsWith(u8"_") && !opt->matchesFilterStrong(StringView(sb))) {
+                ++mute;
+            } else if (!opt->matchesFilter(StringView(sb))) {
+                ++skip;
+            } else {
+                BufferedExecContext bctx;
+                bool ok_ = UnlockGuard(mutex).run([&] { return ::execute(test, bctx); });
+                outb << StringView(bctx.buf_);
+                if (ok_) { ++ok; } else { ++err; }
+            }
+        });
+    });
+
+    pool->join();
+
+    outb << Color::bright(AnsiColor::Green)
+         << StringView(u8"OK: ")
+         << ok
+         << Color::reset();
+
+    if (err) {
+        outb << StringView(u8", ")
+             << Color::bright(AnsiColor::Red)
+             << StringView(u8"ERR: ")
+             << err
+             << Color::reset();
+    }
+
+    if (skip) {
+        outb << StringView(u8", ")
+             << Color::bright(AnsiColor::Yellow)
+             << StringView(u8"SKIP: ")
+             << skip
+             << Color::reset();
+    }
+
+    if (mute) {
+        outb << StringView(u8", ")
+             << Color::bright(AnsiColor::Blue)
+             << StringView(u8"MUTE: ")
+             << mute
+             << Color::reset();
+    }
+
+    outb << endL << flsH << finI;
+
+    exit(err);
+}
+
+void Tests::handlePanic2() {
+    ctx->printTB();
+    fflush(stdout);
+    fflush(stderr);
+    throw Exc();
+}
+
+Tests& Tests::instance() noexcept {
+    static auto res = new Tests();
+
+    return *res;
 }
 
 GetOpt::GetOpt(Ctx& ctx) noexcept {
