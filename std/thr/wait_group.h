@@ -20,6 +20,7 @@ namespace stl {
 
         void done() noexcept;
         void wait() noexcept;
+
         void add(size_t n) noexcept;
     };
 }
