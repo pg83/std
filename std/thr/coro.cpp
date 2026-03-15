@@ -98,7 +98,6 @@ namespace {
 
     struct CoroExecutorImpl: public CoroExecutor {
         alignas(64) int inflight_ = 0;
-        alignas(64) int sysInflight_ = 0;
         ObjPool::Ref opool_;
         const u64 tlsKey_;
         Vector<ReactorIface*> reactors_;
@@ -286,10 +285,6 @@ CoroExecutorImpl::~CoroExecutorImpl() noexcept {
     for (auto* r : reactors_) {
         r->join();
     }
-
-    while (stdAtomicFetch(&sysInflight_, MemoryOrder::Acquire) != 0) {
-        sched_yield();
-    }
 }
 
 void CoroExecutorImpl::join() noexcept {
@@ -361,8 +356,6 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noe
 {
     if (!system_) {
         stdAtomicAddAndFetch(&exec_->inflight_, 1, MemoryOrder::Relaxed);
-    } else {
-        stdAtomicAddAndFetch(&exec_->sysInflight_, 1, MemoryOrder::Relaxed);
     }
 }
 
@@ -409,8 +402,6 @@ ContImpl::~ContImpl() {
 
             exec_->joinW_.write(&b, 1);
         }
-    } else {
-        stdAtomicSubAndFetch(&exec_->sysInflight_, 1, MemoryOrder::Release);
     }
 }
 
