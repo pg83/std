@@ -250,8 +250,8 @@ namespace {
         ContImpl* cont;
         u32 result = 0;
 
-        void parkWith(Runable* afterSuspend) noexcept override {
-            cont->parkWith(afterSuspend);
+        void parkWith(Runable&& afterSuspend) noexcept override {
+            cont->parkWith(&afterSuspend);
         }
 
         void complete(u32 res) noexcept override {

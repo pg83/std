@@ -104,7 +104,7 @@ void ReactorState::processRequest(PollRequest* req) {
     queueMutex_.lock();
     queue_.insert(req);
 
-    req->parkWith(makeRunablePtr([this, needsWakeup = (queue_.min() == req)]() {
+    req->parkWith(makeRunable([this, needsWakeup = (queue_.min() == req)]() {
         queueMutex_.unlock();
 
         if (needsWakeup) {

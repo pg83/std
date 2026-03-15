@@ -5,7 +5,7 @@ namespace stl {
         virtual void run() = 0;
     };
 
-    template <typename V>
+    template <typename V, bool del>
     struct RunableImpl: public Runable {
         V v;
 
@@ -16,12 +16,20 @@ namespace stl {
 
         void run() override {
             v();
-            delete this;
+
+            if constexpr (del) {
+                delete this;
+            }
         }
     };
 
     template <typename T>
+    auto makeRunable(T t) {
+        return RunableImpl<T, false>(t);
+    }
+
+    template <typename T>
     auto makeRunablePtr(T t) {
-        return new RunableImpl<T>(t);
+        return new RunableImpl<T, true>(t);
     }
 }

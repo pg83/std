@@ -17,7 +17,7 @@ namespace stl {
         u64 deadline;
 
         virtual void complete(u32 result) noexcept = 0;
-        virtual void parkWith(Runable* afterSuspend) noexcept = 0;
+        virtual void parkWith(Runable&& afterSuspend) noexcept = 0;
     };
 
     struct ReactorIface {
