@@ -85,6 +85,7 @@ ReactorState::ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool)
 {
     createPipeFD(wakeReadFd, wakeWriteFd);
     wakeReadFd.setNonBlocking();
+    wakeWriteFd.setNonBlocking();
     poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
 }
 
