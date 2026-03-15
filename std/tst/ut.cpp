@@ -95,7 +95,6 @@ namespace {
 
     struct Tests: public Treap {
         Ctx* ctx = 0;
-        OutBuf* outbuf = 0;
         GetOpt* opt = 0;
         size_t ok = 0;
         size_t err = 0;
@@ -111,13 +110,13 @@ namespace {
         }
 
         void handlePanic2();
-        void execute(OutBuf&& outb);
+        void execute();
         void run(Ctx& ctx_) noexcept;
 
         static Tests& instance() noexcept;
 
         void handlePanic1() noexcept {
-            outbuf->flush();
+            // outbuf->flush();
         }
 
         static void panicHandler1() noexcept {
@@ -133,12 +132,10 @@ namespace {
 void Tests::run(Ctx& ctx_) noexcept {
     ctx = &ctx_;
     opt = new GetOpt(ctx_);
-    execute(sysO);
+    execute();
 }
 
-void Tests::execute(OutBuf&& outb) {
-    outbuf = &outb;
-
+void Tests::execute() {
     setPanicHandler1(panicHandler1);
     setPanicHandler2(panicHandler2);
 
@@ -170,7 +167,7 @@ void Tests::execute(OutBuf&& outb) {
                     return ::execute(test, bctx);
                 });
 
-                outb << StringView(bctx.buf_);
+                stdoutStream().write(bctx.buf_.data(), bctx.buf_.length());
 
                 if (ok_) {
                     ++ok;
@@ -182,6 +179,8 @@ void Tests::execute(OutBuf&& outb) {
     });
 
     pool->join();
+
+    auto&& outb = sysO;
 
     outb << Color::bright(AnsiColor::Green)
          << StringView(u8"OK: ")
