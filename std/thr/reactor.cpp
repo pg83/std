@@ -102,14 +102,9 @@ void ReactorState::rearmOrDisarm(int fd) {
 
 void ReactorState::processRequest(PollRequest* req) {
     queueMutex_.lock();
-
-    const auto prevEarliest = queue_.earliest();
-
     queue_.insert(req);
 
-    const auto needsWakeup = req->deadline <= prevEarliest;
-
-    req->parkWith(makeRunablePtr([this, needsWakeup]() {
+    req->parkWith(makeRunablePtr([this, needsWakeup = (queue_.min() == req)]() {
         queueMutex_.unlock();
 
         if (needsWakeup) {
