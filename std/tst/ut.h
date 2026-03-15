@@ -7,10 +7,12 @@
 #include <std/map/treap_node.h>
 
 namespace stl {
+    class TestArgs;
     class ZeroCopyOutput;
 
     struct ExecContext {
-        virtual ZeroCopyOutput& output() const = 0;
+        virtual ZeroCopyOutput& output() const noexcept = 0;
+        virtual const TestArgs& args() const noexcept = 0;
     };
 
     struct TestFunc: public TreapNode {

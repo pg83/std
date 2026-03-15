@@ -1,8 +1,11 @@
 #include "ut.h"
 #include "ctx.h"
+#include "args.h"
 
 #include <std/ios/sys.h>
 #include <std/str/view.h>
+#include <std/thr/pool.h>
+#include <std/thr/mutex.h>
 #include <std/sys/throw.h>
 #include <std/dbg/color.h>
 #include <std/dbg/panic.h>
@@ -10,9 +13,6 @@
 #include <std/map/treap.h>
 #include <std/lib/vector.h>
 #include <std/str/builder.h>
-#include <std/sym/s_map.h>
-#include <std/thr/pool.h>
-#include <std/thr/mutex.h>
 #include <std/mem/obj_pool.h>
 
 #include <stdio.h>
@@ -26,9 +26,14 @@ namespace {
 
     struct BufferedExecContext: public ExecContext {
         mutable StringBuilder buf_;
+        const TestArgs* opts = nullptr;
 
-        ZeroCopyOutput& output() const override {
+        ZeroCopyOutput& output() const noexcept override {
             return buf_;
+        }
+
+        const TestArgs& args() const noexcept override {
+            return *opts;
         }
     };
 
@@ -69,10 +74,12 @@ namespace {
     struct GetOpt {
         Vector<StringView> includes;
         Vector<StringView> excludes;
-        SymbolMap<StringView> opts;
+        TestArgs opts;
 
         GetOpt(Ctx& ctx) noexcept;
+
         void help() const noexcept;
+
         bool matchesFilter(StringView testName) const noexcept;
         bool matchesFilterStrong(StringView testName) const noexcept;
         bool matchesExclude(StringView testName) const noexcept;
@@ -145,6 +152,7 @@ void Tests::execute(OutBuf&& outb) {
 
         pool->submit([&, test] {
             StringBuilder sb;
+
             sb << *test;
 
             LockGuard lock(mutex);
@@ -155,9 +163,20 @@ void Tests::execute(OutBuf&& outb) {
                 ++skip;
             } else {
                 BufferedExecContext bctx;
-                bool ok_ = UnlockGuard(mutex).run([&] { return ::execute(test, bctx); });
+
+                bctx.opts = &opt->opts;
+
+                bool ok_ = UnlockGuard(mutex).run([&] {
+                    return ::execute(test, bctx);
+                });
+
                 outb << StringView(bctx.buf_);
-                if (ok_) { ++ok; } else { ++err; }
+
+                if (ok_) {
+                    ++ok;
+                } else {
+                    ++err;
+                }
             }
         });
     });
