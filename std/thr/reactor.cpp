@@ -4,7 +4,7 @@
 #include "coro.h"
 #include "mutex.h"
 #include "poller.h"
-#include "event.h"
+#include "signal.h"
 
 #include <std/sys/fd.h>
 #include <std/mem/new.h>
@@ -59,7 +59,7 @@ namespace {
         IntMap<FdEntry> fdMap_;
         Mutex queueMutex_;
         DeadlineTreap queue_;
-        Event done_;
+        Signal done_;
         ScopedFD wakeReadFd;
         ScopedFD wakeWriteFd;
 
