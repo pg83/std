@@ -128,7 +128,7 @@ void ReactorState::join() noexcept {
 }
 
 void ReactorState::drainWakeup() noexcept {
-    char buf[64];
+    char buf[1024];
 
     while (::read(wakeReadFd.get(), buf, sizeof(buf)) > 0) {
     }
