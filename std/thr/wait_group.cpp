@@ -1,7 +1,6 @@
 #include "wait_group.h"
 #include "mutex.h"
 #include "cond_var.h"
-#include "coro.h"
 
 #include <std/sys/types.h>
 
