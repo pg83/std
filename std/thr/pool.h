@@ -5,7 +5,6 @@
 #include <std/sys/types.h>
 
 namespace stl {
-
     class PCG32;
     class ObjPool;
 

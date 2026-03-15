@@ -67,10 +67,10 @@ namespace {
 
         ~ReactorState() noexcept override = default;
 
+        void drainQueue();
         void wakeup() noexcept;
         void rearmOrDisarm(int fd);
         void drainWakeup() noexcept;
-        void drainQueue();
         void run() noexcept override;
         void join() noexcept override;
         void processEvent(PollEvent* ev) noexcept;

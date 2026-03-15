@@ -110,8 +110,8 @@ namespace {
             return l.suite() < r.suite() || (l.suite() == r.suite() && l.name() < r.name());
         }
 
-        void handlePanic2();
         void execute();
+        void handlePanic2();
         void run(Ctx& ctx_) noexcept;
 
         static Tests& instance() noexcept;

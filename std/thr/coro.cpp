@@ -365,8 +365,8 @@ void CoroMutexImpl::lock() noexcept {
 void CoroMutexImpl::unlock() noexcept {
     LockGuard guard(queueMutex_);
 
-    if (auto* node = waiters_.popFrontOrNull(); node) {
-        ((ContImpl*)(Task*)node)->reSchedule();
+    if (auto node = (ContImpl*)(Task*)waiters_.popFrontOrNull(); node) {
+        node->reSchedule();
     } else {
         locked_ = false;
     }
@@ -494,16 +494,16 @@ void CoroCondVarImpl::wait(MutexIface* mutex) noexcept {
 void CoroCondVarImpl::signal() noexcept {
     LockGuard guard(queueMutex_);
 
-    if (auto* node = waiters_.popFrontOrNull(); node) {
-        ((ContImpl*)(Task*)node)->reSchedule();
+    if (auto* node = (ContImpl*)(Task*)waiters_.popFrontOrNull(); node) {
+        node->reSchedule();
     }
 }
 
 void CoroCondVarImpl::broadcast() noexcept {
     LockGuard guard(queueMutex_);
 
-    while (auto* node = waiters_.popFrontOrNull()) {
-        ((ContImpl*)(Task*)node)->reSchedule();
+    while (auto* node = (ContImpl*)(Task*)waiters_.popFrontOrNull()) {
+        node->reSchedule();
     }
 }
 
