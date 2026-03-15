@@ -107,6 +107,13 @@ TreapNode* Treap::min() const noexcept {
     return t;
 }
 
+void Treap::xchg(Treap& other) noexcept {
+    auto* tmp = root;
+
+    root = other.root;
+    other.root = tmp;
+}
+
 size_t Treap::height() const noexcept {
     if (root) {
         return root->height();

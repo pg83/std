@@ -28,6 +28,7 @@ namespace stl {
         TreapNode* min() const noexcept;
 
         void insert(TreapNode* node) noexcept;
+        void xchg(Treap& other) noexcept;
 
         size_t height() const noexcept;
         size_t length() const noexcept;

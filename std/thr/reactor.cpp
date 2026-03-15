@@ -58,7 +58,7 @@ namespace {
         DeadlineTreap timers;
         IntMap<FdEntry> fdMap_;
         Mutex queueMutex_;
-        IntrusiveList queue_;
+        DeadlineTreap queue_;
         Event done_;
         ScopedFD wakeReadFd;
         ScopedFD wakeWriteFd;
@@ -102,11 +102,19 @@ void ReactorState::rearmOrDisarm(int fd) {
 
 void ReactorState::processRequest(PollRequest* req) {
     queueMutex_.lock();
-    queue_.pushBack(req);
 
-    req->parkWith(makeRunablePtr([this]() {
+    const auto prevEarliest = queue_.earliest();
+
+    queue_.insert(req);
+
+    const auto needsWakeup = req->deadline <= prevEarliest;
+
+    req->parkWith(makeRunablePtr([this, needsWakeup]() {
         queueMutex_.unlock();
-        wakeup();
+
+        if (needsWakeup) {
+            wakeup();
+        }
     }));
 }
 
@@ -130,13 +138,20 @@ void ReactorState::drainWakeup() noexcept {
 }
 
 void ReactorState::drainQueue() {
-    IntrusiveList local;
+    DeadlineTreap local;
 
     LockGuard(queueMutex_).run([this, &local]() {
-        queue_.xchgWithEmptyList(local);
+        queue_.xchg(local);
     });
 
-    while (auto* req = (PollRequest*)local.popFrontOrNull()) {
+    IntrusiveList tmp;
+
+    local.visit([&tmp](TreapNode* node) {
+        tmp.pushBack((PollRequest*)node);
+        node->left = node->right = nullptr;
+    });
+
+    while (auto* req = (PollRequest*)tmp.popFrontOrNull()) {
         timers.insert(req);
 
         auto& entry = fdMap_[req->fd];
