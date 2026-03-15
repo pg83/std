@@ -266,7 +266,7 @@ namespace {
             armed_.erase(fd);
         }
 
-        void buildFds() {
+        void waitImpl(VisitorFace& v, u32 timeoutUs) override {
             fds_.clear();
 
             armed_.visit([&](const Entry& e) {
@@ -275,10 +275,6 @@ namespace {
                     .events = toPollEvents(e.flags),
                 });
             });
-        }
-
-        void waitImpl(VisitorFace& v, u32 timeoutUs) override {
-            buildFds();
 
             int n = STD_POLL(fds_.mutData(), (int)fds_.length(), (int)((timeoutUs + 999) / 1000));
 
@@ -299,7 +295,7 @@ namespace {
 
                 Entry e = *ep;
 
-                armed_.erase((u64)pfd.fd); // ONESHOT before visit, which may re-arm
+                armed_.erase(pfd.fd); // ONESHOT before visit, which may re-arm
 
                 PollEvent ev{e.data, fromPollEvents(pfd.revents)};
 
