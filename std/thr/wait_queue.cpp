@@ -163,6 +163,10 @@ WaitQueue::~WaitQueue() noexcept {
 
 WaitQueue* WaitQueue::construct(ObjPool* pool, size_t maxWaiters) {
 #if __SIZEOF_POINTER__ == 8
+    if (maxWaiters <= 32) {
+        return pool->make<BitmaskImpl<u32>>();
+    }
+
     if (maxWaiters <= 64) {
         return pool->make<BitmaskImpl<u64>>();
     }
