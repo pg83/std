@@ -33,7 +33,7 @@ struct WaitGroup::Impl {
         LockGuard lock(mutex);
 
         if (--counter == 0) {
-            cv.signal();
+            cv.broadcast();
         }
     }
 

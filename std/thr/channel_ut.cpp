@@ -1,7 +1,7 @@
 #include "coro.h"
-#include "channel.h"
 #include "pool.h"
-#include "latch.h"
+#include "channel.h"
+#include "wait_group.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/atomic.h>
@@ -163,7 +163,7 @@ STD_TEST_SUITE(Channel) {
         const int nConsumers = 4;
         const int nPerProducer = 50;
         const int total = nProducers * nPerProducer;
-        Latch prodDone(nProducers);
+        WaitGroup prodDone(nProducers);
         int consumed = 0;
 
         for (int i = 0; i < nProducers; ++i) {
@@ -171,7 +171,7 @@ STD_TEST_SUITE(Channel) {
                 for (int j = 0; j < nPerProducer; ++j) {
                     ch.enqueue((void*)(uintptr_t)(j + 1));
                 }
-                prodDone.arrive();
+                prodDone.done();
             });
         }
 
@@ -225,7 +225,7 @@ STD_TEST_SUITE(Channel) {
         const int nConsumers = 8;
         const int nPerProducer = 200;
         const int total = nProducers * nPerProducer;
-        Latch prodDone(nProducers);
+        WaitGroup prodDone(nProducers);
         int consumed = 0;
 
         for (int i = 0; i < nProducers; ++i) {
@@ -233,7 +233,7 @@ STD_TEST_SUITE(Channel) {
                 for (int j = 0; j < nPerProducer; ++j) {
                     ch.enqueue((void*)(uintptr_t)(j + 1));
                 }
-                prodDone.arrive();
+                prodDone.done();
             });
         }
 

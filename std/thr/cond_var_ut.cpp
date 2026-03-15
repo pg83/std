@@ -1,10 +1,10 @@
 #include "mutex.h"
+#include "coro.h"
+#include "pool.h"
 #include "thread.h"
 #include "runable.h"
 #include "cond_var.h"
-#include "coro.h"
-#include "pool.h"
-#include "latch.h"
+#include "wait_group.h"
 
 #include <std/tst/ut.h>
 
@@ -801,14 +801,14 @@ STD_TEST_SUITE(CoroCondVar) {
         CondVar cv(exec.mutPtr());
 
         {
-            Latch done(1);
+            WaitGroup done(1);
             exec->spawn([&]() {
                 LockGuard lock(mtx);
                 while (!ready1) {
                     cv.wait(mtx);
                 }
                 executed1 = true;
-                done.arrive();
+                done.done();
             });
             exec->spawn([&]() {
                 LockGuard lock(mtx);
@@ -821,14 +821,14 @@ STD_TEST_SUITE(CoroCondVar) {
         STD_INSIST(executed1 == true);
 
         {
-            Latch done(1);
+            WaitGroup done(1);
             exec->spawn([&]() {
                 LockGuard lock(mtx);
                 while (!ready2) {
                     cv.wait(mtx);
                 }
                 executed2 = true;
-                done.arrive();
+                done.done();
             });
             exec->spawn([&]() {
                 LockGuard lock(mtx);
