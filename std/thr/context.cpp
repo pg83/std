@@ -16,9 +16,16 @@ namespace __cxxabiv1 {
     extern "C" __cxa_eh_globals* __cxa_get_globals() noexcept;
 }
 
+namespace {
+    struct alignas(max_align_t) ContextBase: public Context, public Newable {
+        static void operator delete(void*) noexcept {
+        }
+    };
+}
+
 #if defined(__linux__) && defined(__x86_64__)
 namespace {
-    struct alignas(max_align_t) ContextImpl: public Context, public Newable {
+    struct ContextImpl: public ContextBase {
         u64 rsp = 0;
         __cxxabiv1::__cxa_eh_globals ehg_;
 
@@ -91,7 +98,7 @@ void ContextImpl::switchTo(Context& target) noexcept {
 #include <ucontext.h>
 
 namespace {
-    struct alignas(max_align_t) ContextImpl: public Context, public Newable {
+    struct ContextImpl: public ContextBase {
         ucontext_t uctx;
         __cxxabiv1::__cxa_eh_globals ehg_;
 
@@ -142,4 +149,7 @@ Context* Context::create(void* buf) noexcept {
 
 Context* Context::create(void* buf, void* stackPtr, size_t stackSize, Runable& entry) noexcept {
     return new (buf) ContextImpl(stackPtr, stackSize, entry);
+}
+
+Context::~Context() {
 }

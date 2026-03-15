@@ -19,6 +19,7 @@
 #include <std/sys/atomic.h>
 #include <std/lib/vector.h>
 #include <std/dbg/insist.h>
+#include <std/ptr/scoped.h>
 #include <std/alg/minmax.h>
 #include <std/alg/exchange.h>
 #include <std/alg/destruct.h>
@@ -38,7 +39,7 @@ namespace {
 
     struct ContImpl: public Cont, public Task {
         CoroExecutorImpl* exec_;
-        Context* ctx_;
+        ScopedPtr<Context> ctx_;
         Context* workerCtx_;
         Runable* runable_;
         Runable* afterSuspend_;
@@ -349,7 +350,7 @@ bool CoroMutexImpl::tryLock() noexcept {
 
 ContImpl::ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noexcept
     : exec_(exec)
-    , ctx_(Context::create(ctxBuf, params.stackPtr, params.stackSize, *this))
+    , ctx_{Context::create(ctxBuf, params.stackPtr, params.stackSize, *this)}
     , workerCtx_(nullptr)
     , runable_(params.runable)
     , afterSuspend_(nullptr)
@@ -381,7 +382,8 @@ void ContImpl::run() noexcept {
     }
 
     *exec_->tls() = this;
-    (workerCtx_ = Context::create(alloca(Context::implSize())))->switchTo(*ctx_);
+    (workerCtx_ = Context::create(alloca(Context::implSize())))->switchTo(*ctx_.ptr);
+    delete workerCtx_;
     workerCtx_ = nullptr;
 
     if (auto* as = exchange(afterSuspend_, nullptr); as) {

@@ -12,5 +12,14 @@ namespace stl {
         ~ScopedPtr() {
             delete ptr;
         }
+
+        // sugar
+        auto operator->() noexcept {
+            return ptr;
+        }
+
+        auto operator->() const noexcept {
+            return ptr;
+        }
     };
 }

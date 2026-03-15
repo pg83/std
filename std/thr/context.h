@@ -6,6 +6,8 @@ namespace stl {
     struct Runable;
 
     struct Context {
+        virtual ~Context();
+
         virtual void switchTo(Context& target) noexcept = 0;
 
         static size_t implSize() noexcept;
