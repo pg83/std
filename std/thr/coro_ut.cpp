@@ -566,4 +566,20 @@ STD_TEST_SUITE(CoroPoll) {
         exec->join();
         STD_INSIST(caught == 1);
     }
+
+    STD_TEST(SpawnFromMain) {
+        auto exec = CoroExecutor::create(4);
+        int counter = 0;
+        Mutex mtx(&*exec);
+
+        for (int i = 0; i < 1000; ++i) {
+            exec->spawn([&]() {
+                LockGuard guard(mtx);
+                ++counter;
+            });
+        }
+
+        exec->join();
+        STD_INSIST(counter == 1000);
+    }
 }
