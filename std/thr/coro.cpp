@@ -199,11 +199,11 @@ namespace {
 
         CoroMutexImpl(CoroExecutorImpl* exec) noexcept;
 
-        void* nativeHandle() noexcept override;
         void run() override;
         void lock() noexcept override;
         void unlock() noexcept override;
         bool tryLock() noexcept override;
+        void* nativeHandle() noexcept override;
     };
 
     struct Waiter: public IntrusiveNode {
