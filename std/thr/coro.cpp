@@ -290,7 +290,7 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     submitR_.setNonBlocking();
 
     for (size_t i = 0; i < reactors; ++i) {
-        reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr(), &done_));
+        reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr()));
     }
 
     for (auto r : reactors_) {
@@ -299,7 +299,10 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
                 .setStack(opool_.mutPtr(), 16 * 1024)
                 .setPriority(1)
                 .setSystem(true)
-                .setRunablePtr(r));
+                .setRunable([this, r]() {
+                    r->run();
+                    done_.done();
+                }));
     }
 
     spawnRun(
@@ -309,6 +312,11 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
             .setSystem(true)
             .setRunable([this]() {
                 submitterLoop();
+                for (auto* r : reactors_) {
+                    r->stop();
+                }
+
+                done_.done();
             }));
 }
 
@@ -360,12 +368,6 @@ void CoroExecutorImpl::submitterLoop() {
                 if (task) {
                     pool_->submitTask(task);
                 } else {
-                    for (auto* r : reactors_) {
-                        r->stop();
-                    }
-
-                    done_.done();
-
                     return;
                 }
             }

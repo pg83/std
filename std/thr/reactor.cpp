@@ -4,7 +4,6 @@
 #include "coro.h"
 #include "mutex.h"
 #include "poller.h"
-#include "wait_group.h"
 
 #include <std/sys/fd.h>
 #include <std/mem/new.h>
@@ -59,11 +58,10 @@ namespace {
         IntMap<FdEntry> fdMap_;
         Mutex queueMutex_;
         DeadlineTreap queue_;
-        WaitGroup* externalDone_;
         ScopedFD wakeReadFd;
         ScopedFD wakeWriteFd;
 
-        ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool, WaitGroup* externalDone);
+        ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool);
 
         ~ReactorState() noexcept override = default;
 
@@ -78,12 +76,11 @@ namespace {
     };
 }
 
-ReactorState::ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool, WaitGroup* externalDone)
+ReactorState::ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool)
     : exec(e)
     , pool(p)
     , poller(PollerIface::create(opool))
     , queueMutex_(e)
-    , externalDone_(externalDone)
 {
     createPipeFD(wakeReadFd, wakeWriteFd);
     wakeReadFd.setNonBlocking();
@@ -205,13 +202,11 @@ void ReactorState::run() noexcept {
 
         e->yield();
     }
-
-    externalDone_->done();
 }
 
 ReactorIface::~ReactorIface() noexcept {
 }
 
-ReactorIface* ReactorIface::create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool, WaitGroup* done) {
-    return opool->make<ReactorState>(exec, pool, opool, done);
+ReactorIface* ReactorIface::create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool) {
+    return opool->make<ReactorState>(exec, pool, opool);
 }
