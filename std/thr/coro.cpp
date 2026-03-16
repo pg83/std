@@ -317,7 +317,7 @@ CoroExecutorImpl::~CoroExecutorImpl() noexcept {
 
     submitExternalTask(nullptr);
 
-    join();
+    pool_->join();
 }
 
 void CoroExecutorImpl::join() noexcept {
