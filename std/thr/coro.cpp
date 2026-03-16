@@ -166,13 +166,11 @@ namespace {
         CoroExecutorImpl* exec_;
         Cont* cont_ = nullptr;
         Runable* runable_;
-        Mutex mtx_;
-        CondVar cv_;
+        WaitGroup wg_;
 
         CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable);
 
         void start() override;
-        void notifyDone() noexcept;
         void join() noexcept override;
         void detach() noexcept override;
         u64 threadId() const noexcept override;
@@ -562,32 +560,19 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
 CoroThreadImpl::CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable)
     : exec_(exec)
     , runable_(&runable)
-    , mtx_(exec)
-    , cv_(exec)
+    , wg_(1, exec)
 {
 }
 
 void CoroThreadImpl::start() {
     cont_ = exec_->spawnRun(SpawnParams().setRunable([this]() {
         runable_->run();
-        notifyDone();
+        wg_.done();
     }));
 }
 
-void CoroThreadImpl::notifyDone() noexcept {
-    LockGuard guard(mtx_);
-
-    runable_ = nullptr;
-    cv_.signal();
-}
-
 void CoroThreadImpl::join() noexcept {
-    LockGuard(mtx_).run([this]() {
-        while (runable_) {
-            cv_.wait(mtx_);
-        }
-    });
-
+    wg_.wait();
     delete this;
 }
 
