@@ -3,7 +3,6 @@
 #include "cond_var.h"
 
 #include <std/sys/types.h>
-#include <std/sys/atomic.h>
 
 using namespace stl;
 
@@ -25,21 +24,19 @@ struct WaitGroup::Impl {
     }
 
     void add(size_t n) noexcept {
-        stdAtomicAddAndFetch(&counter, n, MemoryOrder::Relaxed);
+        LockGuard lock(mutex);
+        counter += n;
     }
 
     void done() noexcept {
-        if (stdAtomicAddAndFetch(&counter, (size_t)-1, MemoryOrder::Release) == 0) {
-            LockGuard lock(mutex);
+        LockGuard lock(mutex);
+
+        if (--counter == 0) {
             cv.broadcast();
         }
     }
 
     void wait() noexcept {
-        if (stdAtomicFetch(&counter, MemoryOrder::Acquire) == 0) {
-            return;
-        }
-
         LockGuard lock(mutex);
 
         while (counter > 0) {
