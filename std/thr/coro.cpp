@@ -6,6 +6,7 @@
 #include "context.h"
 #include "reactor.h"
 #include "poller.h"
+#include "wait_group.h"
 #include "cond_var.h"
 #include "mutex_iface.h"
 #include "thread_iface.h"
@@ -107,6 +108,7 @@ namespace {
         ScopedFD joinW_;
         ScopedFD submitR_;
         ScopedFD submitW_;
+        WaitGroup done_;
         ThreadPool* pool_;
 
         CoroExecutorImpl(size_t threads, size_t reactors);
@@ -277,6 +279,7 @@ namespace {
 CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     : opool_(ObjPool::fromMemory())
     , tlsKey_(ThreadPool::registerTlsKey())
+    , done_(reactors + 1)
     , pool_(ThreadPool::workStealing(opool_.mutPtr(), threads + reactors))
 {
     createPipeFD(joinR_, joinW_);
@@ -284,7 +287,7 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     submitR_.setNonBlocking();
 
     for (size_t i = 0; i < reactors; ++i) {
-        reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr()));
+        reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr(), &done_));
     }
 
     for (auto r : reactors_) {
@@ -308,15 +311,8 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
 
 CoroExecutorImpl::~CoroExecutorImpl() noexcept {
     join();
-
-    for (auto* r : reactors_) {
-        spawn([r]() {
-            r->join();
-        });
-    }
-
     submitExternalTask(nullptr);
-
+    done_.wait();
     pool_->join();
 }
 
@@ -355,6 +351,12 @@ void CoroExecutorImpl::submitterLoop() {
 
             for (ssize_t i = 0; i < n / (ssize_t)sizeof(Task*); ++i) {
                 if (!buf[i]) {
+                    for (auto* r : reactors_) {
+                        r->stop();
+                    }
+
+                    done_.done();
+
                     return;
                 }
 

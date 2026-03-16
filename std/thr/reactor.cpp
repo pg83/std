@@ -59,11 +59,11 @@ namespace {
         IntMap<FdEntry> fdMap_;
         Mutex queueMutex_;
         DeadlineTreap queue_;
-        WaitGroup done_;
+        WaitGroup* externalDone_;
         ScopedFD wakeReadFd;
         ScopedFD wakeWriteFd;
 
-        ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool);
+        ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool, WaitGroup* externalDone);
 
         ~ReactorState() noexcept override = default;
 
@@ -72,18 +72,18 @@ namespace {
         void rearmOrDisarm(int fd);
         void drainWakeup() noexcept;
         void run() noexcept override;
-        void join() noexcept override;
+        void stop() noexcept override;
         void processEvent(PollEvent* ev) noexcept;
         void processRequest(PollRequest* req) override;
     };
 }
 
-ReactorState::ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool)
+ReactorState::ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool, WaitGroup* externalDone)
     : exec(e)
     , pool(p)
     , poller(PollerIface::create(opool))
     , queueMutex_(e)
-    , done_(1, e)
+    , externalDone_(externalDone)
 {
     createPipeFD(wakeReadFd, wakeWriteFd);
     wakeReadFd.setNonBlocking();
@@ -121,10 +121,9 @@ void ReactorState::wakeup() noexcept {
     ::write(wakeWriteFd.get(), &b, 1);
 }
 
-void ReactorState::join() noexcept {
+void ReactorState::stop() noexcept {
     exec = nullptr;
     wakeup();
-    done_.wait();
 }
 
 void ReactorState::drainWakeup() noexcept {
@@ -207,12 +206,12 @@ void ReactorState::run() noexcept {
         e->yield();
     }
 
-    done_.done();
+    externalDone_->done();
 }
 
 ReactorIface::~ReactorIface() noexcept {
 }
 
-ReactorIface* ReactorIface::create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool) {
-    return opool->make<ReactorState>(exec, pool, opool);
+ReactorIface* ReactorIface::create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool, WaitGroup* done) {
+    return opool->make<ReactorState>(exec, pool, opool, done);
 }

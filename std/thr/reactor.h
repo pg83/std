@@ -8,6 +8,7 @@
 
 namespace stl {
     class ObjPool;
+    class WaitGroup;
 
     struct Runable;
     struct ThreadPool;
@@ -25,9 +26,9 @@ namespace stl {
     struct ReactorIface: public Runable {
         virtual ~ReactorIface() noexcept;
 
-        virtual void join() noexcept = 0;
+        virtual void stop() noexcept = 0;
         virtual void processRequest(PollRequest* req) = 0;
 
-        static ReactorIface* create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool);
+        static ReactorIface* create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool, WaitGroup* done);
     };
 }
