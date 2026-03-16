@@ -312,6 +312,7 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
             .setSystem(true)
             .setRunable([this]() {
                 submitterLoop();
+
                 for (auto* r : reactors_) {
                     r->stop();
                 }
