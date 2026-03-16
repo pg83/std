@@ -291,9 +291,9 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
 Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
     auto task = makeContImpl(this, params);
 
-    if (params.system) {
+    if (tls()) {
         pool_->submitTask(task);
-    } else if (tls()) {
+    } else if (params.system) {
         pool_->submitTask(task);
     } else {
         submitExternalTask(task);
