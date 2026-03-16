@@ -119,6 +119,7 @@ namespace {
         void spawnSystem() noexcept;
         void join() noexcept override;
         void submitterLoop() noexcept;
+        Cont* spawnRun(SpawnParams params) override;
         void submitExternalTask(Task* task) noexcept;
 
         auto tls() {
@@ -127,20 +128,6 @@ namespace {
 
         ContImpl* currentCont() {
             return (ContImpl*)*tls();
-        }
-
-        Cont* spawnRun(SpawnParams params) override {
-            auto task = makeContImpl(this, params);
-
-            if (params.system) {
-                pool_->submitTask(task);
-            } else if (tls()) {
-                pool_->submitTask(task);
-            } else {
-                submitExternalTask(task);
-            }
-
-            return task;
         }
 
         Cont* me() const noexcept override {
@@ -299,6 +286,20 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     spawnRun(SpawnParams().setSystem(true).setRunable([this]() {
         spawnSystem();
     }));
+}
+
+Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
+    auto task = makeContImpl(this, params);
+
+    if (params.system) {
+        pool_->submitTask(task);
+    } else if (tls()) {
+        pool_->submitTask(task);
+    } else {
+        submitExternalTask(task);
+    }
+
+    return task;
 }
 
 void CoroExecutorImpl::spawnSystem() noexcept {
