@@ -29,6 +29,7 @@
 #include <std/alg/destruct.h>
 #include <std/lib/ring_buf.h>
 #include <std/mem/obj_pool.h>
+#include <std/rng/split_mix_64.h>
 
 #include <time.h>
 #include <fcntl.h>
@@ -151,8 +152,6 @@ namespace {
         void parkWith(Runable* afterSuspend) noexcept {
             currentCont()->parkWith(afterSuspend);
         }
-
-        ReactorIface* pickReactor() noexcept;
 
         MutexIface* createMutex() override;
         CondVarIface* createCondVar() override;
@@ -374,10 +373,6 @@ void CoroExecutorImpl::submitterLoop() {
     }
 }
 
-ReactorIface* CoroExecutorImpl::pickReactor() noexcept {
-    return reactors_[pool_->random().uniformBiased((u32)reactors_.length())];
-}
-
 CoroMutexImpl::CoroMutexImpl(CoroExecutorImpl* exec) noexcept
     : exec_(exec)
     , locked_(false)
@@ -506,7 +501,7 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
     req.flags = flags;
     req.deadline = deadlineUs;
 
-    pickReactor()->processRequest(&req);
+    reactors_[splitMix64(fd) % reactors_.length()]->processRequest(&req);
 
     return req.result;
 }
