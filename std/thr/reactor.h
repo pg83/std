@@ -23,8 +23,6 @@ namespace stl {
     };
 
     struct ReactorIface: public Runable {
-        virtual ~ReactorIface() noexcept;
-
         virtual void stop() noexcept = 0;
         virtual void processRequest(PollRequest* req) = 0;
 

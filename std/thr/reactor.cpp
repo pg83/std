@@ -63,7 +63,7 @@ namespace {
 
         ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool);
 
-        ~ReactorState() noexcept override = default;
+        ~ReactorState() noexcept = default;
 
         void drainQueue();
         void wakeup() noexcept;
@@ -202,9 +202,6 @@ void ReactorState::run() noexcept {
 
         e->yield();
     }
-}
-
-ReactorIface::~ReactorIface() noexcept {
 }
 
 ReactorIface* ReactorIface::create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool) {
