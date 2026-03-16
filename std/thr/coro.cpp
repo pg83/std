@@ -18,6 +18,7 @@
 #include <std/rng/pcg.h>
 #include <std/lib/list.h>
 #include <std/sym/i_map.h>
+#include <std/alg/range.h>
 #include <std/sys/atomic.h>
 #include <std/lib/vector.h>
 #include <std/dbg/insist.h>
@@ -355,8 +356,10 @@ void CoroExecutorImpl::submitterLoop() {
                 break;
             }
 
-            for (ssize_t i = 0; i < n / (ssize_t)sizeof(Task*); ++i) {
-                if (!buf[i]) {
+            for (auto task: range(buf, buf + n / sizeof(Task*))) {
+                if (task) {
+                    pool_->submitTask(task);
+                } else {
                     for (auto* r : reactors_) {
                         r->stop();
                     }
@@ -365,8 +368,6 @@ void CoroExecutorImpl::submitterLoop() {
 
                     return;
                 }
-
-                pool_->submitTask(buf[i]);
             }
         }
     }
