@@ -391,8 +391,6 @@ void CoroMutexImpl::run() {
 }
 
 void CoroMutexImpl::lock() noexcept {
-    auto* cont = exec_->currentCont();
-
     queueMutex_.lock();
 
     if (!locked_) {
@@ -401,6 +399,8 @@ void CoroMutexImpl::lock() noexcept {
 
         return;
     }
+
+    auto* cont = exec_->currentCont();
 
     waiters_.pushBack(cont);
     cont->parkWith(this);
