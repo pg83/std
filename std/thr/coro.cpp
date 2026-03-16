@@ -311,8 +311,14 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
 
 CoroExecutorImpl::~CoroExecutorImpl() noexcept {
     join();
-    submitExternalTask(nullptr);
-    done_.wait();
+
+    spawn([&]() {
+        submitExternalTask(nullptr);
+        done_.wait();
+    });
+
+    join();
+
     pool_->join();
 }
 
