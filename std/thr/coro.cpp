@@ -363,7 +363,7 @@ void CoroExecutorImpl::submitterLoop() {
                 break;
             }
 
-            for (auto task: range(buf, buf + n / sizeof(Task*))) {
+            for (auto task : range(buf, buf + n / sizeof(Task*))) {
                 if (task) {
                     pool_->submitTask(task);
                 } else {
