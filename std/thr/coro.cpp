@@ -284,6 +284,8 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
 {
     createPipeFD(joinR_, joinW_);
     createPipeFD(submitR_, submitW_);
+
+    joinW_.setNonBlocking();
     submitR_.setNonBlocking();
 
     for (size_t i = 0; i < reactors; ++i) {
