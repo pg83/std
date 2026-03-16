@@ -116,8 +116,8 @@ namespace {
         CoroExecutorImpl(size_t threads, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
 
-        void submitterLoop();
         void join() noexcept override;
+        void submitterLoop() noexcept;
         void submitExternalTask(Task* task) noexcept;
         void spawnTask(Task* task, bool system) noexcept;
 
@@ -349,7 +349,7 @@ void CoroExecutorImpl::spawnTask(Task* task, bool system) noexcept {
     }
 }
 
-void CoroExecutorImpl::submitterLoop() {
+void CoroExecutorImpl::submitterLoop() noexcept {
     Task* buf[64];
 
     for (;;) {
