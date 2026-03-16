@@ -14,7 +14,6 @@ namespace stl {
     struct ThreadIface;
     struct CondVarIface;
     struct ChannelIface;
-    struct SignalIface;
     struct CoroExecutor;
 
     struct Cont {

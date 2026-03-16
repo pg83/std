@@ -471,9 +471,9 @@ void ContImpl::run() noexcept {
     workerCtx_ = nullptr;
 
     if (auto* as = exchange(afterSuspend_, nullptr); as) {
-        as->run();
+        return as->run();
     } else if (runable_) {
-        reSchedule();
+        return reSchedule();
     } else {
         delete this;
     }
