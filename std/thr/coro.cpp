@@ -318,8 +318,6 @@ CoroExecutorImpl::~CoroExecutorImpl() noexcept {
     });
 
     join();
-
-    pool_->join();
 }
 
 void CoroExecutorImpl::join() noexcept {
