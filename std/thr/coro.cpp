@@ -120,7 +120,6 @@ namespace {
         void join() noexcept override;
         void submitterLoop() noexcept;
         void submitExternalTask(Task* task) noexcept;
-        void spawnTask(Task* task, bool system) noexcept;
 
         auto tls() {
             return pool_->tls(tlsKey_);
@@ -131,11 +130,17 @@ namespace {
         }
 
         Cont* spawnRun(SpawnParams params) override {
-            auto res = makeContImpl(this, params);
+            auto task = makeContImpl(this, params);
 
-            spawnTask(res, params.system);
+            if (params.system) {
+                pool_->submitTask(task);
+            } else if (tls()) {
+                pool_->submitTask(task);
+            } else {
+                submitExternalTask(task);
+            }
 
-            return res;
+            return task;
         }
 
         Cont* me() const noexcept override {
@@ -352,33 +357,22 @@ void CoroExecutorImpl::submitExternalTask(Task* task) noexcept {
     submitW_.write(&task, sizeof(task));
 }
 
-void CoroExecutorImpl::spawnTask(Task* task, bool system) noexcept {
-    if (system || tls()) {
-        pool_->submitTask(task);
-    } else {
-        submitExternalTask(task);
-    }
-}
-
 void CoroExecutorImpl::submitterLoop() noexcept {
     Task* buf[64];
 
     for (;;) {
         CoroExecutor::poll(submitR_.get(), PollFlag::In);
 
-        for (;;) {
-            auto n = ::read(submitR_.get(), buf, sizeof(buf));
+        auto n = ::read(submitR_.get(), buf, sizeof(buf));
 
-            if (n <= 0) {
-                break;
-            }
+        STD_INSIST(n > 0);
+        STD_INSIST(n % sizeof(Task*) == 0);
 
-            for (auto task : range(buf, buf + n / sizeof(Task*))) {
-                if (task) {
-                    pool_->submitTask(task);
-                } else {
-                    return;
-                }
+        for (auto task : range(buf, buf + n / sizeof(Task*))) {
+            if (task) {
+                pool_->submitTask(task);
+            } else {
+                return;
             }
         }
     }
