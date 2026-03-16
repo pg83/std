@@ -25,8 +25,7 @@ struct WaitGroup::Impl {
     }
 
     void add(size_t n) noexcept {
-        LockGuard lock(mutex);
-        counter += n;
+        stdAtomicAddAndFetch(&counter, n, MemoryOrder::Relaxed);
     }
 
     void done() noexcept {
