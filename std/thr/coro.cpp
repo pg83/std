@@ -5,6 +5,7 @@
 #include "thread.h"
 #include "context.h"
 #include "reactor.h"
+#include "poller.h"
 #include "cond_var.h"
 #include "mutex_iface.h"
 #include "thread_iface.h"
@@ -104,12 +105,18 @@ namespace {
         Vector<ReactorIface*> reactors_;
         ScopedFD joinR_;
         ScopedFD joinW_;
+        ScopedFD submitR_;
+        ScopedFD submitW_;
         ThreadPool* pool_;
 
         CoroExecutorImpl(size_t threads, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
 
         void join() noexcept override;
+        void submitterLoop();
+        void stopSubmitter() noexcept;
+        void submitExternalTask(Task* task) noexcept;
+        void spawnTask(Task* task, bool system) noexcept;
 
         auto tls() {
             return pool_->tls(tlsKey_);
@@ -122,7 +129,7 @@ namespace {
         Cont* spawnRun(SpawnParams params) override {
             auto res = makeContImpl(this, params);
 
-            pool_->submitTask(res);
+            spawnTask(res, params.system);
 
             return res;
         }
@@ -274,6 +281,8 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     , pool_(ThreadPool::workStealing(opool_.mutPtr(), threads + reactors))
 {
     createPipeFD(joinR_, joinW_);
+    createPipeFD(submitR_, submitW_);
+    submitR_.setNonBlocking();
 
     for (size_t i = 0; i < reactors; ++i) {
         reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr()));
@@ -287,6 +296,13 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
                 .setSystem(true)
                 .setRunablePtr(r));
     }
+
+    spawnRun(
+        SpawnParams()
+            .setStack(opool_.mutPtr(), 16 * 1024)
+            .setPriority(1)
+            .setSystem(true)
+            .setRunable([this]() { submitterLoop(); }));
 }
 
 CoroExecutorImpl::~CoroExecutorImpl() noexcept {
@@ -298,6 +314,8 @@ CoroExecutorImpl::~CoroExecutorImpl() noexcept {
         });
     }
 
+    stopSubmitter();
+
     join();
 }
 
@@ -306,6 +324,38 @@ void CoroExecutorImpl::join() noexcept {
         char b;
 
         joinR_.read(&b, 1);
+    }
+}
+
+void CoroExecutorImpl::submitExternalTask(Task* task) noexcept {
+    submitW_.write(&task, sizeof(task));
+}
+
+void CoroExecutorImpl::spawnTask(Task* task, bool system) noexcept {
+    if (system || tls()) {
+        pool_->submitTask(task);
+    } else {
+        submitExternalTask(task);
+    }
+}
+
+void CoroExecutorImpl::stopSubmitter() noexcept {
+    Task* null = nullptr;
+    submitW_.write(&null, sizeof(null));
+}
+
+void CoroExecutorImpl::submitterLoop() {
+    Task* buf[64];
+    for (;;) {
+        CoroExecutor::poll(submitR_.get(), PollFlag::In);
+        for (;;) {
+            auto n = ::read(submitR_.get(), buf, sizeof(buf));
+            if (n <= 0) break;
+            for (ssize_t i = 0; i < n / (ssize_t)sizeof(Task*); ++i) {
+                if (!buf[i]) return;
+                pool_->submitTask(buf[i]);
+            }
+        }
     }
 }
 
