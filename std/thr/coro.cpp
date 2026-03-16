@@ -112,9 +112,8 @@ namespace {
         CoroExecutorImpl(size_t threads, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
 
-        void join() noexcept override;
         void submitterLoop();
-        void stopSubmitter() noexcept;
+        void join() noexcept override;
         void submitExternalTask(Task* task) noexcept;
         void spawnTask(Task* task, bool system) noexcept;
 
@@ -302,7 +301,9 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
             .setStack(opool_.mutPtr(), 16 * 1024)
             .setPriority(1)
             .setSystem(true)
-            .setRunable([this]() { submitterLoop(); }));
+            .setRunable([this]() {
+                submitterLoop();
+            }));
 }
 
 CoroExecutorImpl::~CoroExecutorImpl() noexcept {
@@ -314,7 +315,7 @@ CoroExecutorImpl::~CoroExecutorImpl() noexcept {
         });
     }
 
-    stopSubmitter();
+    submitExternalTask(nullptr);
 
     join();
 }
@@ -339,20 +340,24 @@ void CoroExecutorImpl::spawnTask(Task* task, bool system) noexcept {
     }
 }
 
-void CoroExecutorImpl::stopSubmitter() noexcept {
-    Task* null = nullptr;
-    submitW_.write(&null, sizeof(null));
-}
-
 void CoroExecutorImpl::submitterLoop() {
     Task* buf[64];
+
     for (;;) {
         CoroExecutor::poll(submitR_.get(), PollFlag::In);
+
         for (;;) {
             auto n = ::read(submitR_.get(), buf, sizeof(buf));
-            if (n <= 0) break;
+
+            if (n <= 0) {
+                break;
+            }
+
             for (ssize_t i = 0; i < n / (ssize_t)sizeof(Task*); ++i) {
-                if (!buf[i]) return;
+                if (!buf[i]) {
+                    return;
+                }
+
                 pool_->submitTask(buf[i]);
             }
         }

@@ -43,7 +43,7 @@ namespace {
         u32 flags() const noexcept {
             u32 f = 0;
 
-            for (auto n = front(), e = end() ; n != e; n = n->next) {
+            for (auto n = front(), e = end(); n != e; n = n->next) {
                 f |= static_cast<const PollRequest*>(n)->flags;
             }
 
