@@ -277,7 +277,6 @@ namespace {
 CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     : opool_(ObjPool::fromMemory())
     , tlsKey_(ThreadPool::registerTlsKey())
-    , done_(reactors + 1)
     , pool_(ThreadPool::workStealing(opool_.mutPtr(), threads + reactors))
 {
     createPipeFD(joinR_, joinW_);
@@ -291,16 +290,20 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     }
 
     for (auto r : reactors_) {
+        done_.inc();
+
         spawnRun(
             SpawnParams()
                 .setStack(opool_.mutPtr(), 16 * 1024)
-                .setPriority(1)
+                .setPriority(2)
                 .setSystem(true)
                 .setRunable([this, r]() {
                     r->run();
                     done_.done();
                 }));
     }
+
+    done_.inc();
 
     spawnRun(
         SpawnParams()
