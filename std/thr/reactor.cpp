@@ -183,11 +183,11 @@ void ReactorState::run() noexcept {
         pool->beforeBlock();
 
         poller->wait([this](PollEvent* ev) {
-            if (ev->data == nullptr) {
+            if (ev->data) {
+                processEvent(ev);
+            } else {
                 drainWakeup();
                 poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
-            } else {
-                processEvent(ev);
             }
         }, timers.earliest());
 
