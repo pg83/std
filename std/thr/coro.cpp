@@ -116,6 +116,7 @@ namespace {
         CoroExecutorImpl(size_t threads, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
 
+        void spawnSystem() noexcept;
         void join() noexcept override;
         void submitterLoop() noexcept;
         void submitExternalTask(Task* task) noexcept;
@@ -277,6 +278,7 @@ namespace {
 CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     : opool_(ObjPool::fromMemory())
     , tlsKey_(ThreadPool::registerTlsKey())
+    , done_(this)
     , pool_(ThreadPool::workStealing(opool_.mutPtr(), threads + reactors))
 {
     createPipeFD(joinR_, joinW_);
@@ -289,6 +291,12 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
         reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr()));
     }
 
+    spawnRun(SpawnParams().setSystem(true).setRunable([this]() {
+        spawnSystem();
+    }));
+}
+
+void CoroExecutorImpl::spawnSystem() noexcept {
     for (auto r : reactors_) {
         done_.inc();
 
