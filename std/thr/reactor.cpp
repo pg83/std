@@ -33,9 +33,9 @@ namespace {
         }
 
         u64 earliest() const noexcept {
-            auto* n = min();
+            auto n = (PollRequest*)min();
 
-            return n ? ((PollRequest*)n)->deadline : UINT64_MAX;
+            return n ? n->deadline : UINT64_MAX;
         }
     };
 
@@ -43,7 +43,7 @@ namespace {
         u32 flags() const noexcept {
             u32 f = 0;
 
-            for (auto* n = front(); n != end(); n = n->next) {
+            for (auto n = front(), e = end() ; n != e; n = n->next) {
                 f |= static_cast<const PollRequest*>(n)->flags;
             }
 
