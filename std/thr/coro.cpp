@@ -166,12 +166,6 @@ namespace {
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
     };
 
-    struct Waiter: public IntrusiveNode {
-        ContImpl* cont;
-        void* value;
-        bool valueSet;
-    };
-
     struct PollRequestImpl: public PollRequest {
         ContImpl* cont;
         u32 result = 0;
@@ -536,6 +530,12 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
 
 ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
     struct CoroChannelImpl: public ChannelIface, public Runable {
+        struct Waiter: public IntrusiveNode {
+            ContImpl* cont;
+            void* value;
+            bool valueSet;
+        };
+
         Mutex queueMutex_;
         IntrusiveList senders_;
         IntrusiveList receivers_;
