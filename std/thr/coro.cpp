@@ -112,9 +112,6 @@ namespace {
         }
     }
 
-    struct CoroChannelImpl;
-    struct CoroChannelImplN;
-
     struct CoroExecutorImpl: public CoroExecutor {
         alignas(64) int inflight_ = 0;
         ObjPool::Ref opool_;
@@ -173,53 +170,6 @@ namespace {
         ContImpl* cont;
         void* value;
         bool valueSet;
-    };
-
-    struct CoroChannelImpl: public ChannelIface, public Runable {
-        Mutex queueMutex_;
-        IntrusiveList senders_;
-        IntrusiveList receivers_;
-        bool closed_;
-
-        CoroChannelImpl(CoroExecutorImpl* exec) noexcept;
-
-        CoroExecutorImpl* exec() noexcept {
-            return (CoroExecutorImpl*)queueMutex_.nativeHandle();
-        }
-
-        bool sendOne(void* v) noexcept;
-        bool recvOne(void** out) noexcept;
-
-        virtual bool bufferOne(void* v) noexcept;
-        virtual bool unbufferOne(void** out) noexcept;
-
-        void run() override;
-        void close() override;
-        void enqueue(void* v) override;
-        bool dequeue(void** out) override;
-        bool tryEnqueue(void* v) override;
-        bool tryDequeue(void** out) override;
-    };
-
-    struct CoroChannelImplN: public CoroChannelImpl {
-        RingBuffer buf_;
-
-        CoroChannelImplN(CoroExecutorImpl* exec, size_t capacity) noexcept;
-
-        void* operator new(size_t, void* p) noexcept {
-            return p;
-        }
-
-        void operator delete(void* p) noexcept {
-            freeMemory(p);
-        }
-
-        bool bufferOne(void* v) noexcept override;
-        bool unbufferOne(void** out) noexcept override;
-    };
-
-    struct CoroChannelImpl0: public CoroChannelImpl {
-        CoroChannelImpl0(CoroExecutorImpl* exec) noexcept;
     };
 
     struct PollRequestImpl: public PollRequest {
@@ -584,162 +534,182 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
     return new CoroThreadImpl(this, runable);
 }
 
-CoroChannelImpl::CoroChannelImpl(CoroExecutorImpl* exec) noexcept
-    : queueMutex_(exec)
-    , closed_(false)
-{
-}
+ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
+    struct CoroChannelImpl: public ChannelIface, public Runable {
+        Mutex         queueMutex_;
+        IntrusiveList senders_;
+        IntrusiveList receivers_;
+        bool          closed_;
 
-void CoroChannelImpl::run() {
-    queueMutex_.unlock();
-}
+        CoroChannelImpl(CoroExecutorImpl* exec) noexcept
+            : queueMutex_(exec)
+            , closed_(false)
+        {}
 
-void CoroChannelImpl::enqueue(void* v) {
-    LockGuard guard(queueMutex_);
-
-    STD_INSIST(!closed_);
-
-    if (sendOne(v)) {
-        return;
-    }
-
-    Waiter w;
-
-    w.cont = exec()->currentCont();
-    w.value = v;
-    w.valueSet = true;
-
-    senders_.pushBack(&w);
-    guard.drop();
-    w.cont->parkWith(this);
-}
-
-bool CoroChannelImpl::dequeue(void** out) {
-    LockGuard guard(queueMutex_);
-
-    if (recvOne(out)) {
-        return true;
-    }
-
-    if (closed_) {
-        return false;
-    }
-
-    Waiter w;
-
-    w.cont = exec()->currentCont();
-    w.value = nullptr;
-    w.valueSet = false;
-
-    receivers_.pushBack(&w);
-    guard.drop();
-    w.cont->parkWith(this);
-
-    if (w.valueSet) {
-        *out = w.value;
-
-        return true;
-    }
-
-    return false;
-}
-
-bool CoroChannelImpl::tryEnqueue(void* v) {
-    LockGuard guard(queueMutex_);
-
-    STD_INSIST(!closed_);
-
-    return sendOne(v);
-}
-
-bool CoroChannelImpl::tryDequeue(void** out) {
-    LockGuard guard(queueMutex_);
-
-    return recvOne(out);
-}
-
-void CoroChannelImpl::close() {
-    LockGuard guard(queueMutex_);
-
-    STD_INSIST(!closed_);
-    STD_INSIST(senders_.empty());
-
-    closed_ = true;
-
-    while (auto w = (Waiter*)receivers_.popFrontOrNull()) {
-        w->cont->reSchedule();
-    }
-}
-
-// CoroChannelImplN — buffered channel (cap > 0)
-
-CoroChannelImplN::CoroChannelImplN(CoroExecutorImpl* exec, size_t capacity) noexcept
-    : CoroChannelImpl(exec)
-    , buf_((void**)(this + 1), capacity)
-{
-}
-
-bool CoroChannelImpl::sendOne(void* v) noexcept {
-    if (auto* w = (Waiter*)receivers_.popFrontOrNull(); w) {
-        w->value = v;
-        w->valueSet = true;
-        w->cont->reSchedule();
-
-        return true;
-    }
-
-    return bufferOne(v);
-}
-
-bool CoroChannelImpl::bufferOne(void*) noexcept {
-    return false;
-}
-
-bool CoroChannelImpl::recvOne(void** out) noexcept {
-    if (unbufferOne(out)) {
-        return true;
-    }
-
-    if (auto* w = (Waiter*)senders_.popFrontOrNull(); w) {
-        *out = w->value;
-        w->cont->reSchedule();
-
-        return true;
-    }
-
-    return false;
-}
-
-bool CoroChannelImpl::unbufferOne(void**) noexcept {
-    return false;
-}
-
-bool CoroChannelImplN::bufferOne(void* v) noexcept {
-    if (!buf_.full()) {
-        buf_.push(v);
-
-        return true;
-    }
-
-    return false;
-}
-
-bool CoroChannelImplN::unbufferOne(void** out) noexcept {
-    if (!buf_.empty()) {
-        *out = buf_.pop();
-
-        if (auto* w = (Waiter*)senders_.popFrontOrNull(); w) {
-            buf_.push(w->value);
-            w->cont->reSchedule();
+        CoroExecutorImpl* exec() noexcept {
+            return (CoroExecutorImpl*)queueMutex_.nativeHandle();
         }
 
-        return true;
-    }
+        void run() override {
+            queueMutex_.unlock();
+        }
 
-    return false;
-}
+        bool sendOne(void* v) noexcept {
+            if (auto* w = (Waiter*)receivers_.popFrontOrNull(); w) {
+                w->value = v;
+                w->valueSet = true;
+                w->cont->reSchedule();
 
-ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
+                return true;
+            }
+
+            return bufferOne(v);
+        }
+
+        bool recvOne(void** out) noexcept {
+            if (unbufferOne(out)) {
+                return true;
+            }
+
+            if (auto* w = (Waiter*)senders_.popFrontOrNull(); w) {
+                *out = w->value;
+                w->cont->reSchedule();
+
+                return true;
+            }
+
+            return false;
+        }
+
+        virtual bool bufferOne(void*) noexcept {
+            return false;
+        }
+
+        virtual bool unbufferOne(void**) noexcept {
+            return false;
+        }
+
+        void enqueue(void* v) override {
+            LockGuard guard(queueMutex_);
+
+            STD_INSIST(!closed_);
+
+            if (sendOne(v)) {
+                return;
+            }
+
+            Waiter w;
+
+            w.cont = exec()->currentCont();
+            w.value = v;
+            w.valueSet = true;
+
+            senders_.pushBack(&w);
+            guard.drop();
+            w.cont->parkWith(this);
+        }
+
+        bool dequeue(void** out) override {
+            LockGuard guard(queueMutex_);
+
+            if (recvOne(out)) {
+                return true;
+            }
+
+            if (closed_) {
+                return false;
+            }
+
+            Waiter w;
+
+            w.cont = exec()->currentCont();
+            w.value = nullptr;
+            w.valueSet = false;
+
+            receivers_.pushBack(&w);
+            guard.drop();
+            w.cont->parkWith(this);
+
+            if (w.valueSet) {
+                *out = w.value;
+
+                return true;
+            }
+
+            return false;
+        }
+
+        bool tryEnqueue(void* v) override {
+            LockGuard guard(queueMutex_);
+
+            STD_INSIST(!closed_);
+
+            return sendOne(v);
+        }
+
+        bool tryDequeue(void** out) override {
+            LockGuard guard(queueMutex_);
+
+            return recvOne(out);
+        }
+
+        void close() override {
+            LockGuard guard(queueMutex_);
+
+            STD_INSIST(!closed_);
+            STD_INSIST(senders_.empty());
+
+            closed_ = true;
+
+            while (auto w = (Waiter*)receivers_.popFrontOrNull()) {
+                w->cont->reSchedule();
+            }
+        }
+    };
+
+    // buffered channel (cap > 0)
+    struct CoroChannelImplN: public CoroChannelImpl {
+        RingBuffer buf_;
+
+        CoroChannelImplN(CoroExecutorImpl* exec, size_t capacity) noexcept
+            : CoroChannelImpl(exec)
+            , buf_((void**)(this + 1), capacity)
+        {}
+
+        void* operator new(size_t, void* p) noexcept {
+            return p;
+        }
+
+        void operator delete(void* p) noexcept {
+            freeMemory(p);
+        }
+
+        bool bufferOne(void* v) noexcept override {
+            if (!buf_.full()) {
+                buf_.push(v);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        bool unbufferOne(void** out) noexcept override {
+            if (!buf_.empty()) {
+                *out = buf_.pop();
+
+                if (auto* w = (Waiter*)senders_.popFrontOrNull(); w) {
+                    buf_.push(w->value);
+                    w->cont->reSchedule();
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+    };
+
     if (cap == 0) {
         return new CoroChannelImpl(this);
     }
