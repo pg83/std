@@ -64,4 +64,39 @@ STD_TEST_SUITE(Future) {
 
         exec->join();
     }
+
+    STD_TEST(CoroRecursive) {
+        auto exec = CoroExecutor::create(4);
+        Future result;
+
+        auto run = [&](auto& self, size_t depth, Future& out) {
+            if (depth == 1) {
+                out.complete((void*)(size_t)1);
+                return;
+            }
+
+            Future f1(exec.mutPtr()), f2(exec.mutPtr());
+
+            exec->spawn([&, depth]() {
+                self(self, depth - 1, f1);
+            });
+
+            exec->spawn([&, depth]() {
+                self(self, depth - 1, f2);
+            });
+
+            auto v = (size_t)f1.wait() + (size_t)f2.wait();
+
+            out.complete((void*)v);
+        };
+
+        exec->spawn([&] {
+            run(run, 10, result);
+        });
+
+        exec->join();
+
+        // f(1)=1, f(d)=2*f(d-1) => f(10)=2^9=512
+        STD_INSIST((size_t)result.wait() == 512);
+    }
 }
