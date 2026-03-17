@@ -75,7 +75,8 @@ STD_TEST_SUITE(Future) {
                 return;
             }
 
-            Future f1(exec.mutPtr()), f2(exec.mutPtr());
+            Future f1(exec.mutPtr());
+            Future f2(exec.mutPtr());
 
             exec->spawn([&, depth]() {
                 self(self, depth - 1, f1);
