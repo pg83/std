@@ -6,15 +6,12 @@
 #include "poller.h"
 
 #include <std/tst/ut.h>
-#include <std/sys/atomic.h>
 #include <std/sys/fd.h>
 #include <std/alg/defer.h>
+#include <std/sys/atomic.h>
 
 #include <errno.h>
 #include <unistd.h>
-
-#undef noexcept
-
 
 using namespace stl;
 
