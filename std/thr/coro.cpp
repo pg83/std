@@ -753,16 +753,18 @@ ChannelIface::~ChannelIface() noexcept {
 
 SemaphoreIface* CoroExecutorImpl::createSemaphore(int initial) {
     struct CoroSemaphoreImpl: public SemaphoreIface, public Runable {
-        CoroExecutorImpl* exec_;
         Mutex queueMutex_;
         IntrusiveList waiters_;
         int count_;
 
         CoroSemaphoreImpl(CoroExecutorImpl* exec, int initial) noexcept
-            : exec_(exec)
-            , queueMutex_(exec)
+            : queueMutex_(exec)
             , count_(initial)
         {
+        }
+
+        CoroExecutorImpl* exec() noexcept {
+            return (CoroExecutorImpl*)queueMutex_.nativeHandle();
         }
 
         void run() override {
@@ -788,7 +790,7 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(int initial) {
                 return;
             }
 
-            auto* cont = exec_->currentCont();
+            auto* cont = exec()->currentCont();
             waiters_.pushBack(cont);
             cont->parkWith(this);
         }
