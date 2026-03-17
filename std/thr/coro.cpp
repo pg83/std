@@ -112,7 +112,7 @@ namespace {
         }
     }
 
-    struct CoroCondVarImpl;
+
     struct CoroChannelImpl;
     struct CoroChannelImplN;
 
@@ -170,21 +170,6 @@ namespace {
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
     };
 
-    struct CoroCondVarImpl: public CondVarIface, public Runable {
-        Mutex queueMutex_;
-        IntrusiveList waiters_;
-
-        CoroCondVarImpl(CoroExecutorImpl* exec) noexcept;
-
-        CoroExecutorImpl* exec() noexcept {
-            return (CoroExecutorImpl*)queueMutex_.nativeHandle();
-        }
-
-        void run() override;
-        void signal() noexcept override;
-        void broadcast() noexcept override;
-        void wait(MutexIface* mutex) noexcept override;
-    };
 
     struct Waiter: public IntrusiveNode {
         ContImpl* cont;
@@ -514,41 +499,49 @@ MutexIface* CoroExecutorImpl::createMutex() {
     return new CoroMutexImpl(this);
 }
 
-CoroCondVarImpl::CoroCondVarImpl(CoroExecutorImpl* exec) noexcept
-    : queueMutex_(exec)
-{
-}
-
-void CoroCondVarImpl::run() {
-    queueMutex_.unlock();
-}
-
-void CoroCondVarImpl::wait(MutexIface* mutex) noexcept {
-    queueMutex_.lock();
-    auto* cont = exec()->currentCont();
-    waiters_.pushBack(cont);
-    mutex->unlock();
-    cont->parkWith(this);
-    mutex->lock();
-}
-
-void CoroCondVarImpl::signal() noexcept {
-    LockGuard guard(queueMutex_);
-
-    if (auto* node = (ContImpl*)(Task*)waiters_.popFrontOrNull(); node) {
-        node->reSchedule();
-    }
-}
-
-void CoroCondVarImpl::broadcast() noexcept {
-    LockGuard guard(queueMutex_);
-
-    while (auto* node = (ContImpl*)(Task*)waiters_.popFrontOrNull()) {
-        node->reSchedule();
-    }
-}
-
 CondVarIface* CoroExecutorImpl::createCondVar() {
+    struct CoroCondVarImpl: public CondVarIface, public Runable {
+        Mutex         queueMutex_;
+        IntrusiveList waiters_;
+
+        CoroCondVarImpl(CoroExecutorImpl* exec) noexcept
+            : queueMutex_(exec)
+        {}
+
+        CoroExecutorImpl* exec() noexcept {
+            return (CoroExecutorImpl*)queueMutex_.nativeHandle();
+        }
+
+        void run() override {
+            queueMutex_.unlock();
+        }
+
+        void wait(MutexIface* mutex) noexcept override {
+            queueMutex_.lock();
+            auto* cont = exec()->currentCont();
+            waiters_.pushBack(cont);
+            mutex->unlock();
+            cont->parkWith(this);
+            mutex->lock();
+        }
+
+        void signal() noexcept override {
+            LockGuard guard(queueMutex_);
+
+            if (auto* node = (ContImpl*)(Task*)waiters_.popFrontOrNull(); node) {
+                node->reSchedule();
+            }
+        }
+
+        void broadcast() noexcept override {
+            LockGuard guard(queueMutex_);
+
+            while (auto* node = (ContImpl*)(Task*)waiters_.popFrontOrNull()) {
+                node->reSchedule();
+            }
+        }
+    };
+
     return new CoroCondVarImpl(this);
 }
 
