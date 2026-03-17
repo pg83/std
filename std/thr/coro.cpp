@@ -374,7 +374,7 @@ void CoroExecutorImpl::submitExternalTask(Task* task) noexcept {
 }
 
 void CoroExecutorImpl::submitterLoop() noexcept {
-    Task* buf[64];
+    Task* buf[1024];
 
     for (;;) {
         CoroExecutor::poll(submitR_.get(), PollFlag::In);
