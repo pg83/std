@@ -64,9 +64,7 @@ namespace stl {
 
         template <typename F>
         Cont* spawn(F f) {
-            return spawnRun(SpawnParams().setRunable([f]() {
-                f();
-            }));
+            return spawnRun(SpawnParams().setRunable(f));
         }
 
         static Ref create(size_t threads);
