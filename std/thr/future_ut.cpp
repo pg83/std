@@ -71,8 +71,7 @@ STD_TEST_SUITE(Future) {
 
         auto run = [&](auto& self, size_t depth, Future& out) -> void {
             if (depth == 1) {
-                out.post((void*)(size_t)1);
-                return;
+                return out.post((void*)(size_t)1);
             }
 
             Future f1(exec.mutPtr());
