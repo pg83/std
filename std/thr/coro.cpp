@@ -292,9 +292,9 @@ Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
     auto task = makeContImpl(this, params);
 
     if (tls()) {
-        pool_->submitTask(task);
+        task->reSchedule();
     } else if (params.system) {
-        pool_->submitTask(task);
+        task->reSchedule();
     } else {
         submitExternalTask(task);
     }
