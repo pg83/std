@@ -22,7 +22,7 @@ namespace stl {
         {
         }
 
-        void complete(void* value) noexcept {
+        void post(void* value) noexcept {
             value_ = value;
             sem_.post();
         }
