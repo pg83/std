@@ -70,7 +70,7 @@ STD_TEST_SUITE(Future) {
         Future result;
 
         auto run = [&](auto& self, size_t depth, Future& out) -> void {
-            if (depth == 1) {
+            if (depth == 0) {
                 return out.post((void*)(size_t)1);
             }
 
@@ -94,9 +94,8 @@ STD_TEST_SUITE(Future) {
             run(run, 10, result);
         });
 
-        exec->join();
+        STD_INSIST((size_t)result.wait() == 1024);
 
-        // f(1)=1, f(d)=2*f(d-1) => f(10)=2^9=512
-        STD_INSIST((size_t)result.wait() == 512);
+        exec->join();
     }
 }
