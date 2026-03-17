@@ -52,8 +52,6 @@ namespace {
         Runable* afterSuspend_;
         u8 priority_;
 
-        u8 priority() const noexcept override;
-
         ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noexcept;
 
         virtual ~ContImpl() = default;
@@ -63,6 +61,7 @@ namespace {
         }
 
         void parkWith(Runable* afterSuspend) noexcept;
+        u8 priority() const noexcept override;
         void run() noexcept override;
         void reSchedule() noexcept;
     };
