@@ -7,6 +7,7 @@
 #include "context.h"
 #include "reactor.h"
 #include "cond_var.h"
+#include "semaphore.h"
 #include "wait_group.h"
 #include "mutex_iface.h"
 #include "thread_iface.h"
@@ -549,24 +550,24 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
         CoroExecutorImpl* exec_;
         Cont* cont_ = nullptr;
         Runable* runable_;
-        WaitGroup wg_;
+        Semaphore sem_;
 
         CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable)
             : exec_(exec)
             , runable_(&runable)
-            , wg_(1, exec)
+            , sem_(0, exec)
         {
         }
 
         void start() override {
             cont_ = exec_->spawnRun(SpawnParams().setRunable([this]() {
                 runable_->run();
-                wg_.done();
+                sem_.post();
             }));
         }
 
         void join() noexcept override {
-            wg_.wait();
+            sem_.wait();
             delete this;
         }
 
