@@ -536,15 +536,16 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
 
 ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
     struct CoroChannelImpl: public ChannelIface, public Runable {
-        Mutex         queueMutex_;
+        Mutex queueMutex_;
         IntrusiveList senders_;
         IntrusiveList receivers_;
-        bool          closed_;
+        bool closed_;
 
         CoroChannelImpl(CoroExecutorImpl* exec) noexcept
             : queueMutex_(exec)
             , closed_(false)
-        {}
+        {
+        }
 
         CoroExecutorImpl* exec() noexcept {
             return (CoroExecutorImpl*)queueMutex_.nativeHandle();
@@ -674,7 +675,8 @@ ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
         CoroChannelImplN(CoroExecutorImpl* exec, size_t capacity) noexcept
             : CoroChannelImpl(exec)
             , buf_((void**)(this + 1), capacity)
-        {}
+        {
+        }
 
         void* operator new(size_t, void* p) noexcept {
             return p;
