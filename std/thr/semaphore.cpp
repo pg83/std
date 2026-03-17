@@ -12,7 +12,7 @@ namespace {
     struct SemImpl: public SemaphoreIface {
         sem_t sem_;
 
-        SemImpl(int initial) noexcept {
+        SemImpl(size_t initial) noexcept {
             STD_INSIST(sem_init(&sem_, 0, initial) == 0);
         }
 
@@ -30,12 +30,12 @@ namespace {
     };
 }
 
-Semaphore::Semaphore(int initial)
+Semaphore::Semaphore(size_t initial)
     : impl_(new SemImpl(initial))
 {
 }
 
-Semaphore::Semaphore(int initial, CoroExecutor* exec)
+Semaphore::Semaphore(size_t initial, CoroExecutor* exec)
     : impl_(exec->createSemaphore(initial))
 {
 }

@@ -161,7 +161,7 @@ namespace {
         CondVarIface* createCondVar() override;
         ChannelIface* createChannel(size_t cap) override;
         ThreadIface* createThread(Runable& runable) override;
-        SemaphoreIface* createSemaphore(int initial) override;
+        SemaphoreIface* createSemaphore(size_t initial) override;
 
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
     };
@@ -722,13 +722,13 @@ ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
 ChannelIface::~ChannelIface() noexcept {
 }
 
-SemaphoreIface* CoroExecutorImpl::createSemaphore(int initial) {
+SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
     struct CoroSemaphoreImpl: public SemaphoreIface, public Runable {
         Mutex queueMutex_;
         IntrusiveList waiters_;
-        int count_;
+        size_t count_;
 
-        CoroSemaphoreImpl(CoroExecutorImpl* exec, int initial) noexcept
+        CoroSemaphoreImpl(CoroExecutorImpl* exec, size_t initial) noexcept
             : queueMutex_(exec)
             , count_(initial)
         {

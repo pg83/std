@@ -1,5 +1,7 @@
 #pragma once
 
+#include <std/sys/types.h>
+
 namespace stl {
     struct CoroExecutor;
     struct SemaphoreIface;
@@ -8,8 +10,8 @@ namespace stl {
         SemaphoreIface* impl_;
 
     public:
-        explicit Semaphore(int initial = 0);
-        Semaphore(int initial, CoroExecutor* exec);
+        explicit Semaphore(size_t initial = 0);
+        Semaphore(size_t initial, CoroExecutor* exec);
 
         ~Semaphore() noexcept;
 
