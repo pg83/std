@@ -49,13 +49,12 @@ namespace {
         Runable* runable_;
         Runable* afterSuspend_;
         u8 priority_;
-        bool system_;
 
         u8 priority() const noexcept override;
 
         ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noexcept;
 
-        virtual ~ContImpl();
+        virtual ~ContImpl() = default;
 
         void operator delete(void* p) noexcept {
             freeMemory(p);
@@ -66,33 +65,49 @@ namespace {
         void reSchedule() noexcept;
     };
 
-    struct alignas(max_align_t) HeapContImpl: public ContImpl {
+    struct UserContImpl: public ContImpl {
+        UserContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noexcept;
+        ~UserContImpl();
+    };
+
+    template <typename Base>
+    struct alignas(max_align_t) HeapContImpl: public Base {
         void* operator new(size_t, size_t stackSize) {
             return allocateMemory(sizeof(HeapContImpl) + Context::implSize() + stackSize);
         }
 
         HeapContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
-            : ContImpl(exec, (char*)(this + 1), params.setStackPtr((char*)(this + 1) + Context::implSize()))
+            : Base(exec, (char*)(this + 1), params.setStackPtr((char*)(this + 1) + Context::implSize()))
         {
         }
     };
 
-    struct alignas(max_align_t) ExtStackContImpl: public ContImpl {
+    template <typename Base>
+    struct alignas(max_align_t) ExtStackContImpl: public Base {
         void* operator new(size_t sz) {
             return allocateMemory(sz + Context::implSize());
         }
 
         ExtStackContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
-            : ContImpl(exec, (char*)(this + 1), params)
+            : Base(exec, (char*)(this + 1), params)
         {
         }
     };
 
-    ContImpl* makeContImpl(CoroExecutorImpl* exec, SpawnParams params) {
+    template <typename Base>
+    ContImpl* makeContImplT(CoroExecutorImpl* exec, SpawnParams params) {
         if (params.stackPtr) {
-            return new ExtStackContImpl(exec, params);
+            return new ExtStackContImpl<Base>(exec, params);
         } else {
-            return new (params.stackSize) HeapContImpl(exec, params);
+            return new (params.stackSize) HeapContImpl<Base>(exec, params);
+        }
+    }
+
+    ContImpl* makeContImpl(CoroExecutorImpl* exec, SpawnParams params) {
+        if (params.system) {
+            return makeContImplT<ContImpl>(exec, params);
+        } else {
+            return makeContImplT<UserContImpl>(exec, params);
         }
     }
 
@@ -436,10 +451,20 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noe
     , runable_(params.runable)
     , afterSuspend_(nullptr)
     , priority_(params.priority)
-    , system_(params.system)
 {
-    if (!system_) {
-        stdAtomicAddAndFetch(&exec_->inflight_, 1, MemoryOrder::Relaxed);
+}
+
+UserContImpl::UserContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noexcept
+    : ContImpl(exec, ctxBuf, params)
+{
+    stdAtomicAddAndFetch(&exec_->inflight_, 1, MemoryOrder::Relaxed);
+}
+
+UserContImpl::~UserContImpl() {
+    if (stdAtomicAddAndFetch(&exec_->inflight_, -1, MemoryOrder::Release) == 0) {
+        char b = 1;
+
+        exec_->joinW_.write(&b, 1);
     }
 }
 
@@ -477,16 +502,6 @@ void ContImpl::run() noexcept {
         return reSchedule();
     } else {
         delete this;
-    }
-}
-
-ContImpl::~ContImpl() {
-    if (!system_) {
-        if (stdAtomicAddAndFetch(&exec_->inflight_, -1, MemoryOrder::Release) == 0) {
-            char b = 1;
-
-            exec_->joinW_.write(&b, 1);
-        }
     }
 }
 
