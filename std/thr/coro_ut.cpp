@@ -15,7 +15,6 @@
 
 #undef noexcept
 
-#include <functional>
 
 using namespace stl;
 
@@ -291,14 +290,14 @@ STD_TEST_SUITE(CoroExecutor) {
 
         int counter2 = 0;
 
-        std::function<void(int)> run = [&](int d) {
+        auto run = [&](auto& self, int d) -> void {
             stdAtomicAddAndFetch(&counter2, 1, MemoryOrder::Relaxed);
 
             doW(work);
 
             if (d > 0) {
                 exec->spawnRun(SpawnParams().setStackSize(2000).setRunable([&, d]() {
-                    run(d - 1);
+                    self(self, d - 1);
                 }));
             }
 
@@ -306,7 +305,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
             if (d > 0) {
                 exec->spawnRun(SpawnParams().setStackSize(2000).setRunable([&, d]() {
-                    run(d - 1);
+                    self(self, d - 1);
                 }));
             }
 
@@ -314,7 +313,7 @@ STD_TEST_SUITE(CoroExecutor) {
         };
 
         exec->spawn([&]() {
-            run(depth);
+            run(run, depth);
         });
 
         exec->join();

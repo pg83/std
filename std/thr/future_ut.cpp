@@ -69,7 +69,7 @@ STD_TEST_SUITE(Future) {
         auto exec = CoroExecutor::create(4);
         Future result;
 
-        auto run = [&](auto& self, size_t depth, Future& out) {
+        auto run = [&](auto& self, size_t depth, Future& out) -> void {
             if (depth == 1) {
                 out.complete((void*)(size_t)1);
                 return;
