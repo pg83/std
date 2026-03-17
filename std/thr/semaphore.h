@@ -1,8 +1,8 @@
 #pragma once
 
 namespace stl {
-    struct SemaphoreIface;
     struct CoroExecutor;
+    struct SemaphoreIface;
 
     class Semaphore {
         SemaphoreIface* impl_;
