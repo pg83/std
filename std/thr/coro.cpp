@@ -112,7 +112,6 @@ namespace {
         }
     }
 
-    struct CoroMutexImpl;
     struct CoroCondVarImpl;
     struct CoroChannelImpl;
     struct CoroChannelImplN;
@@ -199,21 +198,6 @@ namespace {
         void signal() noexcept override;
         void broadcast() noexcept override;
         void wait(MutexIface* mutex) noexcept override;
-    };
-
-    struct CoroMutexImpl: public MutexIface, public Runable {
-        CoroExecutorImpl* exec_;
-        Mutex queueMutex_;
-        IntrusiveList waiters_;
-        bool locked_;
-
-        CoroMutexImpl(CoroExecutorImpl* exec) noexcept;
-
-        void run() override;
-        void lock() noexcept override;
-        void unlock() noexcept override;
-        bool tryLock() noexcept override;
-        void* nativeHandle() noexcept override;
     };
 
     struct Waiter: public IntrusiveNode {
@@ -396,56 +380,6 @@ void CoroExecutorImpl::submitterLoop() noexcept {
     }
 }
 
-CoroMutexImpl::CoroMutexImpl(CoroExecutorImpl* exec) noexcept
-    : exec_(exec)
-    , locked_(false)
-{
-}
-
-void* CoroMutexImpl::nativeHandle() noexcept {
-    return exec_;
-}
-
-void CoroMutexImpl::run() {
-    queueMutex_.unlock();
-}
-
-void CoroMutexImpl::lock() noexcept {
-    queueMutex_.lock();
-
-    if (!locked_) {
-        locked_ = true;
-        queueMutex_.unlock();
-
-        return;
-    }
-
-    auto* cont = exec_->currentCont();
-
-    waiters_.pushBack(cont);
-    cont->parkWith(this);
-}
-
-void CoroMutexImpl::unlock() noexcept {
-    LockGuard guard(queueMutex_);
-
-    if (auto node = (ContImpl*)(Task*)waiters_.popFrontOrNull(); node) {
-        node->reSchedule();
-    } else {
-        locked_ = false;
-    }
-}
-
-bool CoroMutexImpl::tryLock() noexcept {
-    LockGuard guard(queueMutex_);
-
-    if (!locked_) {
-        return locked_ = true;
-    }
-
-    return false;
-}
-
 ContImpl::ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noexcept
     : exec_(exec)
     , ctx_{Context::create(ctxBuf, params.stackPtr, params.stackSize, *this)}
@@ -534,6 +468,62 @@ u64 Cont::id() const noexcept {
 }
 
 MutexIface* CoroExecutorImpl::createMutex() {
+    struct CoroMutexImpl: public MutexIface, public Runable {
+        CoroExecutorImpl* exec_;
+        Mutex             queueMutex_;
+        IntrusiveList     waiters_;
+        bool              locked_;
+
+        CoroMutexImpl(CoroExecutorImpl* exec) noexcept
+            : exec_(exec)
+            , locked_(false)
+        {}
+
+        void* nativeHandle() noexcept override {
+            return exec_;
+        }
+
+        void run() override {
+            queueMutex_.unlock();
+        }
+
+        void lock() noexcept override {
+            queueMutex_.lock();
+
+            if (!locked_) {
+                locked_ = true;
+                queueMutex_.unlock();
+
+                return;
+            }
+
+            auto* cont = exec_->currentCont();
+
+            waiters_.pushBack(cont);
+            cont->parkWith(this);
+        }
+
+        void unlock() noexcept override {
+            LockGuard guard(queueMutex_);
+
+            if (auto node = (ContImpl*)(Task*)waiters_.popFrontOrNull(); node) {
+                node->reSchedule();
+            } else {
+                locked_ = false;
+            }
+        }
+
+        bool tryLock() noexcept override {
+            LockGuard guard(queueMutex_);
+
+            if (!locked_) {
+                return locked_ = true;
+            }
+
+            return false;
+        }
+    };
+
     return new CoroMutexImpl(this);
 }
 
