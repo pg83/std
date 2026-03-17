@@ -14,6 +14,7 @@ namespace stl {
     struct ThreadIface;
     struct CondVarIface;
     struct ChannelIface;
+    struct SemaphoreIface;
     struct CoroExecutor;
 
     struct Cont {
@@ -56,6 +57,7 @@ namespace stl {
         virtual CondVarIface* createCondVar() = 0;
         virtual Cont* spawnRun(SpawnParams params) = 0;
         virtual ChannelIface* createChannel(size_t cap) = 0;
+        virtual SemaphoreIface* createSemaphore(int initial) = 0;
         virtual u32 poll(int fd, u32 flags, u64 deadlineUs) = 0;
         virtual ThreadIface* createThread(Runable& runable) = 0;
 

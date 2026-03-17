@@ -12,6 +12,7 @@
 #include "thread_iface.h"
 #include "channel_iface.h"
 #include "cond_var_iface.h"
+#include "semaphore_iface.h"
 
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
@@ -165,6 +166,7 @@ namespace {
         CondVarIface* createCondVar() override;
         ChannelIface* createChannel(size_t cap) override;
         ThreadIface* createThread(Runable& runable) override;
+        SemaphoreIface* createSemaphore(int initial) override;
 
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
     };
@@ -770,6 +772,52 @@ ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
 }
 
 ChannelIface::~ChannelIface() noexcept {
+}
+
+SemaphoreIface* CoroExecutorImpl::createSemaphore(int initial) {
+    struct CoroSemaphoreImpl: public SemaphoreIface, public Runable {
+        CoroExecutorImpl* exec_;
+        Mutex             queueMutex_;
+        IntrusiveList     waiters_;
+        int               count_;
+
+        CoroSemaphoreImpl(CoroExecutorImpl* exec, int initial) noexcept
+            : exec_(exec)
+            , queueMutex_(exec)
+            , count_(initial)
+        {
+        }
+
+        void run() override {
+            queueMutex_.unlock();
+        }
+
+        void post() noexcept override {
+            LockGuard guard(queueMutex_);
+
+            if (auto* cont = (ContImpl*)(Task*)waiters_.popFrontOrNull(); cont) {
+                cont->reSchedule();
+            } else {
+                ++count_;
+            }
+        }
+
+        void wait() noexcept override {
+            queueMutex_.lock();
+
+            if (count_ > 0) {
+                --count_;
+                queueMutex_.unlock();
+                return;
+            }
+
+            auto* cont = exec_->currentCont();
+            waiters_.pushBack(cont);
+            cont->parkWith(this);
+        }
+    };
+
+    return new CoroSemaphoreImpl(this, initial);
 }
 
 CoroExecutor::~CoroExecutor() noexcept {
