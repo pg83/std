@@ -112,7 +112,6 @@ namespace {
         }
     }
 
-
     struct CoroChannelImpl;
     struct CoroChannelImplN;
 
@@ -169,7 +168,6 @@ namespace {
 
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
     };
-
 
     struct Waiter: public IntrusiveNode {
         ContImpl* cont;
@@ -501,12 +499,13 @@ MutexIface* CoroExecutorImpl::createMutex() {
 
 CondVarIface* CoroExecutorImpl::createCondVar() {
     struct CoroCondVarImpl: public CondVarIface, public Runable {
-        Mutex         queueMutex_;
+        Mutex queueMutex_;
         IntrusiveList waiters_;
 
         CoroCondVarImpl(CoroExecutorImpl* exec) noexcept
             : queueMutex_(exec)
-        {}
+        {
+        }
 
         CoroExecutorImpl* exec() noexcept {
             return (CoroExecutorImpl*)queueMutex_.nativeHandle();
