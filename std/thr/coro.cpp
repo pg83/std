@@ -456,14 +456,15 @@ u64 Cont::id() const noexcept {
 MutexIface* CoroExecutorImpl::createMutex() {
     struct CoroMutexImpl: public MutexIface, public Runable {
         CoroExecutorImpl* exec_;
-        Mutex             queueMutex_;
-        IntrusiveList     waiters_;
-        bool              locked_;
+        Mutex queueMutex_;
+        IntrusiveList waiters_;
+        bool locked_;
 
         CoroMutexImpl(CoroExecutorImpl* exec) noexcept
             : exec_(exec)
             , locked_(false)
-        {}
+        {
+        }
 
         void* nativeHandle() noexcept override {
             return exec_;
@@ -554,15 +555,16 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
 ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
     struct CoroThreadImpl: public ThreadIface {
         CoroExecutorImpl* exec_;
-        Cont*             cont_ = nullptr;
-        Runable*          runable_;
-        WaitGroup         wg_;
+        Cont* cont_ = nullptr;
+        Runable* runable_;
+        WaitGroup wg_;
 
         CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable)
             : exec_(exec)
             , runable_(&runable)
             , wg_(1, exec)
-        {}
+        {
+        }
 
         void start() override {
             cont_ = exec_->spawnRun(SpawnParams().setRunable([this]() {
@@ -759,9 +761,9 @@ ChannelIface::~ChannelIface() noexcept {
 SemaphoreIface* CoroExecutorImpl::createSemaphore(int initial) {
     struct CoroSemaphoreImpl: public SemaphoreIface, public Runable {
         CoroExecutorImpl* exec_;
-        Mutex             queueMutex_;
-        IntrusiveList     waiters_;
-        int               count_;
+        Mutex queueMutex_;
+        IntrusiveList waiters_;
+        int count_;
 
         CoroSemaphoreImpl(CoroExecutorImpl* exec, int initial) noexcept
             : exec_(exec)
