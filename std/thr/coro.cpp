@@ -170,20 +170,6 @@ namespace {
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
     };
 
-    struct CoroThreadImpl: public ThreadIface {
-        CoroExecutorImpl* exec_;
-        Cont* cont_ = nullptr;
-        Runable* runable_;
-        WaitGroup wg_;
-
-        CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable);
-
-        void start() override;
-        void join() noexcept override;
-        void detach() noexcept override;
-        u64 threadId() const noexcept override;
-    };
-
     struct CoroCondVarImpl: public CondVarIface, public Runable {
         Mutex queueMutex_;
         IntrusiveList waiters_;
@@ -565,36 +551,42 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
     return new CoroCondVarImpl(this);
 }
 
-CoroThreadImpl::CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable)
-    : exec_(exec)
-    , runable_(&runable)
-    , wg_(1, exec)
-{
-}
-
-void CoroThreadImpl::start() {
-    cont_ = exec_->spawnRun(SpawnParams().setRunable([this]() {
-        runable_->run();
-        wg_.done();
-    }));
-}
-
-void CoroThreadImpl::join() noexcept {
-    wg_.wait();
-    delete this;
-}
-
-void CoroThreadImpl::detach() noexcept {
-    exec_->spawn([this]() {
-        join();
-    });
-}
-
-u64 CoroThreadImpl::threadId() const noexcept {
-    return cont_->id();
-}
-
 ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
+    struct CoroThreadImpl: public ThreadIface {
+        CoroExecutorImpl* exec_;
+        Cont*             cont_ = nullptr;
+        Runable*          runable_;
+        WaitGroup         wg_;
+
+        CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable)
+            : exec_(exec)
+            , runable_(&runable)
+            , wg_(1, exec)
+        {}
+
+        void start() override {
+            cont_ = exec_->spawnRun(SpawnParams().setRunable([this]() {
+                runable_->run();
+                wg_.done();
+            }));
+        }
+
+        void join() noexcept override {
+            wg_.wait();
+            delete this;
+        }
+
+        void detach() noexcept override {
+            exec_->spawn([this]() {
+                join();
+            });
+        }
+
+        u64 threadId() const noexcept override {
+            return cont_->id();
+        }
+    };
+
     return new CoroThreadImpl(this, runable);
 }
 
