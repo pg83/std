@@ -1,6 +1,6 @@
 #include "channel.h"
-#include "channel_iface.h"
 #include "coro.h"
+#include "channel_iface.h"
 
 using namespace stl;
 

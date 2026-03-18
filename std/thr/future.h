@@ -10,34 +10,20 @@ namespace stl {
         void* value_;
 
     public:
-        Future() noexcept
-            : sem_(0)
-            , value_(nullptr)
-        {
-        }
+        Future() noexcept;
+        explicit Future(CoroExecutor* exec) noexcept;
 
-        explicit Future(CoroExecutor* exec) noexcept
-            : sem_(0, exec)
-            , value_(nullptr)
-        {
-        }
+        ~Future() noexcept;
 
-        void post(void* value) noexcept {
-            value_ = value;
-            sem_.post();
-        }
+        void* wait() noexcept;
+        void post(void* value) noexcept;
 
-        void* wait() noexcept {
-            sem_.wait();
-            return value_;
-        }
-
-        // can be called after wait
+        // can be called only after wait
         void* posted() const noexcept {
             return value_;
         }
 
-        // can be called after wait
+        // can be called only after wait
         void* release() noexcept;
     };
 }
