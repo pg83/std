@@ -32,9 +32,6 @@
 
 using namespace stl;
 
-PollerIface::~PollerIface() noexcept {
-}
-
 #if defined(__linux__)
 namespace {
     static u32 toEpollFlags(u32 flags) noexcept {
@@ -303,6 +300,9 @@ namespace {
             }
         }
     };
+}
+
+PollerIface::~PollerIface() noexcept {
 }
 
 PollerIface* PollerIface::create(ObjPool* pool) {
