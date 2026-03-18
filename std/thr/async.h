@@ -1,61 +1,56 @@
 #pragma once
 
-#include "coro.h"
-#include "future.h"
-
-#include <std/ptr/arc.h>
+#include <std/lib/producer.h>
 #include <std/ptr/intrusive.h>
+#include <std/sys/types.h>
 
 namespace stl {
+    struct CoroExecutor;
+
+    struct FutureIface {
+        virtual ~FutureIface() noexcept;
+
+        virtual i32 ref() noexcept = 0;
+        virtual i32 unref() noexcept = 0;
+        virtual i32 refCount() const noexcept = 0;
+
+        virtual void* wait() noexcept = 0;
+        virtual void* posted() noexcept = 0;
+        virtual void* release() noexcept = 0;
+    };
+
+    FutureIface* asyncImpl(CoroExecutor* exec, ProducerIface* prod);
+
     template <typename T>
-    class SharedFutureBase: public ARC {
-        Future f;
+    class SharedFuture {
+        IntrusivePtr<FutureIface> impl_;
 
     public:
-        SharedFutureBase() noexcept = default;
-
-        explicit SharedFutureBase(CoroExecutor* exec) noexcept
-            : f(exec)
+        SharedFuture(FutureIface* p) noexcept
+            : impl_(p)
         {
         }
 
-        ~SharedFutureBase() noexcept {
-            delete posted();
-        }
-
-        void post(T&& t) noexcept {
-            f.post(new T(static_cast<T&&>(t)));
-        }
-
         T& wait() noexcept {
-            return *(T*)f.wait();
+            return *(T*)impl_->wait();
         }
 
-        auto posted() noexcept {
-            return (T*)f.posted();
+        T* posted() noexcept {
+            return (T*)impl_->posted();
         }
 
-        auto release() noexcept {
-            return (T*)f.release();
+        T* release() noexcept {
+            return (T*)impl_->release();
         }
 
-        auto consume() noexcept {
+        T* consume() noexcept {
             return (wait(), release());
         }
     };
 
-    template <typename T>
-    using SharedFuture = IntrusivePtr<SharedFutureBase<T>>;
-
     template <typename F>
     auto async(CoroExecutor* exec, F fn) {
-        using T = SharedFutureBase<decltype(fn())>;
-        auto sf = makeIntrusivePtr(exec->me() ? new T(exec) : new T());
-
-        exec->spawn([sf, fn]() mutable {
-            sf->post(fn());
-        });
-
-        return sf;
+        using T = decltype(fn());
+        return SharedFuture<T>(asyncImpl(exec, makeProducer(fn)));
     }
 }
