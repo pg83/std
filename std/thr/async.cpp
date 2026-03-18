@@ -2,8 +2,8 @@
 #include "coro.h"
 #include "semaphore.h"
 
-#include <std/alg/exchange.h>
 #include <std/ptr/arc.h>
+#include <std/alg/exchange.h>
 
 using namespace stl;
 
@@ -66,11 +66,11 @@ namespace {
 }
 
 FutureIfaceRef stl::asyncImpl(CoroExecutor* exec, ProducerIface* prod) {
-    FutureIfaceRef fi = exec->me() ? new FutureImpl(exec, prod) : new FutureImpl(prod);
+    IntrusivePtr<FutureImpl> fi = exec->me() ? new FutureImpl(exec, prod) : new FutureImpl(prod);
 
     exec->spawn([fi]() mutable {
-        ((FutureImpl*)fi.mutPtr())->execute();
+        fi->execute();
     });
 
-    return fi;
+    return fi.mutPtr();
 }
