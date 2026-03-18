@@ -1,7 +1,8 @@
 #include "async.h"
 #include "coro.h"
-#include "future.h"
+#include "semaphore.h"
 
+#include <std/alg/exchange.h>
 #include <std/ptr/arc.h>
 
 using namespace stl;
@@ -9,22 +10,26 @@ using namespace stl;
 namespace {
     struct FutureImpl: public FutureIface {
         ARC arc;
-        Future f;
+        Semaphore sem;
+        void* value;
         ProducerIface* prod;
 
         FutureImpl(ProducerIface* p) noexcept
-            : prod(p)
+            : sem(0)
+            , value(nullptr)
+            , prod(p)
         {
         }
 
         FutureImpl(CoroExecutor* exec, ProducerIface* p) noexcept
-            : f(exec)
+            : sem(0, exec)
+            , value(nullptr)
             , prod(p)
         {
         }
 
         ~FutureImpl() noexcept override {
-            prod->del(f.posted());
+            prod->del(value);
             delete prod;
         }
 
@@ -41,19 +46,21 @@ namespace {
         }
 
         void* wait() noexcept override {
-            return f.wait();
+            sem.wait();
+            return value;
         }
 
         void* posted() noexcept override {
-            return f.posted();
+            return value;
         }
 
         void* release() noexcept override {
-            return f.release();
+            return exchange(value, nullptr);
         }
 
         void execute() {
-            f.post(prod->run());
+            value = prod->run();
+            sem.post();
         }
     };
 }
