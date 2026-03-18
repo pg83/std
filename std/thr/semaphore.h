@@ -10,7 +10,7 @@ namespace stl {
         SemaphoreIface* impl_;
 
     public:
-        explicit Semaphore(size_t initial = 0);
+        explicit Semaphore(size_t initial);
         Semaphore(size_t initial, CoroExecutor* exec);
 
         ~Semaphore() noexcept;
