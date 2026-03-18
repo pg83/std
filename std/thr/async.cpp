@@ -65,9 +65,6 @@ namespace {
     };
 }
 
-FutureIface::~FutureIface() noexcept {
-}
-
 FutureIfaceRef stl::asyncImpl(CoroExecutor* exec, ProducerIface* prod) {
     FutureIfaceRef fi = exec->me() ? new FutureImpl(exec, prod) : new FutureImpl(prod);
 

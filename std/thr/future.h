@@ -2,7 +2,11 @@
 
 #include "future_iface.h"
 
+#include <std/ptr/intrusive.h>
+
 namespace stl {
+    using FutureIfaceRef = IntrusivePtr<FutureIface>;
+
     template <typename T>
     struct Future {
         FutureIfaceRef impl;

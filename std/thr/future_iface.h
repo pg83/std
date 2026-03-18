@@ -1,7 +1,6 @@
 #pragma once
 
 #include <std/sys/types.h>
-#include <std/ptr/intrusive.h>
 
 namespace stl {
     struct FutureIface {
@@ -15,6 +14,4 @@ namespace stl {
         virtual void* posted() noexcept = 0;
         virtual void* release() noexcept = 0;
     };
-
-    using FutureIfaceRef = IntrusivePtr<FutureIface>;
 }
