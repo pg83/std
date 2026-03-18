@@ -1,5 +1,6 @@
 #include "async.h"
 #include "coro.h"
+#include "pool.h"
 #include "semaphore.h"
 
 #include <std/ptr/arc.h>
@@ -63,6 +64,16 @@ namespace {
             sem.post();
         }
     };
+}
+
+FutureIfaceRef stl::asyncImpl(ThreadPool* pool, ProducerIface* prod) {
+    auto fi = makeIntrusivePtr(new FutureImpl(prod));
+
+    pool->submit([fi]() mutable {
+        fi->execute();
+    });
+
+    return fi.mutPtr();
 }
 
 FutureIfaceRef stl::asyncImpl(CoroExecutor* exec, ProducerIface* prod) {
