@@ -1,5 +1,5 @@
-#include "shared_future.h"
 #include "coro.h"
+#include "async.h"
 #include "thread.h"
 
 #include <std/tst/ut.h>
@@ -82,12 +82,12 @@ STD_TEST_SUITE(SharedFuture) {
     }
 }
 
-STD_TEST_SUITE(Awaitable) {
+STD_TEST_SUITE(async) {
     STD_TEST(Basic) {
         auto exec = CoroExecutor::create(4);
 
         exec->spawn([&] {
-            auto f = awaitable(exec.mutPtr(), [] {
+            auto f = async(exec.mutPtr(), [] {
                 return 42;
             });
 
@@ -104,7 +104,7 @@ STD_TEST_SUITE(Awaitable) {
         auto exec = CoroExecutor::create(4);
 
         exec->spawn([&] {
-            auto f = awaitable(exec.mutPtr(), [] {
+            auto f = async(exec.mutPtr(), [] {
                 return Point{3, 7};
             });
 
@@ -121,7 +121,7 @@ STD_TEST_SUITE(Awaitable) {
 
         exec->spawn([&] {
             for (int i = 0; i < N; ++i) {
-                auto f = awaitable(exec.mutPtr(), [i] {
+                auto f = async(exec.mutPtr(), [i] {
                     return i * i;
                 });
 
@@ -136,10 +136,10 @@ STD_TEST_SUITE(Awaitable) {
         auto exec = CoroExecutor::create(4);
 
         exec->spawn([&] {
-            auto f1 = awaitable(exec.mutPtr(), [] { return 1; });
-            auto f2 = awaitable(exec.mutPtr(), [] { return 2; });
-            auto f3 = awaitable(exec.mutPtr(), [] { return 3; });
-            auto f4 = awaitable(exec.mutPtr(), [] { return 4; });
+            auto f1 = async(exec.mutPtr(), [] { return 1; });
+            auto f2 = async(exec.mutPtr(), [] { return 2; });
+            auto f3 = async(exec.mutPtr(), [] { return 3; });
+            auto f4 = async(exec.mutPtr(), [] { return 4; });
 
             int sum = f1->wait() + f2->wait() + f3->wait() + f4->wait();
             STD_INSIST(sum == 10);
@@ -151,11 +151,11 @@ STD_TEST_SUITE(Awaitable) {
     STD_TEST(Parallel2) {
         auto exec = CoroExecutor::create(4);
 
-        auto res = awaitable(exec.mutPtr(), [&] {
-            auto f1 = awaitable(exec.mutPtr(), [] { return 1; });
-            auto f2 = awaitable(exec.mutPtr(), [] { return 2; });
-            auto f3 = awaitable(exec.mutPtr(), [] { return 3; });
-            auto f4 = awaitable(exec.mutPtr(), [] { return 4; });
+        auto res = async(exec.mutPtr(), [&] {
+            auto f1 = async(exec.mutPtr(), [] { return 1; });
+            auto f2 = async(exec.mutPtr(), [] { return 2; });
+            auto f3 = async(exec.mutPtr(), [] { return 3; });
+            auto f4 = async(exec.mutPtr(), [] { return 4; });
 
             return f1->wait() + f2->wait() + f3->wait() + f4->wait();
         })->wait();

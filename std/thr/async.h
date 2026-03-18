@@ -1,7 +1,7 @@
 #pragma once
 
-#include "future.h"
 #include "coro.h"
+#include "future.h"
 
 #include <std/ptr/arc.h>
 #include <std/ptr/intrusive.h>
@@ -18,7 +18,7 @@ namespace stl {
         };
 
         Future f;
-        alignas(T) char buf[sizeof(T)];
+        alignas(TT) char buf[sizeof(TT)];
 
     public:
         SharedFutureBase() noexcept = default;
@@ -45,7 +45,7 @@ namespace stl {
     using SharedFuture = IntrusivePtr<SharedFutureBase<T>>;
 
     template <typename F>
-    auto awaitable(CoroExecutor* exec, F fn) {
+    auto async(CoroExecutor* exec, F fn) {
         auto sf = makeIntrusivePtr(exec->me() ? new SharedFutureBase<decltype(fn())>(exec) : new SharedFutureBase<decltype(fn())>());
 
         exec->spawn([sf, fn]() mutable {
