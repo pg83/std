@@ -723,9 +723,6 @@ ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
     return new (allocateMemory(sizeof(CoroChannelImplN) + cap * sizeof(void*))) CoroChannelImplN(this, cap);
 }
 
-ChannelIface::~ChannelIface() noexcept {
-}
-
 SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
     struct CoroSemaphoreImpl: public SemaphoreIface, public Runable {
         Mutex queueMutex_;
