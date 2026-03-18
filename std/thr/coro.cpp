@@ -459,8 +459,8 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
             }
 
             void run() override {
-                mutex->unlock();
                 cv->queueMutex_.unlock();
+                mutex->unlock();
             }
         };
 
