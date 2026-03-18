@@ -9,16 +9,7 @@
 namespace stl {
     template <typename T>
     class SharedFutureBase: public ARC {
-        struct TT {
-            T t;
-
-            void* operator new(size_t, void* p) noexcept {
-                return p;
-            }
-        };
-
         Future f;
-        alignas(TT) char buf[sizeof(TT)];
 
     public:
         SharedFutureBase() noexcept = default;
@@ -29,17 +20,27 @@ namespace stl {
         }
 
         ~SharedFutureBase() noexcept {
-            if (auto tt = (TT*)f.posted(); tt) {
-                tt->~TT();
-            }
+            delete posted();
         }
 
         void post(T&& t) noexcept {
-            f.post(new (buf) TT{.t = static_cast<T&&>(t)});
+            f.post(new T(static_cast<T&&>(t)));
         }
 
         T& wait() noexcept {
-            return ((TT*)f.wait())->t;
+            return *(T*)f.wait();
+        }
+
+        auto posted() noexcept {
+            return (T*)f.posted();
+        }
+
+        auto release() noexcept {
+            return (T*)f.release();
+        }
+
+        auto consume() noexcept {
+            return (wait(), release());
         }
     };
 

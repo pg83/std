@@ -32,8 +32,12 @@ namespace stl {
             return value_;
         }
 
+        // can be called after wait
         void* posted() const noexcept {
             return value_;
         }
+
+        // can be called after wait
+        void* release() noexcept;
     };
 }
