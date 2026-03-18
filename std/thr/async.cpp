@@ -66,7 +66,7 @@ namespace {
 }
 
 FutureIfaceRef stl::asyncImpl(CoroExecutor* exec, ProducerIface* prod) {
-    IntrusivePtr<FutureImpl> fi = exec->me() ? new FutureImpl(exec, prod) : new FutureImpl(prod);
+    auto fi = makeIntrusivePtr(exec->me() ? new FutureImpl(exec, prod) : new FutureImpl(prod));
 
     exec->spawn([fi]() mutable {
         fi->execute();
