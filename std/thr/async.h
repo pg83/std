@@ -9,16 +9,16 @@ namespace stl {
     struct CoroExecutor;
     struct ThreadPool;
 
-    FutureIfaceRef asyncImpl(CoroExecutor* exec, ProducerIface* prod);
-    FutureIfaceRef asyncImpl(ThreadPool* pool, ProducerIface* prod);
+    FutureIfaceRef asyncImpl(ProducerIface* prod, CoroExecutor* exec);
+    FutureIfaceRef asyncImpl(ProducerIface* prod, ThreadPool* pool);
 
     template <typename F>
     auto async(CoroExecutor* exec, F fn) {
-        return Future<decltype(fn())>{asyncImpl(exec, makeProducer(fn))};
+        return Future<decltype(fn())>{asyncImpl(makeProducer(fn), exec)};
     }
 
     template <typename F>
     auto async(ThreadPool* pool, F fn) {
-        return Future<decltype(fn())>{asyncImpl(pool, makeProducer(fn))};
+        return Future<decltype(fn())>{asyncImpl(makeProducer(fn), pool)};
     }
 }

@@ -66,7 +66,7 @@ namespace {
     };
 }
 
-FutureIfaceRef stl::asyncImpl(ThreadPool* pool, ProducerIface* prod) {
+FutureIfaceRef stl::asyncImpl(ProducerIface* prod, ThreadPool* pool) {
     auto fi = makeIntrusivePtr(new FutureImpl(prod));
 
     pool->submit([fi]() mutable {
@@ -76,7 +76,7 @@ FutureIfaceRef stl::asyncImpl(ThreadPool* pool, ProducerIface* prod) {
     return fi.mutPtr();
 }
 
-FutureIfaceRef stl::asyncImpl(CoroExecutor* exec, ProducerIface* prod) {
+FutureIfaceRef stl::asyncImpl(ProducerIface* prod, CoroExecutor* exec) {
     auto fi = makeIntrusivePtr(exec->me() ? new FutureImpl(exec, prod) : new FutureImpl(prod));
 
     exec->spawn([fi]() mutable {
