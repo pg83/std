@@ -31,5 +31,9 @@ namespace stl {
             sem_.wait();
             return value_;
         }
+
+        void* posted() const noexcept {
+            return value_;
+        }
     };
 }
