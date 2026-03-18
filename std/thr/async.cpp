@@ -1,8 +1,8 @@
 #include "async.h"
 #include "coro.h"
 #include "pool.h"
-#include "semaphore.h"
 #include "thread.h"
+#include "semaphore.h"
 
 #include <std/ptr/arc.h>
 #include <std/alg/exchange.h>
