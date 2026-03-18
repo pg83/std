@@ -82,7 +82,7 @@ STD_TEST_SUITE(SharedFuture) {
     }
 }
 
-STD_TEST_SUITE(async) {
+STD_TEST_SUITE(Async) {
     STD_TEST(Basic) {
         auto exec = CoroExecutor::create(4);
 
