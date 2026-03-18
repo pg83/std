@@ -14,8 +14,8 @@ namespace stl {
     struct ThreadIface;
     struct CondVarIface;
     struct ChannelIface;
-    struct SemaphoreIface;
     struct CoroExecutor;
+    struct SemaphoreIface;
 
     struct Cont {
         u64 id() const noexcept;

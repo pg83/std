@@ -447,7 +447,23 @@ MutexIface* CoroExecutorImpl::createMutex() {
 }
 
 CondVarIface* CoroExecutorImpl::createCondVar() {
-    struct CoroCondVarImpl: public CondVarIface, public Runable {
+    struct CoroCondVarImpl: public CondVarIface {
+        struct ParkCtx: public Runable {
+            CoroCondVarImpl* cv;
+            MutexIface* mutex;
+
+            ParkCtx(CoroCondVarImpl* cv, MutexIface* mutex) noexcept
+                : cv(cv)
+                , mutex(mutex)
+            {
+            }
+
+            void run() override {
+                mutex->unlock();
+                cv->queueMutex_.unlock();
+            }
+        };
+
         Mutex queueMutex_;
         IntrusiveList waiters_;
 
@@ -460,16 +476,12 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
             return (CoroExecutorImpl*)queueMutex_.nativeHandle();
         }
 
-        void run() override {
-            queueMutex_.unlock();
-        }
-
         void wait(MutexIface* mutex) noexcept override {
             queueMutex_.lock();
             auto* cont = exec()->currentCont();
             waiters_.pushBack(cont);
-            mutex->unlock();
-            cont->parkWith(this);
+            ParkCtx ctx(this, mutex);
+            cont->parkWith(&ctx);
             mutex->lock();
         }
 
