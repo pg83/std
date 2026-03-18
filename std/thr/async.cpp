@@ -2,6 +2,7 @@
 #include "coro.h"
 #include "pool.h"
 #include "semaphore.h"
+#include "thread.h"
 
 #include <std/ptr/arc.h>
 #include <std/alg/exchange.h>
@@ -64,6 +65,16 @@ namespace {
             sem.post();
         }
     };
+}
+
+FutureIfaceRef stl::asyncImpl(ProducerIface* prod) {
+    auto fi = makeIntrusivePtr(new FutureImpl(prod));
+
+    detach(*makeRunablePtr([fi]() mutable {
+        fi->execute();
+    }));
+
+    return fi.mutPtr();
 }
 
 FutureIfaceRef stl::asyncImpl(ProducerIface* prod, ThreadPool* pool) {

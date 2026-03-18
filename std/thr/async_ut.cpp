@@ -7,6 +7,39 @@
 
 using namespace stl;
 
+STD_TEST_SUITE(ThreadAsync) {
+    STD_TEST(Basic) {
+        auto f = async([] {
+            return 42;
+        });
+
+        STD_INSIST(f.wait() == 42);
+    }
+
+    STD_TEST(Struct) {
+        struct Point {
+            int x, y;
+        };
+
+        auto f = async([] {
+            return Point{3, 7};
+        });
+
+        auto& p = f.wait();
+        STD_INSIST(p.x == 3 && p.y == 7);
+    }
+
+    STD_TEST(Parallel) {
+        auto f1 = async([] { return 1; });
+        auto f2 = async([] { return 2; });
+        auto f3 = async([] { return 3; });
+        auto f4 = async([] { return 4; });
+
+        int sum = f1.wait() + f2.wait() + f3.wait() + f4.wait();
+        STD_INSIST(sum == 10);
+    }
+}
+
 STD_TEST_SUITE(PoolAsync) {
     STD_TEST(Basic) {
         auto opool = ObjPool::fromMemory();
