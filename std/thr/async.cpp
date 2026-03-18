@@ -51,18 +51,21 @@ namespace {
         void* release() noexcept override {
             return f.release();
         }
+
+        void execute() {
+            f.post(prod->run());
+        }
     };
 }
 
-FutureIface::~FutureIface() noexcept = default;
+FutureIface::~FutureIface() noexcept {
+}
 
-FutureIface* stl::asyncImpl(CoroExecutor* exec, ProducerIface* prod) {
-    auto* fi = exec->me()
-        ? new FutureImpl(exec, prod)
-        : new FutureImpl(prod);
+FutureIfaceRef stl::asyncImpl(CoroExecutor* exec, ProducerIface* prod) {
+    FutureIfaceRef fi = exec->me() ? new FutureImpl(exec, prod) : new FutureImpl(prod);
 
-    exec->spawn([fi]() {
-        fi->f.post(fi->prod->run());
+    exec->spawn([fi]() mutable {
+        ((FutureImpl*)fi.mutPtr())->execute();
     });
 
     return fi;

@@ -1,46 +1,29 @@
 #pragma once
 
-#include <std/lib/producer.h>
-#include <std/ptr/intrusive.h>
+#include "future_iface.h"
+
 #include <std/sys/types.h>
+#include <std/lib/producer.h>
 
 namespace stl {
     struct CoroExecutor;
 
-    struct FutureIface {
-        virtual ~FutureIface() noexcept;
-
-        virtual i32 ref() noexcept = 0;
-        virtual i32 unref() noexcept = 0;
-        virtual i32 refCount() const noexcept = 0;
-
-        virtual void* wait() noexcept = 0;
-        virtual void* posted() noexcept = 0;
-        virtual void* release() noexcept = 0;
-    };
-
-    FutureIface* asyncImpl(CoroExecutor* exec, ProducerIface* prod);
+    FutureIfaceRef asyncImpl(CoroExecutor* exec, ProducerIface* prod);
 
     template <typename T>
-    class SharedFuture {
-        IntrusivePtr<FutureIface> impl_;
-
-    public:
-        SharedFuture(FutureIface* p) noexcept
-            : impl_(p)
-        {
-        }
+    struct SharedFuture {
+        FutureIfaceRef impl;
 
         T& wait() noexcept {
-            return *(T*)impl_->wait();
+            return *(T*)impl->wait();
         }
 
         T* posted() noexcept {
-            return (T*)impl_->posted();
+            return (T*)impl->posted();
         }
 
         T* release() noexcept {
-            return (T*)impl_->release();
+            return (T*)impl->release();
         }
 
         T* consume() noexcept {
@@ -50,7 +33,6 @@ namespace stl {
 
     template <typename F>
     auto async(CoroExecutor* exec, F fn) {
-        using T = decltype(fn());
-        return SharedFuture<T>(asyncImpl(exec, makeProducer(fn)));
+        return SharedFuture<decltype(fn())>{asyncImpl(exec, makeProducer(fn))};
     }
 }
