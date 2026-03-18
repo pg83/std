@@ -257,9 +257,10 @@ CoroExecutorImpl::~CoroExecutorImpl() noexcept {
     join();
 
     spawn([&]() {
-        submitExternalTask(nullptr);
         done_.wait();
     });
+
+    submitExternalTask(nullptr);
 
     join();
 }
