@@ -29,7 +29,9 @@ namespace stl {
         }
 
         ~SharedFutureBase() noexcept {
-            ((TT*)f.posted())->~TT();
+            if (auto tt = (TT*)f.posted(); tt) {
+                tt->~TT();
+            }
         }
 
         void post(T&& t) noexcept {
