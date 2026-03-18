@@ -152,13 +152,13 @@ STD_TEST_SUITE(Async) {
         auto exec = CoroExecutor::create(4);
 
         auto res = async(exec.mutPtr(), [&] {
-            auto f1 = async(exec.mutPtr(), [] { return 1; });
-            auto f2 = async(exec.mutPtr(), [] { return 2; });
-            auto f3 = async(exec.mutPtr(), [] { return 3; });
-            auto f4 = async(exec.mutPtr(), [] { return 4; });
+                       auto f1 = async(exec.mutPtr(), [] { return 1; });
+                       auto f2 = async(exec.mutPtr(), [] { return 2; });
+                       auto f3 = async(exec.mutPtr(), [] { return 3; });
+                       auto f4 = async(exec.mutPtr(), [] { return 4; });
 
-            return f1->wait() + f2->wait() + f3->wait() + f4->wait();
-        })->wait();
+                       return f1->wait() + f2->wait() + f3->wait() + f4->wait();
+                   })->wait();
 
         STD_INSIST(res == 10);
     }

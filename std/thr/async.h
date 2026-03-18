@@ -49,7 +49,11 @@ namespace stl {
 
     template <typename F>
     auto async(CoroExecutor* exec, F fn) {
-        auto sf = makeIntrusivePtr(exec->me() ? new SharedFutureBase<decltype(fn())>(exec) : new SharedFutureBase<decltype(fn())>());
+        auto sf = makeIntrusivePtr(
+            exec->me()
+                ? new SharedFutureBase<decltype(fn())>(exec)
+                : new SharedFutureBase<decltype(fn())>() //
+        );
 
         exec->spawn([sf, fn]() mutable {
             sf->post(fn());
