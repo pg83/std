@@ -81,3 +81,68 @@ STD_TEST_SUITE(SharedFuture) {
         STD_INSIST(f->wait() == 777);
     }
 }
+
+STD_TEST_SUITE(Awaitable) {
+    STD_TEST(Basic) {
+        auto exec = CoroExecutor::create(4);
+
+        exec->spawn([&] {
+            auto f = awaitable(exec.mutPtr(), [] {
+                return 42;
+            });
+
+            STD_INSIST(f->wait() == 42);
+        });
+
+        exec->join();
+    }
+
+    STD_TEST(Struct) {
+        struct Point { int x, y; };
+        auto exec = CoroExecutor::create(4);
+
+        exec->spawn([&] {
+            auto f = awaitable(exec.mutPtr(), [] {
+                return Point{3, 7};
+            });
+
+            auto& p = f->wait();
+            STD_INSIST(p.x == 3 && p.y == 7);
+        });
+
+        exec->join();
+    }
+
+    STD_TEST(Multiple) {
+        auto exec = CoroExecutor::create(4);
+        const int N = 8;
+
+        exec->spawn([&] {
+            for (int i = 0; i < N; ++i) {
+                auto f = awaitable(exec.mutPtr(), [i] {
+                    return i * i;
+                });
+
+                STD_INSIST(f->wait() == i * i);
+            }
+        });
+
+        exec->join();
+    }
+
+    STD_TEST(Parallel) {
+        auto exec = CoroExecutor::create(4);
+
+        exec->spawn([&] {
+            auto f1 = awaitable(exec.mutPtr(), [] { return 1; });
+            auto f2 = awaitable(exec.mutPtr(), [] { return 2; });
+            auto f3 = awaitable(exec.mutPtr(), [] { return 3; });
+            auto f4 = awaitable(exec.mutPtr(), [] { return 4; });
+
+            int sum = f1->wait() + f2->wait() + f3->wait() + f4->wait();
+            STD_INSIST(sum == 10);
+        });
+
+        exec->join();
+    }
+}
