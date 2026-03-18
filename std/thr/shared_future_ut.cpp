@@ -98,7 +98,9 @@ STD_TEST_SUITE(Awaitable) {
     }
 
     STD_TEST(Struct) {
-        struct Point { int x, y; };
+        struct Point {
+            int x, y;
+        };
         auto exec = CoroExecutor::create(4);
 
         exec->spawn([&] {

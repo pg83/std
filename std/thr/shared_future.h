@@ -39,7 +39,6 @@ namespace stl {
         T& wait() noexcept {
             return ((TT*)f.wait())->t;
         }
-
     };
 
     template <typename T>
