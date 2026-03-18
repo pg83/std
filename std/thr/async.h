@@ -6,12 +6,12 @@
 #include <std/lib/producer.h>
 
 namespace stl {
-    struct CoroExecutor;
     struct ThreadPool;
+    struct CoroExecutor;
 
     FutureIfaceRef asyncImpl(ProducerIface* prod);
-    FutureIfaceRef asyncImpl(ProducerIface* prod, CoroExecutor* exec);
     FutureIfaceRef asyncImpl(ProducerIface* prod, ThreadPool* pool);
+    FutureIfaceRef asyncImpl(ProducerIface* prod, CoroExecutor* exec);
 
     template <typename F>
     auto async(F fn) {
