@@ -46,7 +46,7 @@ namespace stl {
 
     template <typename F>
     auto awaitable(CoroExecutor* exec, F fn) {
-        auto sf = makeIntrusivePtr(new SharedFutureBase<decltype(fn())>(exec));
+        auto sf = makeIntrusivePtr(exec->me() ? new SharedFutureBase<decltype(fn())>(exec) : new SharedFutureBase<decltype(fn())>());
 
         exec->spawn([sf, fn]() mutable {
             sf->post(fn());

@@ -147,4 +147,19 @@ STD_TEST_SUITE(Awaitable) {
 
         exec->join();
     }
+
+    STD_TEST(Parallel2) {
+        auto exec = CoroExecutor::create(4);
+
+        auto res = awaitable(exec.mutPtr(), [&] {
+            auto f1 = awaitable(exec.mutPtr(), [] { return 1; });
+            auto f2 = awaitable(exec.mutPtr(), [] { return 2; });
+            auto f3 = awaitable(exec.mutPtr(), [] { return 3; });
+            auto f4 = awaitable(exec.mutPtr(), [] { return 4; });
+
+            return f1->wait() + f2->wait() + f3->wait() + f4->wait();
+        })->wait();
+
+        STD_INSIST(res == 10);
+    }
 }

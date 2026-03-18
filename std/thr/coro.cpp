@@ -142,7 +142,11 @@ namespace {
         }
 
         Cont* me() const noexcept override {
-            return ((CoroExecutorImpl*)this)->currentCont();
+            if (auto t = ((CoroExecutorImpl*)this)->tls(); t) {
+                return (ContImpl*)*t;
+            }
+
+            return nullptr;
         }
 
         void yield() noexcept override {
