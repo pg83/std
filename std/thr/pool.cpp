@@ -85,7 +85,7 @@ namespace {
         Mutex mutex_;
         CondVar condVar_;
         IntrusiveList queue_;
-        IntMap<Worker> workerIndex_;
+        IntMap<Worker> workers_;
         size_t inflight_ = 0;
 
         void workerLoop();
@@ -103,7 +103,7 @@ namespace {
 
 ThreadPoolImpl::ThreadPoolImpl(size_t numThreads) {
     for (size_t i = 0; i < numThreads; ++i) {
-        workerIndex_.insertKeyed(this);
+        workers_.insertKeyed(this);
     }
 }
 
@@ -131,13 +131,13 @@ ThreadPoolImpl::~ThreadPoolImpl() noexcept {
 
     submitTask(&task);
 
-    workerIndex_.visit([](Worker& w) {
+    workers_.visit([](Worker& w) {
         w.thread_.join();
     });
 }
 
 void** ThreadPoolImpl::tls(u64 key) noexcept {
-    if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
+    if (auto w = workers_.find(Thread::currentThreadId()); w) {
         return &w->tls_[key];
     }
 
@@ -145,7 +145,7 @@ void** ThreadPoolImpl::tls(u64 key) noexcept {
 }
 
 PCG32& ThreadPoolImpl::random() noexcept {
-    return workerIndex_.find(Thread::currentThreadId())->rng_;
+    return workers_.find(Thread::currentThreadId())->rng_;
 }
 
 void ThreadPoolImpl::workerLoop() {
@@ -227,7 +227,7 @@ namespace {
             void trySteal(IntrusiveList* stolen) noexcept;
         };
 
-        IntMap<Worker> workerIndex_;
+        IntMap<Worker> workers_;
         WaitQueue* wq;
 
         WorkStealingThreadPool(ObjPool* pool, size_t numThreads);
@@ -289,10 +289,10 @@ WorkStealingThreadPool::WorkStealingThreadPool(ObjPool* pool, size_t numThreads)
     PCG32 rng(this);
 
     for (size_t i = 0; i < numThreads; ++i) {
-        workerIndex_.insertKeyed(this, i, rng.nextU64());
+        workers_.insertKeyed(this, i, rng.nextU64());
     }
 
-    workerIndex_.visit([](Worker& w) {
+    workers_.visit([](Worker& w) {
         w.initStealOrder();
         w.mutex_.unlock();
     });
@@ -313,7 +313,7 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
 
     if (curw) {
         return curw;
-    } else if (auto w = workerIndex_.find(Thread::currentThreadId()); w) {
+    } else if (auto w = workers_.find(Thread::currentThreadId()); w) {
         return curw = w;
     }
 
@@ -347,7 +347,7 @@ void WorkStealingThreadPool::beforeBlock() noexcept {
 }
 
 void WorkStealingThreadPool::join() noexcept {
-    while (wq->sleeping() != workerIndex_.size()) {
+    while (wq->sleeping() != workers_.size()) {
         sched_yield();
     }
 }
@@ -355,7 +355,7 @@ void WorkStealingThreadPool::join() noexcept {
 WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
     join();
 
-    workerIndex_.visit([](Worker& w) {
+    workers_.visit([](Worker& w) {
         w.join();
     });
 }
@@ -376,7 +376,7 @@ void WorkStealingThreadPool::Worker::join() noexcept {
 }
 
 void WorkStealingThreadPool::Worker::initStealOrder() noexcept {
-    pool_->workerIndex_.visit([this](Worker& w) {
+    pool_->workers_.visit([this](Worker& w) {
         if (&w != this) {
             so_.pushBack(&w);
         }
