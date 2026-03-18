@@ -594,7 +594,7 @@ ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
             return false;
         }
 
-        void enqueue(void* v) override {
+        void enqueue(void* v) noexcept override {
             LockGuard guard(queueMutex_);
 
             STD_INSIST(!closed_);
@@ -614,7 +614,7 @@ ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
             w.cont->parkWith(this);
         }
 
-        bool dequeue(void** out) override {
+        bool dequeue(void** out) noexcept override {
             LockGuard guard(queueMutex_);
 
             if (recvOne(out)) {
@@ -644,7 +644,7 @@ ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
             return false;
         }
 
-        bool tryEnqueue(void* v) override {
+        bool tryEnqueue(void* v) noexcept override {
             LockGuard guard(queueMutex_);
 
             STD_INSIST(!closed_);
@@ -652,13 +652,13 @@ ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
             return sendOne(v);
         }
 
-        bool tryDequeue(void** out) override {
+        bool tryDequeue(void** out) noexcept override {
             LockGuard guard(queueMutex_);
 
             return recvOne(out);
         }
 
-        void close() override {
+        void close() noexcept override {
             LockGuard guard(queueMutex_);
 
             STD_INSIST(!closed_);

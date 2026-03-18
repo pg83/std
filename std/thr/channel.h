@@ -12,14 +12,15 @@ namespace stl {
     public:
         explicit Channel(CoroExecutor* exec);
         Channel(CoroExecutor* exec, size_t cap);
-        Channel(ChannelIface* iface);
+        Channel(ChannelIface* iface) noexcept;
 
         ~Channel() noexcept;
 
-        void enqueue(void* v);
-        bool dequeue(void** out);
-        bool tryEnqueue(void* v);
-        bool tryDequeue(void** out);
-        void close();
+        void enqueue(void* v) noexcept;
+        bool dequeue(void** out) noexcept;
+        bool tryEnqueue(void* v) noexcept;
+        bool tryDequeue(void** out) noexcept;
+
+        void close() noexcept;
     };
 }
