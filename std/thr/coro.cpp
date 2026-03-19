@@ -9,7 +9,7 @@
 #include "cond_var.h"
 #include "semaphore.h"
 #include "wait_group.h"
-#include "mutex_iface.h"
+#include "semaphore_iface.h"
 #include "thread_iface.h"
 #include "channel_iface.h"
 #include "cond_var_iface.h"
@@ -161,7 +161,6 @@ namespace {
             currentCont()->parkWith(afterSuspend);
         }
 
-        MutexIface* createMutex() override;
         CondVarIface* createCondVar() override;
         ChannelIface* createChannel(size_t cap) override;
         ThreadIface* createThread(Runable& runable) override;
@@ -385,74 +384,13 @@ u64 Cont::id() const noexcept {
     return (u64)(size_t)this;
 }
 
-MutexIface* CoroExecutorImpl::createMutex() {
-    struct CoroMutexImpl: public MutexIface, public Runable {
-        CoroExecutorImpl* exec_;
-        Mutex queueMutex_;
-        IntrusiveList waiters_;
-        bool locked_;
-
-        CoroMutexImpl(CoroExecutorImpl* exec) noexcept
-            : exec_(exec)
-            , locked_(false)
-        {
-        }
-
-        void* nativeHandle() noexcept override {
-            return exec_;
-        }
-
-        void run() override {
-            queueMutex_.unlock();
-        }
-
-        void lock() noexcept override {
-            queueMutex_.lock();
-
-            if (!locked_) {
-                locked_ = true;
-                queueMutex_.unlock();
-
-                return;
-            }
-
-            auto* cont = exec_->currentCont();
-
-            waiters_.pushBack(cont);
-            cont->parkWith(this);
-        }
-
-        void unlock() noexcept override {
-            LockGuard guard(queueMutex_);
-
-            if (auto node = (ContImpl*)(Task*)waiters_.popFrontOrNull(); node) {
-                node->reSchedule();
-            } else {
-                locked_ = false;
-            }
-        }
-
-        bool tryLock() noexcept override {
-            LockGuard guard(queueMutex_);
-
-            if (!locked_) {
-                return locked_ = true;
-            }
-
-            return false;
-        }
-    };
-
-    return new CoroMutexImpl(this);
-}
-
 CondVarIface* CoroExecutorImpl::createCondVar() {
     struct CoroCondVarImpl: public CondVarIface {
         struct ParkCtx: public Runable {
             CoroCondVarImpl* cv;
-            MutexIface* mutex;
+            SemaphoreIface* mutex;
 
-            ParkCtx(CoroCondVarImpl* cv, MutexIface* mutex) noexcept
+            ParkCtx(CoroCondVarImpl* cv, SemaphoreIface* mutex) noexcept
                 : cv(cv)
                 , mutex(mutex)
             {
@@ -460,7 +398,7 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
 
             void run() override {
                 cv->queueMutex_.unlock();
-                mutex->unlock();
+                mutex->post();
             }
         };
 
@@ -476,13 +414,13 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
             return (CoroExecutorImpl*)queueMutex_.nativeHandle();
         }
 
-        void wait(MutexIface* mutex) noexcept override {
+        void wait(SemaphoreIface* mutex) noexcept override {
             queueMutex_.lock();
             auto* cont = exec()->currentCont();
             waiters_.pushBack(cont);
             ParkCtx ctx(this, mutex);
             cont->parkWith(&ctx);
-            mutex->lock();
+            mutex->wait();
         }
 
         void signal() noexcept override {
@@ -755,18 +693,15 @@ ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
 
 SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
     struct CoroSemaphoreImpl: public SemaphoreIface, public Runable {
+        CoroExecutorImpl* exec_;
         Mutex queueMutex_;
         IntrusiveList waiters_;
         size_t count_;
 
         CoroSemaphoreImpl(CoroExecutorImpl* exec, size_t initial) noexcept
-            : queueMutex_(exec)
+            : exec_(exec)
             , count_(initial)
         {
-        }
-
-        CoroExecutorImpl* exec() noexcept {
-            return (CoroExecutorImpl*)queueMutex_.nativeHandle();
         }
 
         void run() override {
@@ -792,9 +727,24 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
                 return;
             }
 
-            auto* cont = exec()->currentCont();
+            auto* cont = exec_->currentCont();
             waiters_.pushBack(cont);
             cont->parkWith(this);
+        }
+
+        void* nativeHandle() noexcept override {
+            return exec_;
+        }
+
+        bool tryWait() noexcept override {
+            LockGuard guard(queueMutex_);
+
+            if (count_ > 0) {
+                --count_;
+                return true;
+            }
+
+            return false;
         }
     };
 

@@ -4,18 +4,18 @@ namespace stl {
     class CondVar;
     class LockGuard;
 
-    struct MutexIface;
+    struct SemaphoreIface;
     struct CoroExecutor;
 
     class Mutex {
         friend class CondVar;
 
-        MutexIface* impl;
+        SemaphoreIface* impl;
 
     public:
         Mutex();
         Mutex(bool lock);
-        Mutex(MutexIface* iface);
+        Mutex(SemaphoreIface* iface);
         Mutex(CoroExecutor* exec);
 
         ~Mutex() noexcept;

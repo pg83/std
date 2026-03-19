@@ -4,3 +4,7 @@ using namespace stl;
 
 SemaphoreIface::~SemaphoreIface() noexcept {
 }
+
+void* SemaphoreIface::nativeHandle() noexcept {
+    return nullptr;
+}

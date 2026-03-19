@@ -27,6 +27,10 @@ namespace {
         void wait() noexcept override {
             STD_INSIST(sem_wait(&sem_) == 0);
         }
+
+        bool tryWait() noexcept override {
+            return sem_trywait(&sem_) == 0;
+        }
     };
 }
 
@@ -50,4 +54,8 @@ void Semaphore::post() noexcept {
 
 void Semaphore::wait() noexcept {
     impl_->wait();
+}
+
+bool Semaphore::tryWait() noexcept {
+    return impl_->tryWait();
 }

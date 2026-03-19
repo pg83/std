@@ -1,6 +1,6 @@
 #include "mutex.h"
 #include "coro.h"
-#include "mutex_iface.h"
+#include "semaphore_iface.h"
 
 #include <std/str/view.h>
 #include <std/sys/throw.h>
@@ -12,7 +12,7 @@
 using namespace stl;
 
 namespace {
-    struct PosixMutexImpl: public MutexIface, public pthread_mutex_t {
+    struct PosixMutexImpl: public SemaphoreIface, public pthread_mutex_t {
         PosixMutexImpl() {
             if (pthread_mutex_init(this, nullptr) != 0) {
                 Errno().raise(StringBuilder() << StringView(u8"pthread_mutex_init failed"));
@@ -23,15 +23,15 @@ namespace {
             STD_INSIST(pthread_mutex_destroy(this) == 0);
         }
 
-        void lock() noexcept override {
+        void wait() noexcept override {
             STD_INSIST(pthread_mutex_lock(this) == 0);
         }
 
-        void unlock() noexcept override {
+        void post() noexcept override {
             STD_INSIST(pthread_mutex_unlock(this) == 0);
         }
 
-        bool tryLock() noexcept override {
+        bool tryWait() noexcept override {
             return pthread_mutex_trylock(this) == 0;
         }
 
@@ -47,11 +47,11 @@ Mutex::Mutex()
 }
 
 Mutex::Mutex(CoroExecutor* exec)
-    : Mutex(exec->createMutex())
+    : Mutex(exec->createSemaphore(1))
 {
 }
 
-Mutex::Mutex(MutexIface* iface)
+Mutex::Mutex(SemaphoreIface* iface)
     : impl(iface)
 {
 }
@@ -69,15 +69,15 @@ Mutex::~Mutex() noexcept {
 }
 
 void Mutex::lock() noexcept {
-    impl->lock();
+    impl->wait();
 }
 
 void Mutex::unlock() noexcept {
-    impl->unlock();
+    impl->post();
 }
 
 bool Mutex::tryLock() noexcept {
-    return impl->tryLock();
+    return impl->tryWait();
 }
 
 void* Mutex::nativeHandle() noexcept {

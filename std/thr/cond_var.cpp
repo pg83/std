@@ -1,7 +1,7 @@
 #include "mutex.h"
 #include "coro.h"
 #include "cond_var.h"
-#include "mutex_iface.h"
+#include "semaphore_iface.h"
 #include "cond_var_iface.h"
 
 #include <std/str/view.h>
@@ -25,7 +25,7 @@ namespace {
             STD_INSIST(pthread_cond_destroy(this) == 0);
         }
 
-        void wait(MutexIface* mutex) noexcept override {
+        void wait(SemaphoreIface* mutex) noexcept override {
             STD_INSIST(pthread_cond_wait(this, (pthread_mutex_t*)mutex->nativeHandle()) == 0);
         }
 
