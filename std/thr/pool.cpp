@@ -275,14 +275,12 @@ void WorkStealingThreadPool::Worker::push(IntrusiveList* tasks) noexcept {
 }
 
 void WorkStealingThreadPool::Worker::beforeBlock() noexcept {
-    if (local_.empty()) {
-        return;
-    } else if (auto* idle = (Worker*)pool_->wq->dequeue(); idle) {
-        idle->push(&local_);
-    } else {
-        LockGuard lock(mutex_);
+    LockGuard lock(mutex_);
 
-        flushLocal();
+    flushLocal();
+
+    if (auto* idle = (Worker*)pool_->wq->dequeue(); idle) {
+        idle->push(&tasks_);
     }
 }
 
