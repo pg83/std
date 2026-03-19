@@ -1,15 +1,12 @@
 #pragma once
 
 namespace stl {
-    class CondVar;
     class LockGuard;
 
     struct SemaphoreIface;
     struct CoroExecutor;
 
     class Mutex {
-        friend class CondVar;
-
         SemaphoreIface* impl;
 
     public:

@@ -1,12 +1,12 @@
 #pragma once
 
 namespace stl {
-    struct SemaphoreIface;
+    class Mutex;
 
     struct CondVarIface {
         virtual ~CondVarIface() noexcept;
 
-        virtual void wait(SemaphoreIface* mutex) noexcept = 0;
+        virtual void wait(Mutex& mutex) noexcept = 0;
         virtual void signal() noexcept = 0;
         virtual void broadcast() noexcept = 0;
     };

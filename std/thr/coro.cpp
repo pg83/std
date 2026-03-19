@@ -388,9 +388,9 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
     struct CoroCondVarImpl: public CondVarIface {
         struct ParkCtx: public Runable {
             CoroCondVarImpl* cv;
-            SemaphoreIface* mutex;
+            Mutex* mutex;
 
-            ParkCtx(CoroCondVarImpl* cv, SemaphoreIface* mutex) noexcept
+            ParkCtx(CoroCondVarImpl* cv, Mutex* mutex) noexcept
                 : cv(cv)
                 , mutex(mutex)
             {
@@ -398,7 +398,7 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
 
             void run() override {
                 cv->queueMutex_.unlock();
-                mutex->post();
+                mutex->unlock();
             }
         };
 
@@ -414,13 +414,13 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
             return (CoroExecutorImpl*)queueMutex_.nativeHandle();
         }
 
-        void wait(SemaphoreIface* mutex) noexcept override {
+        void wait(Mutex& mutex) noexcept override {
             queueMutex_.lock();
             auto* cont = exec()->currentCont();
             waiters_.pushBack(cont);
-            ParkCtx ctx(this, mutex);
+            ParkCtx ctx(this, &mutex);
             cont->parkWith(&ctx);
-            mutex->wait();
+            mutex.lock();
         }
 
         void signal() noexcept override {
