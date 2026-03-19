@@ -406,10 +406,12 @@ void WorkStealingThreadPool::Worker::loop() {
 
     while (true) {
         while (auto task = popNoLock()) {
-            if (!tasks_.empty()) {
-                if (auto w = (Worker*)pool_->wq->dequeue(); w) {
-                    w->push(popNoLock());
-                }
+            if (tasks_.empty()) {
+                // pass
+            } else if (stdAtomicFetch(&pool_->searching_, MemoryOrder::Acquire)) {
+                // pass
+            } else if (auto w = (Worker*)pool_->wq->dequeue(); w) {
+                w->push(popNoLock());
             }
 
             stdAtomicSubAndFetch(&pool_->taskCount_, 1, MemoryOrder::Relaxed);
