@@ -100,6 +100,93 @@ STD_TEST_SUITE(PoolAsync) {
     }
 }
 
+namespace {
+    struct Tracked {
+        int value;
+        int* alive;
+
+        Tracked(int v, int* a) noexcept
+            : value(v)
+            , alive(a)
+        {
+            ++*alive;
+        }
+
+        Tracked(const Tracked& o) noexcept
+            : value(o.value)
+            , alive(o.alive)
+        {
+            ++*alive;
+        }
+
+        ~Tracked() noexcept {
+            --*alive;
+        }
+    };
+}
+
+STD_TEST_SUITE(AsyncLifetime) {
+    STD_TEST(Basic) {
+        int alive = 0;
+
+        {
+            auto f = async([&] {
+                return Tracked(42, &alive);
+            });
+
+            STD_INSIST(f.wait().value == 42);
+        }
+
+        STD_INSIST(alive == 0);
+    }
+
+    STD_TEST(Multiple) {
+        int alive = 0;
+
+        {
+            auto f1 = async([&] { return Tracked(1, &alive); });
+            auto f2 = async([&] { return Tracked(2, &alive); });
+            auto f3 = async([&] { return Tracked(3, &alive); });
+
+            STD_INSIST(f1.wait().value == 1);
+            STD_INSIST(f2.wait().value == 2);
+            STD_INSIST(f3.wait().value == 3);
+        }
+
+        STD_INSIST(alive == 0);
+    }
+
+    STD_TEST(Loop) {
+        int alive = 0;
+
+        for (int i = 0; i < 10; ++i) {
+            auto f = async([&, i] {
+                return Tracked(i, &alive);
+            });
+
+            STD_INSIST(f.wait().value == i);
+        }
+
+        STD_INSIST(alive == 0);
+    }
+
+    STD_TEST(Coro) {
+        int alive = 0;
+        auto exec = CoroExecutor::create(4);
+
+        exec->spawn([&] {
+            auto f1 = async(exec.mutPtr(), [&] { return Tracked(10, &alive); });
+            auto f2 = async(exec.mutPtr(), [&] { return Tracked(20, &alive); });
+
+            STD_INSIST(f1.wait().value == 10);
+            STD_INSIST(f2.wait().value == 20);
+        });
+
+        exec->join();
+        STD_INSIST(alive == 0);
+    }
+}
+
 STD_TEST_SUITE(Async) {
     STD_TEST(Basic) {
         auto exec = CoroExecutor::create(4);
