@@ -58,6 +58,8 @@ namespace stl {
         virtual u32 poll(int fd, u32 flags, u64 deadlineUs) = 0;
         virtual ThreadIface* createThread(Runable& runable) = 0;
         virtual SemaphoreIface* createSemaphore(size_t initial) = 0;
+        virtual bool futexWait(u32* addr, u32 expected) noexcept = 0;
+        virtual void futexWake(u32* addr, u32 n) noexcept = 0;
 
         u32 poll(int fd, u32 flags);
         u64 currentCoroId() const noexcept;

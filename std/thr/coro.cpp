@@ -15,6 +15,8 @@
 #include "cond_var_iface.h"
 #include "semaphore_iface.h"
 
+#include "spin_lock.h"
+
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
 #include <std/rng/pcg.h>
@@ -43,6 +45,11 @@ using namespace stl;
 
 namespace {
     struct CoroExecutorImpl;
+
+    struct FutexShard {
+        SpinLock lock;
+        IntrusiveList waiters;
+    };
 
     struct ContImpl: public Cont, public Task {
         CoroExecutorImpl* exec_;
@@ -123,6 +130,7 @@ namespace {
         ScopedFD submitW_;
         WaitGroup done_;
         ThreadPool* pool_;
+        Vector<FutexShard*> futexShards_;
 
         CoroExecutorImpl(size_t threads, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
@@ -166,6 +174,9 @@ namespace {
         ThreadIface* createThread(Runable& runable) override;
         SemaphoreIface* createSemaphore(size_t initial) override;
 
+        void futexWake(u32* addr, u32 n) noexcept override;
+        bool futexWait(u32* addr, u32 expected) noexcept override;
+
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
     };
 
@@ -195,6 +206,10 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
 
     joinW_.setNonBlocking();
     submitR_.setNonBlocking();
+
+    for (size_t i = 0; i < 1024 * (threads + reactors); ++i) {
+        futexShards_.pushBack(opool_->make<FutexShard>());
+    }
 
     for (size_t i = 0; i < reactors; ++i) {
         reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr()));
@@ -749,6 +764,61 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
     };
 
     return new CoroSemaphoreImpl(this, initial);
+}
+
+struct FutexWaiter: public IntrusiveNode, public Runable {
+    ContImpl* cont;
+    u32* addr;
+    SpinLock* lock;
+
+    void run() override {
+        lock->unlock();
+    }
+};
+
+bool CoroExecutorImpl::futexWait(u32* addr, u32 expected) noexcept {
+    auto& shard = *futexShards_[splitMix64((uintptr_t)addr) % futexShards_.length()];
+
+    shard.lock.lock();
+
+    if (*addr != expected) {
+        shard.lock.unlock();
+        return false;
+    }
+
+    FutexWaiter w;
+
+    w.cont = currentCont();
+    w.addr = addr;
+    w.lock = &shard.lock;
+
+    shard.waiters.pushBack(&w);
+    w.cont->parkWith(&w);
+
+    return true;
+}
+
+void CoroExecutorImpl::futexWake(u32* addr, u32 n) noexcept {
+    auto& shard = *futexShards_[splitMix64((uintptr_t)addr) % futexShards_.length()];
+
+    shard.lock.lock();
+
+    u32 woken = 0;
+    auto* node = shard.waiters.mutFront();
+    auto* end = shard.waiters.mutEnd();
+
+    while (node != end && woken < n) {
+        auto* w = (FutexWaiter*)node;
+        node = node->next;
+
+        if (w->addr == addr) {
+            w->remove();
+            w->cont->reSchedule();
+            ++woken;
+        }
+    }
+
+    shard.lock.unlock();
 }
 
 CoroExecutor::~CoroExecutor() noexcept {

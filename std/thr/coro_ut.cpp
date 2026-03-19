@@ -579,3 +579,194 @@ STD_TEST_SUITE(CoroPoll) {
         STD_INSIST(counter == 1000);
     }
 }
+
+STD_TEST_SUITE(CoroFutex) {
+    STD_TEST(WaitReturnsFalseOnMismatch) {
+        auto exec = CoroExecutor::create(4);
+        u32 val = 5;
+        bool result = true;
+
+        exec->spawn([&]() {
+            result = exec->futexWait(&val, 99);
+        });
+
+        exec->join();
+        STD_INSIST(result == false);
+    }
+
+    STD_TEST(BasicWakeOne) {
+        auto exec = CoroExecutor::create(4);
+        u32 val = 0;
+        int woken = 0;
+
+        exec->spawn([&]() {
+            exec->futexWait(&val, 0);
+            stdAtomicAddAndFetch(&woken, 1, MemoryOrder::Relaxed);
+        });
+
+        exec->spawn([&]() {
+            exec->yield();
+            val = 1;
+            exec->futexWake(&val, 1);
+        });
+
+        exec->join();
+        STD_INSIST(woken == 1);
+    }
+
+    STD_TEST(WakeN) {
+        auto exec = CoroExecutor::create(4);
+        u32 val = 0;
+        int woken = 0;
+        int parked = 0;
+        const int N = 8;
+
+        for (int i = 0; i < N; ++i) {
+            exec->spawn([&]() {
+                stdAtomicAddAndFetch(&parked, 1, MemoryOrder::Release);
+                exec->futexWait(&val, 0);
+                stdAtomicAddAndFetch(&woken, 1, MemoryOrder::Relaxed);
+            });
+        }
+
+        exec->spawn([&]() {
+            while (stdAtomicFetch(&parked, MemoryOrder::Acquire) < N) {
+                exec->yield();
+            }
+            val = 1;
+            exec->futexWake(&val, N);
+        });
+
+        exec->join();
+        STD_INSIST(woken == N);
+    }
+
+    STD_TEST(WakeOnlyRequested) {
+        auto exec = CoroExecutor::create(4);
+        u32 val = 0;
+        int woken = 0;
+        int parked = 0;
+        const int N = 4;
+
+        for (int i = 0; i < N; ++i) {
+            exec->spawn([&]() {
+                stdAtomicAddAndFetch(&parked, 1, MemoryOrder::Release);
+                exec->futexWait(&val, 0);
+                stdAtomicAddAndFetch(&woken, 1, MemoryOrder::Relaxed);
+            });
+        }
+
+        exec->spawn([&]() {
+            while (stdAtomicFetch(&parked, MemoryOrder::Acquire) < N) {
+                exec->yield();
+            }
+            exec->futexWake(&val, 2);
+            while (stdAtomicFetch(&woken, MemoryOrder::Acquire) < 2) {
+                exec->yield();
+            }
+            // extra yields to verify no extra wakes
+            for (int i = 0; i < 10; ++i) {
+                exec->yield();
+            }
+            STD_INSIST(stdAtomicFetch(&woken, MemoryOrder::Relaxed) == 2);
+            // wake remaining so test completes
+            exec->futexWake(&val, N);
+        });
+
+        exec->join();
+        STD_INSIST(woken == N);
+    }
+
+    STD_TEST(DifferentAddresses) {
+        auto exec = CoroExecutor::create(4);
+        u32 a = 0;
+        u32 b = 0;
+        int wokenA = 0;
+        int wokenB = 0;
+        int parked = 0;
+
+        exec->spawn([&]() {
+            stdAtomicAddAndFetch(&parked, 1, MemoryOrder::Release);
+            exec->futexWait(&a, 0);
+            stdAtomicAddAndFetch(&wokenA, 1, MemoryOrder::Relaxed);
+        });
+
+        exec->spawn([&]() {
+            stdAtomicAddAndFetch(&parked, 1, MemoryOrder::Release);
+            exec->futexWait(&b, 0);
+            stdAtomicAddAndFetch(&wokenB, 1, MemoryOrder::Relaxed);
+        });
+
+        exec->spawn([&]() {
+            while (stdAtomicFetch(&parked, MemoryOrder::Acquire) < 2) {
+                exec->yield();
+            }
+            exec->futexWake(&a, 1);
+            exec->yield();
+            exec->yield();
+            STD_INSIST(stdAtomicFetch(&wokenA, MemoryOrder::Relaxed) == 1);
+            STD_INSIST(stdAtomicFetch(&wokenB, MemoryOrder::Relaxed) == 0);
+            exec->futexWake(&b, 1);
+        });
+
+        exec->join();
+        STD_INSIST(wokenA == 1);
+        STD_INSIST(wokenB == 1);
+    }
+
+    STD_TEST(SpuriousWakeNoop) {
+        auto exec = CoroExecutor::create(4);
+        u32 val = 0;
+
+        exec->spawn([&]() {
+            exec->futexWake(&val, 100);
+        });
+
+        exec->join();
+    }
+
+    STD_TEST(WaitReturnsTrue) {
+        auto exec = CoroExecutor::create(4);
+        u32 val = 42;
+        bool result = false;
+
+        exec->spawn([&]() {
+            exec->spawn([&]() {
+                exec->yield();
+                exec->futexWake(&val, 1);
+            });
+            result = exec->futexWait(&val, 42);
+        });
+
+        exec->join();
+        STD_INSIST(result == true);
+    }
+
+    STD_TEST(Stress) {
+        auto exec = CoroExecutor::create(8);
+        const int N = 16;
+        const int ITERS = 500;
+        u32 val = 0;
+        int counter = 0;
+
+        for (int i = 0; i < N; ++i) {
+            exec->spawn([&]() {
+                for (int j = 0; j < ITERS; ++j) {
+                    while (!exec->futexWait(&val, 0)) {
+                    }
+                    stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                }
+            });
+        }
+
+        exec->spawn([&]() {
+            for (int j = 0; j < N * ITERS; ++j) {
+                exec->futexWake(&val, 1);
+                exec->yield();
+            }
+        });
+
+        exec->join();
+        STD_INSIST(counter == N * ITERS);
+    }
+}
