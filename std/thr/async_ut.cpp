@@ -127,48 +127,57 @@ namespace {
 }
 
 STD_TEST_SUITE(AsyncLifetime) {
-    STD_TEST(Basic) {
+    STD_TEST(Pool) {
         int alive = 0;
+        auto opool = ObjPool::fromMemory();
+        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
 
         {
-            auto f = async([&] {
+            auto f = async(pool, [&] {
                 return Tracked(42, &alive);
             });
 
             STD_INSIST(f.wait().value == 42);
         }
 
-        STD_INSIST(alive == 0);
+        pool->join();
+        STD_INSIST(stdAtomicFetch(&alive, MemoryOrder::Acquire) == 0);
     }
 
-    STD_TEST(Multiple) {
+    STD_TEST(PoolMultiple) {
         int alive = 0;
+        auto opool = ObjPool::fromMemory();
+        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
 
         {
-            auto f1 = async([&] { return Tracked(1, &alive); });
-            auto f2 = async([&] { return Tracked(2, &alive); });
-            auto f3 = async([&] { return Tracked(3, &alive); });
+            auto f1 = async(pool, [&] { return Tracked(1, &alive); });
+            auto f2 = async(pool, [&] { return Tracked(2, &alive); });
+            auto f3 = async(pool, [&] { return Tracked(3, &alive); });
 
             STD_INSIST(f1.wait().value == 1);
             STD_INSIST(f2.wait().value == 2);
             STD_INSIST(f3.wait().value == 3);
         }
 
-        STD_INSIST(alive == 0);
+        pool->join();
+        STD_INSIST(stdAtomicFetch(&alive, MemoryOrder::Acquire) == 0);
     }
 
-    STD_TEST(Loop) {
+    STD_TEST(PoolLoop) {
         int alive = 0;
+        auto opool = ObjPool::fromMemory();
+        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
 
         for (int i = 0; i < 10; ++i) {
-            auto f = async([&, i] {
+            auto f = async(pool, [&, i] {
                 return Tracked(i, &alive);
             });
 
             STD_INSIST(f.wait().value == i);
         }
 
-        STD_INSIST(alive == 0);
+        pool->join();
+        STD_INSIST(stdAtomicFetch(&alive, MemoryOrder::Acquire) == 0);
     }
 
     STD_TEST(Coro) {
@@ -184,7 +193,7 @@ STD_TEST_SUITE(AsyncLifetime) {
         });
 
         exec->join();
-        STD_INSIST(alive == 0);
+        STD_INSIST(stdAtomicFetch(&alive, MemoryOrder::Acquire) == 0);
     }
 }
 
