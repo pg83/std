@@ -731,7 +731,7 @@ ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
     return new (allocateMemory(sizeof(CoroChannelImplN) + cap * sizeof(void*))) CoroChannelImplN(this, cap);
 }
 
-// #define STD_CORO_FUTEX_SEMAPHORE 1
+#define STD_CORO_FUTEX_SEMAPHORE 1
 
 SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
 #ifdef STD_CORO_FUTEX_SEMAPHORE
@@ -746,8 +746,9 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
         }
 
         void post() noexcept override {
-            stdAtomicAddAndFetch(&count_, (u32)1, MemoryOrder::Release);
-            exec_->futexWake(&count_, 1);
+            if (stdAtomicAddAndFetch(&count_, (u32)1, MemoryOrder::Release) == 1) {
+                exec_->futexWake(&count_, 1);
+            }
         }
 
         void wait() noexcept override {
