@@ -9,10 +9,10 @@
 #include "cond_var.h"
 #include "semaphore.h"
 #include "wait_group.h"
-#include "semaphore_iface.h"
 #include "thread_iface.h"
 #include "channel_iface.h"
 #include "cond_var_iface.h"
+#include "semaphore_iface.h"
 #include "semaphore_iface.h"
 
 #include "spin_lock.h"
@@ -22,6 +22,7 @@
 #include <std/rng/pcg.h>
 #include <std/lib/list.h>
 #include <std/sym/i_map.h>
+#include <std/alg/defer.h>
 #include <std/alg/range.h>
 #include <std/sys/atomic.h>
 #include <std/lib/vector.h>
@@ -47,12 +48,22 @@ namespace {
     struct CoroExecutorImpl;
 
     struct FutexList: public IntrusiveList {
-        u32 wake(u32* addr, u32 n) noexcept;
+        size_t wake(u32* addr, size_t n) noexcept;
     };
 
     struct FutexShard {
         SpinLock lock;
         FutexList waiters;
+
+        size_t wake(u32* addr, size_t n) noexcept {
+            lock.lock();
+
+            STD_DEFER {
+                lock.unlock();
+            };
+
+            return waiters.wake(addr, n);
+        }
     };
 
     struct ContImpl: public Cont, public Task {
@@ -188,7 +199,7 @@ namespace {
         ThreadIface* createThread(Runable& runable) override;
         SemaphoreIface* createSemaphore(size_t initial) override;
 
-        void futexWake(u32* addr, u32 n) noexcept override;
+        size_t futexWake(u32* addr, size_t n) noexcept override;
         bool futexWait(u32* addr, u32 expected) noexcept override;
 
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
@@ -803,8 +814,8 @@ bool CoroExecutorImpl::futexWait(u32* addr, u32 expected) noexcept {
     return true;
 }
 
-u32 FutexList::wake(u32* addr, u32 n) noexcept {
-    u32 woken = 0;
+size_t FutexList::wake(u32* addr, size_t n) noexcept {
+    size_t woken = 0;
 
     for (auto node = mutFront(), end = mutEnd(); node != end && woken < n; ) {
         if (auto* w = (FutexWaiter*)exchange(node, node->next); w->addr == addr) {
@@ -817,12 +828,8 @@ u32 FutexList::wake(u32* addr, u32 n) noexcept {
     return woken;
 }
 
-void CoroExecutorImpl::futexWake(u32* addr, u32 n) noexcept {
-    auto& shard = *futexShards_[splitMix64((uintptr_t)addr) % futexShards_.length()];
-
-    shard.lock.lock();
-    shard.waiters.wake(addr, n);
-    shard.lock.unlock();
+size_t CoroExecutorImpl::futexWake(u32* addr, size_t n) noexcept {
+    return futexShards_[splitMix64((uintptr_t)addr) % futexShards_.length()]->wake(addr, n);
 }
 
 CoroExecutor::~CoroExecutor() noexcept {
