@@ -1,10 +1,8 @@
 #pragma once
 
 namespace stl {
-    class LockGuard;
-
-    struct SemaphoreIface;
     struct CoroExecutor;
+    struct SemaphoreIface;
 
     class Mutex {
         SemaphoreIface* impl;
@@ -20,6 +18,7 @@ namespace stl {
         void lock() noexcept;
         void unlock() noexcept;
         bool tryLock() noexcept;
+
         void* nativeHandle() noexcept;
     };
 
