@@ -784,6 +784,7 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
     struct CoroSemaphoreImpl: public SemaphoreIface, public Runable {
         CoroExecutorImpl* exec_;
         SpinLock lock_;
+        // Mutex lock_;
         IntrusiveList waiters_;
         size_t count_;
 
