@@ -312,6 +312,12 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
 void WorkStealingThreadPool::submitTask(Task* task) noexcept {
     stdAtomicAddAndFetch(&taskCount_, 1, MemoryOrder::Release);
 
+    /*
+        if (auto w = (Worker*)wq->dequeue(); w) {
+            return w->push(task);
+        }
+    */
+
     if (auto w = localWorker(); w) {
         return w->pushThrLocal(task);
     } else {

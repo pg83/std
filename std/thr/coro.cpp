@@ -506,43 +506,58 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
 }
 
 ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
-    struct CoroThreadImpl: public ThreadIface {
+    struct State: public ARC {
         CoroExecutorImpl* exec_;
-        Cont* cont_ = nullptr;
         Runable* runable_;
         Semaphore sem_;
 
-        CoroThreadImpl(CoroExecutorImpl* exec, Runable& runable)
+        State(CoroExecutorImpl* exec, Runable& runable)
             : exec_(exec)
             , runable_(&runable)
             , sem_(0, exec)
         {
         }
 
-        void start() override {
-            cont_ = exec_->spawnRun(SpawnParams().setRunable([this]() {
-                runable_->run();
-                sem_.post();
+        auto start() {
+            return exec_->spawnRun(SpawnParams().setRunable([ref = makeIntrusivePtr(this)]() mutable {
+                ref->runable_->run();
+                ref->sem_.post();
             }));
         }
 
-        void join() noexcept override {
+        void join() noexcept {
             sem_.wait();
+        }
+    };
+
+    struct CoroThreadImpl: public ThreadIface {
+        IntrusivePtr<State> state_;
+        Cont* cont_ = nullptr;
+
+        CoroThreadImpl(State* s) noexcept
+            : state_(s)
+        {
+        }
+
+        void start() override {
+            cont_ = state_->start();
+        }
+
+        void join() noexcept override {
+            state_->join();
             delete this;
         }
 
         void detach() noexcept override {
-            exec_->spawn([this]() {
-                join();
-            });
+            delete this;
         }
 
-        u64 threadId() const noexcept override {
+        u64 threadId() const noexcept {
             return cont_->id();
         }
     };
 
-    return new CoroThreadImpl(this, runable);
+    return new CoroThreadImpl(new State(this, runable));
 }
 
 ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
