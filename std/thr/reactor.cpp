@@ -176,7 +176,7 @@ void ReactorState::run() noexcept {
     while (auto* e = exec) {
         drainQueue();
 
-        pool->beforeBlock();
+        e->yield();
 
         poller->wait([this](PollEvent* ev) {
             if (ev->data) {
@@ -199,8 +199,6 @@ void ReactorState::run() noexcept {
             rearmOrDisarm(req->fd);
             req->complete(0);
         }
-
-        e->yield();
     }
 }
 

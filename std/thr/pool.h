@@ -12,7 +12,6 @@ namespace stl {
         virtual ~ThreadPool() noexcept;
 
         virtual void join() noexcept = 0;
-        virtual void beforeBlock() noexcept;
         virtual PCG32& random() noexcept = 0;
         virtual void** tls(u64 key) noexcept = 0;
         virtual void submitTask(Task* task) noexcept = 0;

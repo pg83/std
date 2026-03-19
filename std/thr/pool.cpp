@@ -217,7 +217,6 @@ namespace {
             void loop();
             void join() noexcept;
             void sleep() noexcept;
-            void beforeBlock() noexcept;
             void run() noexcept override;
             void initStealOrder() noexcept;
             void push(Task* task) noexcept;
@@ -240,7 +239,6 @@ namespace {
         Worker* localWorker() noexcept;
         Worker* dequeueWorker() noexcept;
         PCG32& random() noexcept override;
-        void beforeBlock() noexcept override;
         void** tls(u64 key) noexcept override;
         void submitTask(Task* task) noexcept override;
     };
@@ -272,16 +270,6 @@ void WorkStealingThreadPool::Worker::push(IntrusiveList* tasks) noexcept {
     LockGuard lock(mutex_);
     tasks_.pushBack(*tasks);
     condVar_.signal();
-}
-
-void WorkStealingThreadPool::Worker::beforeBlock() noexcept {
-    LockGuard lock(mutex_);
-
-    flushLocal();
-
-    if (auto* idle = (Worker*)pool_->wq->dequeue(); idle) {
-        idle->push(&tasks_);
-    }
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(ObjPool* pool, size_t numThreads)
@@ -341,12 +329,6 @@ void** WorkStealingThreadPool::tls(u64 key) noexcept {
 
 PCG32& WorkStealingThreadPool::random() noexcept {
     return localWorker()->random();
-}
-
-void WorkStealingThreadPool::beforeBlock() noexcept {
-    if (auto w = localWorker(); w) {
-        w->beforeBlock();
-    }
 }
 
 void WorkStealingThreadPool::join() noexcept {
@@ -476,9 +458,6 @@ ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads) {
     }
 
     return pool->make<WorkStealingThreadPool>(pool, threads);
-}
-
-void ThreadPool::beforeBlock() noexcept {
 }
 
 u64 ThreadPool::registerTlsKey() noexcept {
