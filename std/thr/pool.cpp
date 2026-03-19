@@ -220,6 +220,7 @@ namespace {
             void run() noexcept override;
             void initStealOrder() noexcept;
             void push(Task* task) noexcept;
+            bool shouldKeepSearching() noexcept;
             void pushThrLocal(Task* task) noexcept;
             void push(IntrusiveList* task) noexcept;
             void steal(IntrusiveList* stolen) noexcept;
@@ -379,6 +380,21 @@ void WorkStealingThreadPool::Worker::initStealOrder() noexcept {
     shuffle(rng_, so_.mutBegin(), so_.mutEnd());
 }
 
+bool WorkStealingThreadPool::Worker::shouldKeepSearching() noexcept {
+    if (!tasks_.empty()) {
+        stdAtomicSubAndFetch(&pool_->searching_, 1, MemoryOrder::Relaxed);
+        return true;
+    }
+
+    if (stdAtomicSubAndFetch(&pool_->searching_, 1, MemoryOrder::Release) == 0) {
+        if (stdAtomicFetch(&pool_->taskCount_, MemoryOrder::Acquire) > 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void WorkStealingThreadPool::Worker::trySteal(IntrusiveList* stolen) noexcept {
     const u32 n = (u32)so_.length();
     const u32 offset = rng_.uniformUnbiased(n);
@@ -401,7 +417,7 @@ void WorkStealingThreadPool::Worker::loop() {
     while (true) {
         sleep();
 
-        for (;;) {
+        do {
             while (auto task = popNoLock()) {
                 if (!tasks_.empty()) {
                     if (auto w = (Worker*)pool_->wq->dequeue(); w) {
@@ -428,20 +444,7 @@ void WorkStealingThreadPool::Worker::loop() {
 
             local_.pushBack(stolen);
             flushLocal();
-
-            if (!tasks_.empty()) {
-                stdAtomicSubAndFetch(&pool_->searching_, 1, MemoryOrder::Relaxed);
-                continue;
-            }
-
-            if (stdAtomicSubAndFetch(&pool_->searching_, 1, MemoryOrder::Release) == 0) {
-                if (stdAtomicFetch(&pool_->taskCount_, MemoryOrder::Acquire) > 0) {
-                    continue;
-                }
-            }
-
-            break;
-        }
+        } while (shouldKeepSearching());
     }
 }
 
