@@ -225,6 +225,7 @@ namespace {
             void push(IntrusiveList* task) noexcept;
             void steal(IntrusiveList* stolen) noexcept;
             void trySteal(IntrusiveList* stolen) noexcept;
+            void splitHalf(IntrusiveList* stolen) noexcept;
         };
 
         IntMap<Worker> workers_;
@@ -435,7 +436,10 @@ void WorkStealingThreadPool::Worker::loop() {
 
 void WorkStealingThreadPool::Worker::steal(IntrusiveList* stolen) noexcept {
     LockGuard lock(mutex_);
+    splitHalf(stolen);
+}
 
+void WorkStealingThreadPool::Worker::splitHalf(IntrusiveList* stolen) noexcept {
     tasks_.splitHalf(tasks_, *stolen);
 
     if (stolen->empty()) {
