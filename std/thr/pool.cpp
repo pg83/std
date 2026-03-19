@@ -254,11 +254,8 @@ void WorkStealingThreadPool::Worker::pushThrLocal(Task* task) noexcept {
 }
 
 void WorkStealingThreadPool::Worker::sleep() noexcept {
-    while (tasks_.empty()) {
-        pool_->wq->enqueue(this);
-        condVar_.wait(mutex_);
-        flushLocal();
-    }
+    pool_->wq->enqueue(this);
+    condVar_.wait(mutex_);
 }
 
 void WorkStealingThreadPool::Worker::push(Task* task) noexcept {
@@ -312,12 +309,6 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
 
 void WorkStealingThreadPool::submitTask(Task* task) noexcept {
     stdAtomicAddAndFetch(&taskCount_, 1, MemoryOrder::Release);
-
-    /*
-        if (auto w = (Worker*)wq->dequeue(); w) {
-            return w->push(task);
-        }
-    */
 
     if (auto w = localWorker(); w) {
         return w->pushThrLocal(task);
@@ -443,6 +434,7 @@ void WorkStealingThreadPool::Worker::loop() {
 
         if (shouldSleep(stdAtomicSubAndFetch(&pool_->searching_, 1, MemoryOrder::Release))) {
             sleep();
+            flushLocal();
         }
     }
 }
