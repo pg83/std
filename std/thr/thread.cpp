@@ -9,6 +9,7 @@
 #include <std/ptr/scoped.h>
 #include <std/dbg/insist.h>
 #include <std/str/builder.h>
+#include <std/alg/exchange.h>
 
 #include <unistd.h>
 #include <pthread.h>
@@ -31,12 +32,10 @@ namespace {
 
         void join() noexcept override {
             STD_INSIST(pthread_join(thread, nullptr) == 0);
-            delete this;
         }
 
         void detach() noexcept override {
             STD_INSIST(pthread_detach(thread) == 0);
-            delete this;
         }
 
         u64 threadId() const noexcept override {
@@ -74,12 +73,12 @@ Thread::~Thread() noexcept {
 
 void Thread::join() noexcept {
     impl->join();
-    impl = nullptr;
+    delete exchange(impl, nullptr);
 }
 
 void Thread::detach() noexcept {
     impl->detach();
-    impl = nullptr;
+    delete exchange(impl, nullptr);
 }
 
 u64 Thread::threadId() const noexcept {

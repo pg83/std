@@ -545,11 +545,9 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
 
         void join() noexcept override {
             state_->join();
-            delete this;
         }
 
         void detach() noexcept override {
-            delete this;
         }
 
         u64 threadId() const noexcept {
