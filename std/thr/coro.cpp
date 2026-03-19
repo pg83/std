@@ -731,7 +731,56 @@ ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
     return new (allocateMemory(sizeof(CoroChannelImplN) + cap * sizeof(void*))) CoroChannelImplN(this, cap);
 }
 
+#define STD_CORO_FUTEX_SEMAPHORE 1
+
 SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
+#ifdef STD_CORO_FUTEX_SEMAPHORE
+    struct CoroSemaphoreImpl: public SemaphoreIface {
+        CoroExecutorImpl* exec_;
+        u32 count_;
+
+        CoroSemaphoreImpl(CoroExecutorImpl* exec, size_t initial) noexcept
+            : exec_(exec)
+            , count_((u32)initial)
+        {
+        }
+
+        void post() noexcept override {
+            stdAtomicAddAndFetch(&count_, (u32)1, MemoryOrder::Release);
+            exec_->futexWake(&count_, 1);
+        }
+
+        void wait() noexcept override {
+            for (;;) {
+                u32 c = stdAtomicFetch(&count_, MemoryOrder::Acquire);
+
+                if (c > 0 && stdAtomicCAS(&count_, &c, c - 1, MemoryOrder::Acquire, MemoryOrder::Relaxed)) {
+                    return;
+                }
+
+                exec_->futexWait(&count_, 0);
+            }
+        }
+
+        void* nativeHandle() noexcept override {
+            return exec_;
+        }
+
+        bool tryWait() noexcept override {
+            for (;;) {
+                u32 c = stdAtomicFetch(&count_, MemoryOrder::Acquire);
+
+                if (c == 0) {
+                    return false;
+                }
+
+                if (stdAtomicCAS(&count_, &c, c - 1, MemoryOrder::Acquire, MemoryOrder::Relaxed)) {
+                    return true;
+                }
+            }
+        }
+    };
+#else
     struct CoroSemaphoreImpl: public SemaphoreIface, public Runable {
         CoroExecutorImpl* exec_;
         Mutex queueMutex_;
@@ -787,6 +836,7 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
             return false;
         }
     };
+#endif
 
     return new CoroSemaphoreImpl(this, initial);
 }
