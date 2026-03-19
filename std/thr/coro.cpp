@@ -519,10 +519,10 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
         }
 
         auto start() {
-            return exec_->spawnRun(SpawnParams().setRunable([ref = makeIntrusivePtr(this)]() mutable {
+            return exec_->spawn([ref = makeIntrusivePtr(this)]() mutable {
                 ref->runable_->run();
                 ref->sem_.post();
-            }));
+            });
         }
 
         void join() noexcept {
