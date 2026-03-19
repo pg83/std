@@ -414,36 +414,36 @@ void WorkStealingThreadPool::Worker::loop() {
     LockGuard lock(mutex_);
 
     while (true) {
-        sleep();
-
-        do {
-            while (auto task = popNoLock()) {
-                if (!tasks_.empty()) {
-                    if (auto w = (Worker*)pool_->wq->dequeue(); w) {
-                        w->push(popNoLock());
-                    }
+        while (auto task = popNoLock()) {
+            if (!tasks_.empty()) {
+                if (auto w = (Worker*)pool_->wq->dequeue(); w) {
+                    w->push(popNoLock());
                 }
-
-                stdAtomicSubAndFetch(&pool_->taskCount_, 1, MemoryOrder::Relaxed);
-
-                UnlockGuard(mutex_).run([task]() {
-                    task->run();
-                });
-
-                flushLocal();
             }
 
-            stdAtomicAddAndFetch(&pool_->searching_, 1, MemoryOrder::Relaxed);
+            stdAtomicSubAndFetch(&pool_->taskCount_, 1, MemoryOrder::Relaxed);
 
-            IntrusiveList stolen;
-
-            UnlockGuard(mutex_).run([this, &stolen]() {
-                trySteal(&stolen);
+            UnlockGuard(mutex_).run([task]() {
+                task->run();
             });
 
-            local_.pushBack(stolen);
             flushLocal();
-        } while (shouldKeepSearching(stdAtomicSubAndFetch(&pool_->searching_, 1, MemoryOrder::Release)));
+        }
+
+        stdAtomicAddAndFetch(&pool_->searching_, 1, MemoryOrder::Relaxed);
+
+        IntrusiveList stolen;
+
+        UnlockGuard(mutex_).run([this, &stolen]() {
+            trySteal(&stolen);
+        });
+
+        local_.pushBack(stolen);
+        flushLocal();
+
+        if (!shouldKeepSearching(stdAtomicSubAndFetch(&pool_->searching_, 1, MemoryOrder::Release))) {
+            sleep();
+        }
     }
 }
 
