@@ -230,6 +230,8 @@ namespace {
 
         IntMap<Worker> workers_;
         WaitQueue* wq;
+        i32 taskCount_ = 0;
+        i32 searching_ = 0;
 
         WorkStealingThreadPool(ObjPool* pool, size_t numThreads);
         ~WorkStealingThreadPool() noexcept;
@@ -322,6 +324,8 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
 }
 
 void WorkStealingThreadPool::submitTask(Task* task) noexcept {
+    stdAtomicAddAndFetch(&taskCount_, 1, MemoryOrder::Release);
+
     if (auto w = localWorker(); w) {
         return w->pushThrLocal(task);
     } else {
@@ -359,6 +363,8 @@ WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
     workers_.visit([](Worker& w) {
         w.join();
     });
+
+    STD_INSIST(taskCount_ == 0);
 }
 
 WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u64 seed)
@@ -372,6 +378,7 @@ WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex
 
 void WorkStealingThreadPool::Worker::join() noexcept {
     ShutDown sh;
+    stdAtomicAddAndFetch(&pool_->taskCount_, 1, MemoryOrder::Relaxed);
     push(&sh);
     thread_.join();
 }
@@ -408,29 +415,47 @@ void WorkStealingThreadPool::Worker::loop() {
     while (true) {
         sleep();
 
-        while (auto task = popNoLock()) {
+        for (;;) {
+            while (auto task = popNoLock()) {
+                if (!tasks_.empty()) {
+                    if (auto w = (Worker*)pool_->wq->dequeue(); w) {
+                        w->push(popNoLock());
+                    }
+                }
+
+                stdAtomicSubAndFetch(&pool_->taskCount_, 1, MemoryOrder::Relaxed);
+
+                UnlockGuard(mutex_).run([task]() {
+                    task->run();
+                });
+
+                flushLocal();
+            }
+
+            stdAtomicAddAndFetch(&pool_->searching_, 1, MemoryOrder::Relaxed);
+
+            IntrusiveList stolen;
+
+            UnlockGuard(mutex_).run([this, &stolen]() {
+                trySteal(&stolen);
+            });
+
+            local_.pushBack(stolen);
+            flushLocal();
+
             if (!tasks_.empty()) {
-                if (auto w = (Worker*)pool_->wq->dequeue(); w) {
-                    w->push(popNoLock());
+                stdAtomicSubAndFetch(&pool_->searching_, 1, MemoryOrder::Relaxed);
+                continue;
+            }
+
+            if (stdAtomicSubAndFetch(&pool_->searching_, 1, MemoryOrder::Release) == 0) {
+                if (stdAtomicFetch(&pool_->taskCount_, MemoryOrder::Acquire) > 0) {
+                    continue;
                 }
             }
 
-            UnlockGuard(mutex_).run([task]() {
-                task->run();
-            });
-
-            flushLocal();
+            break;
         }
-
-        IntrusiveList stolen;
-
-        UnlockGuard(mutex_).run([this, &stolen]() {
-            trySteal(&stolen);
-        });
-
-        local_.pushBack(stolen);
-
-        flushLocal();
     }
 }
 
