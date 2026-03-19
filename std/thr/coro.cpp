@@ -805,14 +805,9 @@ bool CoroExecutorImpl::futexWait(u32* addr, u32 expected) noexcept {
 
 u32 FutexList::wake(u32* addr, u32 n) noexcept {
     u32 woken = 0;
-    auto* node = mutFront();
-    auto* end = mutEnd();
 
-    while (node != end && woken < n) {
-        auto* w = (FutexWaiter*)node;
-        node = node->next;
-
-        if (w->addr == addr) {
+    for (auto node = mutFront(), end = mutEnd(); node != end && woken < n; ) {
+        if (auto* w = (FutexWaiter*)exchange(node, node->next); w->addr == addr) {
             w->remove();
             w->cont->reSchedule();
             ++woken;
