@@ -220,12 +220,12 @@ namespace {
             void run() noexcept override;
             void initStealOrder() noexcept;
             void push(Task* task) noexcept;
-            bool shouldKeepSearching() noexcept;
             void pushThrLocal(Task* task) noexcept;
             void push(IntrusiveList* task) noexcept;
             void steal(IntrusiveList* stolen) noexcept;
             void trySteal(IntrusiveList* stolen) noexcept;
             void splitHalf(IntrusiveList* stolen) noexcept;
+            bool shouldKeepSearching(i32 searching) noexcept;
         };
 
         IntMap<Worker> workers_;
@@ -380,13 +380,12 @@ void WorkStealingThreadPool::Worker::initStealOrder() noexcept {
     shuffle(rng_, so_.mutBegin(), so_.mutEnd());
 }
 
-bool WorkStealingThreadPool::Worker::shouldKeepSearching() noexcept {
+bool WorkStealingThreadPool::Worker::shouldKeepSearching(i32 searching) noexcept {
     if (!tasks_.empty()) {
-        stdAtomicSubAndFetch(&pool_->searching_, 1, MemoryOrder::Relaxed);
         return true;
     }
 
-    if (stdAtomicSubAndFetch(&pool_->searching_, 1, MemoryOrder::Release) == 0) {
+    if (searching == 0) {
         if (stdAtomicFetch(&pool_->taskCount_, MemoryOrder::Acquire) > 0) {
             return true;
         }
@@ -444,7 +443,7 @@ void WorkStealingThreadPool::Worker::loop() {
 
             local_.pushBack(stolen);
             flushLocal();
-        } while (shouldKeepSearching());
+        } while (shouldKeepSearching(stdAtomicSubAndFetch(&pool_->searching_, 1, MemoryOrder::Release)));
     }
 }
 
