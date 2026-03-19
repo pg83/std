@@ -4,6 +4,7 @@
 
 #include <std/tst/ut.h>
 #include <std/mem/obj_pool.h>
+#include <std/sys/atomic.h>
 
 using namespace stl;
 
@@ -109,18 +110,18 @@ namespace {
             : value(v)
             , alive(a)
         {
-            ++*alive;
+            stdAtomicAddAndFetch(alive, 1, MemoryOrder::Relaxed);
         }
 
         Tracked(const Tracked& o) noexcept
             : value(o.value)
             , alive(o.alive)
         {
-            ++*alive;
+            stdAtomicAddAndFetch(alive, 1, MemoryOrder::Relaxed);
         }
 
         ~Tracked() noexcept {
-            --*alive;
+            stdAtomicSubAndFetch(alive, 1, MemoryOrder::Relaxed);
         }
     };
 }
