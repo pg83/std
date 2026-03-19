@@ -731,7 +731,7 @@ ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
     return new (allocateMemory(sizeof(CoroChannelImplN) + cap * sizeof(void*))) CoroChannelImplN(this, cap);
 }
 
-#define STD_CORO_FUTEX_SEMAPHORE 1
+// #define STD_CORO_FUTEX_SEMAPHORE 1
 
 SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
 #ifdef STD_CORO_FUTEX_SEMAPHORE
@@ -783,7 +783,7 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
 #else
     struct CoroSemaphoreImpl: public SemaphoreIface, public Runable {
         CoroExecutorImpl* exec_;
-        Mutex queueMutex_;
+        SpinLock lock_;
         IntrusiveList waiters_;
         size_t count_;
 
@@ -794,25 +794,27 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
         }
 
         void run() override {
-            queueMutex_.unlock();
+            lock_.unlock();
         }
 
         void post() noexcept override {
-            LockGuard guard(queueMutex_);
+            lock_.lock();
 
             if (auto* cont = (ContImpl*)(Task*)waiters_.popFrontOrNull(); cont) {
+                lock_.unlock();
                 cont->reSchedule();
             } else {
                 ++count_;
+                lock_.unlock();
             }
         }
 
         void wait() noexcept override {
-            queueMutex_.lock();
+            lock_.lock();
 
             if (count_ > 0) {
                 --count_;
-                queueMutex_.unlock();
+                lock_.unlock();
                 return;
             }
 
@@ -826,13 +828,15 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
         }
 
         bool tryWait() noexcept override {
-            LockGuard guard(queueMutex_);
+            lock_.lock();
 
             if (count_ > 0) {
                 --count_;
+                lock_.unlock();
                 return true;
             }
 
+            lock_.unlock();
             return false;
         }
     };

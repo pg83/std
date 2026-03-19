@@ -1,9 +1,12 @@
 #include "spin_lock.h"
 
+#include <sched.h>
+
 using namespace stl;
 
 void SpinLock::lock() noexcept {
     while (__atomic_test_and_set(&flag_, __ATOMIC_ACQUIRE)) {
+        sched_yield();
     }
 }
 
