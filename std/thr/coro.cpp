@@ -761,7 +761,6 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
     return new CoroSemaphoreImpl(this, initial);
 }
 
-
 CoroExecutor::~CoroExecutor() noexcept {
 }
 
