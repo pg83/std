@@ -8,10 +8,43 @@
 #include <std/str/builder.h>
 
 #include <pthread.h>
+#include <sched.h>
 
 using namespace stl;
 
 namespace {
+    struct SpinSemImpl: public SemaphoreIface {
+        CoroExecutor* exec_;
+        char flag_ = 0;
+
+        SpinSemImpl(CoroExecutor* exec) noexcept
+            : exec_(exec)
+        {
+        }
+
+        void spin() noexcept {
+            if (exec_ && exec_->me()) {
+                exec_->yield();
+            } else {
+                sched_yield();
+            }
+        }
+
+        void wait() noexcept override {
+            while (__atomic_test_and_set(&flag_, __ATOMIC_ACQUIRE)) {
+                spin();
+            }
+        }
+
+        void post() noexcept override {
+            __atomic_clear(&flag_, __ATOMIC_RELEASE);
+        }
+
+        bool tryWait() noexcept override {
+            return !__atomic_test_and_set(&flag_, __ATOMIC_ACQUIRE);
+        }
+    };
+
     struct PosixMutexImpl: public SemaphoreIface, public pthread_mutex_t {
         PosixMutexImpl() {
             if (pthread_mutex_init(this, nullptr) != 0) {
@@ -49,6 +82,10 @@ Mutex::Mutex()
 Mutex::Mutex(CoroExecutor* exec)
     : Mutex(exec->createSemaphore(1))
 {
+}
+
+SemaphoreIface* Mutex::spinLock(CoroExecutor* exec) {
+    return new SpinSemImpl(exec);
 }
 
 Mutex::Mutex(SemaphoreIface* iface)

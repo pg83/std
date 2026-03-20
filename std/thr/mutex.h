@@ -13,6 +13,8 @@ namespace stl {
         Mutex(SemaphoreIface* iface);
         Mutex(CoroExecutor* exec);
 
+        static SemaphoreIface* spinLock(CoroExecutor*);
+
         ~Mutex() noexcept;
 
         void lock() noexcept;

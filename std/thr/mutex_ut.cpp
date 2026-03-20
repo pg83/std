@@ -3,6 +3,7 @@
 #include "pool.h"
 
 #include <std/tst/ut.h>
+#include <std/mem/obj_pool.h>
 
 using namespace stl;
 
@@ -128,6 +129,110 @@ STD_TEST_SUITE(Mutex) {
 
         mutex.lock();
         mutex.unlock();
+    }
+}
+
+STD_TEST_SUITE(SpinMutex) {
+    STD_TEST(BasicLockUnlock) {
+        Mutex mtx(Mutex::spinLock(nullptr));
+
+        mtx.lock();
+        mtx.unlock();
+
+        mtx.lock();
+        mtx.unlock();
+    }
+
+    STD_TEST(TryLockSuccess) {
+        Mutex mtx(Mutex::spinLock(nullptr));
+
+        bool locked = mtx.tryLock();
+        STD_INSIST(locked == true);
+
+        mtx.unlock();
+    }
+
+    STD_TEST(TryLockFail) {
+        Mutex mtx(Mutex::spinLock(nullptr));
+
+        mtx.lock();
+        bool locked = mtx.tryLock();
+        STD_INSIST(locked == false);
+
+        mtx.unlock();
+    }
+
+    STD_TEST(MultipleLockUnlock) {
+        Mutex mtx(Mutex::spinLock(nullptr));
+
+        for (int i = 0; i < 100; ++i) {
+            mtx.lock();
+            mtx.unlock();
+        }
+    }
+
+    STD_TEST(LockGuardBasic) {
+        Mutex mtx(Mutex::spinLock(nullptr));
+
+        {
+            LockGuard guard(mtx);
+        }
+
+        bool locked = mtx.tryLock();
+        STD_INSIST(locked == true);
+        mtx.unlock();
+    }
+
+    STD_TEST(Contention) {
+        Mutex mtx(Mutex::spinLock(nullptr));
+        auto opool = ObjPool::fromMemory();
+        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
+        int counter = 0;
+
+        for (int i = 0; i < 4; ++i) {
+            pool->submit([&]() {
+                for (int j = 0; j < 10000; ++j) {
+                    LockGuard guard(mtx);
+                    ++counter;
+                }
+            });
+        }
+
+        pool->join();
+        STD_INSIST(counter == 40000);
+    }
+
+    STD_TEST(CoroBasicLockUnlock) {
+        auto exec = CoroExecutor::create(4);
+        Mutex mtx(Mutex::spinLock(exec.mutPtr()));
+
+        exec->spawn([&]() {
+            mtx.lock();
+            mtx.unlock();
+
+            mtx.lock();
+            mtx.unlock();
+        });
+
+        exec->join();
+    }
+
+    STD_TEST(CoroContention) {
+        auto exec = CoroExecutor::create(4);
+        Mutex mtx(Mutex::spinLock(exec.mutPtr()));
+        int counter = 0;
+
+        for (int i = 0; i < 4; ++i) {
+            exec->spawn([&]() {
+                for (int j = 0; j < 10000; ++j) {
+                    LockGuard guard(mtx);
+                    ++counter;
+                }
+            });
+        }
+
+        exec->join();
+        STD_INSIST(counter == 40000);
     }
 }
 
