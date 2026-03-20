@@ -1,4 +1,5 @@
 #include "spin_lock.h"
+#include "coro.h"
 
 #include <sched.h>
 
@@ -6,7 +7,13 @@ using namespace stl;
 
 void SpinLock::lock() noexcept {
     while (__atomic_test_and_set(&flag_, __ATOMIC_ACQUIRE)) {
-        sched_yield();
+        if (0) {
+            sched_yield();
+        } else if (exec_ && exec_->me()) {
+            exec_->yield();
+        } else {
+            sched_yield();
+        }
     }
 }
 

@@ -345,10 +345,13 @@ void ContImpl::run() noexcept {
         return;
     }
 
-    *exec_->tls() = this;
+    auto tls = exec_->tls();
+
+    *tls = this;
     (workerCtx_ = Context::create(alloca(Context::implSize())))->switchTo(*ctx_.ptr);
     delete workerCtx_;
     workerCtx_ = nullptr;
+    *tls = nullptr;
 
     if (auto* as = exchange(afterSuspend_, nullptr); as) {
         return as->run();
@@ -703,6 +706,7 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
             : exec_(exec)
             , count_(initial)
         {
+            lock_.exec_ = exec;
         }
 
         void run() override {
