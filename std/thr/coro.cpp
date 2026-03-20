@@ -149,17 +149,7 @@ namespace {
             return nullptr;
         }
 
-        void yield() noexcept override {
-            struct Y: Runable {
-                ContImpl* c;
-
-                void run() noexcept override {
-                    c->reSchedule();
-                }
-            } y;
-
-            (y.c = currentCont())->parkWith(&y);
-        }
+        void yield() noexcept override;
 
         u32 random() noexcept override {
             return pool_->random().nextU32();
@@ -225,6 +215,18 @@ Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
     }
 
     return task;
+}
+
+void CoroExecutorImpl::yield() noexcept {
+    struct Y: Runable {
+        ContImpl* c;
+
+        void run() noexcept override {
+            c->reSchedule();
+        }
+    } y;
+
+    (y.c = currentCont())->parkWith(&y);
 }
 
 void CoroExecutorImpl::spawnSystem() noexcept {
