@@ -11,7 +11,7 @@
 using namespace stl;
 
 namespace {
-    void runPipeline(int nStages, int nMessages) {
+    void dutchRudder(int nStages, int nMessages) {
         auto exec = CoroExecutor::create(4);
         auto opool = ObjPool::fromMemory();
 
@@ -263,11 +263,11 @@ STD_TEST_SUITE(Channel) {
     }
 
     STD_TEST(Pipeline) {
-        runPipeline(50, 500);
+        dutchRudder(50, 500);
     }
 
     STD_TEST(_Pipeline) {
-        runPipeline(1000, 100000);
+        dutchRudder(1000, 100000);
     }
 
     STD_TEST(Stress) {
