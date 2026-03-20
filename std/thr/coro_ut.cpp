@@ -1,9 +1,10 @@
 #include "coro.h"
 #include "pool.h"
 #include "mutex.h"
+#include "async.h"
+#include "poller.h"
 #include "channel.h"
 #include "cond_var.h"
-#include "poller.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/fd.h>
@@ -26,43 +27,41 @@ namespace {
 STD_TEST_SUITE(CoroExecutor) {
     STD_TEST(Basic) {
         auto exec = CoroExecutor::create(4);
-        int counter = 0;
 
-        exec->spawn([&]() {
-            ++counter;
+        auto f = async(exec.mutPtr(), [] {
+            return 1;
         });
 
-        exec->join();
-        STD_INSIST(counter == 1);
+        STD_INSIST(f.wait() == 1);
     }
 
     STD_TEST(SingleYield) {
         auto exec = CoroExecutor::create(4);
-        int counter = 0;
 
-        exec->spawn([&]() {
+        auto f = async(exec.mutPtr(), [&]() {
+            int counter = 0;
             ++counter;
             exec->yield();
             ++counter;
+            return counter;
         });
 
-        exec->join();
-        STD_INSIST(counter == 2);
+        STD_INSIST(f.wait() == 2);
     }
 
     STD_TEST(MultipleYields) {
         auto exec = CoroExecutor::create(4);
-        int counter = 0;
 
-        exec->spawn([&]() {
+        auto f = async(exec.mutPtr(), [&]() {
+            int counter = 0;
             for (int i = 0; i < 10; ++i) {
                 ++counter;
                 exec->yield();
             }
+            return counter;
         });
 
-        exec->join();
-        STD_INSIST(counter == 10);
+        STD_INSIST(f.wait() == 10);
     }
 
     STD_TEST(ManyCoros) {
@@ -113,18 +112,16 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(MutexBasic) {
         auto exec = CoroExecutor::create(4);
-        int counter = 0;
 
-        exec->spawn([&]() {
+        auto f = async(exec.mutPtr(), [&]() {
             Mutex mtx(exec.mutPtr());
 
             mtx.lock();
-            ++counter;
             mtx.unlock();
+            return 1;
         });
 
-        exec->join();
-        STD_INSIST(counter == 1);
+        STD_INSIST(f.wait() == 1);
     }
 
     STD_TEST(MutexContention) {
@@ -321,14 +318,12 @@ STD_TEST_SUITE(CoroExecutor) {
 STD_TEST_SUITE(CoroRandom) {
     STD_TEST(NonZero) {
         auto exec = CoroExecutor::create(4);
-        u32 result = 0;
 
-        exec->spawn([&]() {
-            result = exec->random();
+        auto f = async(exec.mutPtr(), [&]() {
+            return exec->random();
         });
 
-        exec->join();
-        STD_INSIST(result != 0);
+        STD_INSIST(f.wait() != 0);
     }
 
     STD_TEST(DifferentPerCoro) {
@@ -353,15 +348,15 @@ STD_TEST_SUITE(CoroRandom) {
 
     STD_TEST(Successive) {
         auto exec = CoroExecutor::create(4);
-        u32 a = 0, b = 0;
 
-        exec->spawn([&]() {
-            a = exec->random();
-            b = exec->random();
+        struct Pair { u32 a, b; };
+
+        auto f = async(exec.mutPtr(), [&]() {
+            return Pair{exec->random(), exec->random()};
         });
 
-        exec->join();
-        STD_INSIST(a != b);
+        auto& p = f.wait();
+        STD_INSIST(p.a != p.b);
     }
 }
 
@@ -391,18 +386,15 @@ STD_TEST_SUITE(CoroPoll) {
     }
 
     STD_TEST(Timeout) {
-        // poll on idle pipe with short timeout — must return 0
         auto exec = CoroExecutor::create(4);
-        u32 pollResult = 1;
         ScopedFD readEnd, writeEnd;
         createPipeFD(readEnd, writeEnd);
 
-        exec->spawn([&]() {
-            pollResult = exec->poll(readEnd.get(), PollFlag::In, 1000);
+        auto f = async(exec.mutPtr(), [&]() {
+            return exec->poll(readEnd.get(), PollFlag::In, 1000);
         });
 
-        exec->join();
-        STD_INSIST(pollResult == 0);
+        STD_INSIST(f.wait() == 0);
     }
 
     STD_TEST(MultiPipe) {
@@ -566,15 +558,13 @@ STD_TEST_SUITE(CoroPoll) {
 
     STD_TEST(SleepZero) {
         auto exec = CoroExecutor::create(4);
-        bool done = false;
 
-        exec->spawn([&]() {
+        auto f = async(exec.mutPtr(), [&]() {
             exec->sleepTout(0);
-            done = true;
+            return true;
         });
 
-        exec->join();
-        STD_INSIST(done == true);
+        STD_INSIST(f.wait() == true);
     }
 
     STD_TEST(SleepZeroMultiple) {
@@ -594,16 +584,13 @@ STD_TEST_SUITE(CoroPoll) {
 
     STD_TEST(SleepZeroOrdering) {
         auto exec = CoroExecutor::create(4);
-        int value = 0;
 
-        exec->spawn([&]() {
-            value = 1;
+        auto f = async(exec.mutPtr(), [&]() {
             exec->sleepTout(0);
-            value = 2;
+            return 2;
         });
 
-        exec->join();
-        STD_INSIST(value == 2);
+        STD_INSIST(f.wait() == 2);
     }
 
     STD_TEST(SpawnFromMain) {
