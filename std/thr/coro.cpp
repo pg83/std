@@ -735,31 +735,72 @@ ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
 
 SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
 #ifdef STD_CORO_FUTEX_SEMAPHORE
+    enum: u32 {
+        SemWaiterBit = 0x80000000u,
+        SemValueMask = 0x7fffffffu,
+    };
+
     struct CoroSemaphoreImpl: public SemaphoreIface {
         CoroExecutorImpl* exec_;
-        u32 count_;
+        u32 val_;
+        u32 waiters_;
 
         CoroSemaphoreImpl(CoroExecutorImpl* exec, size_t initial) noexcept
             : exec_(exec)
-            , count_((u32)initial)
+            , val_((u32)initial)
+            , waiters_(0)
         {
         }
 
         void post() noexcept override {
-            if (stdAtomicAddAndFetch(&count_, (u32)1, MemoryOrder::Release) == 1) {
-                exec_->futexWake(&count_, 1);
+            u32 val, nv;
+
+            do {
+                val = stdAtomicFetch(&val_, MemoryOrder::Relaxed);
+                u32 waiters = stdAtomicFetch(&waiters_, MemoryOrder::Relaxed);
+                nv = (val & SemValueMask) + 1;
+
+                if (waiters <= 1) {
+                    nv &= ~SemWaiterBit;
+                } else {
+                    nv |= (val & SemWaiterBit);
+                }
+            } while (!stdAtomicCAS(&val_, &val, nv, MemoryOrder::Release, MemoryOrder::Relaxed));
+
+            if ((val & SemWaiterBit) || stdAtomicFetch(&waiters_, MemoryOrder::Acquire) > 0) {
+                exec_->futexWake(&val_, 1);
             }
         }
 
-        void wait() noexcept override {
-            for (;;) {
-                u32 c = stdAtomicFetch(&count_, MemoryOrder::Acquire);
+        bool doTryWait() noexcept {
+            u32 val;
 
-                if (c > 0 && stdAtomicCAS(&count_, &c, c - 1, MemoryOrder::Acquire, MemoryOrder::Relaxed)) {
+            while ((val = stdAtomicFetch(&val_, MemoryOrder::Acquire)) & SemValueMask) {
+                if (stdAtomicCAS(&val_, &val, val - 1, MemoryOrder::Acquire, MemoryOrder::Relaxed)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        void wait() noexcept override {
+            if (doTryWait()) {
+                return;
+            }
+
+            for (;;) {
+                stdAtomicAddAndFetch(&waiters_, (u32)1, MemoryOrder::Release);
+
+                u32 val = 0;
+                stdAtomicCAS(&val_, &val, SemWaiterBit, MemoryOrder::Relaxed, MemoryOrder::Relaxed);
+
+                exec_->futexWait(&val_, SemWaiterBit);
+                stdAtomicSubAndFetch(&waiters_, (u32)1, MemoryOrder::Release);
+
+                if (doTryWait()) {
                     return;
                 }
-
-                exec_->futexWait(&count_, 0);
             }
         }
 
@@ -768,17 +809,7 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
         }
 
         bool tryWait() noexcept override {
-            for (;;) {
-                u32 c = stdAtomicFetch(&count_, MemoryOrder::Acquire);
-
-                if (c == 0) {
-                    return false;
-                }
-
-                if (stdAtomicCAS(&count_, &c, c - 1, MemoryOrder::Acquire, MemoryOrder::Relaxed)) {
-                    return true;
-                }
-            }
+            return doTryWait();
         }
     };
 #else
