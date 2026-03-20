@@ -59,10 +59,11 @@ namespace stl {
         virtual ThreadIface* createThread(Runable& runable) = 0;
         virtual SemaphoreIface* createSemaphore(size_t initial) = 0;
 
-        u32 poll(int fd, u32 flags);
-        void sleep(u64 deadlineUs);
         void sleep();
+        void sleep(u64 deadlineUs);
         void sleepTout(u64 timeoutUs);
+
+        u32 poll(int fd, u32 flags);
         u64 currentCoroId() const noexcept;
 
         template <typename F>
