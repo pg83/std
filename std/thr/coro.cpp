@@ -149,10 +149,6 @@ namespace {
             return nullptr;
         }
 
-        void steal() noexcept override {
-            pool_->steal();
-        }
-
         void yield() noexcept override {
             currentCont()->parkWith(nullptr);
         }

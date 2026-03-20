@@ -16,8 +16,6 @@ namespace stl {
         virtual void** tls(u64 key) noexcept = 0;
         virtual void submitTask(Task* task) noexcept = 0;
 
-        virtual void steal() noexcept;
-
         template <typename F>
         void submit(F f) {
             submitTask(makeTask(f));

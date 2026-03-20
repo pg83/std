@@ -49,7 +49,6 @@ namespace stl {
         virtual ~CoroExecutor() noexcept;
 
         virtual void join() noexcept = 0;
-        virtual void steal() noexcept = 0;
         virtual void yield() noexcept = 0;
         virtual u32 random() noexcept = 0;
         virtual Cont* me() const noexcept = 0;
