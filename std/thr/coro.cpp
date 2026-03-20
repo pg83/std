@@ -706,6 +706,7 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
 
         CoroSemaphoreImpl(CoroExecutorImpl* exec, size_t initial) noexcept
             : exec_(exec)
+            //, lock_(Mutex::spinLock(exec))
             , count_(initial)
         {
         }
@@ -745,15 +746,14 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
         }
 
         bool tryWait() noexcept override {
-            lock_.lock();
+            LockGuard guard(lock_);
 
             if (count_ > 0) {
                 --count_;
-                lock_.unlock();
+
                 return true;
             }
 
-            lock_.unlock();
             return false;
         }
     };
