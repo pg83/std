@@ -150,7 +150,15 @@ namespace {
         }
 
         void yield() noexcept override {
-            currentCont()->parkWith(nullptr);
+            struct Y: Runable {
+                ContImpl* c;
+
+                void run() noexcept override {
+                    c->reSchedule();
+                }
+            } y;
+
+            (y.c = currentCont())->parkWith(&y);
         }
 
         u32 random() noexcept override {
@@ -358,11 +366,9 @@ void ContImpl::run() noexcept {
 
     if (auto* as = exchange(afterSuspend_, nullptr); as) {
         return as->run();
-    } else if (runable_) {
-        return reSchedule();
-    } else {
-        delete this;
     }
+
+    delete this;
 }
 
 SpawnParams::SpawnParams() noexcept
