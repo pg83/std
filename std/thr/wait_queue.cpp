@@ -1,5 +1,6 @@
 #include "wait_queue.h"
 #include "mutex.h"
+#include "guard.h"
 
 #include <std/sys/types.h>
 #include <std/dbg/assert.h>

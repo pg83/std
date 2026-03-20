@@ -1,6 +1,7 @@
 #include "mutex.h"
 #include "coro.h"
 #include "pool.h"
+#include "guard.h"
 
 #include <std/tst/ut.h>
 #include <std/mem/obj_pool.h>

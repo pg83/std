@@ -1,5 +1,7 @@
 #include "wait_group.h"
+
 #include "mutex.h"
+#include "guard.h"
 #include "cond_var.h"
 
 #include <std/sys/types.h>

@@ -1,7 +1,8 @@
 #include "pool.h"
 #include "mutex.h"
-#include "wait_group.h"
+#include "guard.h"
 #include "cond_var.h"
+#include "wait_group.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/atomic.h>

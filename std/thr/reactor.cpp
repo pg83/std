@@ -3,6 +3,7 @@
 #include "pool.h"
 #include "coro.h"
 #include "mutex.h"
+#include "guard.h"
 #include "poller.h"
 
 #include <std/sys/fd.h>

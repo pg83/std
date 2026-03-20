@@ -1,5 +1,6 @@
 #include "coro.h"
 #include "pool.h"
+#include "guard.h"
 #include "mutex.h"
 #include "async.h"
 #include "poller.h"

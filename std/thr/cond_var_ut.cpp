@@ -1,6 +1,7 @@
-#include "mutex.h"
 #include "coro.h"
 #include "pool.h"
+#include "mutex.h"
+#include "guard.h"
 #include "thread.h"
 #include "runable.h"
 #include "cond_var.h"

@@ -2,6 +2,7 @@
 #include "task.h"
 #include "pool.h"
 #include "mutex.h"
+#include "guard.h"
 #include "thread.h"
 #include "poller.h"
 #include "context.h"
