@@ -278,23 +278,27 @@ void CoroExecutorImpl::submitExternalTask(Task* task) noexcept {
 }
 
 void CoroExecutorImpl::submitterLoop() noexcept {
-    Task* buf[1024];
+    Vector<Task*> buf(64);
 
     for (;;) {
         CoroExecutor::poll(submitR_.get(), PollFlag::In);
 
-        auto n = ::read(submitR_.get(), buf, sizeof(buf));
+        auto n = ::read(submitR_.get(), buf.mutData(), (u8*)buf.mutStorageEnd() - (u8*)buf.mutData());
 
         STD_INSIST(n > 0);
         STD_INSIST(n % sizeof(Task*) == 0);
 
-        for (auto task : range(buf, buf + n / sizeof(Task*))) {
+        auto cnt = (size_t)n / sizeof(Task*);
+
+        for (auto task : range(buf.data(), buf.data() + cnt)) {
             if (task) {
                 pool_->submitTask(task);
             } else {
                 return;
             }
         }
+
+        buf.grow(cnt + 1);
     }
 }
 
