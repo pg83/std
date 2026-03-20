@@ -13,7 +13,6 @@
 #include "channel_iface.h"
 #include "cond_var_iface.h"
 #include "semaphore_iface.h"
-#include "semaphore_iface.h"
 
 #include "spin_lock.h"
 
@@ -21,7 +20,6 @@
 #include <std/sys/crt.h>
 #include <std/rng/pcg.h>
 #include <std/lib/list.h>
-#include <std/sym/i_map.h>
 #include <std/alg/defer.h>
 #include <std/alg/range.h>
 #include <std/sys/atomic.h>
@@ -47,25 +45,6 @@ using namespace stl;
 namespace {
     struct CoroExecutorImpl;
 
-    struct FutexList: public IntrusiveList {
-        size_t wake(u32* addr, size_t n) noexcept;
-    };
-
-    struct FutexShard {
-        SpinLock lock;
-        FutexList waiters;
-
-        size_t wake(u32* addr, size_t n) noexcept {
-            lock.lock();
-
-            STD_DEFER {
-                lock.unlock();
-            };
-
-            return waiters.wake(addr, n);
-        }
-    };
-
     struct ContImpl: public Cont, public Task {
         CoroExecutorImpl* exec_;
         ScopedPtr<Context> ctx_;
@@ -86,16 +65,6 @@ namespace {
         u8 priority() const noexcept override;
         void run() noexcept override;
         void reSchedule() noexcept;
-    };
-
-    struct FutexWaiter: public IntrusiveNode, public Runable {
-        ContImpl* cont;
-        u32* addr;
-        SpinLock* lock;
-
-        void run() override {
-            lock->unlock();
-        }
     };
 
     struct UserContImpl: public ContImpl {
@@ -155,7 +124,6 @@ namespace {
         ScopedFD submitW_;
         WaitGroup done_;
         ThreadPool* pool_;
-        Vector<FutexShard*> futexShards_;
 
         CoroExecutorImpl(size_t threads, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
@@ -199,9 +167,6 @@ namespace {
         ThreadIface* createThread(Runable& runable) override;
         SemaphoreIface* createSemaphore(size_t initial) override;
 
-        size_t futexWake(u32* addr, size_t n) noexcept override;
-        bool futexWait(u32* addr, u32 expected) noexcept override;
-
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
     };
 
@@ -231,10 +196,6 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
 
     joinW_.setNonBlocking();
     submitR_.setNonBlocking();
-
-    for (size_t i = 0; i < 1024 * (threads + reactors); ++i) {
-        futexShards_.pushBack(opool_->make<FutexShard>());
-    }
 
     for (size_t i = 0; i < reactors; ++i) {
         reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr()));
@@ -792,105 +753,9 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
         }
     };
 
-    // futex-based binary semaphore: 0 = unlocked, 1 = locked, 2 = locked + waiters
-    struct CoroFutexSemaphoreImpl: public SemaphoreIface {
-        CoroExecutorImpl* exec_;
-        u32 state_;
-
-        CoroFutexSemaphoreImpl(CoroExecutorImpl* exec) noexcept
-            : exec_(exec)
-            , state_(0)
-        {
-        }
-
-        void wait() noexcept override {
-            // fast path: 0 → 1
-            u32 c = 0;
-
-            if (stdAtomicCAS(&state_, &c, 1, MemoryOrder::Acquire, MemoryOrder::Relaxed)) {
-                return;
-            }
-
-            // slow path
-            for (;;) {
-                // mark as contended
-                if (c == 2 || !stdAtomicCAS(&state_, &c, 2, MemoryOrder::Relaxed, MemoryOrder::Relaxed)) {
-                    exec_->futexWait(&state_, 2);
-                }
-
-                // try to acquire in contended state
-                c = 0;
-
-                if (stdAtomicCAS(&state_, &c, 2, MemoryOrder::Acquire, MemoryOrder::Relaxed)) {
-                    return;
-                }
-            }
-        }
-
-        void post() noexcept override {
-            if (__atomic_exchange_n(&state_, 0, __ATOMIC_RELEASE) == 2) {
-                exec_->futexWake(&state_, 1);
-            }
-        }
-
-        void* nativeHandle() noexcept override {
-            return exec_;
-        }
-
-        bool tryWait() noexcept override {
-            u32 c = 0;
-
-            return stdAtomicCAS(&state_, &c, 1, MemoryOrder::Acquire, MemoryOrder::Relaxed);
-        }
-    };
-
-    if (initial == 1) {
-        return new CoroFutexSemaphoreImpl(this);
-    }
-
     return new CoroSemaphoreImpl(this, initial);
 }
 
-bool CoroExecutorImpl::futexWait(u32* addr, u32 expected) noexcept {
-    auto& shard = *futexShards_[splitMix64((uintptr_t)addr) % futexShards_.length()];
-
-    shard.lock.lock();
-
-    if (*addr != expected) {
-        shard.lock.unlock();
-
-        return false;
-    }
-
-    FutexWaiter w;
-
-    w.cont = currentCont();
-    w.addr = addr;
-    w.lock = &shard.lock;
-
-    shard.waiters.pushBack(&w);
-    w.cont->parkWith(&w);
-
-    return true;
-}
-
-size_t FutexList::wake(u32* addr, size_t n) noexcept {
-    size_t woken = 0;
-
-    for (auto node = mutFront(), end = mutEnd(); node != end && woken < n; ) {
-        if (auto* w = (FutexWaiter*)exchange(node, node->next); w->addr == addr) {
-            w->remove();
-            w->cont->reSchedule();
-            ++woken;
-        }
-    }
-
-    return woken;
-}
-
-size_t CoroExecutorImpl::futexWake(u32* addr, size_t n) noexcept {
-    return futexShards_[splitMix64((uintptr_t)addr) % futexShards_.length()]->wake(addr, n);
-}
 
 CoroExecutor::~CoroExecutor() noexcept {
 }
