@@ -735,7 +735,6 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
     struct CoroSemaphoreImpl: public SemaphoreIface, public Runable {
         CoroExecutorImpl* exec_;
         SpinLock lock_;
-        // Mutex lock_;
         IntrusiveList waiters_;
         size_t count_;
 
@@ -792,6 +791,62 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
             return false;
         }
     };
+
+    // futex-based binary semaphore: 0 = unlocked, 1 = locked, 2 = locked + waiters
+    struct CoroFutexSemaphoreImpl: public SemaphoreIface {
+        CoroExecutorImpl* exec_;
+        u32 state_;
+
+        CoroFutexSemaphoreImpl(CoroExecutorImpl* exec) noexcept
+            : exec_(exec)
+            , state_(0)
+        {
+        }
+
+        void wait() noexcept override {
+            // fast path: 0 → 1
+            u32 c = 0;
+
+            if (stdAtomicCAS(&state_, &c, 1, MemoryOrder::Acquire, MemoryOrder::Relaxed)) {
+                return;
+            }
+
+            // slow path
+            for (;;) {
+                // mark as contended
+                if (c == 2 || !stdAtomicCAS(&state_, &c, 2, MemoryOrder::Relaxed, MemoryOrder::Relaxed)) {
+                    exec_->futexWait(&state_, 2);
+                }
+
+                // try to acquire in contended state
+                c = 0;
+
+                if (stdAtomicCAS(&state_, &c, 2, MemoryOrder::Acquire, MemoryOrder::Relaxed)) {
+                    return;
+                }
+            }
+        }
+
+        void post() noexcept override {
+            if (__atomic_exchange_n(&state_, 0, __ATOMIC_RELEASE) == 2) {
+                exec_->futexWake(&state_, 1);
+            }
+        }
+
+        void* nativeHandle() noexcept override {
+            return exec_;
+        }
+
+        bool tryWait() noexcept override {
+            u32 c = 0;
+
+            return stdAtomicCAS(&state_, &c, 1, MemoryOrder::Acquire, MemoryOrder::Relaxed);
+        }
+    };
+
+    if (initial == 1) {
+        return new CoroFutexSemaphoreImpl(this);
+    }
 
     return new CoroSemaphoreImpl(this, initial);
 }
