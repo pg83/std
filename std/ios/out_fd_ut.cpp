@@ -4,7 +4,7 @@
 #include <std/tst/ut.h>
 #include <std/str/view.h>
 #include <std/lib/buffer.h>
-#include <std/alg/defer.h>
+#include <std/lib/vector.h>
 
 #include <unistd.h>
 #include <sys/mman.h>
@@ -159,28 +159,24 @@ STD_TEST_SUITE(FDRegular) {
         FDRegular fdRegular(fdWrapper);
 
         const size_t bufSize = 65536;
-        u8* writeBuf = new u8[bufSize];
-        STD_DEFER {
-            delete[] writeBuf;
-        };
+        Vector<u8> writeBuf;
+        writeBuf.grow(bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            writeBuf[i] = (u8)(i % 256);
+            writeBuf.mutData()[i] = (u8)(i % 256);
         }
 
-        fdRegular.write(writeBuf, bufSize);
+        fdRegular.write(writeBuf.data(), bufSize);
         fdRegular.finish();
 
         lseek(fd, 0, SEEK_SET);
 
-        u8* readBuf = new u8[bufSize];
-        STD_DEFER {
-            delete[] readBuf;
-        };
-        ssize_t readBytes = ::read(fd, readBuf, bufSize);
+        Vector<u8> readBuf;
+        readBuf.grow(bufSize);
+        ssize_t readBytes = ::read(fd, readBuf.mutData(), bufSize);
         STD_INSIST(readBytes == (ssize_t)bufSize);
 
         for (size_t i = 0; i < bufSize; ++i) {
-            STD_INSIST(readBuf[i] == writeBuf[i]);
+            STD_INSIST(readBuf.data()[i] == writeBuf.data()[i]);
         }
 
         close(fd);
@@ -461,24 +457,20 @@ STD_TEST_SUITE(FDPipe) {
         FDPipe fdPipe(writeEnd);
 
         const size_t bufSize = 8192;
-        u8* writeBuf = new u8[bufSize];
-        STD_DEFER {
-            delete[] writeBuf;
-        };
+        Vector<u8> writeBuf;
+        writeBuf.grow(bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            writeBuf[i] = (u8)(i % 256);
+            writeBuf.mutData()[i] = (u8)(i % 256);
         }
 
-        fdPipe.write(writeBuf, bufSize);
+        fdPipe.write(writeBuf.data(), bufSize);
         fdPipe.finish();
 
-        u8* readBuf = new u8[bufSize];
-        STD_DEFER {
-            delete[] readBuf;
-        };
+        Vector<u8> readBuf;
+        readBuf.grow(bufSize);
         size_t totalRead = 0;
         while (totalRead < bufSize) {
-            size_t bytesRead = readEnd.read(readBuf + totalRead, bufSize - totalRead);
+            size_t bytesRead = readEnd.read(readBuf.mutData() + totalRead, bufSize - totalRead);
             if (bytesRead == 0) {
                 break;
             }
@@ -487,7 +479,7 @@ STD_TEST_SUITE(FDPipe) {
 
         STD_INSIST(totalRead == bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            STD_INSIST(readBuf[i] == writeBuf[i]);
+            STD_INSIST(readBuf.data()[i] == writeBuf.data()[i]);
         }
     }
 

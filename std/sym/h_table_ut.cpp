@@ -2,7 +2,7 @@
 
 #include <std/tst/ut.h>
 #include <std/rng/pcg.h>
-#include <std/alg/defer.h>
+#include <std/lib/vector.h>
 
 #include <string.h>
 
@@ -68,17 +68,15 @@ STD_TEST_SUITE(HashTable) {
         HashTable ht;
 
         const size_t count = 10000;
-        TestNode* nodes = new TestNode[count];
-        STD_DEFER {
-            delete[] nodes;
-        };
+        Vector<TestNode> nodes;
+        nodes.grow(count);
 
         for (size_t i = 0; i < count; ++i) {
-            nodes[i] = {{i + 1, nullptr}, (int)(i * 7)};
+            nodes.mutData()[i] ={{i + 1, nullptr}, (int)(i * 7)};
         }
 
         for (size_t i = 0; i < count; ++i) {
-            ht.insert(&nodes[i]);
+            ht.insert(&nodes.mutData()[i]);
         }
 
         STD_INSIST(ht.size() == count);
@@ -364,15 +362,13 @@ STD_TEST_SUITE(HashTable) {
 
         const size_t iterations = 10000;
         const size_t keyRange = 1000;
-        TestNode* nodes = new TestNode[keyRange * 2];
-        STD_DEFER {
-            delete[] nodes;
-        };
+        Vector<TestNode> nodes;
+        nodes.grow(keyRange * 2);
         TestNode* expectedNodes[keyRange];
         bool shouldExist[keyRange];
 
         for (size_t i = 0; i < keyRange * 2; ++i) {
-            nodes[i] = {{0, nullptr}, (int)(i * 17)};
+            nodes.mutData()[i] ={{0, nullptr}, (int)(i * 17)};
         }
 
         for (size_t i = 0; i < keyRange; ++i) {
@@ -388,9 +384,9 @@ STD_TEST_SUITE(HashTable) {
             size_t idx = key - 1;
 
             if (op < 40) {
-                nodes[idx].key = key;
-                auto prev = ht.insert(&nodes[idx]);
-                expectedNodes[idx] = &nodes[idx];
+                nodes.mutData()[idx].key = key;
+                auto prev = ht.insert(&nodes.mutData()[idx]);
+                expectedNodes[idx] = &nodes.mutData()[idx];
                 if (!shouldExist[idx]) {
                     STD_INSIST(!prev);
                     shouldExist[idx] = true;
@@ -416,19 +412,19 @@ STD_TEST_SUITE(HashTable) {
                 if (shouldExist[idx]) {
                     size_t newIdx = (idx + keyRange + iter) % (keyRange * 2);
 
-                    if (nodes[newIdx].key != 0) {
-                        size_t oldIdx = nodes[newIdx].key - 1;
-                        if (shouldExist[oldIdx] && expectedNodes[oldIdx] == &nodes[newIdx]) {
-                            ht.erase(nodes[newIdx].key);
+                    if (nodes.mutData()[newIdx].key != 0) {
+                        size_t oldIdx = nodes.mutData()[newIdx].key - 1;
+                        if (shouldExist[oldIdx] && expectedNodes[oldIdx] == &nodes.mutData()[newIdx]) {
+                            ht.erase(nodes.mutData()[newIdx].key);
                             shouldExist[oldIdx] = false;
                             expectedNodes[oldIdx] = nullptr;
                             expectedSize--;
                         }
                     }
 
-                    nodes[newIdx].key = key;
-                    STD_INSIST(ht.insert(&nodes[newIdx]));
-                    expectedNodes[idx] = &nodes[newIdx];
+                    nodes.mutData()[newIdx].key = key;
+                    STD_INSIST(ht.insert(&nodes.mutData()[newIdx]));
+                    expectedNodes[idx] = &nodes.mutData()[newIdx];
                 }
             }
 
@@ -454,18 +450,16 @@ STD_TEST_SUITE(HashTable) {
         HashTable ht(4);
 
         const size_t maxSize = 2000;
-        TestNode* nodes = new TestNode[maxSize];
-        STD_DEFER {
-            delete[] nodes;
-        };
+        Vector<TestNode> nodes;
+        nodes.grow(maxSize);
 
         for (size_t i = 0; i < maxSize; ++i) {
-            nodes[i] = {{i + 1, nullptr}, (int)i};
+            nodes.mutData()[i] ={{i + 1, nullptr}, (int)i};
         }
 
         for (size_t phase = 0; phase < 10; ++phase) {
             for (size_t i = 0; i < maxSize; ++i) {
-                ht.insert(&nodes[i]);
+                ht.insert(&nodes.mutData()[i]);
             }
 
             STD_INSIST(ht.size() == maxSize);
@@ -489,19 +483,17 @@ STD_TEST_SUITE(HashTable) {
 
         const size_t capacity = ht.capacity();
         const size_t chainLength = 30;
-        TestNode* nodes = new TestNode[chainLength];
-        STD_DEFER {
-            delete[] nodes;
-        };
+        Vector<TestNode> nodes;
+        nodes.grow(chainLength);
 
         for (size_t i = 0; i < chainLength; ++i) {
-            nodes[i] = {{i * capacity, nullptr}, (int)i};
-            ht.insert(&nodes[i]);
+            nodes.mutData()[i] ={{i * capacity, nullptr}, (int)i};
+            ht.insert(&nodes.mutData()[i]);
         }
 
         for (size_t i = 0; i < chainLength; ++i) {
             u64 key = i * capacity;
-            STD_INSIST(ht.find(key) == &nodes[i]);
+            STD_INSIST(ht.find(key) == &nodes.mutData()[i]);
         }
 
         for (size_t i = 0; i < chainLength; i += 3) {
@@ -515,18 +507,18 @@ STD_TEST_SUITE(HashTable) {
             if (i % 3 == 0) {
                 STD_INSIST(result == nullptr);
             } else {
-                STD_INSIST(result == &nodes[i]);
+                STD_INSIST(result == &nodes.mutData()[i]);
             }
         }
 
         for (size_t i = 0; i < chainLength; i += 3) {
             u64 key = i * capacity;
-            ht.insert(&nodes[i]);
+            ht.insert(&nodes.mutData()[i]);
         }
 
         for (size_t i = 0; i < chainLength; ++i) {
             u64 key = i * capacity;
-            STD_INSIST(ht.find(key) == &nodes[i]);
+            STD_INSIST(ht.find(key) == &nodes.mutData()[i]);
         }
     }
 
@@ -536,13 +528,11 @@ STD_TEST_SUITE(HashTable) {
 
         const size_t keyRange = 2000;
         const size_t operations = 20000;
-        TestNode* nodes = new TestNode[keyRange];
-        STD_DEFER {
-            delete[] nodes;
-        };
+        Vector<TestNode> nodes;
+        nodes.grow(keyRange);
 
         for (size_t i = 0; i < keyRange; ++i) {
-            nodes[i] = {{i + 1, nullptr}, (int)i};
+            nodes.mutData()[i] ={{i + 1, nullptr}, (int)i};
         }
 
         for (size_t op = 0; op < operations; ++op) {
@@ -551,7 +541,7 @@ STD_TEST_SUITE(HashTable) {
             size_t idx = key - 1;
 
             if (choice < 50) {
-                ht.insert(&nodes[idx]);
+                ht.insert(&nodes.mutData()[idx]);
             } else if (choice < 80) {
                 ht.find(key);
             } else if (choice < 95) {

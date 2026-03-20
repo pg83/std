@@ -3,7 +3,7 @@
 
 #include <std/tst/ut.h>
 #include <std/lib/buffer.h>
-#include <std/alg/defer.h>
+#include <std/lib/vector.h>
 
 #include <cstring>
 
@@ -45,14 +45,12 @@ STD_TEST_SUITE(InBufBasicRead) {
 
     STD_TEST(LargeRead) {
         const size_t size = 100000;
-        u8* data = new u8[size];
-        STD_DEFER {
-            delete[] data;
-        };
+        Vector<u8> data;
+        data.grow(size);
         for (size_t i = 0; i < size; ++i) {
-            data[i] = (u8)(i % 256);
+            data.mutData()[i] = (u8)(i % 256);
         }
-        MemoryInput slave(data, size);
+        MemoryInput slave(data.data(), size);
         InBuf buf(slave);
         Buffer result;
         const void* chunk;
@@ -127,14 +125,12 @@ STD_TEST_SUITE(InBufZeroCopy) {
 STD_TEST_SUITE(InBufChunkSize) {
     STD_TEST(CustomChunkSize) {
         const size_t totalSize = 2000;
-        u8* data = new u8[totalSize];
-        STD_DEFER {
-            delete[] data;
-        };
+        Vector<u8> data;
+        data.grow(totalSize);
         for (size_t i = 0; i < totalSize; ++i) {
-            data[i] = (u8)(i % 256);
+            data.mutData()[i] = (u8)(i % 256);
         }
-        MemoryInput slave(data, totalSize);
+        MemoryInput slave(data.data(), totalSize);
         InBuf buf(slave, 512);
         Buffer result;
         const void* chunk;
@@ -165,12 +161,10 @@ STD_TEST_SUITE(InBufChunkSize) {
 
     STD_TEST(LargeChunkSize) {
         const size_t testSize = 10000;
-        u8* data = new u8[testSize];
-        STD_DEFER {
-            delete[] data;
-        };
-        memset(data, 'A', testSize);
-        MemoryInput slave(data, testSize);
+        Vector<u8> data;
+        data.grow(testSize);
+        memset(data.mutData(), 'A', testSize);
+        MemoryInput slave(data.data(), testSize);
         InBuf buf(slave, 65536);
         const void* chunk;
         size_t len = buf.next(&chunk);
@@ -299,14 +293,12 @@ STD_TEST_SUITE(InBufBinaryData) {
 
     STD_TEST(BinaryPattern) {
         const size_t size = 1000;
-        u8* data = new u8[size];
-        STD_DEFER {
-            delete[] data;
-        };
+        Vector<u8> data;
+        data.grow(size);
         for (size_t i = 0; i < size; ++i) {
-            data[i] = (u8)(i % 256);
+            data.mutData()[i] = (u8)(i % 256);
         }
-        MemoryInput slave(data, size);
+        MemoryInput slave(data.data(), size);
         InBuf buf(slave);
         Buffer result;
         const void* chunk;

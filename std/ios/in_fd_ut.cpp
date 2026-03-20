@@ -3,7 +3,7 @@
 
 #include <std/sys/fd.h>
 #include <std/tst/ut.h>
-#include <std/alg/defer.h>
+#include <std/lib/vector.h>
 
 #include <sys/uio.h>
 #include <cstring>
@@ -88,24 +88,20 @@ STD_TEST_SUITE(FDInput) {
         FDInput fdInput(readEnd);
 
         const size_t bufSize = 8192;
-        u8* writeBuf = new u8[bufSize];
-        STD_DEFER {
-            delete[] writeBuf;
-        };
+        Vector<u8> writeBuf;
+        writeBuf.grow(bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            writeBuf[i] = (u8)(i % 256);
+            writeBuf.mutData()[i] = (u8)(i % 256);
         }
 
-        fdPipe.write(writeBuf, bufSize);
+        fdPipe.write(writeBuf.data(), bufSize);
         fdPipe.finish();
 
-        u8* readBuf = new u8[bufSize];
-        STD_DEFER {
-            delete[] readBuf;
-        };
+        Vector<u8> readBuf;
+        readBuf.grow(bufSize);
         size_t totalRead = 0;
         while (totalRead < bufSize) {
-            size_t bytesRead = fdInput.read(readBuf + totalRead, bufSize - totalRead);
+            size_t bytesRead = fdInput.read(readBuf.mutData() + totalRead, bufSize - totalRead);
             if (bytesRead == 0) {
                 break;
             }
@@ -114,7 +110,7 @@ STD_TEST_SUITE(FDInput) {
 
         STD_INSIST(totalRead == bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            STD_INSIST(readBuf[i] == writeBuf[i]);
+            STD_INSIST(readBuf.data()[i] == writeBuf.data()[i]);
         }
     }
 

@@ -3,7 +3,7 @@
 
 #include <std/tst/ut.h>
 #include <std/str/builder.h>
-#include <std/alg/defer.h>
+#include <std/lib/vector.h>
 
 #include <cstring>
 
@@ -87,22 +87,18 @@ STD_TEST_SUITE(MemoryInputAsInput) {
 
     STD_TEST(LargeRead) {
         const size_t bufSize = 100000;
-        u8* data = new u8[bufSize];
-        STD_DEFER {
-            delete[] data;
-        };
+        Vector<u8> data;
+        data.grow(bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            data[i] = (u8)(i % 256);
+            data.mutData()[i] = (u8)(i % 256);
         }
-        MemoryInput input(data, bufSize);
-        u8* buffer = new u8[bufSize];
-        STD_DEFER {
-            delete[] buffer;
-        };
-        size_t bytesRead = input.read(buffer, bufSize);
+        MemoryInput input(data.data(), bufSize);
+        Vector<u8> buffer;
+        buffer.grow(bufSize);
+        size_t bytesRead = input.read(buffer.mutData(), bufSize);
         STD_INSIST(bytesRead == bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            STD_INSIST(buffer[i] == (u8)(i % 256));
+            STD_INSIST(buffer.data()[i] == (u8)(i % 256));
         }
     }
 
@@ -224,14 +220,12 @@ STD_TEST_SUITE(MemoryInputAsZeroCopy) {
 
     STD_TEST(LargeNext) {
         const size_t bufSize = 100000;
-        u8* data = new u8[bufSize];
-        STD_DEFER {
-            delete[] data;
-        };
+        Vector<u8> data;
+        data.grow(bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            data[i] = (u8)(i % 256);
+            data.mutData()[i] = (u8)(i % 256);
         }
-        MemoryInput input(data, bufSize);
+        MemoryInput input(data.data(), bufSize);
         const void* chunk;
         size_t available = input.next(&chunk);
         STD_INSIST(available == bufSize);
@@ -329,14 +323,12 @@ STD_TEST_SUITE(MemoryInputWithCopy) {
 
     STD_TEST(CopyLarge) {
         const size_t bufSize = 100000;
-        u8* data = new u8[bufSize];
-        STD_DEFER {
-            delete[] data;
-        };
+        Vector<u8> data;
+        data.grow(bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            data[i] = (u8)(i % 256);
+            data.mutData()[i] = (u8)(i % 256);
         }
-        MemoryInput input(data, bufSize);
+        MemoryInput input(data.data(), bufSize);
         StringBuilder output;
         copy(input, output);
         STD_INSIST(output.length() == bufSize);
@@ -413,14 +405,12 @@ STD_TEST_SUITE(MemoryInputWithCopy) {
         const size_t patternLen = 10;
         const size_t repeats = 500;
         const size_t totalSize = patternLen * repeats;
-        u8* data = new u8[totalSize];
-        STD_DEFER {
-            delete[] data;
-        };
+        Vector<u8> data;
+        data.grow(totalSize);
         for (size_t i = 0; i < totalSize; ++i) {
-            data[i] = (u8)(i % patternLen);
+            data.mutData()[i] = (u8)(i % patternLen);
         }
-        MemoryInput input(data, totalSize);
+        MemoryInput input(data.data(), totalSize);
         StringBuilder output;
         copy(input, output);
         STD_INSIST(output.length() == totalSize);

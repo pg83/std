@@ -10,8 +10,9 @@
 #include <std/tst/ut.h>
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
-#include <std/alg/defer.h>
+#include <std/lib/vector.h>
 #include <std/sys/atomic.h>
+#include <std/mem/obj_pool.h>
 
 #include <errno.h>
 #include <unistd.h>
@@ -468,21 +469,23 @@ STD_TEST_SUITE(CoroPoll) {
 
         struct Pipe {
             ScopedFD r, w;
+            ~Pipe() noexcept {}
         };
 
-        Pipe* pipes = new Pipe[N];
-        STD_DEFER {
-            delete[] pipes;
-        };
+        auto opool = ObjPool::fromMemory();
+        Vector<Pipe*> pipes;
 
         for (int i = 0; i < N; i++) {
-            createPipeFD(pipes[i].r, pipes[i].w);
+            auto* p = opool->make<Pipe>();
+            pipes.pushBack(p);
 
-            pipes[i].r.setNonBlocking();
-            pipes[i].w.setNonBlocking();
+            createPipeFD(p->r, p->w);
 
-            int rfd = pipes[i].r.get();
-            int wfd = pipes[i].w.get();
+            p->r.setNonBlocking();
+            p->w.setNonBlocking();
+
+            int rfd = p->r.get();
+            int wfd = p->w.get();
 
             CoroExecutor* ex = exec.mutPtr();
 

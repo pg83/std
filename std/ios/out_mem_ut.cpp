@@ -4,7 +4,7 @@
 
 #include <std/sys/fd.h>
 #include <std/tst/ut.h>
-#include <std/alg/defer.h>
+#include <std/lib/vector.h>
 
 #include <cstring>
 
@@ -77,23 +77,19 @@ STD_TEST_SUITE(MemoryOutputAsOutput) {
 
     STD_TEST(LargeWrite) {
         const size_t bufSize = 100000;
-        u8* buffer = new u8[bufSize];
-        STD_DEFER {
-            delete[] buffer;
-        };
-        memset(buffer, 0, bufSize);
-        MemoryOutput output(buffer);
-        u8* data = new u8[bufSize];
-        STD_DEFER {
-            delete[] data;
-        };
+        Vector<u8> buffer;
+        buffer.grow(bufSize);
+        memset(buffer.mutData(), 0, bufSize);
+        MemoryOutput output(buffer.mutData());
+        Vector<u8> data;
+        data.grow(bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            data[i] = (u8)(i % 256);
+            data.mutData()[i] = (u8)(i % 256);
         }
-        size_t bytesWritten = output.write(data, bufSize);
+        size_t bytesWritten = output.write(data.data(), bufSize);
         STD_INSIST(bytesWritten == bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            STD_INSIST(buffer[i] == (u8)(i % 256));
+            STD_INSIST(buffer.data()[i] == (u8)(i % 256));
         }
     }
 
@@ -207,21 +203,19 @@ STD_TEST_SUITE(MemoryOutputAsZeroCopy) {
 
     STD_TEST(LargeImbue) {
         const size_t bufSize = 100000;
-        u8* buffer = new u8[bufSize];
-        STD_DEFER {
-            delete[] buffer;
-        };
-        memset(buffer, 0, bufSize);
-        MemoryOutput output(buffer);
+        Vector<u8> buffer;
+        buffer.grow(bufSize);
+        memset(buffer.mutData(), 0, bufSize);
+        MemoryOutput output(buffer.mutData());
         size_t avail;
         void* chunk = output.imbue(&avail);
         for (size_t i = 0; i < bufSize; ++i) {
             ((u8*)chunk)[i] = (u8)(i % 256);
         }
         output.commit(bufSize);
-        STD_INSIST(output.ptr == buffer + bufSize);
+        STD_INSIST(output.ptr == buffer.data() + bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            STD_INSIST(buffer[i] == (u8)(i % 256));
+            STD_INSIST(buffer.data()[i] == (u8)(i % 256));
         }
     }
 
@@ -282,24 +276,20 @@ STD_TEST_SUITE(MemoryOutputWithMemoryInput) {
 
     STD_TEST(CopyLarge) {
         const size_t bufSize = 100000;
-        u8* inputData = new u8[bufSize];
-        STD_DEFER {
-            delete[] inputData;
-        };
+        Vector<u8> inputData;
+        inputData.grow(bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            inputData[i] = (u8)(i % 256);
+            inputData.mutData()[i] = (u8)(i % 256);
         }
-        MemoryInput input(inputData, bufSize);
-        u8* buffer = new u8[bufSize];
-        STD_DEFER {
-            delete[] buffer;
-        };
-        memset(buffer, 0, bufSize);
-        MemoryOutput output(buffer);
+        MemoryInput input(inputData.data(), bufSize);
+        Vector<u8> buffer;
+        buffer.grow(bufSize);
+        memset(buffer.mutData(), 0, bufSize);
+        MemoryOutput output(buffer.mutData());
         copy(input, output);
-        STD_INSIST(output.ptr == buffer + bufSize);
+        STD_INSIST(output.ptr == buffer.data() + bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            STD_INSIST(buffer[i] == (u8)(i % 256));
+            STD_INSIST(buffer.data()[i] == (u8)(i % 256));
         }
     }
 
@@ -354,24 +344,20 @@ STD_TEST_SUITE(MemoryOutputWithMemoryInput) {
         const size_t patternLen = 10;
         const size_t repeats = 500;
         const size_t totalSize = patternLen * repeats;
-        u8* inputData = new u8[totalSize];
-        STD_DEFER {
-            delete[] inputData;
-        };
+        Vector<u8> inputData;
+        inputData.grow(totalSize);
         for (size_t i = 0; i < totalSize; ++i) {
-            inputData[i] = (u8)(i % patternLen);
+            inputData.mutData()[i] = (u8)(i % patternLen);
         }
-        MemoryInput input(inputData, totalSize);
-        u8* buffer = new u8[totalSize];
-        STD_DEFER {
-            delete[] buffer;
-        };
-        memset(buffer, 0, totalSize);
-        MemoryOutput output(buffer);
+        MemoryInput input(inputData.data(), totalSize);
+        Vector<u8> buffer;
+        buffer.grow(totalSize);
+        memset(buffer.mutData(), 0, totalSize);
+        MemoryOutput output(buffer.mutData());
         copy(input, output);
-        STD_INSIST(output.ptr == buffer + totalSize);
+        STD_INSIST(output.ptr == buffer.data() + totalSize);
         for (size_t i = 0; i < totalSize; ++i) {
-            STD_INSIST(buffer[i] == (u8)(i % patternLen));
+            STD_INSIST(buffer.data()[i] == (u8)(i % patternLen));
         }
     }
 
@@ -442,26 +428,22 @@ STD_TEST_SUITE(MemoryOutputWithFDInput) {
         ScopedFD writeEnd;
         createPipeFD(readEnd, writeEnd);
         const size_t bufSize = 8192;
-        u8* testData = new u8[bufSize];
-        STD_DEFER {
-            delete[] testData;
-        };
+        Vector<u8> testData;
+        testData.grow(bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            testData[i] = (u8)(i % 256);
+            testData.mutData()[i] = (u8)(i % 256);
         }
-        writeEnd.write(testData, bufSize);
+        writeEnd.write(testData.data(), bufSize);
         writeEnd.close();
         FDInput fdInput(readEnd);
-        u8* buffer = new u8[bufSize];
-        STD_DEFER {
-            delete[] buffer;
-        };
-        memset(buffer, 0, bufSize);
-        MemoryOutput output(buffer);
+        Vector<u8> buffer;
+        buffer.grow(bufSize);
+        memset(buffer.mutData(), 0, bufSize);
+        MemoryOutput output(buffer.mutData());
         copy(fdInput, output);
-        STD_INSIST(output.ptr == buffer + bufSize);
+        STD_INSIST(output.ptr == buffer.data() + bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            STD_INSIST(buffer[i] == (u8)(i % 256));
+            STD_INSIST(buffer.data()[i] == (u8)(i % 256));
         }
     }
 

@@ -3,7 +3,7 @@
 
 #include <std/tst/ut.h>
 #include <std/lib/buffer.h>
-#include <std/alg/defer.h>
+#include <std/lib/vector.h>
 
 #include <cstring>
 
@@ -40,14 +40,12 @@ STD_TEST_SUITE(InputReadAll) {
 
     STD_TEST(LargeInput) {
         const size_t bufSize = 100000;
-        u8* data = new u8[bufSize];
-        STD_DEFER {
-            delete[] data;
-        };
+        Vector<u8> data;
+        data.grow(bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
-            data[i] = (u8)(i % 256);
+            data.mutData()[i] = (u8)(i % 256);
         }
-        MemoryInput input(data, bufSize);
+        MemoryInput input(data.data(), bufSize);
         Buffer result;
         input.readAll(result);
         STD_INSIST(result.length() == bufSize);
@@ -107,14 +105,12 @@ STD_TEST_SUITE(InputReadAll) {
 
     STD_TEST(LargeChunkBoundary) {
         const size_t size = 65536;
-        u8* data = new u8[size];
-        STD_DEFER {
-            delete[] data;
-        };
+        Vector<u8> data;
+        data.grow(size);
         for (size_t i = 0; i < size; ++i) {
-            data[i] = (u8)(i % 256);
+            data.mutData()[i] = (u8)(i % 256);
         }
-        MemoryInput input(data, size);
+        MemoryInput input(data.data(), size);
         Buffer result;
         input.readAll(result);
         STD_INSIST(result.length() == size);
@@ -136,14 +132,12 @@ STD_TEST_SUITE(InputReadAll) {
         const size_t patternLen = 10;
         const size_t repeats = 1000;
         const size_t totalSize = patternLen * repeats;
-        u8* data = new u8[totalSize];
-        STD_DEFER {
-            delete[] data;
-        };
+        Vector<u8> data;
+        data.grow(totalSize);
         for (size_t i = 0; i < totalSize; ++i) {
-            data[i] = (u8)(i % patternLen);
+            data.mutData()[i] = (u8)(i % patternLen);
         }
-        MemoryInput input(data, totalSize);
+        MemoryInput input(data.data(), totalSize);
         Buffer result;
         input.readAll(result);
         STD_INSIST(result.length() == totalSize);

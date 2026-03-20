@@ -3,7 +3,7 @@
 
 #include <std/tst/ut.h>
 #include <std/lib/buffer.h>
-#include <std/alg/defer.h>
+#include <std/lib/vector.h>
 
 #include <cstring>
 
@@ -97,15 +97,13 @@ STD_TEST_SUITE(ZeroCopyInputReadLine) {
 
     STD_TEST(LongLine) {
         const size_t lineLen = 10000;
-        u8* data = new u8[lineLen + 1];
-        STD_DEFER {
-            delete[] data;
-        };
+        Vector<u8> data;
+        data.grow(lineLen + 1);
         for (size_t i = 0; i < lineLen; ++i) {
-            data[i] = 'A' + (i % 26);
+            data.mutData()[i] = 'A' + (i % 26);
         }
-        data[lineLen] = '\n';
-        MemoryInput input(data, lineLen + 1);
+        data.mutData()[lineLen] = '\n';
+        MemoryInput input(data.data(), lineLen + 1);
         Buffer buf;
         bool hasData = input.readLine(buf);
         STD_INSIST(buf.length() == lineLen);
@@ -238,14 +236,12 @@ STD_TEST_SUITE(ZeroCopyInputReadLine) {
 
     STD_TEST(VeryLongLineWithoutNewline) {
         const size_t lineLen = 50000;
-        u8* data = new u8[lineLen];
-        STD_DEFER {
-            delete[] data;
-        };
+        Vector<u8> data;
+        data.grow(lineLen);
         for (size_t i = 0; i < lineLen; ++i) {
-            data[i] = 'X';
+            data.mutData()[i] = 'X';
         }
-        MemoryInput input(data, lineLen);
+        MemoryInput input(data.data(), lineLen);
         Buffer buf;
         bool hasData = input.readLine(buf);
         STD_INSIST(buf.length() == lineLen);
@@ -492,16 +488,14 @@ STD_TEST_SUITE(ZeroCopyInputReadTo) {
 
     STD_TEST(ReadToLongString) {
         const size_t wordLen = 5000;
-        u8* data = new u8[wordLen + 5];
-        STD_DEFER {
-            delete[] data;
-        };
+        Vector<u8> data;
+        data.grow(wordLen + 5);
         for (size_t i = 0; i < wordLen; ++i) {
-            data[i] = 'A' + (i % 26);
+            data.mutData()[i] = 'A' + (i % 26);
         }
-        data[wordLen] = ' ';
-        memcpy(data + wordLen + 1, "test", 4);
-        MemoryInput input(data, wordLen + 5);
+        data.mutData()[wordLen] = ' ';
+        memcpy(data.mutData() + wordLen + 1, "test", 4);
+        MemoryInput input(data.data(), wordLen + 5);
         Buffer buf1, buf2;
         bool hasData1 = input.readTo(buf1, u8' ');
         bool hasData2 = input.readTo(buf2, u8' ');
