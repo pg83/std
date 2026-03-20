@@ -49,7 +49,6 @@ namespace {
         ScopedPtr<Context> ctx_;
         Context* workerCtx_;
         Runable* runable_;
-        Runable* afterSuspend_;
         u8 priority_;
 
         ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noexcept;
@@ -316,7 +315,6 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noe
     , ctx_{Context::create(ctxBuf, params.stackPtr, params.stackSize, *this)}
     , workerCtx_(nullptr)
     , runable_(params.runable)
-    , afterSuspend_(nullptr)
     , priority_(params.priority)
 {
 }
@@ -344,15 +342,14 @@ void ContImpl::reSchedule() noexcept {
 }
 
 void ContImpl::parkWith(Runable* afterSuspend) noexcept {
-    afterSuspend_ = afterSuspend;
+    runable_ = afterSuspend;
     STD_ASSERT(exec_->currentCont() == this);
     ctx_->switchTo(*workerCtx_);
 }
 
 void ContImpl::run() noexcept {
     if (workerCtx_) {
-        runable_->run();
-        runable_ = nullptr;
+        exchange(runable_, nullptr)->run();
         ctx_->switchTo(*workerCtx_);
 
         return;
@@ -366,7 +363,7 @@ void ContImpl::run() noexcept {
     workerCtx_ = nullptr;
     *tls = nullptr;
 
-    if (auto* as = exchange(afterSuspend_, nullptr); as) {
+    if (auto* as = exchange(runable_, nullptr); as) {
         return as->run();
     }
 
