@@ -349,7 +349,9 @@ STD_TEST_SUITE(CoroRandom) {
     STD_TEST(Successive) {
         auto exec = CoroExecutor::create(4);
 
-        struct Pair { u32 a, b; };
+        struct Pair {
+            u32 a, b;
+        };
 
         auto f = async(exec.mutPtr(), [&] {
             return Pair{exec->random(), exec->random()};
