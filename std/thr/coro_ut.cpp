@@ -38,7 +38,7 @@ STD_TEST_SUITE(CoroExecutor) {
     STD_TEST(SingleYield) {
         auto exec = CoroExecutor::create(4);
 
-        auto f = async(exec.mutPtr(), [&]() {
+        auto f = async(exec.mutPtr(), [&] {
             int counter = 0;
             ++counter;
             exec->yield();
@@ -52,7 +52,7 @@ STD_TEST_SUITE(CoroExecutor) {
     STD_TEST(MultipleYields) {
         auto exec = CoroExecutor::create(4);
 
-        auto f = async(exec.mutPtr(), [&]() {
+        auto f = async(exec.mutPtr(), [&] {
             int counter = 0;
             for (int i = 0; i < 10; ++i) {
                 ++counter;
@@ -69,7 +69,7 @@ STD_TEST_SUITE(CoroExecutor) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 exec->yield();
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             });
@@ -83,8 +83,8 @@ STD_TEST_SUITE(CoroExecutor) {
         auto exec = CoroExecutor::create(4);
         int counter = 0;
 
-        exec->spawn([&]() {
-            exec->spawn([&]() {
+        exec->spawn([&] {
+            exec->spawn([&] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             });
 
@@ -98,7 +98,7 @@ STD_TEST_SUITE(CoroExecutor) {
     STD_TEST(YieldInterleave) {
         auto exec = CoroExecutor::create(4);
 
-        auto fn = [&]() {
+        auto fn = [&] {
             for (int i = 0; i < 5; ++i) {
                 exec->yield();
             }
@@ -113,7 +113,7 @@ STD_TEST_SUITE(CoroExecutor) {
     STD_TEST(MutexBasic) {
         auto exec = CoroExecutor::create(4);
 
-        auto f = async(exec.mutPtr(), [&]() {
+        auto f = async(exec.mutPtr(), [&] {
             Mutex mtx(exec.mutPtr());
 
             mtx.lock();
@@ -130,7 +130,7 @@ STD_TEST_SUITE(CoroExecutor) {
         Mutex mtx(exec.mutPtr());
 
         for (int i = 0; i < 2; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 for (int j = 0; j < 1000; ++j) {
                     LockGuard guard(mtx);
                     ++counter;
@@ -150,7 +150,7 @@ STD_TEST_SUITE(CoroExecutor) {
         Mutex mtx(exec.mutPtr());
 
         for (int i = 0; i < nCoros; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 for (int j = 0; j < nIters; ++j) {
                     LockGuard guard(mtx);
                     ++counter;
@@ -168,14 +168,14 @@ STD_TEST_SUITE(CoroExecutor) {
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard guard(mtx);
             while (value == 0) {
                 cv.wait(mtx);
             }
         });
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard guard(mtx);
             value = 1;
             cv.signal();
@@ -193,7 +193,7 @@ STD_TEST_SUITE(CoroExecutor) {
         CondVar cv(exec.mutPtr());
 
         for (int i = 0; i < N; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 LockGuard guard(mtx);
                 while (value == 0) {
                     cv.wait(mtx);
@@ -201,7 +201,7 @@ STD_TEST_SUITE(CoroExecutor) {
             });
         }
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard guard(mtx);
             value = 1;
             cv.broadcast();
@@ -220,7 +220,7 @@ STD_TEST_SUITE(CoroExecutor) {
         CondVar cv(exec.mutPtr());
 
         // consumer
-        exec->spawn([&]() {
+        exec->spawn([&] {
             for (int i = 0; i < N; ++i) {
                 LockGuard guard(mtx);
                 while (produced == consumed) {
@@ -231,7 +231,7 @@ STD_TEST_SUITE(CoroExecutor) {
         });
 
         // producer
-        exec->spawn([&]() {
+        exec->spawn([&] {
             for (int i = 0; i < N; ++i) {
                 LockGuard guard(mtx);
                 ++produced;
@@ -253,7 +253,7 @@ STD_TEST_SUITE(CoroExecutor) {
         CondVar cv(exec.mutPtr());
 
         for (int i = 0; i < nCoros; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 for (int j = 0; j < nIters; ++j) {
                     LockGuard guard(mtx);
                     while (queue == 0) {
@@ -265,7 +265,7 @@ STD_TEST_SUITE(CoroExecutor) {
             });
         }
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             for (int j = 0; j < nCoros * nIters; ++j) {
                 LockGuard guard(mtx);
                 ++queue;
@@ -291,7 +291,7 @@ STD_TEST_SUITE(CoroExecutor) {
             doW(work);
 
             if (d > 0) {
-                exec->spawnRun(SpawnParams().setStackSize(2000).setRunable([&, d]() {
+                exec->spawnRun(SpawnParams().setStackSize(2000).setRunable([&, d] {
                     self(self, d - 1);
                 }));
             }
@@ -299,7 +299,7 @@ STD_TEST_SUITE(CoroExecutor) {
             exec->yield();
 
             if (d > 0) {
-                exec->spawnRun(SpawnParams().setStackSize(2000).setRunable([&, d]() {
+                exec->spawnRun(SpawnParams().setStackSize(2000).setRunable([&, d] {
                     self(self, d - 1);
                 }));
             }
@@ -307,7 +307,7 @@ STD_TEST_SUITE(CoroExecutor) {
             doW(work);
         };
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             run(run, depth);
         });
 
@@ -319,7 +319,7 @@ STD_TEST_SUITE(CoroRandom) {
     STD_TEST(NonZero) {
         auto exec = CoroExecutor::create(4);
 
-        auto f = async(exec.mutPtr(), [&]() {
+        auto f = async(exec.mutPtr(), [&] {
             return exec->random();
         });
 
@@ -332,7 +332,7 @@ STD_TEST_SUITE(CoroRandom) {
         u32 values[N] = {};
 
         for (int i = 0; i < N; ++i) {
-            exec->spawn([&, i]() {
+            exec->spawn([&, i] {
                 values[i] = exec->random();
             });
         }
@@ -351,7 +351,7 @@ STD_TEST_SUITE(CoroRandom) {
 
         struct Pair { u32 a, b; };
 
-        auto f = async(exec.mutPtr(), [&]() {
+        auto f = async(exec.mutPtr(), [&] {
             return Pair{exec->random(), exec->random()};
         });
 
@@ -368,7 +368,7 @@ STD_TEST_SUITE(CoroPoll) {
         createPipeFD(readEnd, writeEnd);
         int result = 0;
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             u32 ready = exec->poll(readEnd.get(), PollFlag::In);
             STD_INSIST(ready & PollFlag::In);
             char buf;
@@ -376,7 +376,7 @@ STD_TEST_SUITE(CoroPoll) {
             result = buf;
         });
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             char b = 42;
             writeEnd.write(&b, 1);
         });
@@ -390,7 +390,7 @@ STD_TEST_SUITE(CoroPoll) {
         ScopedFD readEnd, writeEnd;
         createPipeFD(readEnd, writeEnd);
 
-        auto f = async(exec.mutPtr(), [&]() {
+        auto f = async(exec.mutPtr(), [&] {
             return exec->poll(readEnd.get(), PollFlag::In, 1000);
         });
 
@@ -410,7 +410,7 @@ STD_TEST_SUITE(CoroPoll) {
         }
 
         for (int i = 0; i < N; i++) {
-            exec->spawn([&, i]() {
+            exec->spawn([&, i] {
                 u32 ready = exec->poll(readEnds[i].get(), PollFlag::In);
                 STD_INSIST(ready & PollFlag::In);
                 char buf;
@@ -420,7 +420,7 @@ STD_TEST_SUITE(CoroPoll) {
         }
 
         // wake in reverse order
-        exec->spawn([&]() {
+        exec->spawn([&] {
             for (int i = N - 1; i >= 0; i--) {
                 char b = 1;
                 writeEnds[i].write(&b, 1);
@@ -442,14 +442,14 @@ STD_TEST_SUITE(CoroPoll) {
         int woken = 0;
 
         for (int i = 0; i < N; i++) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 u32 ready = exec->poll(readEnd.get(), PollFlag::In);
                 STD_INSIST(ready & PollFlag::In);
                 stdAtomicAddAndFetch(&woken, 1, MemoryOrder::Relaxed);
             });
         }
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             char b = 1;
             writeEnd.write(&b, 1);
         });
@@ -483,7 +483,7 @@ STD_TEST_SUITE(CoroPoll) {
 
             CoroExecutor* ex = exec.mutPtr();
 
-            exec->spawnRun(SpawnParams().setStackSize(64 * 1024).setRunable([ex, rfd, TOTAL]() {
+            exec->spawnRun(SpawnParams().setStackSize(64 * 1024).setRunable([ex, rfd, TOTAL] {
                 char buf[16 * 1024];
                 size_t received = 0;
 
@@ -498,7 +498,7 @@ STD_TEST_SUITE(CoroPoll) {
                 }
             }));
 
-            exec->spawnRun(SpawnParams().setStackSize(64 * 1024).setRunable([ex, wfd, TOTAL]() {
+            exec->spawnRun(SpawnParams().setStackSize(64 * 1024).setRunable([ex, wfd, TOTAL] {
                 char buf[16 * 1024] = {};
                 size_t sent = 0;
 
@@ -530,7 +530,7 @@ STD_TEST_SUITE(CoroPoll) {
         Channel ch(&*exec, 0);
         int caught = 0;
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             try {
                 try {
                     throw 42;
@@ -546,7 +546,7 @@ STD_TEST_SUITE(CoroPoll) {
             }
         });
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             void* v;
             ch.dequeue(&v);  // wake A (reschedules it into pool)
             doW(1000000000); // keep this thread busy so the other thread picks up A
@@ -559,7 +559,7 @@ STD_TEST_SUITE(CoroPoll) {
     STD_TEST(SleepZero) {
         auto exec = CoroExecutor::create(4);
 
-        auto f = async(exec.mutPtr(), [&]() {
+        auto f = async(exec.mutPtr(), [&] {
             exec->sleepTout(0);
             return true;
         });
@@ -572,7 +572,7 @@ STD_TEST_SUITE(CoroPoll) {
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 exec->sleepTout(0);
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             });
@@ -585,7 +585,7 @@ STD_TEST_SUITE(CoroPoll) {
     STD_TEST(SleepZeroOrdering) {
         auto exec = CoroExecutor::create(4);
 
-        auto f = async(exec.mutPtr(), [&]() {
+        auto f = async(exec.mutPtr(), [&] {
             exec->sleepTout(0);
             return 2;
         });
@@ -599,7 +599,7 @@ STD_TEST_SUITE(CoroPoll) {
         Mutex mtx(&*exec);
 
         for (int i = 0; i < 1000; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 LockGuard guard(mtx);
                 ++counter;
             });

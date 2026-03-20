@@ -142,7 +142,7 @@ STD_TEST_SUITE(Defer) {
     }
 
     STD_TEST(DeferWithReturnValue) {
-        auto test = []() -> int {
+        auto test = [] -> int {
             int result = 0;
 
             {
@@ -158,7 +158,7 @@ STD_TEST_SUITE(Defer) {
     }
 
     STD_TEST(DeferExecutesBeforeReturn) {
-        auto test = []() -> int {
+        auto test = [] -> int {
             int value = 10;
 
             {

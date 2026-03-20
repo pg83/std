@@ -612,7 +612,7 @@ STD_TEST_SUITE(CoroCondVar) {
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             cv.signal();
             cv.signal();
             cv.signal();
@@ -625,7 +625,7 @@ STD_TEST_SUITE(CoroCondVar) {
         auto exec = CoroExecutor::create(4);
         CondVar cv(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             cv.broadcast();
             cv.broadcast();
             cv.broadcast();
@@ -641,7 +641,7 @@ STD_TEST_SUITE(CoroCondVar) {
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             while (!ready) {
                 cv.wait(mtx);
@@ -649,7 +649,7 @@ STD_TEST_SUITE(CoroCondVar) {
             executed = true;
         });
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             ready = true;
             cv.signal();
@@ -666,7 +666,7 @@ STD_TEST_SUITE(CoroCondVar) {
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             while (!ready) {
                 cv.wait(mtx);
@@ -674,7 +674,7 @@ STD_TEST_SUITE(CoroCondVar) {
             executed = true;
         });
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             ready = true;
             cv.broadcast();
@@ -693,7 +693,7 @@ STD_TEST_SUITE(CoroCondVar) {
         CondVar cv(exec.mutPtr());
 
         for (int i = 0; i < N; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 LockGuard lock(mtx);
                 while (!ready) {
                     cv.wait(mtx);
@@ -702,7 +702,7 @@ STD_TEST_SUITE(CoroCondVar) {
             });
         }
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             ready = true;
             cv.broadcast();
@@ -720,7 +720,7 @@ STD_TEST_SUITE(CoroCondVar) {
         CondVar cv(exec.mutPtr());
 
         for (int i = 0; i < 2; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 LockGuard lock(mtx);
                 while (!ready) {
                     cv.wait(mtx);
@@ -729,7 +729,7 @@ STD_TEST_SUITE(CoroCondVar) {
             });
         }
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             ready = true;
             cv.signal();
@@ -747,7 +747,7 @@ STD_TEST_SUITE(CoroCondVar) {
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             while (!dataReady) {
                 cv.wait(mtx);
@@ -755,7 +755,7 @@ STD_TEST_SUITE(CoroCondVar) {
             STD_INSIST(data == 42);
         });
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             data = 42;
             dataReady = true;
@@ -774,7 +774,7 @@ STD_TEST_SUITE(CoroCondVar) {
         CondVar cv(exec.mutPtr());
 
         for (int i = 0; i < N; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 LockGuard lock(mtx);
                 while (!dataReady) {
                     cv.wait(mtx);
@@ -783,7 +783,7 @@ STD_TEST_SUITE(CoroCondVar) {
             });
         }
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             data = 100;
             dataReady = true;
@@ -802,7 +802,7 @@ STD_TEST_SUITE(CoroCondVar) {
 
         {
             WaitGroup done(1);
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 LockGuard lock(mtx);
                 while (!ready1) {
                     cv.wait(mtx);
@@ -810,7 +810,7 @@ STD_TEST_SUITE(CoroCondVar) {
                 executed1 = true;
                 done.done();
             });
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 LockGuard lock(mtx);
                 ready1 = true;
                 cv.signal();
@@ -822,7 +822,7 @@ STD_TEST_SUITE(CoroCondVar) {
 
         {
             WaitGroup done(1);
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 LockGuard lock(mtx);
                 while (!ready2) {
                     cv.wait(mtx);
@@ -830,7 +830,7 @@ STD_TEST_SUITE(CoroCondVar) {
                 executed2 = true;
                 done.done();
             });
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 LockGuard lock(mtx);
                 ready2 = true;
                 cv.signal();
@@ -848,14 +848,14 @@ STD_TEST_SUITE(CoroCondVar) {
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             while (value != 5) {
                 cv.wait(mtx);
             }
         });
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             for (int i = 1; i <= 5; ++i) {
                 LockGuard lock(mtx);
                 value = i;
@@ -875,7 +875,7 @@ STD_TEST_SUITE(CoroCondVar) {
         CondVar cv1(exec.mutPtr());
         CondVar cv2(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             while (!ready1) {
                 cv1.wait(mtx);
@@ -883,7 +883,7 @@ STD_TEST_SUITE(CoroCondVar) {
             executed1 = true;
         });
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             while (!ready2) {
                 cv2.wait(mtx);
@@ -891,13 +891,13 @@ STD_TEST_SUITE(CoroCondVar) {
             executed2 = true;
         });
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             ready1 = true;
             cv1.signal();
         });
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             ready2 = true;
             cv2.signal();
@@ -916,7 +916,7 @@ STD_TEST_SUITE(CoroCondVar) {
         CondVar cv(exec.mutPtr());
 
         for (int i = 0; i < 2; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 LockGuard lock(mtx);
                 while (!ready) {
                     cv.wait(mtx);
@@ -925,7 +925,7 @@ STD_TEST_SUITE(CoroCondVar) {
             });
         }
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             ready = true;
             cv.broadcast();
@@ -944,7 +944,7 @@ STD_TEST_SUITE(CoroCondVar) {
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             while (!predicate) {
                 cv.wait(mtx);
@@ -952,7 +952,7 @@ STD_TEST_SUITE(CoroCondVar) {
             result = 123;
         });
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             predicate = true;
             cv.signal();
@@ -968,7 +968,7 @@ STD_TEST_SUITE(CoroCondVar) {
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             while (phase != 1) {
                 cv.wait(mtx);
@@ -977,7 +977,7 @@ STD_TEST_SUITE(CoroCondVar) {
             cv.broadcast();
         });
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             while (phase != 2) {
                 cv.wait(mtx);
@@ -986,7 +986,7 @@ STD_TEST_SUITE(CoroCondVar) {
             cv.broadcast();
         });
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             phase = 1;
             cv.broadcast();
@@ -1004,7 +1004,7 @@ STD_TEST_SUITE(CoroCondVar) {
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             for (int i = 0; i < 1000; ++i) {
                 LockGuard lock(mtx);
                 cv.signal();
@@ -1019,7 +1019,7 @@ STD_TEST_SUITE(CoroCondVar) {
         Mutex mtx(exec.mutPtr());
         CondVar cv(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             for (int i = 0; i < 1000; ++i) {
                 LockGuard lock(mtx);
                 cv.broadcast();
@@ -1038,7 +1038,7 @@ STD_TEST_SUITE(CoroCondVar) {
         CondVar cv(exec.mutPtr());
 
         for (int i = 0; i < N; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 LockGuard lock(mtx);
                 while (!ready) {
                     cv.wait(mtx);
@@ -1047,7 +1047,7 @@ STD_TEST_SUITE(CoroCondVar) {
             });
         }
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             LockGuard lock(mtx);
             ready = true;
             cv.broadcast();

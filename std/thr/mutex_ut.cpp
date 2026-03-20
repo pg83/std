@@ -190,7 +190,7 @@ STD_TEST_SUITE(SpinMutex) {
         int counter = 0;
 
         for (int i = 0; i < 4; ++i) {
-            pool->submit([&]() {
+            pool->submit([&] {
                 for (int j = 0; j < 10000; ++j) {
                     LockGuard guard(mtx);
                     ++counter;
@@ -206,7 +206,7 @@ STD_TEST_SUITE(SpinMutex) {
         auto exec = CoroExecutor::create(4);
         Mutex mtx(Mutex::spinLock(exec.mutPtr()));
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             mtx.lock();
             mtx.unlock();
 
@@ -223,7 +223,7 @@ STD_TEST_SUITE(SpinMutex) {
         int counter = 0;
 
         for (int i = 0; i < 4; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 for (int j = 0; j < 10000; ++j) {
                     LockGuard guard(mtx);
                     ++counter;
@@ -241,7 +241,7 @@ STD_TEST_SUITE(CoroMutex) {
         auto exec = CoroExecutor::create(4);
         Mutex mtx(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             mtx.lock();
             mtx.unlock();
 
@@ -257,7 +257,7 @@ STD_TEST_SUITE(CoroMutex) {
         bool result = false;
         Mutex mtx(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             result = mtx.tryLock();
             if (result) {
                 mtx.unlock();
@@ -273,7 +273,7 @@ STD_TEST_SUITE(CoroMutex) {
         bool result = true;
         Mutex mtx(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             mtx.lock();
             result = mtx.tryLock();
             mtx.unlock();
@@ -287,7 +287,7 @@ STD_TEST_SUITE(CoroMutex) {
         auto exec = CoroExecutor::create(4);
         Mutex mtx(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             for (int i = 0; i < 100; ++i) {
                 mtx.lock();
                 mtx.unlock();
@@ -302,7 +302,7 @@ STD_TEST_SUITE(CoroMutex) {
         bool ok = true;
         Mutex mtx(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             for (int i = 0; i < 100; ++i) {
                 if (!mtx.tryLock()) {
                     ok = false;
@@ -321,7 +321,7 @@ STD_TEST_SUITE(CoroMutex) {
         bool result = false;
         Mutex mtx(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             { LockGuard guard(mtx); }
             result = mtx.tryLock();
             if (result) {
@@ -339,7 +339,7 @@ STD_TEST_SUITE(CoroMutex) {
         Mutex mtx1(exec.mutPtr());
         Mutex mtx2(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             {
                 LockGuard g1(mtx1);
                 { LockGuard g2(mtx2); }
@@ -365,7 +365,7 @@ STD_TEST_SUITE(CoroMutex) {
         Mutex mtx2(exec.mutPtr());
         Mutex mtx3(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             mtx1.lock();
             mtx2.lock();
             mtx3.lock();
@@ -382,7 +382,7 @@ STD_TEST_SUITE(CoroMutex) {
         bool result = false;
         Mutex mtx(exec.mutPtr());
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             mtx.lock();
             mtx.unlock();
 

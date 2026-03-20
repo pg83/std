@@ -70,7 +70,7 @@ namespace {
 FutureIfaceRef stl::asyncImpl(ProducerIface* prod) {
     auto fi = makeIntrusivePtr(new FutureImpl(prod));
 
-    detach(*makeRunablePtr([fi]() mutable {
+    detach(*makeRunablePtr([fi] mutable {
         fi->execute();
     }));
 
@@ -80,7 +80,7 @@ FutureIfaceRef stl::asyncImpl(ProducerIface* prod) {
 FutureIfaceRef stl::asyncImpl(ProducerIface* prod, ThreadPool* pool) {
     auto fi = makeIntrusivePtr(new FutureImpl(prod));
 
-    pool->submit([fi]() mutable {
+    pool->submit([fi] mutable {
         fi->execute();
     });
 
@@ -90,7 +90,7 @@ FutureIfaceRef stl::asyncImpl(ProducerIface* prod, ThreadPool* pool) {
 FutureIfaceRef stl::asyncImpl(ProducerIface* prod, CoroExecutor* exec) {
     auto fi = makeIntrusivePtr(exec->me() ? new FutureImpl(exec, prod) : new FutureImpl(prod));
 
-    exec->spawn([fi]() mutable {
+    exec->spawn([fi] mutable {
         fi->execute();
     });
 

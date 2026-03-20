@@ -286,18 +286,18 @@ STD_TEST_SUITE(Async) {
                 return 1;
             }
 
-            auto f1 = async(exec.mutPtr(), [&]() {
+            auto f1 = async(exec.mutPtr(), [&] {
                 return self(self, depth - 1);
             });
 
-            auto f2 = async(exec.mutPtr(), [&]() {
+            auto f2 = async(exec.mutPtr(), [&] {
                 return self(self, depth - 1);
             });
 
             return f1.wait() + f2.wait();
         };
 
-        auto f = async(exec.mutPtr(), [&]() {
+        auto f = async(exec.mutPtr(), [&] {
             return run(run, 10);
         });
 

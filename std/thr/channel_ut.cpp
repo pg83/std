@@ -14,7 +14,7 @@ STD_TEST_SUITE(Channel) {
         Channel ch(exec.mutPtr(), 1);
         void* result = nullptr;
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             ch.enqueue((void*)42);
             ch.dequeue(&result);
         });
@@ -29,7 +29,7 @@ STD_TEST_SUITE(Channel) {
         Channel ch(exec.mutPtr(), cap);
         int count = 0;
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             for (size_t i = 0; i < cap; ++i) {
                 ch.enqueue((void*)(uintptr_t)i);
             }
@@ -53,13 +53,13 @@ STD_TEST_SUITE(Channel) {
         void* received = nullptr;
 
         // sender: will block after first enqueue since cap=1
-        exec->spawn([&]() {
+        exec->spawn([&] {
             ch.enqueue((void*)1);
             ch.enqueue((void*)2); // blocks here
         });
 
         // receiver: drains the channel
-        exec->spawn([&]() {
+        exec->spawn([&] {
             void* v1;
             void* v2;
             ch.dequeue(&v1);
@@ -77,12 +77,12 @@ STD_TEST_SUITE(Channel) {
         void* received = nullptr;
 
         // receiver: blocks waiting for value
-        exec->spawn([&]() {
+        exec->spawn([&] {
             ch.dequeue(&received);
         });
 
         // sender: sends after receiver is waiting
-        exec->spawn([&]() {
+        exec->spawn([&] {
             ch.enqueue((void*)99);
         });
 
@@ -95,7 +95,7 @@ STD_TEST_SUITE(Channel) {
         Channel ch(exec.mutPtr(), 4);
         bool got = true;
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             ch.enqueue((void*)1);
             ch.close();
 
@@ -115,7 +115,7 @@ STD_TEST_SUITE(Channel) {
         int falseCount = 0;
 
         for (int i = 0; i < N; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 void* v;
                 bool ok = ch.dequeue(&v);
                 if (!ok) {
@@ -124,7 +124,7 @@ STD_TEST_SUITE(Channel) {
             });
         }
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             ch.close();
         });
 
@@ -138,14 +138,14 @@ STD_TEST_SUITE(Channel) {
         const int N = 100;
         int sum = 0;
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             for (int i = 0; i < N; ++i) {
                 ch.enqueue((void*)(uintptr_t)(i + 1));
             }
             ch.close();
         });
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             void* v;
             while (ch.dequeue(&v)) {
                 stdAtomicAddAndFetch(&sum, (int)(uintptr_t)v, MemoryOrder::Relaxed);
@@ -167,7 +167,7 @@ STD_TEST_SUITE(Channel) {
         int consumed = 0;
 
         for (int i = 0; i < nProducers; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 for (int j = 0; j < nPerProducer; ++j) {
                     ch.enqueue((void*)(uintptr_t)(j + 1));
                 }
@@ -176,7 +176,7 @@ STD_TEST_SUITE(Channel) {
         }
 
         for (int i = 0; i < nConsumers; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 void* v;
                 while (ch.dequeue(&v)) {
                     stdAtomicAddAndFetch(&consumed, 1, MemoryOrder::Relaxed);
@@ -185,7 +185,7 @@ STD_TEST_SUITE(Channel) {
         }
 
         prodDone.wait();
-        exec->spawn([&]() {
+        exec->spawn([&] {
             ch.close();
         });
 
@@ -197,7 +197,7 @@ STD_TEST_SUITE(Channel) {
         auto exec = CoroExecutor::create(4);
         Channel ch(exec.mutPtr(), 2);
 
-        exec->spawn([&]() {
+        exec->spawn([&] {
             void* v;
 
             STD_INSIST(!ch.tryDequeue(&v));
@@ -229,7 +229,7 @@ STD_TEST_SUITE(Channel) {
         int consumed = 0;
 
         for (int i = 0; i < nProducers; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 for (int j = 0; j < nPerProducer; ++j) {
                     ch.enqueue((void*)(uintptr_t)(j + 1));
                 }
@@ -238,7 +238,7 @@ STD_TEST_SUITE(Channel) {
         }
 
         for (int i = 0; i < nConsumers; ++i) {
-            exec->spawn([&]() {
+            exec->spawn([&] {
                 void* v;
                 while (ch.dequeue(&v)) {
                     stdAtomicAddAndFetch(&consumed, 1, MemoryOrder::Relaxed);
@@ -247,7 +247,7 @@ STD_TEST_SUITE(Channel) {
         }
 
         prodDone.wait();
-        exec->spawn([&]() {
+        exec->spawn([&] {
             ch.close();
         });
 

@@ -104,7 +104,7 @@ void ReactorState::processRequest(PollRequest* req) {
     queueMutex_.lock();
     queue_.insert(req);
 
-    req->parkWith(makeRunable([this, needsWakeup = (queue_.min() == req)]() {
+    req->parkWith(makeRunable([this, needsWakeup = (queue_.min() == req)] {
         queueMutex_.unlock();
 
         if (needsWakeup) {
@@ -134,7 +134,7 @@ void ReactorState::drainWakeup() noexcept {
 void ReactorState::drainQueue() {
     DeadlineTreap local;
 
-    LockGuard(queueMutex_).run([this, &local]() {
+    LockGuard(queueMutex_).run([this, &local] {
         queue_.xchg(local);
     });
 

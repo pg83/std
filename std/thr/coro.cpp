@@ -199,7 +199,7 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
         reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr()));
     }
 
-    spawnRun(SpawnParams().setSystem(true).setRunable([this]() {
+    spawnRun(SpawnParams().setSystem(true).setRunable([this] {
         spawnSystem();
     }));
 }
@@ -227,7 +227,7 @@ void CoroExecutorImpl::spawnSystem() noexcept {
                 .setStack(opool_.mutPtr(), 16 * 1024)
                 .setPriority(2)
                 .setSystem(true)
-                .setRunable([this, r]() {
+                .setRunable([this, r] {
                     r->run();
                     done_.done();
                 }));
@@ -240,7 +240,7 @@ void CoroExecutorImpl::spawnSystem() noexcept {
             .setStack(opool_.mutPtr(), 16 * 1024)
             .setPriority(1)
             .setSystem(true)
-            .setRunable([this]() {
+            .setRunable([this] {
                 submitterLoop();
 
                 for (auto* r : reactors_) {
@@ -254,7 +254,7 @@ void CoroExecutorImpl::spawnSystem() noexcept {
 CoroExecutorImpl::~CoroExecutorImpl() noexcept {
     join();
 
-    spawn([&]() {
+    spawn([&] {
         done_.wait();
     });
 
@@ -468,7 +468,7 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
         }
 
         auto start() {
-            return exec_->spawn([ref = makeIntrusivePtr(this)]() mutable {
+            return exec_->spawn([ref = makeIntrusivePtr(this)] mutable {
                 ref->run();
             });
         }

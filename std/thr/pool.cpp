@@ -416,7 +416,7 @@ void WorkStealingThreadPool::Worker::loop() {
 
             stdAtomicSubAndFetch(&pool_->taskCount_, 1, MemoryOrder::Relaxed);
 
-            UnlockGuard(mutex_).run([task]() {
+            UnlockGuard(mutex_).run([task] {
                 task->run();
             });
 
@@ -427,7 +427,7 @@ void WorkStealingThreadPool::Worker::loop() {
 
         IntrusiveList stolen;
 
-        UnlockGuard(mutex_).run([this, &stolen]() {
+        UnlockGuard(mutex_).run([this, &stolen] {
             trySteal(&stolen);
         });
 
