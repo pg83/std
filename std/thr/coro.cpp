@@ -14,8 +14,6 @@
 #include "cond_var_iface.h"
 #include "semaphore_iface.h"
 
-#include "spin_lock.h"
-
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
 #include <std/rng/pcg.h>
@@ -702,7 +700,7 @@ ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
 SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
     struct CoroSemaphoreImpl: public SemaphoreIface, public Runable {
         CoroExecutorImpl* exec_;
-        SpinLock lock_;
+        Mutex lock_;
         IntrusiveList waiters_;
         size_t count_;
 
@@ -710,7 +708,6 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
             : exec_(exec)
             , count_(initial)
         {
-            lock_.exec_ = exec;
         }
 
         void run() override {
