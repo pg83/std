@@ -7,6 +7,7 @@
 
 #include <std/tst/ut.h>
 #include <std/sys/fd.h>
+#include <std/sys/crt.h>
 #include <std/alg/defer.h>
 #include <std/sys/atomic.h>
 
@@ -561,6 +562,48 @@ STD_TEST_SUITE(CoroPoll) {
 
         exec->join();
         STD_INSIST(caught == 1);
+    }
+
+    STD_TEST(SleepZero) {
+        auto exec = CoroExecutor::create(4);
+        bool done = false;
+
+        exec->spawn([&]() {
+            exec->sleepTout(0);
+            done = true;
+        });
+
+        exec->join();
+        STD_INSIST(done == true);
+    }
+
+    STD_TEST(SleepZeroMultiple) {
+        auto exec = CoroExecutor::create(4);
+        int counter = 0;
+
+        for (int i = 0; i < 100; ++i) {
+            exec->spawn([&]() {
+                exec->sleepTout(0);
+                stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+            });
+        }
+
+        exec->join();
+        STD_INSIST(counter == 100);
+    }
+
+    STD_TEST(SleepZeroOrdering) {
+        auto exec = CoroExecutor::create(4);
+        int value = 0;
+
+        exec->spawn([&]() {
+            value = 1;
+            exec->sleepTout(0);
+            value = 2;
+        });
+
+        exec->join();
+        STD_INSIST(value == 2);
     }
 
     STD_TEST(SpawnFromMain) {

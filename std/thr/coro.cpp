@@ -776,6 +776,18 @@ u64 CoroExecutor::currentCoroId() const noexcept {
     return me()->id();
 }
 
+void CoroExecutor::sleep(u64 deadlineUs) {
+    poll(-1, 0, deadlineUs);
+}
+
+void CoroExecutor::sleep() {
+    sleep(UINT64_MAX);
+}
+
+void CoroExecutor::sleepTout(u64 timeoutUs) {
+    sleep(monotonicNowUs() + timeoutUs);
+}
+
 u32 CoroExecutor::poll(int fd, u32 flags) {
     for (;;) {
         if (auto res = poll(fd, flags, UINT64_MAX); res) {

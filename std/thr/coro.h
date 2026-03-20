@@ -60,6 +60,9 @@ namespace stl {
         virtual SemaphoreIface* createSemaphore(size_t initial) = 0;
 
         u32 poll(int fd, u32 flags);
+        void sleep(u64 deadlineUs);
+        void sleep();
+        void sleepTout(u64 timeoutUs);
         u64 currentCoroId() const noexcept;
 
         template <typename F>

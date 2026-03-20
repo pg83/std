@@ -55,6 +55,7 @@ namespace {
         ThreadPool* pool;
         PollerIface* poller;
         DeadlineTreap timers;
+        DeadlineTreap sleepers;
         IntMap<FdEntry> fdMap_;
         Mutex queueMutex_;
         DeadlineTreap queue_;
@@ -143,12 +144,16 @@ void ReactorState::drainQueue() {
         req->left = nullptr;
         req->right = nullptr;
 
-        timers.insert(req);
+        if (req->fd == -1) {
+            sleepers.insert(req);
+        } else {
+            timers.insert(req);
 
-        auto& entry = fdMap_[req->fd];
+            auto& entry = fdMap_[req->fd];
 
-        entry.pushBack(req);
-        poller->arm(req->fd, entry.flags(), (void*)(uintptr_t)(req->fd + 1));
+            entry.pushBack(req);
+            poller->arm(req->fd, entry.flags(), (void*)(uintptr_t)(req->fd + 1));
+        }
     });
 }
 
@@ -185,7 +190,7 @@ void ReactorState::run() noexcept {
                 drainWakeup();
                 poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
             }
-        }, timers.earliest());
+        }, min(timers.earliest(), sleepers.earliest()));
 
         auto now = monotonicNowUs();
 
@@ -197,6 +202,15 @@ void ReactorState::run() noexcept {
             timers.remove(req);
             req->remove();
             rearmOrDisarm(req->fd);
+            req->complete(0);
+        }
+
+        while (auto* req = (PollRequest*)sleepers.min()) {
+            if (req->deadline > now) {
+                break;
+            }
+
+            sleepers.remove(req);
             req->complete(0);
         }
     }
