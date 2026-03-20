@@ -31,13 +31,6 @@ namespace {
             });
         }
 
-        exec->spawn([ch = chArr[0], nMessages]() {
-            for (int i = 1; i <= nMessages; ++i) {
-                ch->enqueue((void*)(uintptr_t)i);
-            }
-            ch->close();
-        });
-
         i64 sum = 0;
 
         exec->spawn([ch = chArr[nStages], &sum]() {
@@ -45,6 +38,13 @@ namespace {
             while (ch->dequeue(&v)) {
                 sum += (i64)(uintptr_t)v;
             }
+        });
+
+        exec->spawn([ch = chArr[0], nMessages]() {
+            for (int i = 1; i <= nMessages; ++i) {
+                ch->enqueue((void*)(uintptr_t)i);
+            }
+            ch->close();
         });
 
         exec->join();
