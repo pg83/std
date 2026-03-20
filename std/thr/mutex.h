@@ -10,8 +10,8 @@ namespace stl {
     public:
         Mutex();
         Mutex(bool lock);
-        Mutex(SemaphoreIface* iface);
         Mutex(CoroExecutor* exec);
+        Mutex(SemaphoreIface* iface);
 
         static SemaphoreIface* spinLock(CoroExecutor*);
 
