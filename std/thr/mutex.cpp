@@ -13,7 +13,7 @@
 using namespace stl;
 
 namespace {
-    struct SpinSemImpl: public SemaphoreIface {
+    struct alignas(64) SpinSemImpl: public SemaphoreIface {
         CoroExecutor* exec_;
         char flag_ = 0;
 
@@ -31,8 +31,14 @@ namespace {
         }
 
         void wait() noexcept override {
-            while (__atomic_test_and_set(&flag_, __ATOMIC_ACQUIRE)) {
-                spin();
+            for (;;) {
+                if (!__atomic_test_and_set(&flag_, __ATOMIC_ACQUIRE)) {
+                    return;
+                }
+
+                while (__atomic_load_n(&flag_, __ATOMIC_RELAXED)) {
+                    spin();
+                }
             }
         }
 
