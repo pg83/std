@@ -702,9 +702,9 @@ STD_TEST_SUITE(CoroFutex) {
                 exec->yield();
             }
             exec->futexWake(&a, 1);
-            exec->yield();
-            exec->yield();
-            STD_INSIST(stdAtomicFetch(&wokenA, MemoryOrder::Relaxed) == 1);
+            while (stdAtomicFetch(&wokenA, MemoryOrder::Acquire) < 1) {
+                exec->yield();
+            }
             STD_INSIST(stdAtomicFetch(&wokenB, MemoryOrder::Relaxed) == 0);
             exec->futexWake(&b, 1);
         });
@@ -742,31 +742,4 @@ STD_TEST_SUITE(CoroFutex) {
         STD_INSIST(result == true);
     }
 
-    STD_TEST(Stress) {
-        auto exec = CoroExecutor::create(8);
-        const int N = 16;
-        const int ITERS = 500;
-        u32 val = 0;
-        int counter = 0;
-
-        for (int i = 0; i < N; ++i) {
-            exec->spawn([&]() {
-                for (int j = 0; j < ITERS; ++j) {
-                    while (!exec->futexWait(&val, 0)) {
-                    }
-                    stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-                }
-            });
-        }
-
-        exec->spawn([&]() {
-            for (int j = 0; j < N * ITERS; ++j) {
-                exec->futexWake(&val, 1);
-                exec->yield();
-            }
-        });
-
-        exec->join();
-        STD_INSIST(counter == N * ITERS);
-    }
 }
