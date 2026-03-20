@@ -10,6 +10,48 @@
 
 using namespace stl;
 
+namespace {
+    void runPipeline(int nStages, int nMessages) {
+        auto exec = CoroExecutor::create(4);
+        auto opool = ObjPool::fromMemory();
+
+        Vector<Channel*> chArr;
+
+        for (int i = 0; i <= nStages; ++i) {
+            chArr.pushBack(opool->make<Channel>(exec.mutPtr(), (size_t)5));
+        }
+
+        for (int i = 0; i < nStages; ++i) {
+            exec->spawn([in = chArr[i], out = chArr[i + 1]]() {
+                void* v;
+                while (in->dequeue(&v)) {
+                    out->enqueue(v);
+                }
+                out->close();
+            });
+        }
+
+        exec->spawn([ch = chArr[0], nMessages]() {
+            for (int i = 1; i <= nMessages; ++i) {
+                ch->enqueue((void*)(uintptr_t)i);
+            }
+            ch->close();
+        });
+
+        i64 sum = 0;
+
+        exec->spawn([ch = chArr[nStages], &sum]() {
+            void* v;
+            while (ch->dequeue(&v)) {
+                sum += (i64)(uintptr_t)v;
+            }
+        });
+
+        exec->join();
+        STD_INSIST(sum == (i64)nMessages * (nMessages + 1) / 2);
+    }
+}
+
 STD_TEST_SUITE(Channel) {
     STD_TEST(Basic) {
         auto exec = CoroExecutor::create(4);
@@ -221,45 +263,11 @@ STD_TEST_SUITE(Channel) {
     }
 
     STD_TEST(Pipeline) {
-        auto exec = CoroExecutor::create(4);
-        auto opool = ObjPool::fromMemory();
-        const int nStages = 50;
-        const int nMessages = 500;
+        runPipeline(50, 500);
+    }
 
-        Vector<Channel*> chArr;
-
-        for (int i = 0; i <= nStages; ++i) {
-            chArr.pushBack(opool->make<Channel>(exec.mutPtr(), (size_t)5));
-        }
-
-        for (int i = 0; i < nStages; ++i) {
-            exec->spawn([in = chArr[i], out = chArr[i + 1]]() {
-                void* v;
-                while (in->dequeue(&v)) {
-                    out->enqueue(v);
-                }
-                out->close();
-            });
-        }
-
-        exec->spawn([ch = chArr[0], nMessages]() {
-            for (int i = 1; i <= nMessages; ++i) {
-                ch->enqueue((void*)(uintptr_t)i);
-            }
-            ch->close();
-        });
-
-        i64 sum = 0;
-
-        exec->spawn([ch = chArr[nStages], &sum]() {
-            void* v;
-            while (ch->dequeue(&v)) {
-                sum += (i64)(uintptr_t)v;
-            }
-        });
-
-        exec->join();
-        STD_INSIST(sum == (i64)nMessages * (nMessages + 1) / 2);
+    STD_TEST(_Pipeline) {
+        runPipeline(500, 50000);
     }
 
     STD_TEST(Stress) {
