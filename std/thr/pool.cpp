@@ -218,6 +218,7 @@ namespace {
             void loop();
             void join() noexcept;
             void sleep() noexcept;
+            void steal() noexcept;
             void run() noexcept override;
             void initStealOrder() noexcept;
             void push(Task* task) noexcept;
@@ -238,12 +239,30 @@ namespace {
         ~WorkStealingThreadPool() noexcept;
 
         void join() noexcept override;
+        void steal() noexcept override;
         Worker* localWorker() noexcept;
         Worker* dequeueWorker() noexcept;
         PCG32& random() noexcept override;
         void** tls(u64 key) noexcept override;
         void submitTask(Task* task) noexcept override;
     };
+}
+
+void WorkStealingThreadPool::steal() noexcept {
+    if (auto w = localWorker(); w) {
+        w->steal();
+    }
+}
+
+void WorkStealingThreadPool::Worker::steal() noexcept {
+    IntrusiveList stolen;
+
+    trySteal(&stolen);
+
+    LockGuard(mutex_).run([&] {
+        local_.pushBack(stolen);
+        flushLocal();
+    });
 }
 
 void WorkStealingThreadPool::Worker::pushThrLocal(Task* task) noexcept {
@@ -467,4 +486,7 @@ u64 ThreadPool::registerTlsKey() noexcept {
     static u64 tlsKeyCounter = 0;
 
     return stdAtomicAddAndFetch(&tlsKeyCounter, 1, MemoryOrder::Relaxed);
+}
+
+void ThreadPool::steal() noexcept {
 }
