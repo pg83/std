@@ -267,7 +267,7 @@ STD_TEST_SUITE(Channel) {
     }
 
     STD_TEST(_Pipeline) {
-        runPipeline(500, 50000);
+        runPipeline(1000, 100000);
     }
 
     STD_TEST(Stress) {

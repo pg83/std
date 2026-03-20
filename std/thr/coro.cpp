@@ -707,7 +707,7 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
 
         CoroSemaphoreImpl(CoroExecutorImpl* exec, size_t initial) noexcept
             : exec_(exec)
-            //, lock_(Mutex::spinLock(exec))
+            , lock_(Mutex::spinLock(exec))
             , count_(initial)
         {
         }

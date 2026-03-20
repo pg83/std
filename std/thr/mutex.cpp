@@ -25,6 +25,7 @@ namespace {
         void spin() noexcept {
             if (exec_ && exec_->me()) {
                 exec_->yield();
+                // sched_yield();
             } else {
                 sched_yield();
             }
