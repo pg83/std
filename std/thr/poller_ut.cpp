@@ -18,7 +18,9 @@ STD_TEST_SUITE(Poller) {
         auto pool = ObjPool::fromMemory();
         auto* p = PollerIface::create(pool.mutPtr());
         u32 n = 0;
-        p->wait([&](PollEvent*) { ++n; }, 1000);
+        p->wait([&](PollEvent*) {
+            ++n;
+        }, 1000);
         STD_INSIST(n == 0);
     }
 
@@ -92,7 +94,9 @@ STD_TEST_SUITE(Poller) {
         w.write(&c, 1);
 
         u32 n = 0;
-        p->wait([&](PollEvent*) { ++n; }, 1000);
+        p->wait([&](PollEvent*) {
+            ++n;
+        }, 1000);
 
         STD_INSIST(n == 0);
     }
@@ -109,12 +113,16 @@ STD_TEST_SUITE(Poller) {
         w.write(&c, 1);
 
         u32 n = 0;
-        p->wait([&](PollEvent*) { ++n; }, 100000);
+        p->wait([&](PollEvent*) {
+            ++n;
+        }, 100000);
         STD_INSIST(n == 1);
 
         // after ONESHOT fires, second wait should time out
         n = 0;
-        p->wait([&](PollEvent*) { ++n; }, 1000);
+        p->wait([&](PollEvent*) {
+            ++n;
+        }, 1000);
         STD_INSIST(n == 0);
     }
 
@@ -154,7 +162,9 @@ STD_TEST_SUITE(Poller) {
         p->arm(w2.get(), PollFlag::Out, (void*)2);
 
         u32 n = 0;
-        p->wait([&](PollEvent*) { ++n; }, 100000);
+        p->wait([&](PollEvent*) {
+            ++n;
+        }, 100000);
 
         STD_INSIST(n == 2);
     }

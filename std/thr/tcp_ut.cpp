@@ -27,7 +27,9 @@ STD_TEST_SUITE(TcpSocket) {
 
         TcpSocket srv(exec.mutPtr());
         STD_INSIST(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
-        STD_DEFER { srv.close(); };
+        STD_DEFER {
+            srv.close();
+        };
 
         int opt = 1;
         ::setsockopt(srv.fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
@@ -41,7 +43,9 @@ STD_TEST_SUITE(TcpSocket) {
         exec->spawn([&] {
             TcpSocket client;
             STD_INSIST(srv.acceptInf(client, nullptr, nullptr) == 0);
-            STD_DEFER { client.close(); };
+            STD_DEFER {
+                client.close();
+            };
 
             char buf[32] = {};
             size_t n = client.readInf(buf, sizeof(buf));
@@ -54,7 +58,9 @@ STD_TEST_SUITE(TcpSocket) {
             TcpSocket cli(exec.mutPtr());
             auto caddr = makeAddr(17654);
             STD_INSIST(cli.connectInf((sockaddr*)&caddr, sizeof(caddr)) == 0);
-            STD_DEFER { cli.close(); };
+            STD_DEFER {
+                cli.close();
+            };
 
             const char* msg = "hello";
             size_t msgLen = strlen(msg);
@@ -75,7 +81,9 @@ STD_TEST_SUITE(TcpSocket) {
 
         TcpSocket srv(exec.mutPtr());
         STD_INSIST(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
-        STD_DEFER { srv.close(); };
+        STD_DEFER {
+            srv.close();
+        };
 
         int opt = 1;
         ::setsockopt(srv.fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));

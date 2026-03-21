@@ -323,7 +323,9 @@ STD_TEST_SUITE(CoroMutex) {
         Mutex mtx(exec.mutPtr());
 
         exec->spawn([&] {
-            { LockGuard guard(mtx); }
+            {
+                LockGuard guard(mtx);
+            }
             result = mtx.tryLock();
             if (result) {
                 mtx.unlock();
@@ -343,7 +345,9 @@ STD_TEST_SUITE(CoroMutex) {
         exec->spawn([&] {
             {
                 LockGuard g1(mtx1);
-                { LockGuard g2(mtx2); }
+                {
+                    LockGuard g2(mtx2);
+                }
             }
             r1 = mtx1.tryLock();
             r2 = mtx2.tryLock();

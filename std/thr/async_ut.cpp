@@ -31,10 +31,18 @@ STD_TEST_SUITE(ThreadAsync) {
     }
 
     STD_TEST(Parallel) {
-        auto f1 = async([] { return 1; });
-        auto f2 = async([] { return 2; });
-        auto f3 = async([] { return 3; });
-        auto f4 = async([] { return 4; });
+        auto f1 = async([] {
+            return 1;
+        });
+        auto f2 = async([] {
+            return 2;
+        });
+        auto f3 = async([] {
+            return 3;
+        });
+        auto f4 = async([] {
+            return 4;
+        });
 
         int sum = f1.wait() + f2.wait() + f3.wait() + f4.wait();
         STD_INSIST(sum == 10);
@@ -90,10 +98,18 @@ STD_TEST_SUITE(PoolAsync) {
         auto opool = ObjPool::fromMemory();
         auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
 
-        auto f1 = async(pool, [] { return 1; });
-        auto f2 = async(pool, [] { return 2; });
-        auto f3 = async(pool, [] { return 3; });
-        auto f4 = async(pool, [] { return 4; });
+        auto f1 = async(pool, [] {
+            return 1;
+        });
+        auto f2 = async(pool, [] {
+            return 2;
+        });
+        auto f3 = async(pool, [] {
+            return 3;
+        });
+        auto f4 = async(pool, [] {
+            return 4;
+        });
 
         int sum = f1.wait() + f2.wait() + f3.wait() + f4.wait();
         STD_INSIST(sum == 10);
@@ -150,9 +166,15 @@ STD_TEST_SUITE(AsyncLifetime) {
         auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
 
         {
-            auto f1 = async(pool, [&] { return Tracked(1, &alive); });
-            auto f2 = async(pool, [&] { return Tracked(2, &alive); });
-            auto f3 = async(pool, [&] { return Tracked(3, &alive); });
+            auto f1 = async(pool, [&] {
+                return Tracked(1, &alive);
+            });
+            auto f2 = async(pool, [&] {
+                return Tracked(2, &alive);
+            });
+            auto f3 = async(pool, [&] {
+                return Tracked(3, &alive);
+            });
 
             STD_INSIST(f1.wait().value == 1);
             STD_INSIST(f2.wait().value == 2);
@@ -185,8 +207,12 @@ STD_TEST_SUITE(AsyncLifetime) {
         auto exec = CoroExecutor::create(4);
 
         exec->spawn([&] {
-            auto f1 = async(exec.mutPtr(), [&] { return Tracked(10, &alive); });
-            auto f2 = async(exec.mutPtr(), [&] { return Tracked(20, &alive); });
+            auto f1 = async(exec.mutPtr(), [&] {
+                return Tracked(10, &alive);
+            });
+            auto f2 = async(exec.mutPtr(), [&] {
+                return Tracked(20, &alive);
+            });
 
             STD_INSIST(f1.wait().value == 10);
             STD_INSIST(f2.wait().value == 20);
@@ -251,10 +277,18 @@ STD_TEST_SUITE(Async) {
         auto exec = CoroExecutor::create(4);
 
         exec->spawn([&] {
-            auto f1 = async(exec.mutPtr(), [] { return 1; });
-            auto f2 = async(exec.mutPtr(), [] { return 2; });
-            auto f3 = async(exec.mutPtr(), [] { return 3; });
-            auto f4 = async(exec.mutPtr(), [] { return 4; });
+            auto f1 = async(exec.mutPtr(), [] {
+                return 1;
+            });
+            auto f2 = async(exec.mutPtr(), [] {
+                return 2;
+            });
+            auto f3 = async(exec.mutPtr(), [] {
+                return 3;
+            });
+            auto f4 = async(exec.mutPtr(), [] {
+                return 4;
+            });
 
             int sum = f1.wait() + f2.wait() + f3.wait() + f4.wait();
             STD_INSIST(sum == 10);
@@ -267,10 +301,18 @@ STD_TEST_SUITE(Async) {
         auto exec = CoroExecutor::create(4);
 
         auto res = async(exec.mutPtr(), [&] {
-                       auto f1 = async(exec.mutPtr(), [] { return 1; });
-                       auto f2 = async(exec.mutPtr(), [] { return 2; });
-                       auto f3 = async(exec.mutPtr(), [] { return 3; });
-                       auto f4 = async(exec.mutPtr(), [] { return 4; });
+                       auto f1 = async(exec.mutPtr(), [] {
+                           return 1;
+                       });
+                       auto f2 = async(exec.mutPtr(), [] {
+                           return 2;
+                       });
+                       auto f3 = async(exec.mutPtr(), [] {
+                           return 3;
+                       });
+                       auto f4 = async(exec.mutPtr(), [] {
+                           return 4;
+                       });
 
                        return f1.wait() + f2.wait() + f3.wait() + f4.wait();
                    }).wait();
