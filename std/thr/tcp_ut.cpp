@@ -3,6 +3,7 @@
 
 #include <std/tst/ut.h>
 #include <std/dbg/insist.h>
+#include <std/alg/defer.h>
 
 #include <string.h>
 #include <netinet/in.h>
@@ -24,9 +25,9 @@ STD_TEST_SUITE(TcpSocket) {
     STD_TEST(ConnectAcceptEcho) {
         auto exec = CoroExecutor::create(4);
 
-        // create listening socket manually (no coroutine needed)
         TcpSocket srv(exec.mutPtr());
         STD_INSIST(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
+        STD_DEFER { srv.close(); };
 
         int opt = 1;
         ::setsockopt(srv.fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
@@ -37,24 +38,23 @@ STD_TEST_SUITE(TcpSocket) {
 
         char recvBuf[32] = {};
 
-        // server coroutine: accept one connection and echo back
         exec->spawn([&] {
             TcpSocket client;
             STD_INSIST(srv.acceptInf(client, nullptr, nullptr) == 0);
+            STD_DEFER { client.close(); };
 
             char buf[32] = {};
             size_t n = client.readInf(buf, sizeof(buf));
             STD_INSIST(n > 0);
             size_t w = client.writeInf(buf, n);
             STD_INSIST(w == n);
-            client.close();
         });
 
-        // client coroutine: connect, write, read echo
         exec->spawn([&] {
             TcpSocket cli(exec.mutPtr());
             auto caddr = makeAddr(17654);
             STD_INSIST(cli.connectInf((sockaddr*)&caddr, sizeof(caddr)) == 0);
+            STD_DEFER { cli.close(); };
 
             const char* msg = "hello";
             size_t msgLen = strlen(msg);
@@ -63,11 +63,9 @@ STD_TEST_SUITE(TcpSocket) {
 
             size_t n = cli.readInf(recvBuf, sizeof(recvBuf));
             STD_INSIST(n == msgLen);
-            cli.close();
         });
 
         exec->join();
-        srv.close();
 
         STD_INSIST(memcmp(recvBuf, "hello", 5) == 0);
     }
@@ -77,6 +75,7 @@ STD_TEST_SUITE(TcpSocket) {
 
         TcpSocket srv(exec.mutPtr());
         STD_INSIST(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
+        STD_DEFER { srv.close(); };
 
         int opt = 1;
         ::setsockopt(srv.fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
@@ -87,14 +86,11 @@ STD_TEST_SUITE(TcpSocket) {
 
         auto f = async(exec.mutPtr(), [&] {
             TcpSocket client;
-            // 1ms timeout — no one will connect
             return srv.acceptTout(client, nullptr, nullptr, 1000);
         });
 
-        // poll returns 0 on timeout, accept4 will then fail with EAGAIN → -EAGAIN
         STD_INSIST(f.wait() != 0);
 
         exec->join();
-        srv.close();
     }
 }
