@@ -94,7 +94,7 @@ STD_TEST_SUITE(TcpSocket) {
 
         auto f = async(exec.mutPtr(), [&] {
             TcpSocket client;
-            return srv.acceptTout(client, nullptr, nullptr, 1000);
+            return srv.acceptTout(client, nullptr, nullptr, 1);
         });
 
         STD_INSIST(f.wait() != 0);
