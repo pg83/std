@@ -1,0 +1,153 @@
+#include "tcp.h"
+#include "poller.h"
+
+#include <std/sys/crt.h>
+
+#include <errno.h>
+#include <unistd.h>
+#include <sys/socket.h>
+
+using namespace stl;
+
+TcpSocket::TcpSocket() noexcept
+    : fd(-1)
+    , exec(nullptr)
+{
+}
+
+TcpSocket::TcpSocket(CoroExecutor* exec) noexcept
+    : fd(-1)
+    , exec(exec)
+{
+}
+
+TcpSocket::TcpSocket(int fd, CoroExecutor* exec) noexcept
+    : fd(fd)
+    , exec(exec)
+{
+}
+
+int TcpSocket::socket(int domain, int type, int protocol) {
+    if (fd = ::socket(domain, type | SOCK_NONBLOCK | SOCK_CLOEXEC, protocol); fd < 0) {
+        return -errno;
+    }
+    return 0;
+}
+
+void TcpSocket::close() {
+    if (fd >= 0) {
+        ::close(fd);
+        fd = -1;
+    }
+}
+
+void TcpSocket::shutdown(int how) {
+    ::shutdown(fd, how);
+}
+
+int TcpSocket::bind(const sockaddr* addr, u32 addrLen) {
+    if (int r = ::bind(fd, addr, addrLen); r < 0) {
+        return -errno;
+    }
+    return 0;
+}
+
+int TcpSocket::listen(int backlog) {
+    if (int r = ::listen(fd, backlog); r < 0) {
+        return -errno;
+    }
+    return 0;
+}
+
+int TcpSocket::connect(const sockaddr* addr, u32 addrLen, u64 deadlineUs) {
+    if (int r = socket(addr->sa_family, SOCK_STREAM, 0); r < 0) {
+        return r;
+    }
+
+    if (int r = ::connect(fd, addr, addrLen); r == 0) {
+        return 0;
+    } else if (errno != EINPROGRESS) {
+        return -errno;
+    }
+
+    exec->poll(fd, PollFlag::Out, deadlineUs);
+
+    int err = 0;
+    socklen_t len = sizeof(err);
+    if (int r = ::getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len); r < 0) {
+        return -errno;
+    }
+    if (err) {
+        return -err;
+    }
+    return 0;
+}
+
+int TcpSocket::connectTout(const sockaddr* addr, u32 addrLen, u64 timeoutUs) {
+    return connect(addr, addrLen, monotonicNowUs() + timeoutUs);
+}
+
+int TcpSocket::connectInf(const sockaddr* addr, u32 addrLen) {
+    return connect(addr, addrLen, UINT64_MAX);
+}
+
+int TcpSocket::accept(TcpSocket& out, sockaddr* addr, u32* addrLen, u64 deadlineUs) {
+    exec->poll(fd, PollFlag::In, deadlineUs);
+
+    socklen_t slen = addrLen ? (socklen_t)*addrLen : 0;
+    if (int newFd = ::accept4(fd, addr, addrLen ? &slen : nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC); newFd < 0) {
+        return -errno;
+    } else {
+        if (addrLen) {
+            *addrLen = (u32)slen;
+        }
+        out = TcpSocket(newFd, exec);
+        return 0;
+    }
+}
+
+int TcpSocket::acceptTout(TcpSocket& out, sockaddr* addr, u32* addrLen, u64 timeoutUs) {
+    return accept(out, addr, addrLen, monotonicNowUs() + timeoutUs);
+}
+
+int TcpSocket::acceptInf(TcpSocket& out, sockaddr* addr, u32* addrLen) {
+    return accept(out, addr, addrLen, UINT64_MAX);
+}
+
+size_t TcpSocket::read(void* buf, size_t len, u64 deadlineUs) {
+    for (;;) {
+        if (ssize_t n = ::read(fd, buf, len); n > 0) {
+            return (size_t)n;
+        } else if (n == 0 || errno != EAGAIN) {
+            return 0;
+        }
+        exec->poll(fd, PollFlag::In, deadlineUs);
+    }
+}
+
+size_t TcpSocket::readTout(void* buf, size_t len, u64 timeoutUs) {
+    return read(buf, len, monotonicNowUs() + timeoutUs);
+}
+
+size_t TcpSocket::readInf(void* buf, size_t len) {
+    return read(buf, len, UINT64_MAX);
+}
+
+size_t TcpSocket::write(const void* buf, size_t len, u64 deadlineUs) {
+    for (;;) {
+        if (ssize_t n = ::write(fd, buf, len); n > 0) {
+            return (size_t)n;
+        } else if (errno != EAGAIN) {
+            return 0;
+        }
+        exec->poll(fd, PollFlag::Out, deadlineUs);
+    }
+}
+
+size_t TcpSocket::writeTout(const void* buf, size_t len, u64 timeoutUs) {
+    return write(buf, len, monotonicNowUs() + timeoutUs);
+}
+
+size_t TcpSocket::writeInf(const void* buf, size_t len) {
+    return write(buf, len, UINT64_MAX);
+}
