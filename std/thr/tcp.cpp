@@ -31,6 +31,7 @@ int TcpSocket::socket(int domain, int type, int protocol) {
     if (fd = ::socket(domain, type | SOCK_NONBLOCK | SOCK_CLOEXEC, protocol); fd < 0) {
         return -errno;
     }
+
     return 0;
 }
 
@@ -49,6 +50,7 @@ int TcpSocket::bind(const sockaddr* addr, u32 addrLen) {
     if (int r = ::bind(fd, addr, addrLen); r < 0) {
         return -errno;
     }
+
     return 0;
 }
 
@@ -56,6 +58,7 @@ int TcpSocket::listen(int backlog) {
     if (int r = ::listen(fd, backlog); r < 0) {
         return -errno;
     }
+
     return 0;
 }
 
@@ -74,12 +77,15 @@ int TcpSocket::connect(const sockaddr* addr, u32 addrLen, u64 deadlineUs) {
 
     int err = 0;
     socklen_t len = sizeof(err);
+
     if (int r = ::getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len); r < 0) {
         return -errno;
     }
+
     if (err) {
         return -err;
     }
+
     return 0;
 }
 
@@ -95,13 +101,16 @@ int TcpSocket::accept(TcpSocket& out, sockaddr* addr, u32* addrLen, u64 deadline
     exec->poll(fd, PollFlag::In, deadlineUs);
 
     socklen_t slen = addrLen ? (socklen_t)*addrLen : 0;
+
     if (int newFd = ::accept4(fd, addr, addrLen ? &slen : nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC); newFd < 0) {
         return -errno;
     } else {
         if (addrLen) {
             *addrLen = (u32)slen;
         }
+
         out = TcpSocket(newFd, exec);
+
         return 0;
     }
 }
@@ -121,6 +130,7 @@ size_t TcpSocket::read(void* buf, size_t len, u64 deadlineUs) {
         } else if (n == 0 || errno != EAGAIN) {
             return 0;
         }
+
         exec->poll(fd, PollFlag::In, deadlineUs);
     }
 }
@@ -140,6 +150,7 @@ size_t TcpSocket::write(const void* buf, size_t len, u64 deadlineUs) {
         } else if (errno != EAGAIN) {
             return 0;
         }
+
         exec->poll(fd, PollFlag::Out, deadlineUs);
     }
 }

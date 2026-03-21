@@ -469,7 +469,8 @@ STD_TEST_SUITE(CoroPoll) {
 
         struct Pipe {
             ScopedFD r, w;
-            ~Pipe() noexcept {}
+            ~Pipe() noexcept {
+            }
         };
 
         auto opool = ObjPool::fromMemory();

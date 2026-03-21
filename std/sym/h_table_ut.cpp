@@ -72,7 +72,7 @@ STD_TEST_SUITE(HashTable) {
         nodes.grow(count);
 
         for (size_t i = 0; i < count; ++i) {
-            nodes.mutData()[i] ={{i + 1, nullptr}, (int)(i * 7)};
+            nodes.mutData()[i] = {{i + 1, nullptr}, (int)(i * 7)};
         }
 
         for (size_t i = 0; i < count; ++i) {
@@ -368,7 +368,7 @@ STD_TEST_SUITE(HashTable) {
         bool shouldExist[keyRange];
 
         for (size_t i = 0; i < keyRange * 2; ++i) {
-            nodes.mutData()[i] ={{0, nullptr}, (int)(i * 17)};
+            nodes.mutData()[i] = {{0, nullptr}, (int)(i * 17)};
         }
 
         for (size_t i = 0; i < keyRange; ++i) {
@@ -454,7 +454,7 @@ STD_TEST_SUITE(HashTable) {
         nodes.grow(maxSize);
 
         for (size_t i = 0; i < maxSize; ++i) {
-            nodes.mutData()[i] ={{i + 1, nullptr}, (int)i};
+            nodes.mutData()[i] = {{i + 1, nullptr}, (int)i};
         }
 
         for (size_t phase = 0; phase < 10; ++phase) {
@@ -487,7 +487,7 @@ STD_TEST_SUITE(HashTable) {
         nodes.grow(chainLength);
 
         for (size_t i = 0; i < chainLength; ++i) {
-            nodes.mutData()[i] ={{i * capacity, nullptr}, (int)i};
+            nodes.mutData()[i] = {{i * capacity, nullptr}, (int)i};
             ht.insert(&nodes.mutData()[i]);
         }
 
@@ -532,7 +532,7 @@ STD_TEST_SUITE(HashTable) {
         nodes.grow(keyRange);
 
         for (size_t i = 0; i < keyRange; ++i) {
-            nodes.mutData()[i] ={{i + 1, nullptr}, (int)i};
+            nodes.mutData()[i] = {{i + 1, nullptr}, (int)i};
         }
 
         for (size_t op = 0; op < operations; ++op) {
