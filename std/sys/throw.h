@@ -21,6 +21,7 @@ namespace stl {
         int error;
 
         Errno() noexcept;
+        explicit Errno(int error) noexcept;
 
         [[noreturn]]
         void raise(Buffer&& text);

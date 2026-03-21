@@ -2,6 +2,9 @@
 
 set -xue
 
+find . -type f -name '*_ut.cpp' | while read l; do sed -e 's|{ |{\n|' -i ${l}; done
+find . -type f -name '*_ut.cpp' | while read l; do sed -e 's|; }|;\n}|' -i ${l}; done
+
 ya style std tst
 
 (

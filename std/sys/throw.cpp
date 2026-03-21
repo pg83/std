@@ -64,6 +64,11 @@ Errno::Errno() noexcept
     errno = 0;
 }
 
+Errno::Errno(int error) noexcept
+    : error(error)
+{
+}
+
 void Errno::raise(Buffer&& text) {
     throw ErrnoError(error, move(text));
 }

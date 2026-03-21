@@ -4,7 +4,7 @@
 
 #include <std/sys/types.h>
 
-#include <sys/socket.h>
+struct sockaddr;
 
 namespace stl {
     struct TcpSocket {
