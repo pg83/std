@@ -123,42 +123,47 @@ int TcpSocket::acceptInf(TcpSocket& out, sockaddr* addr, u32* addrLen) {
     return accept(out, addr, addrLen, UINT64_MAX);
 }
 
-size_t TcpSocket::read(void* buf, size_t len, u64 deadlineUs) {
+int TcpSocket::read(size_t* nRead, void* buf, size_t len, u64 deadlineUs) {
     for (;;) {
         if (ssize_t n = ::read(fd, buf, len); n > 0) {
-            return (size_t)n;
-        } else if (n == 0 || errno != EAGAIN) {
+            *nRead = (size_t)n;
             return 0;
+        } else if (n == 0) {
+            *nRead = 0;
+            return 0;
+        } else if (errno != EAGAIN) {
+            return -errno;
         }
 
         exec->poll(fd, PollFlag::In, deadlineUs);
     }
 }
 
-size_t TcpSocket::readTout(void* buf, size_t len, u64 timeoutUs) {
-    return read(buf, len, monotonicNowUs() + timeoutUs);
+int TcpSocket::readTout(size_t* nRead, void* buf, size_t len, u64 timeoutUs) {
+    return read(nRead, buf, len, monotonicNowUs() + timeoutUs);
 }
 
-size_t TcpSocket::readInf(void* buf, size_t len) {
-    return read(buf, len, UINT64_MAX);
+int TcpSocket::readInf(size_t* nRead, void* buf, size_t len) {
+    return read(nRead, buf, len, UINT64_MAX);
 }
 
-size_t TcpSocket::write(const void* buf, size_t len, u64 deadlineUs) {
+int TcpSocket::write(size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
     for (;;) {
         if (ssize_t n = ::write(fd, buf, len); n > 0) {
-            return (size_t)n;
-        } else if (errno != EAGAIN) {
+            *nWritten = (size_t)n;
             return 0;
+        } else if (errno != EAGAIN) {
+            return -errno;
         }
 
         exec->poll(fd, PollFlag::Out, deadlineUs);
     }
 }
 
-size_t TcpSocket::writeTout(const void* buf, size_t len, u64 timeoutUs) {
-    return write(buf, len, monotonicNowUs() + timeoutUs);
+int TcpSocket::writeTout(size_t* nWritten, const void* buf, size_t len, u64 timeoutUs) {
+    return write(nWritten, buf, len, monotonicNowUs() + timeoutUs);
 }
 
-size_t TcpSocket::writeInf(const void* buf, size_t len) {
-    return write(buf, len, UINT64_MAX);
+int TcpSocket::writeInf(size_t* nWritten, const void* buf, size_t len) {
+    return write(nWritten, buf, len, UINT64_MAX);
 }

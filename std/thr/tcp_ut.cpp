@@ -48,9 +48,11 @@ STD_TEST_SUITE(TcpSocket) {
             };
 
             char buf[32] = {};
-            size_t n = client.readInf(buf, sizeof(buf));
+            size_t n = 0;
+            STD_INSIST(client.readInf(&n, buf, sizeof(buf)) == 0);
             STD_INSIST(n > 0);
-            size_t w = client.writeInf(buf, n);
+            size_t w = 0;
+            STD_INSIST(client.writeInf(&w, buf, n) == 0);
             STD_INSIST(w == n);
         });
 
@@ -64,10 +66,12 @@ STD_TEST_SUITE(TcpSocket) {
 
             const char* msg = "hello";
             size_t msgLen = strlen(msg);
-            size_t w = cli.writeInf(msg, msgLen);
+            size_t w = 0;
+            STD_INSIST(cli.writeInf(&w, msg, msgLen) == 0);
             STD_INSIST(w == msgLen);
 
-            size_t n = cli.readInf(recvBuf, sizeof(recvBuf));
+            size_t n = 0;
+            STD_INSIST(cli.readInf(&n, recvBuf, sizeof(recvBuf)) == 0);
             STD_INSIST(n == msgLen);
         });
 
