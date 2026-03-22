@@ -12,6 +12,7 @@
 #include <std/ios/output.h>
 #include <std/lib/buffer.h>
 #include <std/sys/atomic.h>
+#include <std/ios/in_zero.h>
 #include <std/mem/obj_pool.h>
 #include <std/ios/stream_tcp.h>
 #include <std/thr/wait_group.h>
@@ -171,12 +172,12 @@ bool HttpConnection::serve(HttpServe& handler) {
     } else if (auto cl = req.headers.find(StringView("content-length")); cl) {
         req.in = createLimited(pool.mutPtr(), &buf, cl->stou());
     } else {
-        req.in = nullptr;
+        req.in = pool->make<ZeroInput>();
     }
 
     handler.serve(req);
 
-    if (req.in) {
+    {
         const void* chunk;
         size_t n;
 
