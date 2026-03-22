@@ -84,6 +84,8 @@ bool ChunkedInput::loadChunk() {
     chunkRemaining = StringView(sizeBuf).stripCr().stoh();
 
     if (!chunkRemaining) {
+        char crlf[2];
+        inner->read(crlf, 2);
         eof = true;
         return false;
     }
