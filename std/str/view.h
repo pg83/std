@@ -91,6 +91,7 @@ namespace stl {
 
         // parse
         u64 stou() const noexcept;
+        u64 stoh() const noexcept;
     };
 
     bool operator==(StringView l, StringView r) noexcept;

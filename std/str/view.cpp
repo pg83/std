@@ -147,6 +147,29 @@ u64 StringView::stou() const noexcept {
     return result;
 }
 
+u64 StringView::stoh() const noexcept {
+    u64 result = 0;
+
+    for (size_t i = 0; i < length(); ++i) {
+        u8 ch = (*this)[i];
+        u8 digit;
+
+        if (ch >= '0' && ch <= '9') {
+            digit = ch - '0';
+        } else if (ch >= 'a' && ch <= 'f') {
+            digit = ch - 'a' + 10;
+        } else if (ch >= 'A' && ch <= 'F') {
+            digit = ch - 'A' + 10;
+        } else {
+            break;
+        }
+
+        result = result * 16 + digit;
+    }
+
+    return result;
+}
+
 template <>
 void stl::output<ZeroCopyOutput, StringView>(ZeroCopyOutput& out, StringView str) {
     out.write(str.data(), str.length());
