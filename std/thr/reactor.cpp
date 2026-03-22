@@ -13,6 +13,7 @@
 #include <std/map/treap.h>
 #include <std/sym/i_map.h>
 #include <std/alg/minmax.h>
+#include <std/alg/exchange.h>
 #include <std/mem/obj_pool.h>
 
 #include <unistd.h>
@@ -163,15 +164,11 @@ void ReactorState::processEvent(PollEvent* ev) noexcept {
 
     if (auto* entry = fdMap_.find(fd); entry) {
         for (auto n = entry->mutFront(), e = entry->mutEnd(); n != e;) {
-            auto* next = n->next;
-
-            if (auto* req = (PollRequest*)n; req->flags & ev->flags) {
-                n->remove();
+            if (auto* req = (PollRequest*)exchange(n, n->next); req->flags & ev->flags) {
+                req->remove();
                 timers.remove(req);
                 req->complete(ev->flags);
             }
-
-            n = next;
         }
 
         rearmOrDisarm(fd);
