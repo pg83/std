@@ -33,7 +33,7 @@ STD_TEST_SUITE(HttpServer) {
                     "Content-Length: 5\r\n"
                     "\r\n"
                     "hello";
-                req.out.write(resp, ::strlen(resp));
+                req.out->write(resp, ::strlen(resp));
             }
         } handler;
 

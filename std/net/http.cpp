@@ -18,19 +18,28 @@
 
 using namespace stl;
 
-HttpRequest::HttpRequest(ZeroCopyInput& in, Output& out, ObjPool& pool)
-    : in(in)
-    , out(out)
+namespace {
+    struct HttpRequestImpl: public HttpRequest {
+        HttpRequestImpl(ZeroCopyInput& in, Output& out, ObjPool& pool);
+    };
+}
+
+HttpRequestImpl::HttpRequestImpl(ZeroCopyInput& in_, Output& out_, ObjPool& pool)
+    : HttpRequest{.in = &in_, .out = &out_}
 {
     Buffer line;
 
-    STD_VERIFY(in.readLine(line));
+    STD_VERIFY(in->readLine(line));
 
-    StringView method, rest, path, version;
+    StringView rest;
+    StringView path;
+    StringView method;
+    StringView version;
 
     STD_VERIFY(StringView(line).stripCr().split(' ', method, rest));
 
     rest.split(' ', path, version);
+
     this->method = pool.intern(method);
     this->path = pool.intern(path.empty() ? rest : path);
 
@@ -38,7 +47,7 @@ HttpRequest::HttpRequest(ZeroCopyInput& in, Output& out, ObjPool& pool)
 
     for (;;) {
         line.reset();
-        in.readLine(line);
+        in->readLine(line);
 
         StringView name, val;
 
@@ -59,10 +68,10 @@ namespace {
             sock.close();
         };
 
+        ObjPool::Ref pool = ObjPool::fromMemory();
         TcpStream stream(sock);
         InBuf buf(stream);
-        ObjPool::Ref pool = ObjPool::fromMemory();
-        HttpRequest req(buf, stream, *pool);
+        HttpRequestImpl req(buf, stream, *pool);
 
         handler.serve(req);
     }
