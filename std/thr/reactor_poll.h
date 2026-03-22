@@ -24,8 +24,6 @@ namespace stl {
     };
 
     struct ReactorIface {
-        virtual ~ReactorIface() noexcept = default;
-
         virtual void stop() noexcept = 0;
         virtual void join() noexcept = 0;
         virtual void processRequest(PollRequest* req) = 0;
