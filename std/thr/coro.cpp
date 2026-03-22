@@ -53,8 +53,7 @@ namespace {
         u8 priority_;
 
         ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noexcept;
-
-        virtual ~ContImpl() = default;
+        ~ContImpl();
 
         void operator delete(void* p) noexcept {
             freeMemory(p);
@@ -66,49 +65,33 @@ namespace {
         void reSchedule() noexcept;
     };
 
-    struct UserContImpl: public ContImpl {
-        UserContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noexcept;
-        ~UserContImpl();
-    };
-
-    template <typename Base>
-    struct alignas(max_align_t) HeapContImpl: public Base {
+    struct alignas(max_align_t) HeapContImpl: public ContImpl {
         void* operator new(size_t, size_t stackSize) {
             return allocateMemory(sizeof(HeapContImpl) + Context::implSize() + stackSize);
         }
 
         HeapContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
-            : Base(exec, (char*)(this + 1), params.setStackPtr((char*)(this + 1) + Context::implSize()))
+            : ContImpl(exec, (char*)(this + 1), params.setStackPtr((char*)(this + 1) + Context::implSize()))
         {
         }
     };
 
-    template <typename Base>
-    struct alignas(max_align_t) ExtStackContImpl: public Base {
+    struct alignas(max_align_t) ExtStackContImpl: public ContImpl {
         void* operator new(size_t sz) {
             return allocateMemory(sz + Context::implSize());
         }
 
         ExtStackContImpl(CoroExecutorImpl* exec, SpawnParams params) noexcept
-            : Base(exec, (char*)(this + 1), params)
+            : ContImpl(exec, (char*)(this + 1), params)
         {
         }
     };
 
-    template <typename Base>
-    ContImpl* makeContImplT(CoroExecutorImpl* exec, SpawnParams params) {
-        if (params.stackPtr) {
-            return new ExtStackContImpl<Base>(exec, params);
-        } else {
-            return new (params.stackSize) HeapContImpl<Base>(exec, params);
-        }
-    }
-
     ContImpl* makeContImpl(CoroExecutorImpl* exec, SpawnParams params) {
-        if (params.system) {
-            return makeContImplT<ContImpl>(exec, params);
+        if (params.stackPtr) {
+            return new ExtStackContImpl(exec, params);
         } else {
-            return makeContImplT<UserContImpl>(exec, params);
+            return new (params.stackSize) HeapContImpl(exec, params);
         }
     }
 
@@ -260,15 +243,10 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noe
     , runable_(params.runable)
     , priority_(params.priority)
 {
-}
-
-UserContImpl::UserContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noexcept
-    : ContImpl(exec, ctxBuf, params)
-{
     stdAtomicAddAndFetch(&exec_->inflight_, 1, MemoryOrder::Relaxed);
 }
 
-UserContImpl::~UserContImpl() {
+ContImpl::~ContImpl() {
     if (stdAtomicAddAndFetch(&exec_->inflight_, -1, MemoryOrder::Release) == 0) {
         char b = 1;
 
@@ -318,7 +296,6 @@ SpawnParams::SpawnParams() noexcept
     , stackPtr(nullptr)
     , runable(nullptr)
     , priority(0)
-    , system(false)
 {
 }
 
@@ -799,12 +776,6 @@ SpawnParams& SpawnParams::setStackPtr(void* v) noexcept {
 
 SpawnParams& SpawnParams::setPriority(u8 v) noexcept {
     priority = v;
-
-    return *this;
-}
-
-SpawnParams& SpawnParams::setSystem(bool v) noexcept {
-    system = v;
 
     return *this;
 }
