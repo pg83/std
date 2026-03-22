@@ -19,6 +19,7 @@ namespace stl {
     struct HttpRequest {
         StringView method;
         StringView path;
+        StringView query;
         SymbolMap<StringView> headers;
         ZeroCopyInput* in;
         Output* out;

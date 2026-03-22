@@ -152,7 +152,17 @@ bool HttpConnection::serve(HttpServe& handler) {
     rest.split(' ', path, version);
 
     req.method = pool->intern(method);
-    req.path = pool->intern(path.empty() ? rest : path);
+
+    StringView rawPath = path.empty() ? rest : path;
+    StringView pathPart, queryPart;
+
+    if (rawPath.split('?', pathPart, queryPart)) {
+        req.path = pool->intern(pathPart);
+        req.query = pool->intern(queryPart);
+    } else {
+        req.path = pool->intern(rawPath);
+    }
+
     version = pool->intern(version);
 
     for (;;) {

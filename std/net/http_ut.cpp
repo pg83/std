@@ -23,6 +23,94 @@ namespace {
     }
 }
 
+STD_TEST_SUITE(HttpRequestParsing) {
+    STD_TEST(PathNoQuery) {
+        auto exec = CoroExecutor::create(4);
+
+        struct Handler: HttpServe {
+            StringView path;
+            StringView query;
+
+            void serve(HttpRequest& req) override {
+                path = req.path;
+                query = req.query;
+                const char* resp = "HTTP/1.0 200 OK\r\nContent-Length: 0\r\n\r\n";
+                req.out->write(resp, ::strlen(resp));
+            }
+        } handler;
+
+        auto addr = makeAddr(17670);
+        WaitGroup wg(exec.mutPtr());
+        auto ctl = serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
+
+        exec->spawn([&] {
+            TcpSocket cli(exec.mutPtr());
+            auto caddr = makeAddr(17670);
+            STD_INSIST(cli.connectInf((const sockaddr*)&caddr, sizeof(caddr)) == 0);
+            STD_DEFER { cli.close(); };
+
+            TcpStream stream(cli);
+            const char* req = "GET /foo/bar HTTP/1.0\r\n\r\n";
+            stream.write(req, ::strlen(req));
+
+            char buf[256] = {};
+            size_t n = 0;
+            cli.readInf(&n, buf, sizeof(buf) - 1);
+
+            ctl->stop();
+        });
+
+        exec->spawn([&] { wg.wait(); });
+        exec->join();
+
+        STD_INSIST(handler.path == StringView("/foo/bar"));
+        STD_INSIST(handler.query.empty());
+    }
+
+    STD_TEST(PathWithQuery) {
+        auto exec = CoroExecutor::create(4);
+
+        struct Handler: HttpServe {
+            StringView path;
+            StringView query;
+
+            void serve(HttpRequest& req) override {
+                path = req.path;
+                query = req.query;
+                const char* resp = "HTTP/1.0 200 OK\r\nContent-Length: 0\r\n\r\n";
+                req.out->write(resp, ::strlen(resp));
+            }
+        } handler;
+
+        auto addr = makeAddr(17671);
+        WaitGroup wg(exec.mutPtr());
+        auto ctl = serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
+
+        exec->spawn([&] {
+            TcpSocket cli(exec.mutPtr());
+            auto caddr = makeAddr(17671);
+            STD_INSIST(cli.connectInf((const sockaddr*)&caddr, sizeof(caddr)) == 0);
+            STD_DEFER { cli.close(); };
+
+            TcpStream stream(cli);
+            const char* req = "GET /search?q=hello&page=2 HTTP/1.0\r\n\r\n";
+            stream.write(req, ::strlen(req));
+
+            char buf[256] = {};
+            size_t n = 0;
+            cli.readInf(&n, buf, sizeof(buf) - 1);
+
+            ctl->stop();
+        });
+
+        exec->spawn([&] { wg.wait(); });
+        exec->join();
+
+        STD_INSIST(handler.path == StringView("/search"));
+        STD_INSIST(handler.query == StringView("q=hello&page=2"));
+    }
+}
+
 STD_TEST_SUITE(HttpServer) {
     STD_TEST(GetRequest) {
         auto exec = CoroExecutor::create(4);
