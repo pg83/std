@@ -9,7 +9,8 @@ struct sockaddr;
 namespace stl {
     class Input;
     class Output;
-
+    class InBuf;
+    class ObjPool;
     struct CoroExecutor;
 
     struct HttpRequest {
@@ -19,7 +20,7 @@ namespace stl {
         Input& in;
         Output& out;
 
-        HttpRequest(Input& in, Output& out) noexcept;
+        HttpRequest(InBuf& in, Output& out, ObjPool& pool);
     };
 
     struct HttpServe {

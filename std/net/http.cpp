@@ -17,40 +17,37 @@
 
 using namespace stl;
 
-HttpRequest::HttpRequest(Input& in, Output& out) noexcept
+HttpRequest::HttpRequest(InBuf& in, Output& out, ObjPool& pool)
     : in(in)
     , out(out)
 {
+    Buffer line;
+
+    STD_INSIST(in.readLine(line));
+
+    StringView method, rest, path, version;
+
+    STD_INSIST(StringView(line).stripCr().split(' ', method, rest));
+
+    rest.split(' ', path, version);
+    this->method = pool.intern(method);
+    this->path = pool.intern(path.empty() ? rest : path);
+
+    for (;;) {
+        line.reset();
+        in.readLine(line);
+
+        StringView name, val;
+
+        if (!StringView(line).stripCr().split(':', name, val)) {
+            break;
+        }
+
+        headers.insert(pool.intern(name), pool.intern(val.stripSpace()));
+    }
 }
 
 namespace {
-    void parseRequest(InBuf& buf, HttpRequest& req, ObjPool& pool) {
-        Buffer line;
-
-        STD_INSIST(buf.readLine(line));
-
-        StringView method, rest, path, version;
-
-        STD_INSIST(StringView(line).stripCr().split(' ', method, rest));
-
-        rest.split(' ', path, version);
-        req.method = pool.intern(method);
-        req.path = pool.intern(path.empty() ? rest : path);
-
-        for (;;) {
-            line.reset();
-            buf.readLine(line);
-
-            StringView name, val;
-
-            if (!StringView(line).stripCr().split(':', name, val)) {
-                break;
-            }
-
-            req.headers.insert(pool.intern(name), pool.intern(val.stripSpace()));
-        }
-    }
-
     void serveConn(HttpServe& handler, CoroExecutor* exec, int fd) {
         TcpSocket sock(fd, exec);
 
@@ -61,9 +58,8 @@ namespace {
         TcpStream stream(sock);
         InBuf buf(stream);
         ObjPool::Ref pool = ObjPool::fromMemory();
-        HttpRequest req(buf, stream);
+        HttpRequest req(buf, stream, *pool);
 
-        parseRequest(buf, req, *pool);
         handler.serve(req);
     }
 }
