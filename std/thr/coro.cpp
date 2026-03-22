@@ -216,7 +216,7 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
         reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr()));
     }
 
-    fsReactor_ = FSReactorIface::create(nullptr, opool_.mutPtr());
+    fsReactor_ = FSReactorIface::create(ThreadPool::simple(opool_.mutPtr(), reactors), opool_.mutPtr());
 
     spawnRun(SpawnParams().setSystem(true).setRunable([this] {
         spawnSystem();
