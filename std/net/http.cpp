@@ -20,7 +20,6 @@ using namespace stl;
 
 namespace {
     struct HttpConnection {
-        ObjPool::Ref pool;
         TcpSocket sock;
         TcpStream stream;
         InBuf buf;
@@ -35,8 +34,7 @@ namespace {
 }
 
 HttpConnection::HttpConnection(CoroExecutor* exec, int fd)
-    : pool(ObjPool::fromMemory())
-    , sock(fd, exec)
+    : sock(fd, exec)
     , stream(sock)
     , buf(stream)
 {
@@ -47,7 +45,7 @@ HttpConnection::~HttpConnection() {
 }
 
 bool HttpConnection::serve(HttpServe& handler) {
-    pool = ObjPool::fromMemory();
+    auto pool = ObjPool::fromMemory();
 
     line.reset();
 
