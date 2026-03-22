@@ -87,6 +87,7 @@ namespace stl {
         // write ASCII-lowercased copy into buffer (must be >= length() bytes)
         // returns view into buffer
         StringView lower(u8* buffer) const noexcept;
+        StringView lower(Buffer& buffer) const noexcept;
 
         // parse
         u64 stou() const noexcept;

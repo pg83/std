@@ -127,6 +127,12 @@ StringView StringView::lower(u8* buffer) const noexcept {
     return StringView(buffer, len_);
 }
 
+StringView StringView::lower(Buffer& buffer) const noexcept {
+    buffer.grow(length());
+
+    return lower((u8*)buffer.mutData());
+}
+
 u64 StringView::stou() const noexcept {
     u64 result = 0;
 

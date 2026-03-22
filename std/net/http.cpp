@@ -85,10 +85,13 @@ bool HttpConnection::serve(HttpServe& handler) {
 
     handler.serve(req);
 
-    auto connection = req.headers.find(StringView("connection"));
-    bool keepAlive = connection
-        ? (*connection == StringView("keep-alive"))
-        : (version == StringView("HTTP/1.1"));
+    bool keepAlive = false;
+
+    if (auto connection = req.headers.find(StringView("connection")); connection) {
+        keepAlive = connection->lower(line) == StringView("keep-alive");
+    } else {
+        keepAlive = version.lower(line) == StringView("http/1.1");
+    }
 
     return keepAlive;
 }
