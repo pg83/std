@@ -711,7 +711,7 @@ CoroExecutor::~CoroExecutor() noexcept {
 }
 
 CoroExecutor::Ref CoroExecutor::create(size_t threads) {
-    return create(threads, max(threads / 4, (size_t)1));
+    return create(threads, max(threads / 2, (size_t)1));
 }
 
 CoroExecutor::Ref CoroExecutor::create(size_t threads, size_t reactors) {
