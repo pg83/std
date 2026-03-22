@@ -4,6 +4,7 @@
 #include <std/dbg/insist.h>
 #include <std/alg/defer.h>
 #include <std/thr/tcp.h>
+#include <std/thr/wait_group.h>
 #include <std/ios/stream_tcp.h>
 
 #include <string.h>
@@ -38,7 +39,8 @@ STD_TEST_SUITE(HttpServer) {
         } handler;
 
         auto addr = makeAddr(17661);
-        serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr));
+        WaitGroup wg(exec.mutPtr());
+        auto ctl = serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
 
         char recvBuf[256] = {};
 
@@ -60,6 +62,12 @@ STD_TEST_SUITE(HttpServer) {
             size_t n = 0;
             cli.readInf(&n, recvBuf, sizeof(recvBuf) - 1);
             STD_INSIST(n > 0);
+
+            ctl->stop();
+        });
+
+        exec->spawn([&] {
+            wg.wait();
         });
 
         exec->join();

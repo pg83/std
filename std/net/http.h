@@ -1,14 +1,17 @@
 #pragma once
 
+#include <std/ptr/arc.h>
 #include <std/str/view.h>
 #include <std/sym/s_map.h>
 #include <std/sys/types.h>
+#include <std/ptr/intrusive.h>
 
 struct sockaddr;
 
 namespace stl {
     class Input;
     class Output;
+    class WaitGroup;
     class ZeroCopyInput;
 
     struct CoroExecutor;
@@ -25,5 +28,10 @@ namespace stl {
         virtual void serve(HttpRequest& req) = 0;
     };
 
-    void serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen);
+    struct HttpServerCtl : ARC {
+        virtual void stop() = 0;
+        virtual ~HttpServerCtl() = default;
+    };
+
+    IntrusivePtr<HttpServerCtl> serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg);
 }
