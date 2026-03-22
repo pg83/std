@@ -19,8 +19,6 @@ namespace stl {
     };
 
     struct PollerIface {
-        virtual ~PollerIface() noexcept;
-
         // add or re-arm fd with ONESHOT semantics
         virtual void arm(int fd, u32 flags, void* data) = 0;
         // remove fd from poller

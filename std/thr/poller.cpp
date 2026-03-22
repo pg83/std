@@ -86,7 +86,7 @@ namespace {
             STD_INSIST(epfd_ >= 0);
         }
 
-        ~EpollPoller() noexcept override {
+        ~EpollPoller() noexcept {
             ::close(epfd_);
         }
 
@@ -135,7 +135,7 @@ namespace {
             STD_INSIST(kqfd_ >= 0);
         }
 
-        ~KqueuePoller() noexcept override {
+        ~KqueuePoller() noexcept {
             ::close(kqfd_);
         }
 
@@ -300,9 +300,6 @@ namespace {
             }
         }
     };
-}
-
-PollerIface::~PollerIface() noexcept {
 }
 
 PollerIface* PollerIface::create(ObjPool* pool) {
