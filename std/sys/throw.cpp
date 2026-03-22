@@ -11,6 +11,40 @@
 using namespace stl;
 
 namespace {
+    struct VerifyError: public Exception {
+        const u8* what_;
+        u32 line_;
+        const u8* file_;
+        Buffer full;
+
+        VerifyError(const u8* what, u32 line, const u8* file) noexcept
+            : what_(what)
+            , line_(line)
+            , file_(file)
+        {
+        }
+
+        ExceptionKind kind() const noexcept override {
+            return ExceptionKind::Verify;
+        }
+
+        StringView description() override {
+            if (!full.empty()) {
+                return full;
+            }
+
+            (StringBuilder()
+             << StringView((const char*)file_)
+             << StringView(u8":")
+             << line_
+             << StringView(u8": verify failed: ")
+             << StringView((const char*)what_))
+                .xchg(full);
+
+            return full;
+        }
+    };
+
     struct ErrnoError: public Exception {
         Buffer full;
         Buffer text;
@@ -43,6 +77,10 @@ namespace {
             return full;
         }
     };
+}
+
+void stl::raiseVerify(const u8* what, u32 line, const u8* file) {
+    throw VerifyError(what, line, file);
 }
 
 Exception::~Exception() noexcept {
