@@ -2,9 +2,10 @@
 
 namespace stl {
     struct ProducerIface {
+        virtual ~ProducerIface() noexcept;
+
         virtual void* run() = 0;
         virtual void del(void*) = 0;
-        virtual ~ProducerIface() noexcept;
     };
 
     template <typename F>
