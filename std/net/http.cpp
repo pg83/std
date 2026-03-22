@@ -11,6 +11,7 @@
 #include <std/thr/tcp.h>
 #include <std/alg/defer.h>
 #include <std/dbg/insist.h>
+#include <std/dbg/verify.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -23,11 +24,11 @@ HttpRequest::HttpRequest(InBuf& in, Output& out, ObjPool& pool)
 {
     Buffer line;
 
-    STD_INSIST(in.readLine(line));
+    STD_VERIFY(in.readLine(line));
 
     StringView method, rest, path, version;
 
-    STD_INSIST(StringView(line).stripCr().split(' ', method, rest));
+    STD_VERIFY(StringView(line).stripCr().split(' ', method, rest));
 
     rest.split(' ', path, version);
     this->method = pool.intern(method);
