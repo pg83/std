@@ -12,6 +12,7 @@ EXTRA=
     bld/box \
     ${EXTRA} \
     lib/c++ \
+    lib/kernel \
     lib/ucontext \
     lib/rapidhash \
     lib/cpp/trace \
