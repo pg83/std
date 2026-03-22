@@ -30,7 +30,7 @@ namespace {
         HttpConnection(CoroExecutor* exec, int fd);
         ~HttpConnection();
 
-        void serve(HttpServe& handler);
+        bool serve(HttpServe& handler);
     };
 }
 
@@ -46,10 +46,14 @@ HttpConnection::~HttpConnection() {
     sock.close();
 }
 
-void HttpConnection::serve(HttpServe& handler) {
+bool HttpConnection::serve(HttpServe& handler) {
+    pool = ObjPool::fromMemory();
+
     line.reset();
 
-    STD_VERIFY(buf.readLine(line));
+    if (!buf.readLine(line)) {
+        return false;
+    }
 
     HttpRequest req;
 
@@ -80,6 +84,13 @@ void HttpConnection::serve(HttpServe& handler) {
     }
 
     handler.serve(req);
+
+    auto connection = req.headers.find(StringView("connection"));
+    bool keepAlive = connection
+        ? (*connection == StringView("keep-alive"))
+        : (version == StringView("HTTP/1.1"));
+
+    return keepAlive;
 }
 
 void stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen) {
@@ -112,7 +123,8 @@ void stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u3
             exec->spawn([&handler, exec, fd = client.fd] {
                 HttpConnection conn(exec, fd);
 
-                conn.serve(handler);
+                while (conn.serve(handler)) {
+                }
             });
         }
     }));
