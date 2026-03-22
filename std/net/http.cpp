@@ -19,35 +19,42 @@
 using namespace stl;
 
 namespace {
-    struct HttpRequestImpl: public HttpRequest {
-        HttpRequestImpl(ZeroCopyInput& in, Output& out, ObjPool& pool);
+    struct HttpRequestImpl {
+        ObjPool::Ref pool;
+        TcpSocket sock;
+        TcpStream stream;
+        InBuf buf;
+        HttpRequest req;
+
+        HttpRequestImpl(CoroExecutor* exec, int fd);
+        ~HttpRequestImpl();
     };
 }
 
-HttpRequestImpl::HttpRequestImpl(ZeroCopyInput& in_, Output& out_, ObjPool& pool)
-    : HttpRequest{.in = &in_, .out = &out_}
+HttpRequestImpl::HttpRequestImpl(CoroExecutor* exec, int fd)
+    : pool(ObjPool::fromMemory())
+    , sock(fd, exec)
+    , stream(sock)
+    , buf(stream)
+    , req{.in = &buf, .out = &stream}
 {
     Buffer line;
 
-    STD_VERIFY(in->readLine(line));
+    STD_VERIFY(req.in->readLine(line));
 
-    StringView rest;
-    StringView path;
-    StringView method;
-    StringView version;
+    StringView method, rest, path, version;
 
     STD_VERIFY(StringView(line).stripCr().split(' ', method, rest));
 
     rest.split(' ', path, version);
-
-    this->method = pool.intern(method);
-    this->path = pool.intern(path.empty() ? rest : path);
+    req.method = pool->intern(method);
+    req.path = pool->intern(path.empty() ? rest : path);
 
     Buffer lcName;
 
     for (;;) {
         line.reset();
-        in->readLine(line);
+        req.in->readLine(line);
 
         StringView name, val;
 
@@ -56,24 +63,19 @@ HttpRequestImpl::HttpRequestImpl(ZeroCopyInput& in_, Output& out_, ObjPool& pool
         }
 
         lcName.grow(name.length());
-        headers.insert(name.lower((u8*)lcName.mutData()), pool.intern(val.stripSpace()));
+        req.headers.insert(name.lower((u8*)lcName.mutData()), pool->intern(val.stripSpace()));
     }
+}
+
+HttpRequestImpl::~HttpRequestImpl() {
+    sock.close();
 }
 
 namespace {
     void serveConn(HttpServe& handler, CoroExecutor* exec, int fd) {
-        TcpSocket sock(fd, exec);
+        HttpRequestImpl impl(exec, fd);
 
-        STD_DEFER {
-            sock.close();
-        };
-
-        ObjPool::Ref pool = ObjPool::fromMemory();
-        TcpStream stream(sock);
-        InBuf buf(stream);
-        HttpRequestImpl req(buf, stream, *pool);
-
-        handler.serve(req);
+        handler.serve(impl.req);
     }
 }
 
