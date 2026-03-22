@@ -26,11 +26,9 @@ namespace stl {
         size_t stackSize;
         void* stackPtr;
         Runable* runable;
-        u8 priority;
 
         SpawnParams() noexcept;
 
-        SpawnParams& setPriority(u8 v) noexcept;
         SpawnParams& setStackPtr(void* v) noexcept;
         SpawnParams& setStackSize(size_t v) noexcept;
         SpawnParams& setRunablePtr(Runable* v) noexcept;

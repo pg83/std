@@ -230,9 +230,7 @@ namespace {
             void run() noexcept override;
             void initStealOrder() noexcept;
             void push(Task* task) noexcept;
-            void push1(Task* task) noexcept;
             void push1(IntrusiveList& tasks) noexcept;
-            void pushThrLocal(Task* task) noexcept;
             void push(IntrusiveList* task) noexcept;
             bool shouldSleep(i32 searching) noexcept;
             void steal(IntrusiveList* stolen) noexcept;
@@ -258,14 +256,6 @@ namespace {
     };
 }
 
-void WorkStealingThreadPool::Worker::pushThrLocal(Task* task) noexcept {
-    if (task->priority()) {
-        local_.pushFront(task);
-    } else {
-        local_.pushBack(task);
-    }
-}
-
 void WorkStealingThreadPool::Worker::sleep() noexcept {
     pool_->wq->enqueue(this);
     condVar_.wait(mutex_);
@@ -275,11 +265,6 @@ void WorkStealingThreadPool::Worker::push(Task* task) noexcept {
     LockGuard lock(mutex_);
     tasks_.pushBack(task);
     condVar_.signal();
-}
-
-void WorkStealingThreadPool::Worker::push1(Task* task) noexcept {
-    LockGuard lock(mutex_);
-    tasks_.pushBack(task);
 }
 
 void WorkStealingThreadPool::Worker::push1(IntrusiveList& tasks) noexcept {
@@ -339,9 +324,7 @@ void WorkStealingThreadPool::submitTasks(IntrusiveList& tasks) noexcept {
     stdAtomicAddAndFetch(&taskCount_, count, MemoryOrder::Release);
 
     if (auto w = localWorker(); w) {
-        while (auto t = (Task*)tasks.popFrontOrNull()) {
-            w->pushThrLocal(t);
-        }
+        w->local_.pushBack(tasks);
     } else if (auto w = (Worker*)wq->dequeue(); w) {
         w->push(&tasks);
     } else {

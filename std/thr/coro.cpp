@@ -50,7 +50,6 @@ namespace {
         ScopedPtr<Context> ctx_;
         Context* workerCtx_;
         Runable* runable_;
-        u8 priority_;
 
         ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noexcept;
         ~ContImpl();
@@ -60,7 +59,6 @@ namespace {
         }
 
         void parkWith(Runable* afterSuspend) noexcept;
-        u8 priority() const noexcept override;
         void run() noexcept override;
         void reSchedule() noexcept;
     };
@@ -241,7 +239,6 @@ ContImpl::ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noe
     , ctx_{Context::create(ctxBuf, params.stackPtr, params.stackSize, *this)}
     , workerCtx_(nullptr)
     , runable_(params.runable)
-    , priority_(params.priority)
 {
     stdAtomicAddAndFetch(&exec_->inflight_, 1, MemoryOrder::Relaxed);
 }
@@ -252,10 +249,6 @@ ContImpl::~ContImpl() {
 
         exec_->joinW_.write(&b, 1);
     }
-}
-
-u8 ContImpl::priority() const noexcept {
-    return priority_;
 }
 
 void ContImpl::reSchedule() noexcept {
@@ -295,7 +288,6 @@ SpawnParams::SpawnParams() noexcept
     : stackSize(16 * 1024)
     , stackPtr(nullptr)
     , runable(nullptr)
-    , priority(0)
 {
 }
 
@@ -770,12 +762,6 @@ SpawnParams& SpawnParams::setStackSize(size_t v) noexcept {
 
 SpawnParams& SpawnParams::setStackPtr(void* v) noexcept {
     stackPtr = v;
-
-    return *this;
-}
-
-SpawnParams& SpawnParams::setPriority(u8 v) noexcept {
-    priority = v;
 
     return *this;
 }

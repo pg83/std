@@ -7,7 +7,6 @@
 
 namespace stl {
     struct Task: public Runable, public IntrusiveNode {
-        virtual u8 priority() const noexcept;
     };
 
     template <typename V>
