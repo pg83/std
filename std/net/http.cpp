@@ -1,17 +1,17 @@
 #include "http.h"
 
-#include <std/ios/in_buf.h>
-#include <std/ios/input.h>
-#include <std/ios/output.h>
-#include <std/ios/stream_tcp.h>
-#include <std/lib/buffer.h>
-#include <std/mem/obj_pool.h>
+#include <std/thr/tcp.h>
 #include <std/sys/crt.h>
 #include <std/thr/coro.h>
-#include <std/thr/tcp.h>
 #include <std/alg/defer.h>
+#include <std/ios/input.h>
 #include <std/dbg/insist.h>
 #include <std/dbg/verify.h>
+#include <std/ios/in_buf.h>
+#include <std/ios/output.h>
+#include <std/lib/buffer.h>
+#include <std/mem/obj_pool.h>
+#include <std/ios/stream_tcp.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -24,6 +24,8 @@ namespace {
         TcpSocket sock;
         TcpStream stream;
         InBuf buf;
+        Buffer line;
+        Buffer lcName;
 
         HttpConnection(CoroExecutor* exec, int fd);
         ~HttpConnection();
@@ -45,11 +47,12 @@ HttpConnection::~HttpConnection() {
 }
 
 void HttpConnection::serve(HttpServe& handler) {
-    Buffer line;
+    line.reset();
 
     STD_VERIFY(buf.readLine(line));
 
     HttpRequest req;
+
     req.in = &buf;
     req.out = &stream;
 
@@ -61,8 +64,6 @@ void HttpConnection::serve(HttpServe& handler) {
 
     req.method = pool->intern(method);
     req.path = pool->intern(path.empty() ? rest : path);
-
-    Buffer lcName;
 
     for (;;) {
         line.reset();
