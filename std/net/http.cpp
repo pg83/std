@@ -63,12 +63,14 @@ HttpServerCtlImpl::HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, con
 void HttpServerCtlImpl::stop() {
     stdAtomicStore(&stopped, true, stl::MemoryOrder::Release);
 
-    int fd = ::socket(addr.ss_family, SOCK_STREAM, 0);
+    exec->spawn([this] {
+        TcpSocket sock(exec);
 
-    if (fd >= 0) {
-        ::connect(fd, (const sockaddr*)&addr, addrLen);
-        ::close(fd);
-    }
+        if (sock.socket(addr.ss_family, SOCK_STREAM, 0) == 0) {
+            sock.connectInf((const sockaddr*)&addr, addrLen);
+            sock.close();
+        }
+    });
 }
 
 void HttpServerCtlImpl::run() {
