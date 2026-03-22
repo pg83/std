@@ -150,8 +150,7 @@ u64 StringView::stou() const noexcept {
 u64 StringView::stoh() const noexcept {
     u64 result = 0;
 
-    for (size_t i = 0; i < length(); ++i) {
-        u8 ch = (*this)[i];
+    for (auto ch : *this) {
         u8 digit;
 
         if (ch >= '0' && ch <= '9') {
