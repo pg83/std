@@ -46,6 +46,16 @@ void TcpSocket::shutdown(int how) {
     ::shutdown(fd, how);
 }
 
+int TcpSocket::setReuseAddr(bool on) {
+    int opt = on ? 1 : 0;
+
+    if (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        return -errno;
+    }
+
+    return 0;
+}
+
 int TcpSocket::bind(const sockaddr* addr, u32 addrLen) {
     if (int r = ::bind(fd, addr, addrLen); r < 0) {
         return -errno;

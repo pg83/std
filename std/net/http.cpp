@@ -90,8 +90,7 @@ void stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u3
 
     STD_VERIFY(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
 
-    int opt = 1;
-    ::setsockopt(srv.fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    srv.setReuseAddr(true);
 
     STD_VERIFY(srv.bind((const sockaddr*)&addrCopy, addrLen) == 0);
     STD_VERIFY(srv.listen(128) == 0);
