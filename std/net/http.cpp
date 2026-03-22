@@ -32,9 +32,8 @@ namespace {
 
         HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen);
 
-        void stop() override;
         void run();
-        void acceptLoop(int srvFd);
+        void stop() override;
     };
 
     struct HttpConnection {
