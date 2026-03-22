@@ -47,7 +47,7 @@ HttpRequest::HttpRequest(ZeroCopyInput& in, Output& out, ObjPool& pool)
         }
 
         lcName.grow(name.length());
-        headers.insert(pool.intern(name.lower((u8*)lcName.mutData())), pool.intern(val.stripSpace()));
+        headers.insert(name.lower((u8*)lcName.mutData()), pool.intern(val.stripSpace()));
     }
 }
 
