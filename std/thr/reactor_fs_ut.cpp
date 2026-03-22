@@ -34,29 +34,29 @@ namespace {
     };
 
     ssize_t doRead(FSReactorIface* reactor, CoroExecutor* exec,
-               int fd, void* buf, size_t len, off_t off)
+                   int fd, void* buf, size_t len, off_t off)
     {
         struct iovec iov = {buf, len};
         TestFSRequest req(exec);
-        req.iov    = &iov;
+        req.iov = &iov;
         req.iovcnt = 1;
         req.offset = off;
-        req.fd     = fd;
-        req.op     = FSRequestOp::Read;
+        req.fd = fd;
+        req.op = FSRequestOp::Read;
         reactor->submit(&req);
         return req.result;
     }
 
     ssize_t doWrite(FSReactorIface* reactor, CoroExecutor* exec,
-                int fd, const void* buf, size_t len, off_t off)
+                    int fd, const void* buf, size_t len, off_t off)
     {
         struct iovec iov = {(void*)buf, len};
         TestFSRequest req(exec);
-        req.iov    = &iov;
+        req.iov = &iov;
         req.iovcnt = 1;
         req.offset = off;
-        req.fd     = fd;
-        req.op     = FSRequestOp::Write;
+        req.fd = fd;
+        req.op = FSRequestOp::Write;
         reactor->submit(&req);
         return req.result;
     }
@@ -71,7 +71,7 @@ namespace {
 
 STD_TEST_SUITE(FSReactor) {
     STD_TEST(PreadFile) {
-        auto exec  = CoroExecutor::create(2);
+        auto exec = CoroExecutor::create(2);
         auto opool = ObjPool::fromMemory();
         auto* reactor = FSReactorIface::create(nullptr, opool.mutPtr());
 
@@ -94,7 +94,7 @@ STD_TEST_SUITE(FSReactor) {
     }
 
     STD_TEST(PwriteFile) {
-        auto exec  = CoroExecutor::create(2);
+        auto exec = CoroExecutor::create(2);
         auto opool = ObjPool::fromMemory();
         auto* reactor = FSReactorIface::create(nullptr, opool.mutPtr());
 
@@ -117,7 +117,7 @@ STD_TEST_SUITE(FSReactor) {
     }
 
     STD_TEST(PreadPwriteRoundtrip) {
-        auto exec  = CoroExecutor::create(2);
+        auto exec = CoroExecutor::create(2);
         auto opool = ObjPool::fromMemory();
         auto* reactor = FSReactorIface::create(nullptr, opool.mutPtr());
 
@@ -140,7 +140,7 @@ STD_TEST_SUITE(FSReactor) {
     }
 
     STD_TEST(MultipleIovecs) {
-        auto exec  = CoroExecutor::create(2);
+        auto exec = CoroExecutor::create(2);
         auto opool = ObjPool::fromMemory();
         auto* reactor = FSReactorIface::create(nullptr, opool.mutPtr());
 
@@ -155,22 +155,22 @@ STD_TEST_SUITE(FSReactor) {
             };
 
             TestFSRequest wreq(exec.mutPtr());
-            wreq.iov    = wiov;
+            wreq.iov = wiov;
             wreq.iovcnt = 2;
             wreq.offset = 0;
-            wreq.fd     = fd;
-            wreq.op     = FSRequestOp::Write;
+            wreq.fd = fd;
+            wreq.op = FSRequestOp::Write;
             reactor->submit(&wreq);
             STD_INSIST(wreq.result == 11);
 
             char buf[16] = {};
             struct iovec riov = {buf, sizeof(buf)};
             TestFSRequest rreq(exec.mutPtr());
-            rreq.iov    = &riov;
+            rreq.iov = &riov;
             rreq.iovcnt = 1;
             rreq.offset = 0;
-            rreq.fd     = fd;
-            rreq.op     = FSRequestOp::Read;
+            rreq.fd = fd;
+            rreq.op = FSRequestOp::Read;
             reactor->submit(&rreq);
             STD_INSIST(rreq.result == 11);
             STD_INSIST(memcmp(buf, "hello world", 11) == 0);
@@ -182,7 +182,7 @@ STD_TEST_SUITE(FSReactor) {
     }
 
     STD_TEST(MultipleConcurrentPreads) {
-        auto exec  = CoroExecutor::create(4);
+        auto exec = CoroExecutor::create(4);
         auto opool = ObjPool::fromMemory();
         auto* reactor = FSReactorIface::create(nullptr, opool.mutPtr());
 
