@@ -15,14 +15,14 @@ using namespace stl;
 namespace {
     struct TestFSRequest: public FSRequest {
         Semaphore sem;
-        i64 result = 0;
+        ssize_t result = 0;
 
         TestFSRequest(CoroExecutor* exec)
             : sem(0, exec)
         {
         }
 
-        void complete(i64 res) noexcept override {
+        void complete(ssize_t res) noexcept override {
             result = res;
             sem.post();
         }
@@ -33,8 +33,8 @@ namespace {
         }
     };
 
-    i64 doRead(FSReactorIface* reactor, CoroExecutor* exec,
-               int fd, void* buf, size_t len, i64 off)
+    ssize_t doRead(FSReactorIface* reactor, CoroExecutor* exec,
+               int fd, void* buf, size_t len, off_t off)
     {
         struct iovec iov = {buf, len};
         TestFSRequest req(exec);
@@ -47,8 +47,8 @@ namespace {
         return req.result;
     }
 
-    i64 doWrite(FSReactorIface* reactor, CoroExecutor* exec,
-                int fd, const void* buf, size_t len, i64 off)
+    ssize_t doWrite(FSReactorIface* reactor, CoroExecutor* exec,
+                int fd, const void* buf, size_t len, off_t off)
     {
         struct iovec iov = {(void*)buf, len};
         TestFSRequest req(exec);
@@ -82,9 +82,9 @@ STD_TEST_SUITE(FSReactor) {
             ::write(fd, data, sizeof(data));
 
             char buf[32] = {};
-            i64 n = doRead(reactor, exec.mutPtr(), fd, buf, sizeof(buf), 0);
+            ssize_t n = doRead(reactor, exec.mutPtr(), fd, buf, sizeof(buf), 0);
 
-            STD_INSIST(n == (i64)sizeof(data));
+            STD_INSIST(n == (ssize_t)sizeof(data));
             STD_INSIST(memcmp(buf, data, sizeof(data)) == 0);
 
             ::close(fd);
@@ -102,9 +102,9 @@ STD_TEST_SUITE(FSReactor) {
             int fd = makeTmpFd();
 
             const char data[] = "pwrite test";
-            i64 n = doWrite(reactor, exec.mutPtr(), fd, data, sizeof(data), 0);
+            ssize_t n = doWrite(reactor, exec.mutPtr(), fd, data, sizeof(data), 0);
 
-            STD_INSIST(n == (i64)sizeof(data));
+            STD_INSIST(n == (ssize_t)sizeof(data));
 
             char buf[32] = {};
             ::pread(fd, buf, sizeof(buf), 0);
@@ -125,12 +125,12 @@ STD_TEST_SUITE(FSReactor) {
             int fd = makeTmpFd();
 
             const char msg[] = "roundtrip";
-            i64 written = doWrite(reactor, exec.mutPtr(), fd, msg, sizeof(msg), 16);
-            STD_INSIST(written == (i64)sizeof(msg));
+            ssize_t written = doWrite(reactor, exec.mutPtr(), fd, msg, sizeof(msg), 16);
+            STD_INSIST(written == (ssize_t)sizeof(msg));
 
             char buf[32] = {};
-            i64 nread = doRead(reactor, exec.mutPtr(), fd, buf, sizeof(buf), 16);
-            STD_INSIST(nread == (i64)sizeof(msg));
+            ssize_t nread = doRead(reactor, exec.mutPtr(), fd, buf, sizeof(buf), 16);
+            STD_INSIST(nread == (ssize_t)sizeof(msg));
             STD_INSIST(memcmp(buf, msg, sizeof(msg)) == 0);
 
             ::close(fd);
@@ -196,8 +196,8 @@ STD_TEST_SUITE(FSReactor) {
         for (int i = 0; i < N; ++i) {
             exec->spawn([&] {
                 char buf[64] = {};
-                i64 n = doRead(reactor, exec.mutPtr(), fd, buf, sizeof(buf), 0);
-                STD_INSIST(n == (i64)sizeof(fileData));
+                ssize_t n = doRead(reactor, exec.mutPtr(), fd, buf, sizeof(buf), 0);
+                STD_INSIST(n == (ssize_t)sizeof(fileData));
                 STD_INSIST(memcmp(buf, fileData, sizeof(fileData)) == 0);
 
                 if (++doneCount == N) {

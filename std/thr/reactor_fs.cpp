@@ -15,8 +15,6 @@ namespace {
 
         FSReactorState(ThreadPool* pool, ObjPool* opool);
 
-        void run() noexcept override;
-        void stop() noexcept override;
         void submit(FSRequest* req) override;
     };
 }
@@ -27,12 +25,6 @@ FSReactorState::FSReactorState(ThreadPool* pool, ObjPool* opool)
     if (!pool_) {
         pool_ = ThreadPool::simple(opool, 4);
     }
-}
-
-void FSReactorState::run() noexcept {
-}
-
-void FSReactorState::stop() noexcept {
 }
 
 void FSReactorState::submit(FSRequest* req) {
@@ -46,7 +38,7 @@ void FSReactorState::submit(FSRequest* req) {
                 n = ::pwritev(req->fd, req->iov, req->iovcnt, req->offset);
             }
 
-            req->complete(n < 0 ? (i64)-errno : (i64)n);
+            req->complete(n < 0 ? -errno : n);
         });
     }));
 }

@@ -21,16 +21,15 @@ namespace stl {
     struct FSRequest: public IntrusiveNode {
         struct iovec* iov;
         int iovcnt;
-        i64 offset;
+        off_t offset;
         i32 fd;
         u32 op;
 
-        virtual void complete(i64 result) noexcept = 0;
+        virtual void complete(ssize_t result) noexcept = 0;
         virtual void parkWith(Runable&& afterSuspend) noexcept = 0;
     };
 
-    struct FSReactorIface: public Runable {
-        virtual void stop() noexcept = 0;
+    struct FSReactorIface {
         virtual void submit(FSRequest* req) = 0;
 
         static FSReactorIface* create(ThreadPool* pool, ObjPool* opool);

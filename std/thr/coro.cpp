@@ -9,8 +9,9 @@
 #include "cond_var.h"
 #include "semaphore.h"
 #include "wait_group.h"
-#include "reactor_poll.h"
+#include "reactor_fs.h"
 #include "thread_iface.h"
+#include "reactor_poll.h"
 #include "channel_iface.h"
 #include "cond_var_iface.h"
 #include "semaphore_iface.h"
@@ -38,6 +39,7 @@
 #include <sched.h>
 #include <alloca.h>
 #include <unistd.h>
+#include <sys/uio.h>
 
 using namespace stl;
 
@@ -116,6 +118,7 @@ namespace {
         ObjPool::Ref opool_;
         const u64 tlsKey_;
         Vector<ReactorIface*> reactors_;
+        FSReactorIface* fsReactor_;
         ScopedFD joinR_;
         ScopedFD joinW_;
         ScopedFD submitR_;
@@ -164,6 +167,8 @@ namespace {
         SemaphoreIface* createSemaphore(size_t initial) override;
 
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
+        ssize_t pread(int fd, void* buf, size_t len, off_t offset) override;
+        ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) override;
     };
 
     struct PollRequestImpl: public PollRequest {
@@ -175,6 +180,20 @@ namespace {
         }
 
         void complete(u32 res) noexcept override {
+            result = res;
+            cont->reSchedule();
+        }
+    };
+
+    struct FSRequestImpl: public FSRequest {
+        ContImpl* cont;
+        ssize_t result = 0;
+
+        void parkWith(Runable&& afterSuspend) noexcept override {
+            cont->parkWith(&afterSuspend);
+        }
+
+        void complete(ssize_t res) noexcept override {
             result = res;
             cont->reSchedule();
         }
@@ -196,6 +215,8 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     for (size_t i = 0; i < reactors; ++i) {
         reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr()));
     }
+
+    fsReactor_ = FSReactorIface::create(nullptr, opool_.mutPtr());
 
     spawnRun(SpawnParams().setSystem(true).setRunable([this] {
         spawnSystem();
@@ -389,6 +410,32 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
 
     reactors_[splitMix64(fd) % reactors_.length()]->processRequest(&req);
 
+    return req.result;
+}
+
+ssize_t CoroExecutorImpl::pread(int fd, void* buf, size_t len, off_t offset) {
+    struct iovec iov = {buf, len};
+    FSRequestImpl req;
+    req.cont   = currentCont();
+    req.iov    = &iov;
+    req.iovcnt = 1;
+    req.offset = offset;
+    req.fd     = fd;
+    req.op     = FSRequestOp::Read;
+    fsReactor_->submit(&req);
+    return req.result;
+}
+
+ssize_t CoroExecutorImpl::pwrite(int fd, const void* buf, size_t len, off_t offset) {
+    struct iovec iov = {(void*)buf, len};
+    FSRequestImpl req;
+    req.cont   = currentCont();
+    req.iov    = &iov;
+    req.iovcnt = 1;
+    req.offset = offset;
+    req.fd     = fd;
+    req.op     = FSRequestOp::Write;
+    fsReactor_->submit(&req);
     return req.result;
 }
 
