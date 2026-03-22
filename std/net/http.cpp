@@ -273,6 +273,7 @@ bool HttpConnection::serve(HttpServe& handler) {
 
     req.method = pool->intern(method);
     req.path = pool->intern(path.empty() ? rest : path);
+    version = pool->intern(version);
 
     for (;;) {
         line.reset();

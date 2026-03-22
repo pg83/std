@@ -998,4 +998,24 @@ STD_TEST_SUITE(StringView) {
         sv.lower(buf);
         STD_INSIST(sv == StringView("UPPER"));
     }
+
+    STD_TEST(StohZero) {
+        STD_INSIST(StringView("0").stoh() == 0);
+    }
+
+    STD_TEST(StohBasic) {
+        STD_INSIST(StringView("ff").stoh() == 255);
+    }
+
+    STD_TEST(StohUpperCase) {
+        STD_INSIST(StringView("FF").stoh() == 255);
+    }
+
+    STD_TEST(StohMixedCase) {
+        STD_INSIST(StringView("1a2B").stoh() == 0x1a2b);
+    }
+
+    STD_TEST(StohLarge) {
+        STD_INSIST(StringView("400").stoh() == 1024);
+    }
 }
