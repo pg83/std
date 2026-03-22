@@ -230,12 +230,12 @@ namespace {
             void run() noexcept override;
             void initStealOrder() noexcept;
             void push(Task* task) noexcept;
-            void push1(IntrusiveList& tasks) noexcept;
             void push(IntrusiveList* task) noexcept;
             bool shouldSleep(i32 searching) noexcept;
             void steal(IntrusiveList* stolen) noexcept;
             void trySteal(IntrusiveList* stolen) noexcept;
             void splitHalf(IntrusiveList* stolen) noexcept;
+            void pushNoSignal(IntrusiveList& tasks) noexcept;
         };
 
         IntMap<Worker> workers_;
@@ -267,7 +267,7 @@ void WorkStealingThreadPool::Worker::push(Task* task) noexcept {
     condVar_.signal();
 }
 
-void WorkStealingThreadPool::Worker::push1(IntrusiveList& tasks) noexcept {
+void WorkStealingThreadPool::Worker::pushNoSignal(IntrusiveList& tasks) noexcept {
     LockGuard lock(mutex_);
     tasks_.pushBack(tasks);
 }
@@ -329,7 +329,7 @@ void WorkStealingThreadPool::submitTasks(IntrusiveList& tasks) noexcept {
     } else if (auto w = (Worker*)wq->dequeue(); w) {
         w->push(&tasks);
     } else {
-        index_[splitMix64((size_t)tasks.mutFront()) % index_.length()]->push1(tasks);
+        index_[splitMix64((size_t)tasks.mutFront()) % index_.length()]->pushNoSignal(tasks);
 
         if (auto w = (Worker*)wq->dequeue(); w) {
             IntrusiveList tmp;
