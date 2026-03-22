@@ -14,6 +14,7 @@
 #include <std/sys/atomic.h>
 #include <std/ios/in_zero.h>
 #include <std/mem/obj_pool.h>
+#include <std/thr/semaphore.h>
 #include <std/ios/stream_tcp.h>
 #include <std/thr/wait_group.h>
 
@@ -33,8 +34,8 @@ namespace {
 
         HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen);
 
-        void run();
         void stop() override;
+        void run(Semaphore* sem);
     };
 
     struct HttpConnection {
@@ -74,7 +75,7 @@ void HttpServerCtlImpl::stop() {
     });
 }
 
-void HttpServerCtlImpl::run() {
+void HttpServerCtlImpl::run(Semaphore* sem) {
     TcpSocket srv(exec);
 
     STD_DEFER {
@@ -87,6 +88,8 @@ void HttpServerCtlImpl::run() {
 
     STD_VERIFY(srv.bind((const sockaddr*)&addr, addrLen) == 0);
     STD_VERIFY(srv.listen(128) == 0);
+
+    sem->post();
 
     for (;;) {
         TcpSocket client;
@@ -202,10 +205,14 @@ IntrusivePtr<HttpServerCtl> stl::serve(HttpServe& handler, CoroExecutor* exec, c
 
     wg.inc();
 
-    exec->spawn([ctl, &wg] mutable {
-        ctl->run();
+    Semaphore sem(0);
+
+    exec->spawn([ctl, &wg, &sem] mutable {
+        ctl->run(&sem);
         wg.done();
     });
+
+    sem.wait();
 
     return ctl.mutPtr();
 }
