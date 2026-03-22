@@ -89,7 +89,7 @@ ReactorState::ReactorState(CoroExecutor* exec, ThreadPool* p, ObjPool* opool)
     wakeReadFd.setNonBlocking();
     wakeWriteFd.setNonBlocking();
     poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
-    thread_ = new Thread(*this);
+    thread_ = opool->make<Thread>(*this);
 }
 
 void ReactorState::rearmOrDisarm(int fd) {
@@ -126,7 +126,6 @@ ReactorState::~ReactorState() noexcept {
     stdAtomicStore(&stopped_, true, MemoryOrder::Release);
     wakeup();
     thread_->join();
-    delete thread_;
 }
 
 void ReactorState::drainWakeup() noexcept {

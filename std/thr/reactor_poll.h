@@ -24,8 +24,6 @@ namespace stl {
     };
 
     struct ReactorIface {
-        virtual ~ReactorIface() noexcept = default;
-
         virtual void processRequest(PollRequest* req) = 0;
 
         static ReactorIface* create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool);
