@@ -30,7 +30,6 @@ namespace {
 
         ChunkedInput(ZeroCopyInput* inner);
 
-        size_t readImpl(void* data, size_t len) override;
         size_t nextImpl(const void** chunk) override;
         void commitImpl(size_t len) noexcept override;
 
@@ -45,13 +44,7 @@ LimitedInput::LimitedInput(ZeroCopyInput* inner, size_t limit)
 }
 
 size_t LimitedInput::readImpl(void* data, size_t len) {
-    len = min(len, remaining);
-
-    if (!len) {
-        return 0;
-    }
-
-    size_t n = inner->read(data, len);
+    size_t n = inner->read(data, min(len, remaining));
 
     remaining -= n;
 
@@ -96,21 +89,6 @@ bool ChunkedInput::loadChunk() {
     }
 
     return true;
-}
-
-size_t ChunkedInput::readImpl(void* data, size_t len) {
-    const void* chunk;
-
-    len = min(next(&chunk), len);
-
-    if (!len) {
-        return 0;
-    }
-
-    memCpy(data, chunk, len);
-    commit(len);
-
-    return len;
 }
 
 size_t ChunkedInput::nextImpl(const void** chunk) {
