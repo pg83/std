@@ -78,6 +78,12 @@ namespace stl {
         u32 hash32() const noexcept;
         u64 hash64() const noexcept;
 
+        StringView stripSpace() const noexcept;
+        StringView stripCr() const noexcept;
+
+        // split by delimiter; returns false if not found
+        bool split(u8 delim, StringView& before, StringView& after) const noexcept;
+
         // parse
         u64 stou() const noexcept;
     };

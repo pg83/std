@@ -84,6 +84,39 @@ const u8* StringView::memChr(u8 ch) const noexcept {
     return (const u8*)memchr(fix(data()), ch, length());
 }
 
+StringView StringView::stripCr() const noexcept {
+    if (!empty() && back() == '\r') {
+        return prefix(length() - 1);
+    }
+
+    return *this;
+}
+
+StringView StringView::stripSpace() const noexcept {
+    const u8* p = data();
+    const u8* e = end();
+
+    while (p < e && *p == ' ') {
+        ++p;
+    }
+
+    while (e > p && *(e - 1) == ' ') {
+        --e;
+    }
+
+    return StringView(p, e);
+}
+
+bool StringView::split(u8 delim, StringView& before, StringView& after) const noexcept {
+    if (const u8* p = memChr(delim); p) {
+        before = StringView(data(), p);
+        after = StringView(p + 1, end());
+        return true;
+    }
+
+    return false;
+}
+
 u64 StringView::stou() const noexcept {
     u64 result = 0;
 
