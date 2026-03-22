@@ -41,8 +41,10 @@ namespace {
         IntMap<void*> tls_;
         PCG32 rng_{this};
 
-        void submitTask(Task* task) noexcept override {
-            task->run();
+        void submitTasks(IntrusiveList& tasks) noexcept override {
+            while (auto t = (Task*)tasks.popFrontOrNull()) {
+                t->run();
+            }
         }
 
         void join() noexcept override {
@@ -96,7 +98,7 @@ namespace {
         ThreadPoolImpl(size_t numThreads);
         ~ThreadPoolImpl() noexcept;
 
-        void submitTask(Task* task) noexcept override;
+        void submitTasks(IntrusiveList& tasks) noexcept override;
         void join() noexcept override;
         void** tls(u64 key) noexcept override;
         PCG32& random() noexcept override;
@@ -109,10 +111,10 @@ ThreadPoolImpl::ThreadPoolImpl(size_t numThreads) {
     }
 }
 
-void ThreadPoolImpl::submitTask(Task* task) noexcept {
+void ThreadPoolImpl::submitTasks(IntrusiveList& tasks) noexcept {
     LockGuard lock(mutex_);
-    ++inflight_;
-    queue_.pushBack(task);
+    inflight_ += tasks.length();
+    queue_.pushBack(tasks);
     condVar_.signal();
 }
 
@@ -169,6 +171,12 @@ void ThreadPoolImpl::workerLoop() {
 ThreadPool::~ThreadPool() noexcept {
 }
 
+void ThreadPool::submitTask(Task* task) noexcept {
+    IntrusiveList list;
+    list.pushBack(task);
+    submitTasks(list);
+}
+
 ThreadPool* ThreadPool::sync(ObjPool* pool) {
     return pool->make<SyncThreadPool>();
 }
@@ -223,6 +231,7 @@ namespace {
             void initStealOrder() noexcept;
             void push(Task* task) noexcept;
             void push1(Task* task) noexcept;
+            void push1(IntrusiveList& tasks) noexcept;
             void pushThrLocal(Task* task) noexcept;
             void push(IntrusiveList* task) noexcept;
             bool shouldSleep(i32 searching) noexcept;
@@ -245,7 +254,7 @@ namespace {
         Worker* dequeueWorker() noexcept;
         PCG32& random() noexcept override;
         void** tls(u64 key) noexcept override;
-        void submitTask(Task* task) noexcept override;
+        void submitTasks(IntrusiveList& tasks) noexcept override;
     };
 }
 
@@ -271,6 +280,11 @@ void WorkStealingThreadPool::Worker::push(Task* task) noexcept {
 void WorkStealingThreadPool::Worker::push1(Task* task) noexcept {
     LockGuard lock(mutex_);
     tasks_.pushBack(task);
+}
+
+void WorkStealingThreadPool::Worker::push1(IntrusiveList& tasks) noexcept {
+    LockGuard lock(mutex_);
+    tasks_.pushBack(tasks);
 }
 
 void WorkStealingThreadPool::Worker::push(IntrusiveList* tasks) noexcept {
@@ -320,15 +334,18 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
     return nullptr;
 }
 
-void WorkStealingThreadPool::submitTask(Task* task) noexcept {
-    stdAtomicAddAndFetch(&taskCount_, 1, MemoryOrder::Release);
+void WorkStealingThreadPool::submitTasks(IntrusiveList& tasks) noexcept {
+    auto count = (i32)tasks.length();
+    stdAtomicAddAndFetch(&taskCount_, count, MemoryOrder::Release);
 
     if (auto w = localWorker(); w) {
-        return w->pushThrLocal(task);
+        while (auto t = (Task*)tasks.popFrontOrNull()) {
+            w->pushThrLocal(t);
+        }
     } else if (auto w = (Worker*)wq->dequeue(); w) {
-        return w->push(task);
+        w->push(&tasks);
     } else {
-        index_[splitMix64((size_t)task) % index_.length()]->push1(task);
+        index_[splitMix64((size_t)tasks.mutFront()) % index_.length()]->push1(tasks);
 
         if (auto w = (Worker*)wq->dequeue(); w) {
             IntrusiveList tmp;

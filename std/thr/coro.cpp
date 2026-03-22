@@ -121,8 +121,6 @@ namespace {
         FSReactorIface* fsReactor_;
         ScopedFD joinR_;
         ScopedFD joinW_;
-        ScopedFD submitR_;
-        ScopedFD submitW_;
         WaitGroup done_;
         ThreadPool* pool_;
 
@@ -207,10 +205,8 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     , pool_(ThreadPool::workStealing(opool_.mutPtr(), threads + reactors))
 {
     createPipeFD(joinR_, joinW_);
-    createPipeFD(submitR_, submitW_);
 
     joinW_.setNonBlocking();
-    submitR_.setNonBlocking();
 
     for (size_t i = 0; i < reactors; ++i) {
         reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr()));
@@ -218,21 +214,18 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
 
     fsReactor_ = FSReactorIface::create(ThreadPool::simple(opool_.mutPtr(), reactors), opool_.mutPtr());
 
+    done_.inc();
+
     spawnRun(SpawnParams().setSystem(true).setRunable([this] {
         spawnSystem();
+        done_.done();
     }));
 }
 
 Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
     auto task = makeContImpl(this, params);
 
-    if (tls()) {
-        task->reSchedule();
-    } else if (params.system) {
-        task->reSchedule();
-    } else {
-        submitExternalTask(task);
-    }
+    task->reSchedule();
 
     return task;
 }
@@ -263,33 +256,18 @@ void CoroExecutorImpl::spawnSystem() noexcept {
                     done_.done();
                 }));
     }
-
-    done_.inc();
-
-    spawnRun(
-        SpawnParams()
-            .setStack(opool_.mutPtr(), 16 * 1024)
-            .setPriority(1)
-            .setSystem(true)
-            .setRunable([this] {
-                submitterLoop();
-
-                for (auto* r : reactors_) {
-                    r->stop();
-                }
-
-                done_.done();
-            }));
 }
 
 CoroExecutorImpl::~CoroExecutorImpl() noexcept {
     join();
 
     spawn([&] {
+        for (auto* r : reactors_) {
+            r->stop();
+        }
+
         done_.wait();
     });
-
-    submitExternalTask(nullptr);
 
     join();
 }
@@ -299,35 +277,6 @@ void CoroExecutorImpl::join() noexcept {
         char b;
 
         joinR_.read(&b, 1);
-    }
-}
-
-void CoroExecutorImpl::submitExternalTask(Task* task) noexcept {
-    submitW_.write(&task, sizeof(task));
-}
-
-void CoroExecutorImpl::submitterLoop() noexcept {
-    Vector<Task*> buf(64);
-
-    for (;;) {
-        CoroExecutor::poll(submitR_.get(), PollFlag::In);
-
-        auto n = ::read(submitR_.get(), buf.mutData(), (u8*)buf.mutStorageEnd() - (u8*)buf.mutData());
-
-        STD_INSIST(n > 0);
-        STD_INSIST(n % sizeof(Task*) == 0);
-
-        auto cnt = (size_t)n / sizeof(Task*);
-
-        for (auto task : range(buf.data(), buf.data() + cnt)) {
-            if (task) {
-                pool_->submitTask(task);
-            } else {
-                return;
-            }
-        }
-
-        buf.grow(cnt + 1);
     }
 }
 
