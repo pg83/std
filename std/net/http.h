@@ -28,9 +28,10 @@ namespace stl {
         virtual void serve(HttpRequest& req) = 0;
     };
 
-    struct HttpServerCtl : ARC {
+    struct HttpServerCtl: public ARC {
+        virtual ~HttpServerCtl();
+
         virtual void stop() = 0;
-        virtual ~HttpServerCtl() = default;
     };
 
     IntrusivePtr<HttpServerCtl> serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg);
