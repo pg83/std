@@ -47,7 +47,9 @@ STD_TEST_SUITE(HttpRequestParsing) {
             TcpSocket cli(exec.mutPtr());
             auto caddr = makeAddr(17670);
             STD_INSIST(cli.connectInf((const sockaddr*)&caddr, sizeof(caddr)) == 0);
-            STD_DEFER { cli.close(); };
+            STD_DEFER {
+                cli.close();
+            };
 
             TcpStream stream(cli);
             const char* req = "GET /foo/bar HTTP/1.0\r\n\r\n";
@@ -60,7 +62,9 @@ STD_TEST_SUITE(HttpRequestParsing) {
             ctl->stop();
         });
 
-        exec->spawn([&] { wg.wait(); });
+        exec->spawn([&] {
+            wg.wait();
+        });
         exec->join();
 
         STD_INSIST(handler.path == StringView("/foo/bar"));
@@ -90,7 +94,9 @@ STD_TEST_SUITE(HttpRequestParsing) {
             TcpSocket cli(exec.mutPtr());
             auto caddr = makeAddr(17671);
             STD_INSIST(cli.connectInf((const sockaddr*)&caddr, sizeof(caddr)) == 0);
-            STD_DEFER { cli.close(); };
+            STD_DEFER {
+                cli.close();
+            };
 
             TcpStream stream(cli);
             const char* req = "GET /search?q=hello&page=2 HTTP/1.0\r\n\r\n";
@@ -103,7 +109,9 @@ STD_TEST_SUITE(HttpRequestParsing) {
             ctl->stop();
         });
 
-        exec->spawn([&] { wg.wait(); });
+        exec->spawn([&] {
+            wg.wait();
+        });
         exec->join();
 
         STD_INSIST(handler.path == StringView("/search"));
