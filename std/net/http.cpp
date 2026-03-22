@@ -19,34 +19,46 @@
 using namespace stl;
 
 namespace {
-    struct HttpRequestImpl {
+    struct HttpConnection {
         ObjPool::Ref pool;
         TcpSocket sock;
         TcpStream stream;
         InBuf buf;
-        HttpRequest req;
 
-        HttpRequestImpl(CoroExecutor* exec, int fd);
-        ~HttpRequestImpl();
+        HttpConnection(CoroExecutor* exec, int fd);
+        ~HttpConnection();
+
+        void serve(HttpServe& handler);
     };
 }
 
-HttpRequestImpl::HttpRequestImpl(CoroExecutor* exec, int fd)
+HttpConnection::HttpConnection(CoroExecutor* exec, int fd)
     : pool(ObjPool::fromMemory())
     , sock(fd, exec)
     , stream(sock)
     , buf(stream)
-    , req{.in = &buf, .out = &stream}
 {
+}
+
+HttpConnection::~HttpConnection() {
+    sock.close();
+}
+
+void HttpConnection::serve(HttpServe& handler) {
     Buffer line;
 
-    STD_VERIFY(req.in->readLine(line));
+    STD_VERIFY(buf.readLine(line));
+
+    HttpRequest req;
+    req.in = &buf;
+    req.out = &stream;
 
     StringView method, rest, path, version;
 
     STD_VERIFY(StringView(line).stripCr().split(' ', method, rest));
 
     rest.split(' ', path, version);
+
     req.method = pool->intern(method);
     req.path = pool->intern(path.empty() ? rest : path);
 
@@ -54,7 +66,7 @@ HttpRequestImpl::HttpRequestImpl(CoroExecutor* exec, int fd)
 
     for (;;) {
         line.reset();
-        req.in->readLine(line);
+        buf.readLine(line);
 
         StringView name, val;
 
@@ -65,18 +77,8 @@ HttpRequestImpl::HttpRequestImpl(CoroExecutor* exec, int fd)
         lcName.grow(name.length());
         req.headers.insert(name.lower((u8*)lcName.mutData()), pool->intern(val.stripSpace()));
     }
-}
 
-HttpRequestImpl::~HttpRequestImpl() {
-    sock.close();
-}
-
-namespace {
-    void serveConn(HttpServe& handler, CoroExecutor* exec, int fd) {
-        HttpRequestImpl impl(exec, fd);
-
-        handler.serve(impl.req);
-    }
+    handler.serve(req);
 }
 
 void stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen) {
@@ -108,7 +110,9 @@ void stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u3
             }
 
             exec->spawn([&handler, exec, fd = client.fd] {
-                serveConn(handler, exec, fd);
+                HttpConnection conn(exec, fd);
+
+                conn.serve(handler);
             });
         }
     }));
