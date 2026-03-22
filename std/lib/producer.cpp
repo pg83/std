@@ -2,4 +2,5 @@
 
 using namespace stl;
 
-ProducerIface::~ProducerIface() noexcept = default;
+ProducerIface::~ProducerIface() noexcept {
+}
