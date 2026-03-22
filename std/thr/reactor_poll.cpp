@@ -68,17 +68,13 @@ namespace {
 
         ReactorState(CoroExecutor* exec, ThreadPool* p, ObjPool* opool);
 
-        ~ReactorState() noexcept {
-            delete thread_;
-        }
+        ~ReactorState() noexcept;
 
         void drainQueue();
         void wakeup() noexcept;
         void rearmOrDisarm(int fd);
         void drainWakeup() noexcept;
         void run() noexcept override;
-        void stop() noexcept override;
-        void join() noexcept override;
         void processEvent(PollEvent* ev, IntrusiveList& ready) noexcept;
         void processRequest(PollRequest* req) override;
     };
@@ -126,13 +122,11 @@ void ReactorState::wakeup() noexcept {
     ::write(wakeWriteFd.get(), &b, 1);
 }
 
-void ReactorState::stop() noexcept {
+ReactorState::~ReactorState() noexcept {
     stdAtomicStore(&stopped_, true, MemoryOrder::Release);
     wakeup();
-}
-
-void ReactorState::join() noexcept {
     thread_->join();
+    delete thread_;
 }
 
 void ReactorState::drainWakeup() noexcept {

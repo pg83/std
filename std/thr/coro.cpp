@@ -212,18 +212,6 @@ void CoroExecutorImpl::yield() noexcept {
 
 CoroExecutorImpl::~CoroExecutorImpl() noexcept {
     join();
-
-    spawn([&] {
-        for (auto* r : reactors_) {
-            r->stop();
-        }
-
-        for (auto* r : reactors_) {
-            r->join();
-        }
-    });
-
-    join();
 }
 
 void CoroExecutorImpl::join() noexcept {
