@@ -34,6 +34,8 @@ HttpRequest::HttpRequest(ZeroCopyInput& in, Output& out, ObjPool& pool)
     this->method = pool.intern(method);
     this->path = pool.intern(path.empty() ? rest : path);
 
+    Buffer lcName;
+
     for (;;) {
         line.reset();
         in.readLine(line);
@@ -44,7 +46,8 @@ HttpRequest::HttpRequest(ZeroCopyInput& in, Output& out, ObjPool& pool)
             break;
         }
 
-        headers.insert(pool.intern(name), pool.intern(val.stripSpace()));
+        lcName.grow(name.length());
+        headers.insert(pool.intern(name.lower((u8*)lcName.mutData())), pool.intern(val.stripSpace()));
     }
 }
 

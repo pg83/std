@@ -956,4 +956,46 @@ STD_TEST_SUITE(StringView) {
         STD_INSIST(method == StringView("GET"));
         STD_INSIST(rest == StringView("/index.html HTTP/1.0"));
     }
+
+    STD_TEST(LowerBasic) {
+        StringView sv("Hello");
+        u8 buf[8];
+        STD_INSIST(sv.lower(buf) == StringView("hello"));
+    }
+
+    STD_TEST(LowerAllCaps) {
+        StringView sv("HELLO");
+        u8 buf[8];
+        STD_INSIST(sv.lower(buf) == StringView("hello"));
+    }
+
+    STD_TEST(LowerAlreadyLower) {
+        StringView sv("hello");
+        u8 buf[8];
+        STD_INSIST(sv.lower(buf) == StringView("hello"));
+    }
+
+    STD_TEST(LowerEmpty) {
+        u8 buf[1];
+        STD_INSIST(StringView("").lower(buf).empty());
+    }
+
+    STD_TEST(LowerMixed) {
+        StringView sv("Content-Type");
+        u8 buf[16];
+        STD_INSIST(sv.lower(buf) == StringView("content-type"));
+    }
+
+    STD_TEST(LowerNonAlpha) {
+        StringView sv("Host: 127.0.0.1");
+        u8 buf[16];
+        STD_INSIST(sv.lower(buf) == StringView("host: 127.0.0.1"));
+    }
+
+    STD_TEST(LowerDoesNotModifySource) {
+        StringView sv("UPPER");
+        u8 buf[8];
+        sv.lower(buf);
+        STD_INSIST(sv == StringView("UPPER"));
+    }
 }

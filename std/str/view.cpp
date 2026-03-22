@@ -118,6 +118,15 @@ bool StringView::split(u8 delim, StringView& before, StringView& after) const no
     return false;
 }
 
+StringView StringView::lower(u8* buffer) const noexcept {
+    for (size_t i = 0; i < len_; ++i) {
+        u8 ch = ptr_[i];
+        buffer[i] = (ch >= 'A' && ch <= 'Z') ? (u8)(ch + ('a' - 'A')) : ch;
+    }
+
+    return StringView(buffer, len_);
+}
+
 u64 StringView::stou() const noexcept {
     u64 result = 0;
 

@@ -84,6 +84,10 @@ namespace stl {
         // split by delimiter; returns false if not found
         bool split(u8 delim, StringView& before, StringView& after) const noexcept;
 
+        // write ASCII-lowercased copy into buffer (must be >= length() bytes)
+        // returns view into buffer
+        StringView lower(u8* buffer) const noexcept;
+
         // parse
         u64 stou() const noexcept;
     };
