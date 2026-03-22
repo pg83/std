@@ -9,18 +9,19 @@ struct sockaddr;
 namespace stl {
     class Input;
     class Output;
-    class InBuf;
     class ObjPool;
+    class ZeroCopyInput;
+
     struct CoroExecutor;
 
     struct HttpRequest {
         StringView method;
         StringView path;
         SymbolMap<StringView> headers;
-        Input& in;
+        ZeroCopyInput& in;
         Output& out;
 
-        HttpRequest(InBuf& in, Output& out, ObjPool& pool);
+        HttpRequest(ZeroCopyInput& in, Output& out, ObjPool& pool);
     };
 
     struct HttpServe {

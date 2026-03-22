@@ -18,7 +18,7 @@
 
 using namespace stl;
 
-HttpRequest::HttpRequest(InBuf& in, Output& out, ObjPool& pool)
+HttpRequest::HttpRequest(ZeroCopyInput& in, Output& out, ObjPool& pool)
     : in(in)
     , out(out)
 {
