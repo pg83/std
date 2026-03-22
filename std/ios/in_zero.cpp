@@ -9,7 +9,8 @@ size_t ZeroInput::readImpl(void* data, size_t len) {
 }
 
 size_t ZeroInput::nextImpl(const void** chunk) {
-    (void)chunk;
+    *chunk = "";
+
     return 0;
 }
 
