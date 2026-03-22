@@ -1,9 +1,9 @@
 #include "reactor_poll.h"
 
 #include "pool.h"
-#include "coro.h"
 #include "mutex.h"
 #include "guard.h"
+#include "thread.h"
 #include "poller.h"
 
 #include <std/sys/fd.h>
@@ -13,6 +13,7 @@
 #include <std/map/treap.h>
 #include <std/sym/i_map.h>
 #include <std/alg/minmax.h>
+#include <std/sys/atomic.h>
 #include <std/alg/exchange.h>
 #include <std/mem/obj_pool.h>
 
@@ -52,8 +53,7 @@ namespace {
         }
     };
 
-    struct ReactorState: public ReactorIface, public Newable {
-        CoroExecutor* exec;
+    struct ReactorState: public ReactorIface, public Runable, public Newable {
         ThreadPool* pool;
         PollerIface* poller;
         DeadlineTreap timers;
@@ -63,10 +63,14 @@ namespace {
         DeadlineTreap queue_;
         ScopedFD wakeReadFd;
         ScopedFD wakeWriteFd;
+        bool stopped_ = false;
+        Thread* thread_ = nullptr;
 
-        ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool);
+        ReactorState(CoroExecutor* exec, ThreadPool* p, ObjPool* opool);
 
-        ~ReactorState() noexcept = default;
+        ~ReactorState() noexcept {
+            delete thread_;
+        }
 
         void drainQueue();
         void wakeup() noexcept;
@@ -74,21 +78,22 @@ namespace {
         void drainWakeup() noexcept;
         void run() noexcept override;
         void stop() noexcept override;
-        void processEvent(PollEvent* ev) noexcept;
+        void join() noexcept override;
+        void processEvent(PollEvent* ev, IntrusiveList& ready) noexcept;
         void processRequest(PollRequest* req) override;
     };
 }
 
-ReactorState::ReactorState(CoroExecutor* e, ThreadPool* p, ObjPool* opool)
-    : exec(e)
-    , pool(p)
+ReactorState::ReactorState(CoroExecutor* exec, ThreadPool* p, ObjPool* opool)
+    : pool(p)
     , poller(PollerIface::create(opool))
-    , queueMutex_(e)
+    , queueMutex_(Mutex::spinLock(exec))
 {
     createPipeFD(wakeReadFd, wakeWriteFd);
     wakeReadFd.setNonBlocking();
     wakeWriteFd.setNonBlocking();
     poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
+    thread_ = new Thread(*this);
 }
 
 void ReactorState::rearmOrDisarm(int fd) {
@@ -122,8 +127,12 @@ void ReactorState::wakeup() noexcept {
 }
 
 void ReactorState::stop() noexcept {
-    exec = nullptr;
+    stdAtomicStore(&stopped_, true, MemoryOrder::Release);
     wakeup();
+}
+
+void ReactorState::join() noexcept {
+    thread_->join();
 }
 
 void ReactorState::drainWakeup() noexcept {
@@ -159,7 +168,7 @@ void ReactorState::drainQueue() {
     });
 }
 
-void ReactorState::processEvent(PollEvent* ev) noexcept {
+void ReactorState::processEvent(PollEvent* ev, IntrusiveList& ready) noexcept {
     int fd = (uintptr_t)ev->data - 1;
 
     if (auto* entry = fdMap_.find(fd); entry) {
@@ -167,7 +176,7 @@ void ReactorState::processEvent(PollEvent* ev) noexcept {
             if (auto* req = (PollRequest*)exchange(n, n->next); req->flags & ev->flags) {
                 req->remove();
                 timers.remove(req);
-                req->complete(ev->flags);
+                req->complete(ev->flags, ready);
             }
         }
 
@@ -176,14 +185,14 @@ void ReactorState::processEvent(PollEvent* ev) noexcept {
 }
 
 void ReactorState::run() noexcept {
-    while (auto* e = exec) {
+    while (!stdAtomicFetch(&stopped_, MemoryOrder::Acquire)) {
         drainQueue();
 
-        e->yield();
+        IntrusiveList ready;
 
-        poller->wait([this](PollEvent* ev) {
+        poller->wait([this, &ready](PollEvent* ev) {
             if (ev->data) {
-                processEvent(ev);
+                processEvent(ev, ready);
             } else {
                 drainWakeup();
                 poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
@@ -200,7 +209,7 @@ void ReactorState::run() noexcept {
             timers.remove(req);
             req->remove();
             rearmOrDisarm(req->fd);
-            req->complete(0);
+            req->complete(0, ready);
         }
 
         while (auto* req = (PollRequest*)sleepers.min()) {
@@ -209,7 +218,11 @@ void ReactorState::run() noexcept {
             }
 
             sleepers.remove(req);
-            req->complete(0);
+            req->complete(0, ready);
+        }
+
+        if (!ready.empty()) {
+            pool->submitTasks(ready);
         }
     }
 }

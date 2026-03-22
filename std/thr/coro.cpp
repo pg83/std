@@ -8,7 +8,6 @@
 #include "context.h"
 #include "cond_var.h"
 #include "semaphore.h"
-#include "wait_group.h"
 #include "reactor_fs.h"
 #include "thread_iface.h"
 #include "reactor_poll.h"
@@ -115,23 +114,19 @@ namespace {
 
     struct CoroExecutorImpl: public CoroExecutor {
         alignas(64) int inflight_ = 0;
+        ScopedFD joinR_;
+        ScopedFD joinW_;
         ObjPool::Ref opool_;
         const u64 tlsKey_;
         Vector<ReactorIface*> reactors_;
         FSReactorIface* fsReactor_;
-        ScopedFD joinR_;
-        ScopedFD joinW_;
-        WaitGroup done_;
         ThreadPool* pool_;
 
         CoroExecutorImpl(size_t threads, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
 
-        void spawnSystem() noexcept;
         void join() noexcept override;
-        void submitterLoop() noexcept;
         Cont* spawnRun(SpawnParams params) override;
-        void submitExternalTask(Task* task) noexcept;
 
         auto tls() {
             return pool_->tls(tlsKey_);
@@ -177,9 +172,9 @@ namespace {
             cont->parkWith(&afterSuspend);
         }
 
-        void complete(u32 res) noexcept override {
+        void complete(u32 res, IntrusiveList& ready) noexcept override {
             result = res;
-            cont->reSchedule();
+            ready.pushBack(cont);
         }
     };
 
@@ -201,7 +196,6 @@ namespace {
 CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     : opool_(ObjPool::fromMemory())
     , tlsKey_(ThreadPool::registerTlsKey())
-    , done_(this)
     , pool_(ThreadPool::workStealing(opool_.mutPtr(), threads + reactors))
 {
     createPipeFD(joinR_, joinW_);
@@ -213,13 +207,6 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     }
 
     fsReactor_ = FSReactorIface::create(ThreadPool::simple(opool_.mutPtr(), reactors), opool_.mutPtr());
-
-    done_.inc();
-
-    spawnRun(SpawnParams().setSystem(true).setRunable([this] {
-        spawnSystem();
-        done_.done();
-    }));
 }
 
 Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
@@ -242,22 +229,6 @@ void CoroExecutorImpl::yield() noexcept {
     (y.c = currentCont())->parkWith(&y);
 }
 
-void CoroExecutorImpl::spawnSystem() noexcept {
-    for (auto r : reactors_) {
-        done_.inc();
-
-        spawnRun(
-            SpawnParams()
-                .setStack(opool_.mutPtr(), 16 * 1024)
-                .setPriority(2)
-                .setSystem(true)
-                .setRunable([this, r] {
-                    r->run();
-                    done_.done();
-                }));
-    }
-}
-
 CoroExecutorImpl::~CoroExecutorImpl() noexcept {
     join();
 
@@ -266,7 +237,9 @@ CoroExecutorImpl::~CoroExecutorImpl() noexcept {
             r->stop();
         }
 
-        done_.wait();
+        for (auto* r : reactors_) {
+            r->join();
+        }
     });
 
     join();
