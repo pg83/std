@@ -19,6 +19,7 @@
 #include <std/alg/shuffle.h>
 #include <std/alg/exchange.h>
 #include <std/mem/obj_pool.h>
+#include <std/rng/split_mix_64.h>
 
 #include <stdlib.h>
 #include <sched.h>
@@ -221,6 +222,7 @@ namespace {
             void run() noexcept override;
             void initStealOrder() noexcept;
             void push(Task* task) noexcept;
+            void push1(Task* task) noexcept;
             void pushThrLocal(Task* task) noexcept;
             void push(IntrusiveList* task) noexcept;
             bool shouldSleep(i32 searching) noexcept;
@@ -230,6 +232,7 @@ namespace {
         };
 
         IntMap<Worker> workers_;
+        Vector<Worker*> index_;
         WaitQueue* wq;
         i32 taskCount_ = 0;
         i32 searching_ = 0;
@@ -265,6 +268,11 @@ void WorkStealingThreadPool::Worker::push(Task* task) noexcept {
     condVar_.signal();
 }
 
+void WorkStealingThreadPool::Worker::push1(Task* task) noexcept {
+    LockGuard lock(mutex_);
+    tasks_.pushBack(task);
+}
+
 void WorkStealingThreadPool::Worker::push(IntrusiveList* tasks) noexcept {
     LockGuard lock(mutex_);
     tasks_.pushBack(*tasks);
@@ -280,8 +288,12 @@ WorkStealingThreadPool::WorkStealingThreadPool(ObjPool* pool, size_t numThreads)
         workers_.insertKeyed(this, i, rng.nextU64());
     }
 
-    workers_.visit([](Worker& w) {
+    workers_.visit([this](Worker& w) {
+        index_.pushBack(&w);
         w.initStealOrder();
+    });
+
+    workers_.visit([this](Worker& w) {
         w.mutex_.unlock();
     });
 }
@@ -313,8 +325,15 @@ void WorkStealingThreadPool::submitTask(Task* task) noexcept {
 
     if (auto w = localWorker(); w) {
         return w->pushThrLocal(task);
+    } else if (auto w = (Worker*)wq->dequeue(); w) {
+        return w->push(task);
     } else {
-        return dequeueWorker()->push(task);
+        index_[splitMix64((size_t)task) % index_.length()]->push1(task);
+
+        if (auto w = (Worker*)wq->dequeue(); w) {
+            IntrusiveList tmp;
+            w->push(&tmp);
+        }
     }
 }
 
