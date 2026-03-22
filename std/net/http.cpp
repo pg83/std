@@ -71,13 +71,13 @@ void stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u3
 
     TcpSocket srv(exec);
 
-    STD_INSIST(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
+    STD_VERIFY(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
 
     int opt = 1;
     ::setsockopt(srv.fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    STD_INSIST(srv.bind((const sockaddr*)&addrCopy, addrLen) == 0);
-    STD_INSIST(srv.listen(128) == 0);
+    STD_VERIFY(srv.bind((const sockaddr*)&addrCopy, addrLen) == 0);
+    STD_VERIFY(srv.listen(128) == 0);
 
     exec->spawnRun(SpawnParams().setSystem(true).setRunable([&handler, exec, srvFd = srv.fd] {
         TcpSocket srv(srvFd, exec);
