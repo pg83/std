@@ -108,9 +108,10 @@ StringView StringView::stripSpace() const noexcept {
 }
 
 bool StringView::split(u8 delim, StringView& before, StringView& after) const noexcept {
-    if (const u8* p = memChr(delim); p) {
+    if (auto p = memChr(delim); p) {
         before = StringView(data(), p);
         after = StringView(p + 1, end());
+
         return true;
     }
 
