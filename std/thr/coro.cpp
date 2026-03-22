@@ -414,28 +414,42 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
 }
 
 ssize_t CoroExecutorImpl::pread(int fd, void* buf, size_t len, off_t offset) {
-    struct iovec iov = {buf, len};
+    struct iovec iov = {
+        buf,
+        len,
+    };
+
     FSRequestImpl req;
+
     req.cont = currentCont();
     req.iov = &iov;
     req.iovcnt = 1;
     req.offset = offset;
     req.fd = fd;
     req.op = FSRequestOp::Read;
+
     fsReactor_->submit(&req);
+
     return req.result;
 }
 
 ssize_t CoroExecutorImpl::pwrite(int fd, const void* buf, size_t len, off_t offset) {
-    struct iovec iov = {(void*)buf, len};
+    struct iovec iov = {
+        (void*)buf,
+        len,
+    };
+
     FSRequestImpl req;
+
     req.cont = currentCont();
     req.iov = &iov;
     req.iovcnt = 1;
     req.offset = offset;
     req.fd = fd;
     req.op = FSRequestOp::Write;
+
     fsReactor_->submit(&req);
+
     return req.result;
 }
 
