@@ -79,8 +79,7 @@ bool HttpConnection::serve(HttpServe& handler) {
             break;
         }
 
-        lcName.grow(name.length());
-        req.headers.insert(name.lower((u8*)lcName.mutData()), pool->intern(val.stripSpace()));
+        req.headers.insert(name.lower(lcName), pool->intern(val.stripSpace()));
     }
 
     handler.serve(req);
