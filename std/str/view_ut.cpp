@@ -826,4 +826,134 @@ STD_TEST_SUITE(StringView) {
         StringView sv("1!2@3#4$5");
         STD_INSIST(sv.stou() == 12345);
     }
+
+    STD_TEST(StripSpaceBasic) {
+        StringView sv("  hello  ");
+        STD_INSIST(sv.stripSpace() == StringView("hello"));
+    }
+
+    STD_TEST(StripSpaceLeading) {
+        StringView sv("   hello");
+        STD_INSIST(sv.stripSpace() == StringView("hello"));
+    }
+
+    STD_TEST(StripSpaceTrailing) {
+        StringView sv("hello   ");
+        STD_INSIST(sv.stripSpace() == StringView("hello"));
+    }
+
+    STD_TEST(StripSpaceNone) {
+        StringView sv("hello");
+        STD_INSIST(sv.stripSpace() == StringView("hello"));
+    }
+
+    STD_TEST(StripSpaceEmpty) {
+        StringView sv("");
+        STD_INSIST(sv.stripSpace().empty());
+    }
+
+    STD_TEST(StripSpaceOnlySpaces) {
+        StringView sv("   ");
+        STD_INSIST(sv.stripSpace().empty());
+    }
+
+    STD_TEST(StripSpaceSingleSpace) {
+        StringView sv(" ");
+        STD_INSIST(sv.stripSpace().empty());
+    }
+
+    STD_TEST(StripSpaceInnerSpaces) {
+        StringView sv("  hello world  ");
+        STD_INSIST(sv.stripSpace() == StringView("hello world"));
+    }
+
+    STD_TEST(StripCrBasic) {
+        StringView sv("hello\r");
+        STD_INSIST(sv.stripCr() == StringView("hello"));
+    }
+
+    STD_TEST(StripCrNone) {
+        StringView sv("hello");
+        STD_INSIST(sv.stripCr() == StringView("hello"));
+    }
+
+    STD_TEST(StripCrEmpty) {
+        StringView sv("");
+        STD_INSIST(sv.stripCr().empty());
+    }
+
+    STD_TEST(StripCrOnlyCr) {
+        StringView sv("\r");
+        STD_INSIST(sv.stripCr().empty());
+    }
+
+    STD_TEST(StripCrNotAtEnd) {
+        StringView sv("hel\rlo");
+        STD_INSIST(sv.stripCr() == StringView("hel\rlo"));
+    }
+
+    STD_TEST(StripCrMultipleCr) {
+        StringView sv("hello\r\r");
+        STD_INSIST(sv.stripCr() == StringView("hello\r"));
+    }
+
+    STD_TEST(SplitBasic) {
+        StringView sv("hello:world");
+        StringView before, after;
+        STD_INSIST(sv.split(':', before, after));
+        STD_INSIST(before == StringView("hello"));
+        STD_INSIST(after == StringView("world"));
+    }
+
+    STD_TEST(SplitNotFound) {
+        StringView sv("hello world");
+        StringView before, after;
+        STD_INSIST(!sv.split(':', before, after));
+    }
+
+    STD_TEST(SplitAtStart) {
+        StringView sv(":world");
+        StringView before, after;
+        STD_INSIST(sv.split(':', before, after));
+        STD_INSIST(before.empty());
+        STD_INSIST(after == StringView("world"));
+    }
+
+    STD_TEST(SplitAtEnd) {
+        StringView sv("hello:");
+        StringView before, after;
+        STD_INSIST(sv.split(':', before, after));
+        STD_INSIST(before == StringView("hello"));
+        STD_INSIST(after.empty());
+    }
+
+    STD_TEST(SplitEmpty) {
+        StringView sv("");
+        StringView before, after;
+        STD_INSIST(!sv.split(':', before, after));
+    }
+
+    STD_TEST(SplitOnlyDelim) {
+        StringView sv(":");
+        StringView before, after;
+        STD_INSIST(sv.split(':', before, after));
+        STD_INSIST(before.empty());
+        STD_INSIST(after.empty());
+    }
+
+    STD_TEST(SplitFirstOccurrence) {
+        StringView sv("a:b:c");
+        StringView before, after;
+        STD_INSIST(sv.split(':', before, after));
+        STD_INSIST(before == StringView("a"));
+        STD_INSIST(after == StringView("b:c"));
+    }
+
+    STD_TEST(SplitBySpace) {
+        StringView sv("GET /index.html HTTP/1.0");
+        StringView method, rest;
+        STD_INSIST(sv.split(' ', method, rest));
+        STD_INSIST(method == StringView("GET"));
+        STD_INSIST(rest == StringView("/index.html HTTP/1.0"));
+    }
 }
