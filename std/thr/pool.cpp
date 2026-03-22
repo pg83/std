@@ -321,6 +321,7 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
 
 void WorkStealingThreadPool::submitTasks(IntrusiveList& tasks) noexcept {
     auto count = (i32)tasks.length();
+
     stdAtomicAddAndFetch(&taskCount_, count, MemoryOrder::Release);
 
     if (auto w = localWorker(); w) {
