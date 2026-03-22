@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/mman.h>
 
 using namespace stl;
 
@@ -621,10 +622,7 @@ STD_TEST_SUITE(CoroPoll) {
 
 namespace {
     int makeTmpFd() {
-        char path[] = "/tmp/coro_fs_ut_XXXXXX";
-        int fd = mkstemp(path);
-        unlink(path);
-        return fd;
+        return memfd_create("coro_fs_ut", 0);
     }
 }
 

@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/mman.h>
 #include <sys/uio.h>
 
 using namespace stl;
@@ -62,10 +63,7 @@ namespace {
     }
 
     int makeTmpFd() {
-        char path[] = "/tmp/reactor_fs_ut_XXXXXX";
-        int fd = mkstemp(path);
-        unlink(path);
-        return fd;
+        return memfd_create("reactor_fs_ut", 0);
     }
 }
 
