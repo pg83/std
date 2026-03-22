@@ -177,7 +177,7 @@ namespace {
 CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
     : opool_(ObjPool::fromMemory())
     , tlsKey_(ThreadPool::registerTlsKey())
-    , pool_(ThreadPool::workStealing(opool_.mutPtr(), threads + reactors))
+    , pool_(ThreadPool::workStealing(opool_.mutPtr(), threads))
 {
     createPipeFD(joinR_, joinW_);
 
