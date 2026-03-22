@@ -28,10 +28,9 @@ namespace {
         CoroExecutor* exec;
         sockaddr_storage addr;
         u32 addrLen;
-        WaitGroup& wg;
         bool stopped;
 
-        HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg);
+        HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen);
 
         void stop() override;
         void run();
@@ -52,12 +51,11 @@ namespace {
     };
 }
 
-HttpServerCtlImpl::HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg)
+HttpServerCtlImpl::HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen)
     : handler(handler)
     , exec(exec)
     , addr{}
     , addrLen(addrLen)
-    , wg(wg)
     , stopped(false)
 {
     memCpy(&this->addr, addr, addrLen);
@@ -77,27 +75,16 @@ void HttpServerCtlImpl::stop() {
 void HttpServerCtlImpl::run() {
     TcpSocket srv(exec);
 
+    STD_DEFER {
+        srv.close();
+    };
+
     STD_VERIFY(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
 
     srv.setReuseAddr(true);
 
     STD_VERIFY(srv.bind((const sockaddr*)&addr, addrLen) == 0);
     STD_VERIFY(srv.listen(128) == 0);
-
-    wg.inc();
-
-    exec->spawn([this, srvFd = srv.fd] {
-        acceptLoop(srvFd);
-    });
-}
-
-void HttpServerCtlImpl::acceptLoop(int srvFd) {
-    TcpSocket srv(srvFd, exec);
-
-    STD_DEFER {
-        srv.close();
-        wg.done();
-    };
 
     for (;;) {
         TcpSocket client;
@@ -209,9 +196,14 @@ bool HttpConnection::serve(HttpServe& handler) {
 }
 
 IntrusivePtr<HttpServerCtl> stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg) {
-    auto ctl = makeIntrusivePtr(new HttpServerCtlImpl(handler, exec, addr, addrLen, wg));
+    auto ctl = makeIntrusivePtr(new HttpServerCtlImpl(handler, exec, addr, addrLen));
 
-    ctl->run();
+    wg.inc();
+
+    exec->spawn([ctl, &wg] mutable {
+        ctl->run();
+        wg.done();
+    });
 
     return ctl.mutPtr();
 }
