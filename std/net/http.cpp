@@ -73,7 +73,6 @@ struct stl::HttpResponseImpl {
     };
 
     HttpRequest* req;
-    Output* rawOut;
     Output* out;
     Vector<Header*> headers;
     SymbolMap<Header*> headerIndex;
@@ -89,8 +88,7 @@ struct stl::HttpResponseImpl {
 
 HttpResponseImpl::HttpResponseImpl(HttpRequest* req)
     : req(req)
-    , rawOut(req->out)
-    , out(nullptr)
+    , out(req->out)
     , status(200)
 {
 }
@@ -127,15 +125,13 @@ void HttpResponseImpl::endHeaders() {
 
         sb << StringView(u8"\r\n");
 
-        rawOut->write(sb.data(), sb.used());
+        out->write(sb.data(), sb.used());
     }
 
-    out = rawOut;
-
     if (auto* cl = headerIndex.find(StringView("content-length")); cl) {
-        out = createLimitedOutput(pool, rawOut, (*cl)->value.stou());
+        out = createLimitedOutput(pool, out, (*cl)->value.stou());
     } else if (auto* te = headerIndex.find(StringView("transfer-encoding")); te && (*te)->value == StringView("chunked")) {
-        out = createChunkedOutput(pool, rawOut);
+        out = createChunkedOutput(pool, out);
     }
 
     if (auto* conn = headerIndex.find(StringView("connection")); conn) {
