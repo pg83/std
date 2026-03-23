@@ -297,8 +297,7 @@ bool HttpConnection::serve(HttpServe& handler) {
     }
 
     if (auto* conn = req.headers.find(StringView("connection")); conn) {
-        Buffer tmp;
-        req.keepAlive = conn->lower(tmp) == StringView("keep-alive");
+        req.keepAlive = conn->lower(line) == StringView("keep-alive");
     } else {
         req.keepAlive = version == StringView("HTTP/1.1");
     }

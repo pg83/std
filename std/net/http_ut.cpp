@@ -379,9 +379,8 @@ namespace {
 STD_TEST_SUITE(HttpFileServe) {
     STD_TEST(_ServeFiles) {
         auto exec = CoroExecutor::create(8);
-
         auto pool = ObjPool::fromMemory();
-        auto* sslCtx = SslCtx::create(pool.mutPtr(), StringView(testCert), StringView(testKey));
+        auto sslCtx = SslCtx::create(pool.mutPtr(), StringView(testCert), StringView(testKey));
 
         struct Handler: HttpServe {
             CoroExecutor* exec;
@@ -396,9 +395,11 @@ STD_TEST_SUITE(HttpFileServe) {
 
                 if (fd.get() < 0) {
                     HttpResponse resp(req);
+
                     resp.setStatus(404);
                     resp.addHeader(StringView("Content-Length"), StringView("0"));
                     resp.endHeaders();
+
                     return;
                 }
 
