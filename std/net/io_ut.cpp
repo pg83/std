@@ -12,13 +12,7 @@ using namespace stl;
 
 namespace {
     void drain(ZeroCopyInput* in, Buffer& out) {
-        const void* chunk;
-        size_t n;
-
-        while ((n = in->next(&chunk))) {
-            out.append((const u8*)chunk, n);
-            in->commit(n);
-        }
+        in->readAll(out);
     }
 }
 
