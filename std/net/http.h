@@ -15,6 +15,7 @@ namespace stl {
     class WaitGroup;
     class ZeroCopyInput;
 
+    struct SslCtx;
     struct CoroExecutor;
 
     struct HttpRequest {
@@ -26,8 +27,6 @@ namespace stl {
         ZeroCopyInput* in;
         Output* out;
     };
-
-    struct SslCtx;
 
     struct HttpServe {
         virtual SslCtx* ssl();
