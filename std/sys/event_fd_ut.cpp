@@ -8,7 +8,7 @@
 using namespace stl;
 
 static bool isReadable(int fd) {
-    struct pollfd pfd{};
+    struct pollfd pfd {};
     pfd.fd = fd;
     pfd.events = POLLIN;
     return poll(&pfd, 1, 0) > 0;
