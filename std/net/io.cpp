@@ -1,6 +1,7 @@
 #include "io.h"
 
 #include <std/sys/crt.h>
+#include <std/dbg/insist.h>
 #include <std/str/view.h>
 #include <std/ios/in_zc.h>
 #include <std/ios/output.h>
@@ -136,6 +137,8 @@ LimitedOutput::LimitedOutput(Output* inner, size_t limit)
 }
 
 size_t LimitedOutput::writeImpl(const void* data, size_t len) {
+    STD_INSIST(remaining > 0);
+
     size_t n = inner->write(data, min(len, remaining));
 
     remaining -= n;

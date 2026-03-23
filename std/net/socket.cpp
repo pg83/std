@@ -160,7 +160,7 @@ int TcpSocket::readInf(size_t* nRead, void* buf, size_t len) {
 
 int TcpSocket::write(size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
     for (;;) {
-        if (ssize_t n = ::write(fd, buf, len); n > 0) {
+        if (ssize_t n = ::send(fd, buf, len, MSG_NOSIGNAL); n > 0) {
             *nWritten = (size_t)n;
             return 0;
         } else if (errno != EAGAIN) {

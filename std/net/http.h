@@ -26,7 +26,7 @@ namespace stl {
         SymbolMap<StringView> headers;
         ZeroCopyInput* in;
         Output* out;
-        bool* keepAlive;
+        bool keepAlive;
     };
 
     struct HttpResponseImpl;

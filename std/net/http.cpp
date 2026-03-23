@@ -13,6 +13,7 @@
 #include <std/ios/output.h>
 #include <std/ios/out_buf.h>
 #include <std/lib/buffer.h>
+#include <std/str/builder.h>
 #include <std/sys/atomic.h>
 #include <std/thr/poller.h>
 #include <std/ios/in_zero.h>
@@ -105,16 +106,18 @@ void HttpResponseImpl::endHeaders() {
     auto* pool = req->opool;
 
     {
-        OutBuf ob(*rawOut);
+        StringBuilder sb;
 
-        ob << StringView(u8"HTTP/1.1 ")
+        sb << StringView(u8"HTTP/1.1 ")
            << (u64)status
            << StringView(u8" ")
            << reasonPhrase(status)
            << StringView(u8"\r\n");
 
-        ob.write(hdrs.data(), hdrs.used());
-        ob << StringView(u8"\r\n");
+        sb.write(hdrs.data(), hdrs.used());
+        sb << StringView(u8"\r\n");
+
+        rawOut->write(sb.data(), sb.used());
     }
 
     out = rawOut;
@@ -135,9 +138,7 @@ void HttpResponseImpl::endHeaders() {
         ka = reqConn->lower(tmp) == StringView("keep-alive");
     }
 
-    if (req->keepAlive) {
-        *req->keepAlive = ka;
-    }
+    req->keepAlive = ka;
 }
 
 HttpResponse::HttpResponse(HttpRequest& req)
@@ -242,9 +243,12 @@ void HttpServerCtlImpl::run(Semaphore* sem) {
         }
 
         exec->spawn([this, fd = client.fd] {
-            HttpConnection conn(exec, fd, handler.ssl());
+            try {
+                HttpConnection conn(exec, fd, handler.ssl());
 
-            while (conn.serve(handler)) {
+                while (conn.serve(handler)) {
+                }
+            } catch (...) {
             }
         });
     }
@@ -288,14 +292,12 @@ bool HttpConnection::serve(HttpServe& handler) {
         return false;
     }
 
-    bool keepAlive = false;
-
     HttpRequest req;
 
     req.opool = pool.mutPtr();
     req.in = in;
     req.out = out;
-    req.keepAlive = &keepAlive;
+    req.keepAlive = false;
 
     StringView method, rest, path, version;
 
@@ -342,7 +344,7 @@ bool HttpConnection::serve(HttpServe& handler) {
 
     req.in->drain();
 
-    return keepAlive;
+    return req.keepAlive;
 }
 
 IntrusivePtr<HttpServerCtl> stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg) {
