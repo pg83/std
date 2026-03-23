@@ -5,6 +5,8 @@
 #include <std/net/socket.h>
 #include <std/str/builder.h>
 
+#include <sys/uio.h>
+
 using namespace stl;
 
 TcpStream::TcpStream(TcpSocket& sock) noexcept
@@ -30,6 +32,16 @@ size_t TcpStream::writeImpl(const void* data, size_t len) {
 
     if (int r = sock->writeInf(&n, data, len); r < 0) {
         Errno(-r).raise(StringBuilder() << StringView(u8"tcp write() failed"));
+    }
+
+    return n;
+}
+
+size_t TcpStream::writeVImpl(iovec* iov, size_t count) {
+    size_t n = 0;
+
+    if (int r = sock->writevInf(&n, iov, count); r < 0) {
+        Errno(-r).raise(StringBuilder() << StringView(u8"tcp writev() failed"));
     }
 
     return n;

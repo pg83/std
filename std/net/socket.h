@@ -2,6 +2,7 @@
 
 #include <std/sys/types.h>
 
+struct iovec;
 struct sockaddr;
 
 namespace stl {
@@ -39,5 +40,8 @@ namespace stl {
         int writeInf(size_t* nWritten, const void* buf, size_t len);
         int write(size_t* nWritten, const void* buf, size_t len, u64 deadlineUs);
         int writeTout(size_t* nWritten, const void* buf, size_t len, u64 timeoutUs);
+
+        int writevInf(size_t* nWritten, iovec* iov, size_t iovcnt);
+        int writev(size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs);
     };
 }

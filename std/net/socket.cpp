@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <unistd.h>
+#include <sys/uio.h>
 #include <sys/socket.h>
 
 using namespace stl;
@@ -177,4 +178,21 @@ int TcpSocket::writeTout(size_t* nWritten, const void* buf, size_t len, u64 time
 
 int TcpSocket::writeInf(size_t* nWritten, const void* buf, size_t len) {
     return write(nWritten, buf, len, UINT64_MAX);
+}
+
+int TcpSocket::writev(size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs) {
+    for (;;) {
+        if (ssize_t n = ::writev(fd, iov, iovcnt); n > 0) {
+            *nWritten = (size_t)n;
+            return 0;
+        } else if (errno != EAGAIN) {
+            return -errno;
+        }
+
+        exec->poll(fd, PollFlag::Out, deadlineUs);
+    }
+}
+
+int TcpSocket::writevInf(size_t* nWritten, iovec* iov, size_t iovcnt) {
+    return writev(nWritten, iov, iovcnt, UINT64_MAX);
 }
