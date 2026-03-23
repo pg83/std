@@ -5,7 +5,7 @@
 #include <std/lib/node.h>
 #include <std/sys/types.h>
 
-#include <sys/uio.h>
+struct iovec;
 
 namespace stl {
     class ObjPool;
@@ -20,7 +20,7 @@ namespace stl {
 
     struct FSRequest: public IntrusiveNode {
         struct iovec* iov;
-        int iovcnt;
+        size_t iovcnt;
         off_t offset;
         i32 fd;
         u32 op;

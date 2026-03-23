@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include <inttypes.h>
+#include <sys/types.h>
 
 using i8 = int8_t;
 // yep
