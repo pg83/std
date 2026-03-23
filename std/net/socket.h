@@ -1,12 +1,12 @@
 #pragma once
 
-#include "coro.h"
-
 #include <std/sys/types.h>
 
 struct sockaddr;
 
 namespace stl {
+    struct CoroExecutor;
+
     struct TcpSocket {
         int fd;
         CoroExecutor* exec;

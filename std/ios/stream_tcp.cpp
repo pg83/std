@@ -1,8 +1,8 @@
 #include "stream_tcp.h"
 
-#include <std/thr/tcp.h>
 #include <std/str/view.h>
 #include <std/sys/throw.h>
+#include <std/net/socket.h>
 #include <std/str/builder.h>
 
 using namespace stl;

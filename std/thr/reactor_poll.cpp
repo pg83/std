@@ -51,7 +51,7 @@ namespace {
         }
     };
 
-    struct ReactorState: public ReactorIface, public Runable, public Newable {
+    struct ReactorState: public ReactorIface, public Runable {
         ThreadPool* pool;
         PollerIface* poller;
         DeadlineTreap timers;

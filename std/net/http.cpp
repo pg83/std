@@ -1,7 +1,7 @@
 #include "http.h"
 #include "io.h"
+#include "socket.h"
 
-#include <std/thr/tcp.h>
 #include <std/sys/crt.h>
 #include <std/thr/coro.h>
 #include <std/alg/defer.h>

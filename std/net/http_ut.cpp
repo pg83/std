@@ -1,9 +1,10 @@
 #include "http.h"
+#include "socket.h"
 
 #include <std/sys/fd.h>
 #include <std/tst/ut.h>
-#include <std/thr/tcp.h>
 #include <std/tst/args.h>
+#include <std/thr/coro.h>
 #include <std/alg/defer.h>
 #include <std/dbg/insist.h>
 #include <std/ios/out_buf.h>
