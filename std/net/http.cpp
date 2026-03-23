@@ -42,7 +42,7 @@ namespace {
     };
 
     struct HttpConnection {
-        ObjPool::Ref pool;
+        ObjPool::Ref opool = ObjPool::fromMemory();
         TcpSocket sock;
         ZeroCopyInput* in;
         Output* out;
@@ -118,10 +118,9 @@ void HttpServerCtlImpl::run(Semaphore* sem) {
 }
 
 HttpConnection::HttpConnection(CoroExecutor* exec, int fd, SslCtx* ssl)
-    : pool(ObjPool::fromMemory())
-    , sock(fd, exec)
+    : sock(fd, exec)
 {
-    auto* stream = pool->make<TcpStream>(sock);
+    auto* stream = opool->make<TcpStream>(sock);
 
     Input* rawIn = stream;
     Output* rawOut = stream;
@@ -132,14 +131,14 @@ HttpConnection::HttpConnection(CoroExecutor* exec, int fd, SslCtx* ssl)
         exec->poll(fd, PollFlag::In);
 
         if (::recv(fd, &b, 1, MSG_PEEK) == 1 && b == 0x16) {
-            auto* s = ssl->create(pool.mutPtr(), rawIn, rawOut);
+            auto* s = ssl->create(opool.mutPtr(), rawIn, rawOut);
 
             rawIn = s;
             rawOut = s;
         }
     }
 
-    in = pool->make<InBuf>(*rawIn);
+    in = opool->make<InBuf>(*rawIn);
     out = rawOut;
 }
 
@@ -148,7 +147,7 @@ HttpConnection::~HttpConnection() {
 }
 
 bool HttpConnection::serve(HttpServe& handler) {
-    auto rpool = ObjPool::fromMemory();
+    auto pool = ObjPool::fromMemory();
 
     line.reset();
 
@@ -158,7 +157,7 @@ bool HttpConnection::serve(HttpServe& handler) {
 
     HttpRequest req;
 
-    req.opool = rpool.mutPtr();
+    req.opool = pool.mutPtr();
     req.in = in;
     req.out = out;
 
@@ -168,19 +167,19 @@ bool HttpConnection::serve(HttpServe& handler) {
 
     rest.split(' ', path, version);
 
-    req.method = rpool->intern(method);
+    req.method = pool->intern(method);
 
     StringView rawPath = path.empty() ? rest : path;
     StringView pathPart, queryPart;
 
     if (rawPath.split('?', pathPart, queryPart)) {
-        req.path = rpool->intern(pathPart);
-        req.query = rpool->intern(queryPart);
+        req.path = pool->intern(pathPart);
+        req.query = pool->intern(queryPart);
     } else {
-        req.path = rpool->intern(rawPath);
+        req.path = pool->intern(rawPath);
     }
 
-    version = rpool->intern(version);
+    version = pool->intern(version);
 
     for (;;) {
         line.reset();
@@ -192,15 +191,15 @@ bool HttpConnection::serve(HttpServe& handler) {
             break;
         }
 
-        req.headers.insert(name.lower(lcName), rpool->intern(val.stripSpace()));
+        req.headers.insert(name.lower(lcName), pool->intern(val.stripSpace()));
     }
 
     if (auto te = req.headers.find(StringView("transfer-encoding")); te && *te == StringView("chunked")) {
-        req.in = createChunked(rpool.mutPtr(), in);
+        req.in = createChunked(pool.mutPtr(), in);
     } else if (auto cl = req.headers.find(StringView("content-length")); cl) {
-        req.in = createLimited(rpool.mutPtr(), in, cl->stou());
+        req.in = createLimited(pool.mutPtr(), in, cl->stou());
     } else {
-        req.in = rpool->make<ZeroInput>();
+        req.in = pool->make<ZeroInput>();
     }
 
     handler.serve(req);
