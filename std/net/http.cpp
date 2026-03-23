@@ -11,6 +11,7 @@
 #include <std/dbg/verify.h>
 #include <std/ios/in_buf.h>
 #include <std/ios/output.h>
+#include <std/ios/out_buf.h>
 #include <std/lib/buffer.h>
 #include <std/sys/atomic.h>
 #include <std/thr/poller.h>
@@ -25,6 +26,110 @@
 #include <netinet/in.h>
 
 using namespace stl;
+
+namespace {
+    StringView reasonPhrase(u32 code) {
+        switch (code) {
+            case 200: return StringView(u8"OK");
+            case 201: return StringView(u8"Created");
+            case 204: return StringView(u8"No Content");
+            case 301: return StringView(u8"Moved Permanently");
+            case 302: return StringView(u8"Found");
+            case 304: return StringView(u8"Not Modified");
+            case 400: return StringView(u8"Bad Request");
+            case 401: return StringView(u8"Unauthorized");
+            case 403: return StringView(u8"Forbidden");
+            case 404: return StringView(u8"Not Found");
+            case 405: return StringView(u8"Method Not Allowed");
+            case 500: return StringView(u8"Internal Server Error");
+            case 502: return StringView(u8"Bad Gateway");
+            case 503: return StringView(u8"Service Unavailable");
+        }
+
+        return StringView(u8"Unknown");
+    }
+}
+
+struct stl::HttpResponseImpl {
+    HttpRequest* req;
+    Output* rawOut;
+    Output* out;
+    Buffer hdrs;
+    SymbolMap<StringView> respHeaders;
+    Buffer lcName;
+    u32 status;
+
+    HttpResponseImpl(HttpRequest* req);
+};
+
+HttpResponseImpl::HttpResponseImpl(HttpRequest* req)
+    : req(req)
+    , rawOut(req->out)
+    , out(nullptr)
+    , status(200)
+{
+}
+
+HttpResponse::HttpResponse(HttpRequest& req)
+    : impl(req.opool->make<HttpResponseImpl>(&req))
+{
+}
+
+Output* HttpResponse::out() {
+    return impl->out;
+}
+
+void HttpResponse::setStatus(u32 code) {
+    impl->status = code;
+}
+
+void HttpResponse::addHeader(StringView name, StringView value) {
+    impl->hdrs.append(name.data(), name.length());
+    impl->hdrs.append(u8": ", 2);
+    impl->hdrs.append(value.data(), value.length());
+    impl->hdrs.append(u8"\r\n", 2);
+
+    impl->respHeaders.insert(name.lower(impl->lcName), impl->req->opool->intern(value));
+}
+
+void HttpResponse::endHeaders() {
+    auto* pool = impl->req->opool;
+
+    {
+        OutBuf ob(*impl->rawOut);
+
+        ob << StringView(u8"HTTP/1.1 ")
+           << (u64)impl->status
+           << StringView(u8" ")
+           << reasonPhrase(impl->status)
+           << StringView(u8"\r\n");
+
+        ob.write(impl->hdrs.data(), impl->hdrs.used());
+        ob << StringView(u8"\r\n");
+    }
+
+    impl->out = impl->rawOut;
+
+    if (auto* cl = impl->respHeaders.find(StringView("content-length")); cl) {
+        impl->out = createLimitedOutput(pool, impl->rawOut, cl->stou());
+    } else if (auto* te = impl->respHeaders.find(StringView("transfer-encoding")); te && *te == StringView("chunked")) {
+        impl->out = createChunkedOutput(pool, impl->rawOut);
+    }
+
+    // determine keep-alive
+    bool ka = false;
+
+    if (auto* conn = impl->respHeaders.find(StringView("connection")); conn) {
+        ka = *conn == StringView("keep-alive");
+    } else if (auto* reqConn = impl->req->headers.find(StringView("connection")); reqConn) {
+        Buffer tmp;
+        ka = reqConn->lower(tmp) == StringView("keep-alive");
+    }
+
+    if (impl->req->keepAlive) {
+        *impl->req->keepAlive = ka;
+    }
+}
 
 namespace {
     struct HttpServerCtlImpl: public HttpServerCtl {
@@ -153,11 +258,14 @@ bool HttpConnection::serve(HttpServe& handler) {
         return false;
     }
 
+    bool keepAlive = false;
+
     HttpRequest req;
 
     req.opool = pool.mutPtr();
     req.in = in;
     req.out = out;
+    req.keepAlive = &keepAlive;
 
     StringView method, rest, path, version;
 
@@ -203,14 +311,6 @@ bool HttpConnection::serve(HttpServe& handler) {
     handler.serve(req);
 
     req.in->drain();
-
-    bool keepAlive = false;
-
-    if (auto connection = req.headers.find(StringView("connection")); connection) {
-        keepAlive = connection->lower(line) == StringView("keep-alive");
-    } else {
-        keepAlive = version.lower(line) == StringView("http/1.1");
-    }
 
     return keepAlive;
 }

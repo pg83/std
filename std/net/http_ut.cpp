@@ -9,6 +9,7 @@
 #include <std/alg/defer.h>
 #include <std/dbg/insist.h>
 #include <std/ios/out_buf.h>
+#include <std/str/builder.h>
 #include <std/mem/obj_pool.h>
 #include <std/thr/wait_group.h>
 #include <std/ios/stream_tcp.h>
@@ -43,8 +44,10 @@ STD_TEST_SUITE(HttpRequestParsing) {
             void serve(HttpRequest& req) override {
                 path = req.path;
                 query = req.query;
-                const char* resp = "HTTP/1.0 200 OK\r\nContent-Length: 0\r\n\r\n";
-                req.out->write(resp, ::strlen(resp));
+
+                HttpResponse resp(req);
+                resp.addHeader(StringView("Content-Length"), StringView("0"));
+                resp.endHeaders();
             }
         } handler;
 
@@ -90,8 +93,10 @@ STD_TEST_SUITE(HttpRequestParsing) {
             void serve(HttpRequest& req) override {
                 path = req.path;
                 query = req.query;
-                const char* resp = "HTTP/1.0 200 OK\r\nContent-Length: 0\r\n\r\n";
-                req.out->write(resp, ::strlen(resp));
+
+                HttpResponse resp(req);
+                resp.addHeader(StringView("Content-Length"), StringView("0"));
+                resp.endHeaders();
             }
         } handler;
 
@@ -134,12 +139,10 @@ STD_TEST_SUITE(HttpServer) {
 
         struct Handler: HttpServe {
             void serve(HttpRequest& req) override {
-                const char* resp =
-                    "HTTP/1.0 200 OK\r\n"
-                    "Content-Length: 5\r\n"
-                    "\r\n"
-                    "hello";
-                req.out->write(resp, ::strlen(resp));
+                HttpResponse resp(req);
+                resp.addHeader(StringView("Content-Length"), StringView("5"));
+                resp.endHeaders();
+                resp.out()->write("hello", 5);
             }
         } handler;
 
@@ -185,12 +188,11 @@ STD_TEST_SUITE(HttpServer) {
 
         struct Handler: HttpServe {
             void serve(HttpRequest& req) override {
-                const char* resp =
-                    "HTTP/1.1 200 OK\r\n"
-                    "Content-Length: 2\r\n"
-                    "\r\n"
-                    "ok";
-                req.out->write(resp, ::strlen(resp));
+                HttpResponse resp(req);
+                resp.addHeader(StringView("Content-Length"), StringView("2"));
+                resp.addHeader(StringView("Connection"), StringView("keep-alive"));
+                resp.endHeaders();
+                resp.out()->write("ok", 2);
             }
         } handler;
 
@@ -256,12 +258,11 @@ STD_TEST_SUITE(HttpServer) {
 
         struct Handler: HttpServe {
             void serve(HttpRequest& req) override {
-                const char* resp =
-                    "HTTP/1.1 200 OK\r\n"
-                    "Content-Length: 2\r\n"
-                    "\r\n"
-                    "ok";
-                req.out->write(resp, ::strlen(resp));
+                HttpResponse resp(req);
+                resp.addHeader(StringView("Content-Length"), StringView("2"));
+                resp.addHeader(StringView("Connection"), StringView("keep-alive"));
+                resp.endHeaders();
+                resp.out()->write("ok", 2);
             }
         } handler;
 
@@ -356,8 +357,10 @@ STD_TEST_SUITE(HttpFileServe) {
                 ScopedFD fd(::open(Buffer(req.path).cStr(), O_RDONLY));
 
                 if (fd.get() < 0) {
-                    const char* r = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
-                    req.out->write(r, ::strlen(r));
+                    HttpResponse resp(req);
+                    resp.setStatus(404);
+                    resp.addHeader(StringView("Content-Length"), StringView("0"));
+                    resp.endHeaders();
                     return;
                 }
 
@@ -365,13 +368,13 @@ STD_TEST_SUITE(HttpFileServe) {
 
                 CoroFDInput(fd, exec).readAll(buf);
 
-                OutBuf out(*req.out);
+                StringBuilder cl;
+                cl << buf.used();
 
-                out << StringView("HTTP/1.1 200 OK\r\nContent-Length: ")
-                    << buf.used()
-                    << StringView("\r\n\r\n");
-
-                out.write(buf.data(), buf.used());
+                HttpResponse resp(req);
+                resp.addHeader(StringView("Content-Length"), StringView(cl));
+                resp.endHeaders();
+                resp.out()->write(buf.data(), buf.used());
             }
         } handler;
 

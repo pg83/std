@@ -26,6 +26,20 @@ namespace stl {
         SymbolMap<StringView> headers;
         ZeroCopyInput* in;
         Output* out;
+        bool* keepAlive;
+    };
+
+    struct HttpResponseImpl;
+
+    struct HttpResponse {
+        HttpResponseImpl* impl;
+
+        HttpResponse(HttpRequest& req);
+
+        Output* out();
+        void setStatus(u32 code);
+        void addHeader(StringView name, StringView value);
+        void endHeaders();
     };
 
     struct HttpServe {
