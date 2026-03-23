@@ -386,7 +386,8 @@ STD_TEST_SUITE(HttpFileServe) {
             }
 
             void serve(HttpResponse& resp) override {
-                auto* req = resp.request();
+                auto req = resp.request();
+
                 ScopedFD fd(::open(Buffer(req->path).cStr(), O_RDONLY));
 
                 if (fd.get() < 0) {
@@ -397,16 +398,10 @@ STD_TEST_SUITE(HttpFileServe) {
                     return;
                 }
 
-                Buffer buf;
-
-                CoroFDInput(fd, exec).readAll(buf);
-
-                StringBuilder cl;
-                cl << buf.used();
-
-                resp.addHeader(StringView("Content-Length"), StringView(cl));
                 resp.endHeaders();
-                resp.out()->write(buf.data(), buf.used());
+
+                CoroFDInput(fd, exec).sendTo(*resp.out());
+                resp.out()->finish();
             }
         } handler;
 

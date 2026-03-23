@@ -74,6 +74,10 @@ void HttpResponseImpl::addHeader(StringView name, StringView value) {
 void HttpResponseImpl::endHeaders() {
     auto* pool = req->opool;
 
+    if (req->keepAlive && !headerIndex.find(StringView("content-length")) && !headerIndex.find(StringView("transfer-encoding"))) {
+        addHeader(StringView("Transfer-Encoding"), StringView("chunked"));
+    }
+
     {
         StringBuilder sb;
 
