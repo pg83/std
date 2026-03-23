@@ -6,8 +6,8 @@
 #include "thread.h"
 #include "poller.h"
 
-#include <std/sys/fd.h>
 #include <std/mem/new.h>
+#include <std/sys/event_fd.h>
 #include <std/sys/crt.h>
 #include <std/lib/list.h>
 #include <std/map/treap.h>
@@ -16,8 +16,6 @@
 #include <std/sys/atomic.h>
 #include <std/alg/exchange.h>
 #include <std/mem/obj_pool.h>
-
-#include <unistd.h>
 
 using namespace stl;
 
@@ -61,8 +59,7 @@ namespace {
         IntMap<FdEntry> fdMap_;
         Mutex queueMutex_;
         DeadlineTreap queue_;
-        ScopedFD wakeReadFd;
-        ScopedFD wakeWriteFd;
+        EventFD wakeEv_;
         bool stopped_ = false;
         Thread* thread_ = nullptr;
 
@@ -75,8 +72,8 @@ namespace {
         void rearmOrDisarm(int fd);
         void drainWakeup() noexcept;
         void run() noexcept override;
-        void processEvent(PollEvent* ev, IntrusiveList& ready) noexcept;
         void processRequest(PollRequest* req) override;
+        void processEvent(PollEvent* ev, IntrusiveList& ready) noexcept;
     };
 }
 
@@ -85,10 +82,7 @@ ReactorState::ReactorState(CoroExecutor* exec, ThreadPool* p, ObjPool* opool)
     , poller(PollerIface::create(opool))
     , queueMutex_(Mutex::spinLock(exec))
 {
-    createPipeFD(wakeReadFd, wakeWriteFd);
-    wakeReadFd.setNonBlocking();
-    wakeWriteFd.setNonBlocking();
-    poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
+    poller->arm(wakeEv_.fd(), PollFlag::In, nullptr);
     thread_ = opool->make<Thread>(*this);
 }
 
@@ -117,9 +111,7 @@ void ReactorState::processRequest(PollRequest* req) {
 }
 
 void ReactorState::wakeup() noexcept {
-    char b = 1;
-
-    ::write(wakeWriteFd.get(), &b, 1);
+    wakeEv_.signal();
 }
 
 ReactorState::~ReactorState() noexcept {
@@ -129,10 +121,7 @@ ReactorState::~ReactorState() noexcept {
 }
 
 void ReactorState::drainWakeup() noexcept {
-    char buf[1024];
-
-    while (::read(wakeReadFd.get(), buf, sizeof(buf)) > 0) {
-    }
+    wakeEv_.drain();
 }
 
 void ReactorState::drainQueue() {
@@ -188,7 +177,7 @@ void ReactorState::run() noexcept {
                 processEvent(ev, ready);
             } else {
                 drainWakeup();
-                poller->arm(wakeReadFd.get(), PollFlag::In, nullptr);
+                poller->arm(wakeEv_.fd(), PollFlag::In, nullptr);
             }
         }, min(timers.earliest(), sleepers.earliest()));
 
