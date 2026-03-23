@@ -16,6 +16,7 @@ EXTRA=
     lib/ucontext \
     lib/rapidhash \
     lib/cpp/trace \
+    lib/mbedtls/3 \
     ${EXTRA} \
     -- ./build.sh
 

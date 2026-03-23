@@ -1,5 +1,6 @@
 #include "http.h"
 #include "io.h"
+#include "ssl.h"
 #include "socket.h"
 
 #include <std/sys/crt.h>
@@ -14,6 +15,7 @@
 #include <std/sys/atomic.h>
 #include <std/ios/in_zero.h>
 #include <std/mem/obj_pool.h>
+#include <std/thr/poller.h>
 #include <std/thr/semaphore.h>
 #include <std/ios/stream_tcp.h>
 #include <std/thr/wait_group.h>
@@ -28,33 +30,36 @@ namespace {
     struct HttpServerCtlImpl: public HttpServerCtl {
         HttpServe& handler;
         CoroExecutor* exec;
+        SslCtx* ssl;
         sockaddr_storage addr;
         u32 addrLen;
         bool stopped;
 
-        HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen);
+        HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, SslCtx* ssl);
 
         void stop() override;
         void run(Semaphore* sem);
     };
 
     struct HttpConnection {
+        ObjPool::Ref pool;
         TcpSocket sock;
-        TcpStream stream;
-        InBuf buf;
+        ZeroCopyInput* in;
+        Output* out;
         Buffer line;
         Buffer lcName;
 
-        HttpConnection(CoroExecutor* exec, int fd);
+        HttpConnection(CoroExecutor* exec, int fd, SslCtx* ssl);
         ~HttpConnection();
 
         bool serve(HttpServe& handler);
     };
 }
 
-HttpServerCtlImpl::HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen)
+HttpServerCtlImpl::HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, SslCtx* ssl)
     : handler(handler)
     , exec(exec)
+    , ssl(ssl)
     , addr{}
     , addrLen(addrLen)
     , stopped(false)
@@ -104,7 +109,7 @@ void HttpServerCtlImpl::run(Semaphore* sem) {
         }
 
         exec->spawn([this, fd = client.fd] {
-            HttpConnection conn(exec, fd);
+            HttpConnection conn(exec, fd, ssl);
 
             while (conn.serve(handler)) {
             }
@@ -112,11 +117,30 @@ void HttpServerCtlImpl::run(Semaphore* sem) {
     }
 }
 
-HttpConnection::HttpConnection(CoroExecutor* exec, int fd)
-    : sock(fd, exec)
-    , stream(sock)
-    , buf(stream)
+HttpConnection::HttpConnection(CoroExecutor* exec, int fd, SslCtx* ssl)
+    : pool(ObjPool::fromMemory())
+    , sock(fd, exec)
 {
+    auto* stream = pool->make<TcpStream>(sock);
+
+    Input* rawIn = stream;
+    Output* rawOut = stream;
+
+    if (ssl) {
+        unsigned char b;
+
+        exec->poll(fd, PollFlag::In);
+
+        if (::recv(fd, &b, 1, MSG_PEEK) == 1 && b == 0x16) {
+            auto* s = ssl->create(pool.mutPtr(), rawIn, rawOut);
+
+            rawIn = s;
+            rawOut = s;
+        }
+    }
+
+    in = pool->make<InBuf>(*rawIn);
+    out = rawOut;
 }
 
 HttpConnection::~HttpConnection() {
@@ -124,19 +148,19 @@ HttpConnection::~HttpConnection() {
 }
 
 bool HttpConnection::serve(HttpServe& handler) {
-    auto pool = ObjPool::fromMemory();
+    auto rpool = ObjPool::fromMemory();
 
     line.reset();
 
-    if (!buf.readLine(line)) {
+    if (!in->readLine(line)) {
         return false;
     }
 
     HttpRequest req;
 
-    req.opool = pool.mutPtr();
-    req.in = &buf;
-    req.out = &stream;
+    req.opool = rpool.mutPtr();
+    req.in = in;
+    req.out = out;
 
     StringView method, rest, path, version;
 
@@ -144,23 +168,23 @@ bool HttpConnection::serve(HttpServe& handler) {
 
     rest.split(' ', path, version);
 
-    req.method = pool->intern(method);
+    req.method = rpool->intern(method);
 
     StringView rawPath = path.empty() ? rest : path;
     StringView pathPart, queryPart;
 
     if (rawPath.split('?', pathPart, queryPart)) {
-        req.path = pool->intern(pathPart);
-        req.query = pool->intern(queryPart);
+        req.path = rpool->intern(pathPart);
+        req.query = rpool->intern(queryPart);
     } else {
-        req.path = pool->intern(rawPath);
+        req.path = rpool->intern(rawPath);
     }
 
-    version = pool->intern(version);
+    version = rpool->intern(version);
 
     for (;;) {
         line.reset();
-        buf.readLine(line);
+        in->readLine(line);
 
         StringView name, val;
 
@@ -168,15 +192,15 @@ bool HttpConnection::serve(HttpServe& handler) {
             break;
         }
 
-        req.headers.insert(name.lower(lcName), pool->intern(val.stripSpace()));
+        req.headers.insert(name.lower(lcName), rpool->intern(val.stripSpace()));
     }
 
     if (auto te = req.headers.find(StringView("transfer-encoding")); te && *te == StringView("chunked")) {
-        req.in = createChunked(pool.mutPtr(), &buf);
+        req.in = createChunked(rpool.mutPtr(), in);
     } else if (auto cl = req.headers.find(StringView("content-length")); cl) {
-        req.in = createLimited(pool.mutPtr(), &buf, cl->stou());
+        req.in = createLimited(rpool.mutPtr(), in, cl->stou());
     } else {
-        req.in = pool->make<ZeroInput>();
+        req.in = rpool->make<ZeroInput>();
     }
 
     handler.serve(req);
@@ -194,8 +218,8 @@ bool HttpConnection::serve(HttpServe& handler) {
     return keepAlive;
 }
 
-IntrusivePtr<HttpServerCtl> stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg) {
-    auto ctl = makeIntrusivePtr(new HttpServerCtlImpl(handler, exec, addr, addrLen));
+IntrusivePtr<HttpServerCtl> stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg, SslCtx* ssl) {
+    auto ctl = makeIntrusivePtr(new HttpServerCtlImpl(handler, exec, addr, addrLen, ssl));
 
     wg.inc();
 

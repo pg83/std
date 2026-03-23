@@ -1,4 +1,5 @@
 #include "http.h"
+#include "ssl.h"
 #include "socket.h"
 
 #include <std/sys/fd.h>
@@ -8,6 +9,7 @@
 #include <std/alg/defer.h>
 #include <std/dbg/insist.h>
 #include <std/ios/out_buf.h>
+#include <std/mem/obj_pool.h>
 #include <std/thr/wait_group.h>
 #include <std/ios/stream_tcp.h>
 #include <std/ios/in_fd_coro.h>
@@ -313,6 +315,28 @@ STD_TEST_SUITE(HttpServer) {
     }
 }
 
+namespace {
+    const char testCert[] =
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIBfzCCASWgAwIBAgIUUQjugcnFUjBED4h+YaPFRr7pMlowCgYIKoZIzj0EAwIw\n"
+        "FDESMBAGA1UEAwwJbG9jYWxob3N0MCAXDTI2MDMyMzE0MjI1MFoYDzIxMjYwMjI3\n"
+        "MTQyMjUwWjAUMRIwEAYDVQQDDAlsb2NhbGhvc3QwWTATBgcqhkjOPQIBBggqhkjO\n"
+        "PQMBBwNCAARfsZNKls055081/xImV4diaUrCimYW2k0m7Rhq/B5xBjWP5ETfBy3X\n"
+        "aoUXGA02bImZaTSTLd43TWTCB5IbRkngo1MwUTAdBgNVHQ4EFgQURCfdIwDIDcdE\n"
+        "hrObYyq2RJsofgswHwYDVR0jBBgwFoAURCfdIwDIDcdEhrObYyq2RJsofgswDwYD\n"
+        "VR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNIADBFAiEAiISrnWrLf3ZHEnIfmPcM\n"
+        "XMJDSo3hPE486n7a40YQQw8CIEICeaFmiGyD2MvrpAe+S6k80bGFOJeWDOzwJmP7\n"
+        "nZq5\n"
+        "-----END CERTIFICATE-----";
+
+    const char testKey[] =
+        "-----BEGIN PRIVATE KEY-----\n"
+        "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgw0VlkoyRhsiGGmYa\n"
+        "R4bbSCCAbt0MrRex/LkuoYW1/myhRANCAARfsZNKls055081/xImV4diaUrCimYW\n"
+        "2k0m7Rhq/B5xBjWP5ETfBy3XaoUXGA02bImZaTSTLd43TWTCB5IbRkng\n"
+        "-----END PRIVATE KEY-----";
+}
+
 STD_TEST_SUITE(HttpFileServe) {
     STD_TEST(_ServeFiles) {
         auto exec = CoroExecutor::create(8);
@@ -352,10 +376,12 @@ STD_TEST_SUITE(HttpFileServe) {
         }
 
         auto addr = makeAddr(port);
+        auto pool = ObjPool::fromMemory();
+        auto* ssl = SslCtx::create(pool.mutPtr(), StringView(testCert), StringView(testKey));
 
         WaitGroup wg(exec.mutPtr());
 
-        serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
+        serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg, ssl);
 
         exec->spawn([&] {
             wg.wait();
