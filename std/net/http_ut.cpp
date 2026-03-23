@@ -1,15 +1,19 @@
 #include "http.h"
 
+#include <std/sys/fd.h>
 #include <std/tst/ut.h>
-#include <std/dbg/insist.h>
-#include <std/alg/defer.h>
 #include <std/thr/tcp.h>
+#include <std/alg/defer.h>
+#include <std/dbg/insist.h>
+#include <std/ios/out_buf.h>
 #include <std/thr/wait_group.h>
 #include <std/ios/stream_tcp.h>
 
+#include <fcntl.h>
 #include <string.h>
-#include <netinet/in.h>
+#include <unistd.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
 using namespace stl;
 
@@ -303,5 +307,51 @@ STD_TEST_SUITE(HttpServer) {
 
         STD_INSIST(StringView(buf1).search(StringView(u8"ok")) != nullptr);
         STD_INSIST(StringView(buf2).search(StringView(u8"ok")) != nullptr);
+    }
+}
+
+STD_TEST_SUITE(HttpFileServe) {
+    STD_TEST(_ServeFiles) {
+        auto exec = CoroExecutor::create(8);
+
+        struct Handler: HttpServe {
+            CoroExecutor* exec;
+
+            void serve(HttpRequest& req) override {
+                ScopedFD fd(::open(Buffer(req.path).cStr(), O_RDONLY));
+                if (fd.get() < 0) {
+                    const char* r = "HTTP/1.0 404 Not Found\r\nContent-Length: 0\r\n\r\n";
+                    req.out->write(r, ::strlen(r));
+                    return;
+                }
+
+                Buffer buf;
+                for (;;) {
+                    buf.growDelta(64 * 1024);
+                    ssize_t n = exec->pread(fd.get(), buf.mutCurrent(), buf.left(), buf.used());
+                    if (n <= 0) {
+                        break;
+                    }
+                    buf.seekRelative(n);
+                }
+
+                OutBuf out(*req.out);
+                out << StringView("HTTP/1.0 200 OK\r\nContent-Length: ")
+                    << buf.used()
+                    << StringView("\r\n\r\n");
+                out.write(buf.data(), buf.used());
+            }
+        } handler;
+        handler.exec = exec.mutPtr();
+
+        auto addr = makeAddr(18080);
+        WaitGroup wg(exec.mutPtr());
+        serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
+
+        exec->spawn([&] {
+            wg.wait();
+        });
+
+        exec->join();
     }
 }
