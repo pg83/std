@@ -307,10 +307,10 @@ bool HttpConnection::serve(HttpServe& handler) {
     if (auto* conn = req.headers.find(StringView("connection")); conn) {
         req.keepAlive = conn->lower(line) == StringView("keep-alive");
     } else {
-        req.keepAlive = version == StringView("HTTP/1.1");
+        req.keepAlive = version.lower(line) == StringView("http/1.1");
     }
 
-    if (auto te = req.headers.find(StringView("transfer-encoding")); te && *te == StringView("chunked")) {
+    if (auto te = req.headers.find(StringView("transfer-encoding")); te && te->lower(line) == StringView("chunked")) {
         req.in = createChunked(pool.mutPtr(), in);
     } else if (auto cl = req.headers.find(StringView("content-length")); cl) {
         req.in = createLimited(pool.mutPtr(), in, cl->stou());
