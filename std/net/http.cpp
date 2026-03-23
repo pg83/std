@@ -13,6 +13,7 @@
 #include <std/ios/output.h>
 #include <std/ios/out_buf.h>
 #include <std/lib/buffer.h>
+#include <std/lib/vector.h>
 #include <std/str/builder.h>
 #include <std/sys/atomic.h>
 #include <std/thr/poller.h>
@@ -66,11 +67,16 @@ namespace {
 }
 
 struct stl::HttpResponseImpl {
+    struct Header {
+        StringView name;
+        StringView value;
+    };
+
     HttpRequest* req;
     Output* rawOut;
     Output* out;
-    Buffer hdrs;
-    SymbolMap<StringView> respHeaders;
+    Vector<Header*> headers;
+    SymbolMap<Header*> headerIndex;
     Buffer lcName;
     u32 status;
 
@@ -94,12 +100,13 @@ void HttpResponseImpl::setStatus(u32 code) {
 }
 
 void HttpResponseImpl::addHeader(StringView name, StringView value) {
-    hdrs.append(name.data(), name.length());
-    hdrs.append(u8": ", 2);
-    hdrs.append(value.data(), value.length());
-    hdrs.append(u8"\r\n", 2);
+    auto h = req->opool->make<Header>();
 
-    respHeaders.insert(name.lower(lcName), req->opool->intern(value));
+    h->name = name;
+    h->value = value;
+
+    headers.pushBack(h);
+    headerIndex.insert(name.lower(lcName), h);
 }
 
 void HttpResponseImpl::endHeaders() {
@@ -114,7 +121,10 @@ void HttpResponseImpl::endHeaders() {
            << reasonPhrase(status)
            << StringView(u8"\r\n");
 
-        sb.write(hdrs.data(), hdrs.used());
+        for (auto* it = headers.begin(); it != headers.end(); ++it) {
+            sb << (*it)->name << StringView(u8": ") << (*it)->value << StringView(u8"\r\n");
+        }
+
         sb << StringView(u8"\r\n");
 
         rawOut->write(sb.data(), sb.used());
@@ -122,14 +132,14 @@ void HttpResponseImpl::endHeaders() {
 
     out = rawOut;
 
-    if (auto* cl = respHeaders.find(StringView("content-length")); cl) {
-        out = createLimitedOutput(pool, rawOut, cl->stou());
-    } else if (auto* te = respHeaders.find(StringView("transfer-encoding")); te && *te == StringView("chunked")) {
+    if (auto* cl = headerIndex.find(StringView("content-length")); cl) {
+        out = createLimitedOutput(pool, rawOut, (*cl)->value.stou());
+    } else if (auto* te = headerIndex.find(StringView("transfer-encoding")); te && (*te)->value == StringView("chunked")) {
         out = createChunkedOutput(pool, rawOut);
     }
 
-    if (auto* conn = respHeaders.find(StringView("connection")); conn) {
-        if (*conn != StringView("keep-alive")) {
+    if (auto* conn = headerIndex.find(StringView("connection")); conn) {
+        if ((*conn)->value != StringView("keep-alive")) {
             req->keepAlive = false;
         }
     }
