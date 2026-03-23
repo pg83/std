@@ -1,0 +1,73 @@
+#include "in_fd_coro.h"
+
+#include <std/tst/ut.h>
+#include <std/sys/fd.h>
+#include <std/thr/coro.h>
+#include <std/dbg/insist.h>
+
+#include <string.h>
+#include <sys/mman.h>
+
+using namespace stl;
+
+STD_TEST_SUITE(CoroFDInput) {
+    STD_TEST(ReadData) {
+        auto exec = CoroExecutor::create(4);
+        ScopedFD sfd(memfd_create("test", 0));
+        STD_INSIST(sfd.get() >= 0);
+
+        const char* data = "hello coro";
+        sfd.write(data, strlen(data));
+
+        exec->spawn([&] {
+            CoroFDInput in(sfd, exec.mutPtr());
+
+            char buf[32] = {};
+            auto n = in.read(buf, sizeof(buf));
+
+            STD_INSIST(n == strlen(data));
+            STD_INSIST(memcmp(buf, data, n) == 0);
+            STD_INSIST(in.offset == (off_t)n);
+        });
+
+        exec->join();
+    }
+
+    STD_TEST(ReadEof) {
+        auto exec = CoroExecutor::create(4);
+        ScopedFD sfd(memfd_create("test", 0));
+        STD_INSIST(sfd.get() >= 0);
+
+        exec->spawn([&] {
+            CoroFDInput in(sfd, exec.mutPtr());
+
+            char buf[32];
+            auto n = in.read(buf, sizeof(buf));
+
+            STD_INSIST(n == 0);
+        });
+
+        exec->join();
+    }
+
+    STD_TEST(ReadAdvancesOffset) {
+        auto exec = CoroExecutor::create(4);
+        ScopedFD sfd(memfd_create("test", 0));
+        STD_INSIST(sfd.get() >= 0);
+
+        sfd.write("abcdef", 6);
+
+        exec->spawn([&] {
+            CoroFDInput in(sfd, exec.mutPtr());
+
+            char buf[3];
+            STD_INSIST(in.read(buf, 3) == 3);
+            STD_INSIST(in.offset == 3);
+            STD_INSIST(in.read(buf, 3) == 3);
+            STD_INSIST(in.offset == 6);
+            STD_INSIST(memcmp(buf, "def", 3) == 0);
+        });
+
+        exec->join();
+    }
+}
