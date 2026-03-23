@@ -128,17 +128,11 @@ void HttpResponseImpl::endHeaders() {
         out = createChunkedOutput(pool, rawOut);
     }
 
-    // determine keep-alive
-    bool ka = false;
-
     if (auto* conn = respHeaders.find(StringView("connection")); conn) {
-        ka = *conn == StringView("keep-alive");
-    } else if (auto* reqConn = req->headers.find(StringView("connection")); reqConn) {
-        Buffer tmp;
-        ka = reqConn->lower(tmp) == StringView("keep-alive");
+        if (*conn != StringView("keep-alive")) {
+            req->keepAlive = false;
+        }
     }
-
-    req->keepAlive = ka;
 }
 
 HttpResponse::HttpResponse(HttpRequest& req)
@@ -330,6 +324,13 @@ bool HttpConnection::serve(HttpServe& handler) {
         }
 
         req.headers.insert(name.lower(lcName), pool->intern(val.stripSpace()));
+    }
+
+    if (auto* conn = req.headers.find(StringView("connection")); conn) {
+        Buffer tmp;
+        req.keepAlive = conn->lower(tmp) == StringView("keep-alive");
+    } else {
+        req.keepAlive = version == StringView("HTTP/1.1");
     }
 
     if (auto te = req.headers.find(StringView("transfer-encoding")); te && *te == StringView("chunked")) {
