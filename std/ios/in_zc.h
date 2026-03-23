@@ -17,6 +17,8 @@ namespace stl {
     public:
         ~ZeroCopyInput() noexcept override;
 
+        void drain();
+
         bool readLine(Buffer& buf);
         bool readTo(Buffer& buf, u8 delim);
 

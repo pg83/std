@@ -58,3 +58,12 @@ bool ZeroCopyInput::readTo(Buffer& buf, u8 delim) {
 
     return true;
 }
+
+void ZeroCopyInput::drain() {
+    const void* chunk;
+    size_t n;
+
+    while ((n = next(&chunk))) {
+        commit(n);
+    }
+}

@@ -180,14 +180,7 @@ bool HttpConnection::serve(HttpServe& handler) {
 
     handler.serve(req);
 
-    {
-        const void* chunk;
-        size_t n;
-
-        while ((n = req.in->next(&chunk))) {
-            req.in->commit(n);
-        }
-    }
+    req.in->drain();
 
     bool keepAlive = false;
 
