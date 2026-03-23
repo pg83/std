@@ -30,20 +30,34 @@ using namespace stl;
 namespace {
     StringView reasonPhrase(u32 code) {
         switch (code) {
-            case 200: return StringView(u8"OK");
-            case 201: return StringView(u8"Created");
-            case 204: return StringView(u8"No Content");
-            case 301: return StringView(u8"Moved Permanently");
-            case 302: return StringView(u8"Found");
-            case 304: return StringView(u8"Not Modified");
-            case 400: return StringView(u8"Bad Request");
-            case 401: return StringView(u8"Unauthorized");
-            case 403: return StringView(u8"Forbidden");
-            case 404: return StringView(u8"Not Found");
-            case 405: return StringView(u8"Method Not Allowed");
-            case 500: return StringView(u8"Internal Server Error");
-            case 502: return StringView(u8"Bad Gateway");
-            case 503: return StringView(u8"Service Unavailable");
+            case 200:
+                return StringView(u8"OK");
+            case 201:
+                return StringView(u8"Created");
+            case 204:
+                return StringView(u8"No Content");
+            case 301:
+                return StringView(u8"Moved Permanently");
+            case 302:
+                return StringView(u8"Found");
+            case 304:
+                return StringView(u8"Not Modified");
+            case 400:
+                return StringView(u8"Bad Request");
+            case 401:
+                return StringView(u8"Unauthorized");
+            case 403:
+                return StringView(u8"Forbidden");
+            case 404:
+                return StringView(u8"Not Found");
+            case 405:
+                return StringView(u8"Method Not Allowed");
+            case 500:
+                return StringView(u8"Internal Server Error");
+            case 502:
+                return StringView(u8"Bad Gateway");
+            case 503:
+                return StringView(u8"Service Unavailable");
         }
 
         return StringView(u8"Unknown");
@@ -60,6 +74,10 @@ struct stl::HttpResponseImpl {
     u32 status;
 
     HttpResponseImpl(HttpRequest* req);
+
+    void setStatus(u32 code);
+    void addHeader(StringView name, StringView value);
+    void endHeaders();
 };
 
 HttpResponseImpl::HttpResponseImpl(HttpRequest* req)
@@ -68,6 +86,58 @@ HttpResponseImpl::HttpResponseImpl(HttpRequest* req)
     , out(nullptr)
     , status(200)
 {
+}
+
+void HttpResponseImpl::setStatus(u32 code) {
+    status = code;
+}
+
+void HttpResponseImpl::addHeader(StringView name, StringView value) {
+    hdrs.append(name.data(), name.length());
+    hdrs.append(u8": ", 2);
+    hdrs.append(value.data(), value.length());
+    hdrs.append(u8"\r\n", 2);
+
+    respHeaders.insert(name.lower(lcName), req->opool->intern(value));
+}
+
+void HttpResponseImpl::endHeaders() {
+    auto* pool = req->opool;
+
+    {
+        OutBuf ob(*rawOut);
+
+        ob << StringView(u8"HTTP/1.1 ")
+           << (u64)status
+           << StringView(u8" ")
+           << reasonPhrase(status)
+           << StringView(u8"\r\n");
+
+        ob.write(hdrs.data(), hdrs.used());
+        ob << StringView(u8"\r\n");
+    }
+
+    out = rawOut;
+
+    if (auto* cl = respHeaders.find(StringView("content-length")); cl) {
+        out = createLimitedOutput(pool, rawOut, cl->stou());
+    } else if (auto* te = respHeaders.find(StringView("transfer-encoding")); te && *te == StringView("chunked")) {
+        out = createChunkedOutput(pool, rawOut);
+    }
+
+    // determine keep-alive
+    bool ka = false;
+
+    if (auto* conn = respHeaders.find(StringView("connection")); conn) {
+        ka = *conn == StringView("keep-alive");
+    } else if (auto* reqConn = req->headers.find(StringView("connection")); reqConn) {
+        Buffer tmp;
+        ka = reqConn->lower(tmp) == StringView("keep-alive");
+    }
+
+    if (req->keepAlive) {
+        *req->keepAlive = ka;
+    }
 }
 
 HttpResponse::HttpResponse(HttpRequest& req)
@@ -80,55 +150,15 @@ Output* HttpResponse::out() {
 }
 
 void HttpResponse::setStatus(u32 code) {
-    impl->status = code;
+    impl->setStatus(code);
 }
 
 void HttpResponse::addHeader(StringView name, StringView value) {
-    impl->hdrs.append(name.data(), name.length());
-    impl->hdrs.append(u8": ", 2);
-    impl->hdrs.append(value.data(), value.length());
-    impl->hdrs.append(u8"\r\n", 2);
-
-    impl->respHeaders.insert(name.lower(impl->lcName), impl->req->opool->intern(value));
+    impl->addHeader(name, value);
 }
 
 void HttpResponse::endHeaders() {
-    auto* pool = impl->req->opool;
-
-    {
-        OutBuf ob(*impl->rawOut);
-
-        ob << StringView(u8"HTTP/1.1 ")
-           << (u64)impl->status
-           << StringView(u8" ")
-           << reasonPhrase(impl->status)
-           << StringView(u8"\r\n");
-
-        ob.write(impl->hdrs.data(), impl->hdrs.used());
-        ob << StringView(u8"\r\n");
-    }
-
-    impl->out = impl->rawOut;
-
-    if (auto* cl = impl->respHeaders.find(StringView("content-length")); cl) {
-        impl->out = createLimitedOutput(pool, impl->rawOut, cl->stou());
-    } else if (auto* te = impl->respHeaders.find(StringView("transfer-encoding")); te && *te == StringView("chunked")) {
-        impl->out = createChunkedOutput(pool, impl->rawOut);
-    }
-
-    // determine keep-alive
-    bool ka = false;
-
-    if (auto* conn = impl->respHeaders.find(StringView("connection")); conn) {
-        ka = *conn == StringView("keep-alive");
-    } else if (auto* reqConn = impl->req->headers.find(StringView("connection")); reqConn) {
-        Buffer tmp;
-        ka = reqConn->lower(tmp) == StringView("keep-alive");
-    }
-
-    if (impl->req->keepAlive) {
-        *impl->req->keepAlive = ka;
-    }
+    impl->endHeaders();
 }
 
 namespace {
