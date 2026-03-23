@@ -36,11 +36,13 @@ namespace stl {
 
         HttpResponse(HttpRequest& req);
 
-        HttpRequest* request();
         Output* out();
+        HttpRequest* request();
+
         void setStatus(u32 code);
-        void addHeader(StringView name, StringView value);
+
         void endHeaders();
+        void addHeader(StringView name, StringView value);
     };
 
     struct HttpServe {

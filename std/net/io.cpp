@@ -9,6 +9,8 @@
 #include <std/alg/minmax.h>
 #include <std/mem/obj_pool.h>
 
+#include <sys/uio.h>
+
 using namespace stl;
 
 namespace {
@@ -31,6 +33,22 @@ namespace {
 
         size_t writeImpl(const void* data, size_t len) override;
     };
+
+    size_t fmtHex(u8* buf, size_t bufLen, size_t val) {
+        size_t pos = bufLen;
+
+        buf[--pos] = '\n';
+        buf[--pos] = '\r';
+
+        do {
+            u8 d = val & 0xf;
+
+            buf[--pos] = d < 10 ? '0' + d : 'a' + d - 10;
+            val >>= 4;
+        } while (val);
+
+        return pos;
+    }
 
     struct ChunkedOutput: public Output {
         Output* inner;
@@ -153,23 +171,15 @@ ChunkedOutput::ChunkedOutput(Output* inner)
 
 size_t ChunkedOutput::writeImpl(const void* data, size_t len) {
     u8 buf[20];
-    size_t pos = sizeof(buf);
+    size_t pos = fmtHex(buf, sizeof(buf), len);
 
-    buf[--pos] = '\n';
-    buf[--pos] = '\r';
+    iovec iov[3] = {
+        {buf + pos, sizeof(buf) - pos},
+        {const_cast<void*>(data), len},
+        {const_cast<void*>((const void*)u8"\r\n"), 2},
+    };
 
-    size_t v = len;
-
-    do {
-        u8 d = v & 0xf;
-
-        buf[--pos] = d < 10 ? '0' + d : 'a' + d - 10;
-        v >>= 4;
-    } while (v);
-
-    inner->write(buf + pos, sizeof(buf) - pos);
-    inner->write(data, len);
-    inner->write(u8"\r\n", 2);
+    inner->writeV(iov, 3);
 
     return len;
 }

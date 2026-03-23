@@ -256,13 +256,13 @@ HttpConnection::~HttpConnection() {
 }
 
 bool HttpConnection::serve(HttpServe& handler) {
-    auto pool = ObjPool::fromMemory();
-
     line.reset();
 
     if (!in->readLine(line)) {
         return false;
     }
+
+    auto pool = ObjPool::fromMemory();
 
     HttpRequest req;
 
