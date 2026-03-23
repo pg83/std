@@ -30,12 +30,11 @@ namespace {
     struct HttpServerCtlImpl: public HttpServerCtl {
         HttpServe& handler;
         CoroExecutor* exec;
-        SslCtx* ssl;
         sockaddr_storage addr;
         u32 addrLen;
         bool stopped;
 
-        HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, SslCtx* ssl);
+        HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen);
 
         void stop() override;
         void run(Semaphore* sem);
@@ -56,10 +55,9 @@ namespace {
     };
 }
 
-HttpServerCtlImpl::HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, SslCtx* ssl)
+HttpServerCtlImpl::HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen)
     : handler(handler)
     , exec(exec)
-    , ssl(ssl)
     , addr{}
     , addrLen(addrLen)
     , stopped(false)
@@ -109,7 +107,7 @@ void HttpServerCtlImpl::run(Semaphore* sem) {
         }
 
         exec->spawn([this, fd = client.fd] {
-            HttpConnection conn(exec, fd, ssl);
+            HttpConnection conn(exec, fd, handler.ssl());
 
             while (conn.serve(handler)) {
             }
@@ -217,8 +215,8 @@ bool HttpConnection::serve(HttpServe& handler) {
     return keepAlive;
 }
 
-IntrusivePtr<HttpServerCtl> stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg, SslCtx* ssl) {
-    auto ctl = makeIntrusivePtr(new HttpServerCtlImpl(handler, exec, addr, addrLen, ssl));
+IntrusivePtr<HttpServerCtl> stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg) {
+    auto ctl = makeIntrusivePtr(new HttpServerCtlImpl(handler, exec, addr, addrLen));
 
     wg.inc();
 
@@ -235,4 +233,8 @@ IntrusivePtr<HttpServerCtl> stl::serve(HttpServe& handler, CoroExecutor* exec, c
 }
 
 HttpServerCtl::~HttpServerCtl() {
+}
+
+SslCtx* HttpServe::ssl() {
+    return nullptr;
 }

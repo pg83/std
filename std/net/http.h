@@ -27,7 +27,10 @@ namespace stl {
         Output* out;
     };
 
+    struct SslCtx;
+
     struct HttpServe {
+        virtual SslCtx* ssl();
         virtual void serve(HttpRequest& req) = 0;
     };
 
@@ -37,7 +40,5 @@ namespace stl {
         virtual void stop() = 0;
     };
 
-    struct SslCtx;
-
-    IntrusivePtr<HttpServerCtl> serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg, SslCtx* ssl = nullptr);
+    IntrusivePtr<HttpServerCtl> serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg);
 }

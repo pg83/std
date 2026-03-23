@@ -341,8 +341,16 @@ STD_TEST_SUITE(HttpFileServe) {
     STD_TEST(_ServeFiles) {
         auto exec = CoroExecutor::create(8);
 
+        auto pool = ObjPool::fromMemory();
+        auto* sslCtx = SslCtx::create(pool.mutPtr(), StringView(testCert), StringView(testKey));
+
         struct Handler: HttpServe {
             CoroExecutor* exec;
+            SslCtx* sslCtx;
+
+            SslCtx* ssl() override {
+                return sslCtx;
+            }
 
             void serve(HttpRequest& req) override {
                 ScopedFD fd(::open(Buffer(req.path).cStr(), O_RDONLY));
@@ -368,6 +376,7 @@ STD_TEST_SUITE(HttpFileServe) {
         } handler;
 
         handler.exec = exec.mutPtr();
+        handler.sslCtx = sslCtx;
 
         u16 port = 18080;
 
@@ -376,12 +385,10 @@ STD_TEST_SUITE(HttpFileServe) {
         }
 
         auto addr = makeAddr(port);
-        auto pool = ObjPool::fromMemory();
-        auto* ssl = SslCtx::create(pool.mutPtr(), StringView(testCert), StringView(testKey));
 
         WaitGroup wg(exec.mutPtr());
 
-        serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg, ssl);
+        serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
 
         exec->spawn([&] {
             wg.wait();
