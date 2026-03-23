@@ -344,7 +344,11 @@ STD_TEST_SUITE(HttpFileServe) {
         } handler;
         handler.exec = exec.mutPtr();
 
-        auto addr = makeAddr(18080);
+        u16 port = 18080;
+        if (auto* v = _ctx.args().find(StringView("port"))) {
+            port = (u16)v->stou();
+        }
+        auto addr = makeAddr(port);
         WaitGroup wg(exec.mutPtr());
         serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
 
