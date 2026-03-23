@@ -134,6 +134,7 @@ bool HttpConnection::serve(HttpServe& handler) {
 
     HttpRequest req;
 
+    req.opool = pool.mutPtr();
     req.in = &buf;
     req.out = &stream;
 

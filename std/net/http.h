@@ -11,12 +11,14 @@ struct sockaddr;
 namespace stl {
     class Input;
     class Output;
+    class ObjPool;
     class WaitGroup;
     class ZeroCopyInput;
 
     struct CoroExecutor;
 
     struct HttpRequest {
+        ObjPool* opool;
         StringView method;
         StringView path;
         StringView query;

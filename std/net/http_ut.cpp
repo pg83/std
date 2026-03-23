@@ -324,7 +324,7 @@ STD_TEST_SUITE(HttpFileServe) {
                 ScopedFD fd(::open(Buffer(req.path).cStr(), O_RDONLY));
 
                 if (fd.get() < 0) {
-                    const char* r = "HTTP/1.0 404 Not Found\r\nContent-Length: 0\r\n\r\n";
+                    const char* r = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
                     req.out->write(r, ::strlen(r));
                     return;
                 }
@@ -335,7 +335,7 @@ STD_TEST_SUITE(HttpFileServe) {
 
                 OutBuf out(*req.out);
 
-                out << StringView("HTTP/1.0 200 OK\r\nContent-Length: ")
+                out << StringView("HTTP/1.1 200 OK\r\nContent-Length: ")
                     << buf.used()
                     << StringView("\r\n\r\n");
 
