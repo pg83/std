@@ -9,6 +9,7 @@
 #include <std/ios/out_buf.h>
 #include <std/thr/wait_group.h>
 #include <std/ios/stream_tcp.h>
+#include <std/ios/in_fd_coro.h>
 
 #include <fcntl.h>
 #include <string.h>
@@ -320,6 +321,7 @@ STD_TEST_SUITE(HttpFileServe) {
 
             void serve(HttpRequest& req) override {
                 ScopedFD fd(::open(Buffer(req.path).cStr(), O_RDONLY));
+
                 if (fd.get() < 0) {
                     const char* r = "HTTP/1.0 404 Not Found\r\nContent-Length: 0\r\n\r\n";
                     req.out->write(r, ::strlen(r));
@@ -327,19 +329,15 @@ STD_TEST_SUITE(HttpFileServe) {
                 }
 
                 Buffer buf;
-                for (;;) {
-                    buf.growDelta(64 * 1024);
-                    ssize_t n = exec->pread(fd.get(), buf.mutCurrent(), buf.left(), buf.used());
-                    if (n <= 0) {
-                        break;
-                    }
-                    buf.seekRelative(n);
-                }
+
+                CoroFDInput(fd, exec).readAll(buf);
 
                 OutBuf out(*req.out);
+
                 out << StringView("HTTP/1.0 200 OK\r\nContent-Length: ")
                     << buf.used()
                     << StringView("\r\n\r\n");
+
                 out.write(buf.data(), buf.used());
             }
         } handler;
