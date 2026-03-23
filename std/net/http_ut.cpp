@@ -81,11 +81,10 @@ STD_TEST_SUITE(HttpRequestParsing) {
             StringView path;
             StringView query;
 
-            void serve(HttpRequest& req) override {
-                path = req.path;
-                query = req.query;
+            void serve(HttpResponse& resp) override {
+                path = resp.request()->path;
+                query = resp.request()->query;
 
-                HttpResponse resp(req);
                 resp.addHeader(StringView("Content-Length"), StringView("0"));
                 resp.endHeaders();
             }
@@ -130,11 +129,10 @@ STD_TEST_SUITE(HttpRequestParsing) {
             StringView path;
             StringView query;
 
-            void serve(HttpRequest& req) override {
-                path = req.path;
-                query = req.query;
+            void serve(HttpResponse& resp) override {
+                path = resp.request()->path;
+                query = resp.request()->query;
 
-                HttpResponse resp(req);
                 resp.addHeader(StringView("Content-Length"), StringView("0"));
                 resp.endHeaders();
             }
@@ -178,8 +176,7 @@ STD_TEST_SUITE(HttpServer) {
         auto exec = CoroExecutor::create(4);
 
         struct Handler: HttpServe {
-            void serve(HttpRequest& req) override {
-                HttpResponse resp(req);
+            void serve(HttpResponse& resp) override {
                 resp.addHeader(StringView("Content-Length"), StringView("5"));
                 resp.endHeaders();
                 resp.out()->write("hello", 5);
@@ -233,8 +230,7 @@ STD_TEST_SUITE(HttpServer) {
         auto exec = CoroExecutor::create(4);
 
         struct Handler: HttpServe {
-            void serve(HttpRequest& req) override {
-                HttpResponse resp(req);
+            void serve(HttpResponse& resp) override {
                 resp.addHeader(StringView("Content-Length"), StringView("2"));
                 resp.addHeader(StringView("Connection"), StringView("keep-alive"));
                 resp.endHeaders();
@@ -299,8 +295,7 @@ STD_TEST_SUITE(HttpServer) {
         auto exec = CoroExecutor::create(4);
 
         struct Handler: HttpServe {
-            void serve(HttpRequest& req) override {
-                HttpResponse resp(req);
+            void serve(HttpResponse& resp) override {
                 resp.addHeader(StringView("Content-Length"), StringView("2"));
                 resp.addHeader(StringView("Connection"), StringView("keep-alive"));
                 resp.endHeaders();
@@ -390,12 +385,11 @@ STD_TEST_SUITE(HttpFileServe) {
                 return sslCtx;
             }
 
-            void serve(HttpRequest& req) override {
-                ScopedFD fd(::open(Buffer(req.path).cStr(), O_RDONLY));
+            void serve(HttpResponse& resp) override {
+                auto* req = resp.request();
+                ScopedFD fd(::open(Buffer(req->path).cStr(), O_RDONLY));
 
                 if (fd.get() < 0) {
-                    HttpResponse resp(req);
-
                     resp.setStatus(404);
                     resp.addHeader(StringView("Content-Length"), StringView("0"));
                     resp.endHeaders();
@@ -410,7 +404,6 @@ STD_TEST_SUITE(HttpFileServe) {
                 StringBuilder cl;
                 cl << buf.used();
 
-                HttpResponse resp(req);
                 resp.addHeader(StringView("Content-Length"), StringView(cl));
                 resp.endHeaders();
                 resp.out()->write(buf.data(), buf.used());

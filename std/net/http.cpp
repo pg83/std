@@ -110,6 +110,10 @@ HttpResponse::HttpResponse(HttpRequest& req)
 {
 }
 
+HttpRequest* HttpResponse::request() {
+    return impl->req;
+}
+
 Output* HttpResponse::out() {
     return impl->out;
 }
@@ -310,7 +314,9 @@ bool HttpConnection::serve(HttpServe& handler) {
         req.in = pool->make<ZeroInput>();
     }
 
-    handler.serve(req);
+    HttpResponse resp(req);
+
+    handler.serve(resp);
 
     req.in->drain();
 

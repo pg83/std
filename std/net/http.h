@@ -36,6 +36,7 @@ namespace stl {
 
         HttpResponse(HttpRequest& req);
 
+        HttpRequest* request();
         Output* out();
         void setStatus(u32 code);
         void addHeader(StringView name, StringView value);
@@ -44,7 +45,7 @@ namespace stl {
 
     struct HttpServe {
         virtual SslCtx* ssl();
-        virtual void serve(HttpRequest& req) = 0;
+        virtual void serve(HttpResponse& resp) = 0;
     };
 
     struct HttpServerCtl: public ARC {
