@@ -8,7 +8,6 @@
 #include "context.h"
 #include "cond_var.h"
 #include "semaphore.h"
-#include "reactor_fs.h"
 #include "thread_iface.h"
 #include "reactor_poll.h"
 #include "channel_iface.h"
@@ -33,12 +32,12 @@
 #include <std/mem/obj_pool.h>
 #include <std/rng/split_mix_64.h>
 
+#include <errno.h>
 #include <time.h>
 #include <fcntl.h>
 #include <sched.h>
 #include <alloca.h>
 #include <unistd.h>
-#include <sys/uio.h>
 
 using namespace stl;
 
@@ -59,6 +58,11 @@ namespace {
         }
 
         void parkWith(Runable* afterSuspend) noexcept;
+
+        void parkWith(Runable&& afterSuspend) noexcept {
+            parkWith(&afterSuspend);
+        }
+
         void run() noexcept override;
         void reSchedule() noexcept;
     };
@@ -100,7 +104,7 @@ namespace {
         ObjPool::Ref opool_;
         const u64 tlsKey_;
         Vector<ReactorIface*> reactors_;
-        FSReactorIface* fsReactor_;
+        ThreadPool* fsPool_;
         ThreadPool* pool_;
 
         CoroExecutorImpl(size_t threads, size_t reactors);
@@ -159,19 +163,6 @@ namespace {
         }
     };
 
-    struct FSRequestImpl: public FSRequest {
-        ContImpl* cont;
-        ssize_t result = 0;
-
-        void parkWith(Runable&& afterSuspend) noexcept override {
-            cont->parkWith(&afterSuspend);
-        }
-
-        void complete(ssize_t res) noexcept override {
-            result = res;
-            cont->reSchedule();
-        }
-    };
 }
 
 CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
@@ -187,7 +178,7 @@ CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
         reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr()));
     }
 
-    fsReactor_ = FSReactorIface::create(ThreadPool::simple(opool_.mutPtr(), reactors), opool_.mutPtr());
+    fsPool_ = ThreadPool::simple(opool_.mutPtr(), reactors);
 }
 
 Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
@@ -293,43 +284,33 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
 }
 
 ssize_t CoroExecutorImpl::pread(int fd, void* buf, size_t len, off_t offset) {
-    struct iovec iov = {
-        buf,
-        len,
-    };
+    ssize_t result = 0;
+    auto* cont = currentCont();
 
-    FSRequestImpl req;
+    cont->parkWith(makeRunable([&] {
+        fsPool_->submit([&] {
+            ssize_t n = ::pread(fd, buf, len, offset);
+            result = n < 0 ? -errno : n;
+            cont->reSchedule();
+        });
+    }));
 
-    req.cont = currentCont();
-    req.iov = &iov;
-    req.iovcnt = 1;
-    req.offset = offset;
-    req.fd = fd;
-    req.op = FSRequestOp::Read;
-
-    fsReactor_->submit(&req);
-
-    return req.result;
+    return result;
 }
 
 ssize_t CoroExecutorImpl::pwrite(int fd, const void* buf, size_t len, off_t offset) {
-    struct iovec iov = {
-        (void*)buf,
-        len,
-    };
+    ssize_t result = 0;
+    auto* cont = currentCont();
 
-    FSRequestImpl req;
+    cont->parkWith(makeRunable([&] {
+        fsPool_->submit([&] {
+            ssize_t n = ::pwrite(fd, buf, len, offset);
+            result = n < 0 ? -errno : n;
+            cont->reSchedule();
+        });
+    }));
 
-    req.cont = currentCont();
-    req.iov = &iov;
-    req.iovcnt = 1;
-    req.offset = offset;
-    req.fd = fd;
-    req.op = FSRequestOp::Write;
-
-    fsReactor_->submit(&req);
-
-    return req.result;
+    return result;
 }
 
 u64 Cont::id() const noexcept {
