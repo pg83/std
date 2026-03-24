@@ -149,6 +149,7 @@ namespace {
     };
 
     struct HttpConnection {
+        HttpServe* handler;
         ObjPool::Ref opool = ObjPool::fromMemory();
         TcpSocket sock;
         ZeroCopyInput* in;
@@ -156,10 +157,10 @@ namespace {
         Buffer line;
         Buffer lcName;
 
-        HttpConnection(CoroExecutor* exec, int fd, SslCtx* ssl);
+        HttpConnection(HttpServe* handler, CoroExecutor* exec, int fd);
         ~HttpConnection();
 
-        bool serve(HttpServe& handler);
+        bool serve();
     };
 }
 
@@ -216,9 +217,9 @@ void HttpServerCtlImpl::run(Semaphore* sem) {
 
         exec->spawn([this, fd = client.fd] {
             try {
-                HttpConnection conn(exec, fd, handler.ssl());
+                HttpConnection conn(&handler, exec, fd);
 
-                while (conn.serve(handler)) {
+                while (conn.serve()) {
                 }
             } catch (...) {
             }
@@ -226,36 +227,36 @@ void HttpServerCtlImpl::run(Semaphore* sem) {
     }
 }
 
-HttpConnection::HttpConnection(CoroExecutor* exec, int fd, SslCtx* ssl)
-    : sock(fd, exec)
+HttpConnection::HttpConnection(HttpServe* handler, CoroExecutor* exec, int fd)
+    : handler(handler)
+    , sock(fd, exec)
 {
-    auto* stream = opool->make<TcpStream>(sock);
+    auto stream = opool->make<TcpStream>(sock);
 
-    Input* rawIn = stream;
-    Output* rawOut = stream;
+    Input* in = stream;
+    out = stream;
 
-    if (ssl) {
+    if (auto ssl = handler->ssl()) {
         unsigned char b;
 
         exec->poll(fd, PollFlag::In);
 
         if (::recv(fd, &b, 1, MSG_PEEK) == 1 && b == 0x16) {
-            auto* s = ssl->create(opool.mutPtr(), rawIn, rawOut);
+            auto s = ssl->create(opool.mutPtr(), in, out);
 
-            rawIn = s;
-            rawOut = s;
+            in = s;
+            out = s;
         }
     }
 
-    in = opool->make<InBuf>(*rawIn);
-    out = rawOut;
+    this->in = opool->make<InBuf>(*in);
 }
 
 HttpConnection::~HttpConnection() {
     sock.close();
 }
 
-bool HttpConnection::serve(HttpServe& handler) {
+bool HttpConnection::serve() {
     line.reset();
 
     if (!in->readLine(line)) {
@@ -320,7 +321,7 @@ bool HttpConnection::serve(HttpServe& handler) {
 
     HttpResponse resp(req);
 
-    handler.serve(resp);
+    handler->serve(resp);
 
     req.in->drain();
 
