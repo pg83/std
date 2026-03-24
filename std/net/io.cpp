@@ -175,8 +175,8 @@ size_t ChunkedOutput::writeImpl(const void* data, size_t len) {
 
     iovec iov[3] = {
         {buf + pos, sizeof(buf) - pos},
-        {const_cast<void*>(data), len},
-        {const_cast<void*>((const void*)u8"\r\n"), 2},
+        {(void*)data, len},
+        {(void*)u8"\r\n", 2},
     };
 
     inner->writeV(iov, 3);
