@@ -62,6 +62,11 @@ namespace {
             parkWith(&afterSuspend);
         }
 
+        template <typename F>
+        void park(F f) noexcept {
+            parkWith(makeRunable(f));
+        }
+
         void run() noexcept override;
         void reSchedule() noexcept;
     };
@@ -192,9 +197,9 @@ Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
 void CoroExecutorImpl::yield() noexcept {
     auto c = currentCont();
 
-    c->parkWith(makeRunable([c] {
+    c->park([c] {
         c->reSchedule();
-    }));
+    });
 }
 
 CoroExecutorImpl::~CoroExecutorImpl() noexcept {
@@ -282,12 +287,12 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
 void CoroExecutorImpl::offload(ThreadPool* pool, Runable&& work) {
     auto* cont = currentCont();
 
-    cont->parkWith(makeRunable([&] {
+    cont->park([&] {
         pool->submit([&] {
             work.run();
             cont->reSchedule();
         });
-    }));
+    });
 }
 
 ssize_t CoroExecutorImpl::pread(int fd, void* buf, size_t len, off_t offset) {
@@ -328,8 +333,7 @@ EventIface* CoroExecutorImpl::createEvent() {
         }
 
         void wait(Runable&& cb) noexcept override {
-            waiter_ = exec_->currentCont();
-            waiter_->parkWith(&cb);
+            (waiter_ = exec_->currentCont())->parkWith(&cb);
         }
 
         void signal() noexcept override {
@@ -342,22 +346,6 @@ EventIface* CoroExecutorImpl::createEvent() {
 
 CondVarIface* CoroExecutorImpl::createCondVar() {
     struct CoroCondVarImpl: public CondVarIface {
-        struct ParkCtx: public Runable {
-            CoroCondVarImpl* cv;
-            Mutex* mutex;
-
-            ParkCtx(CoroCondVarImpl* cv, Mutex* mutex) noexcept
-                : cv(cv)
-                , mutex(mutex)
-            {
-            }
-
-            void run() override {
-                cv->queueMutex_.unlock();
-                mutex->unlock();
-            }
-        };
-
         Mutex queueMutex_;
         IntrusiveList waiters_;
 
@@ -374,8 +362,10 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
             queueMutex_.lock();
             auto* cont = exec()->currentCont();
             waiters_.pushBack(cont);
-            ParkCtx ctx(this, &mutex);
-            cont->parkWith(&ctx);
+            cont->park([&] {
+                queueMutex_.unlock();
+                mutex.unlock();
+            });
             mutex.lock();
         }
 
