@@ -82,8 +82,8 @@ STD_TEST_SUITE(HttpRequestParsing) {
             StringView query;
 
             void serve(HttpResponse& resp) override {
-                path = resp.request()->path;
-                query = resp.request()->query;
+                path = resp.request()->path();
+                query = resp.request()->query();
 
                 resp.addHeader(StringView("Content-Length"), StringView("0"));
                 resp.endHeaders();
@@ -130,8 +130,8 @@ STD_TEST_SUITE(HttpRequestParsing) {
             StringView query;
 
             void serve(HttpResponse& resp) override {
-                path = resp.request()->path;
-                query = resp.request()->query;
+                path = resp.request()->path();
+                query = resp.request()->query();
 
                 resp.addHeader(StringView("Content-Length"), StringView("0"));
                 resp.endHeaders();
@@ -388,7 +388,7 @@ STD_TEST_SUITE(HttpFileServe) {
             void serve(HttpResponse& resp) override {
                 auto req = resp.request();
 
-                ScopedFD fd(::open(Buffer(req->path).cStr(), O_RDONLY));
+                ScopedFD fd(::open(Buffer(req->path()).cStr(), O_RDONLY));
 
                 if (fd.get() < 0) {
                     resp.setStatus(404);

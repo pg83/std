@@ -14,6 +14,7 @@
 #include <std/ios/output.h>
 #include <std/lib/buffer.h>
 #include <std/lib/vector.h>
+#include <std/sym/s_map.h>
 #include <std/sys/atomic.h>
 #include <std/thr/poller.h>
 #include <std/ios/out_buf.h>
@@ -31,6 +32,26 @@
 using namespace stl;
 
 namespace {
+    struct HttpConnection;
+
+    struct HttpRequestImpl: public HttpRequest {
+        ObjPool::Ref pool = ObjPool::fromMemory();
+        StringView reqMethod;
+        StringView reqPath;
+        StringView reqQuery;
+        SymbolMap<StringView> headers;
+        ZeroCopyInput* reqIn;
+        bool keepAlive;
+
+        void parse(HttpConnection* conn);
+
+        StringView method() override;
+        StringView path() override;
+        StringView query() override;
+        ZeroCopyInput* in() override;
+        StringView* header(StringView name) override;
+    };
+
     struct HttpServerCtlImpl: public HttpServerCtl {
         HttpServe& handler;
         CoroExecutor* exec;
@@ -66,13 +87,13 @@ namespace {
         };
 
         HttpConnection* conn;
-        HttpRequest* req;
+        HttpRequestImpl* req;
         Output* rawOut;
         Vector<Header*> headers;
         SymbolMap<Header*> headerIndex;
         u32 status;
 
-        HttpResponseImpl(HttpRequest* req, HttpConnection* conn);
+        HttpResponseImpl(HttpRequestImpl* req, HttpConnection* conn);
 
         Output* out() override;
         void endHeaders() override;
@@ -82,10 +103,81 @@ namespace {
     };
 }
 
-HttpResponseImpl::HttpResponseImpl(HttpRequest* req, HttpConnection* conn)
+void HttpRequestImpl::parse(HttpConnection* conn) {
+    keepAlive = false;
+
+    StringView method, rest, path, version;
+
+    STD_VERIFY(StringView(conn->line).stripCr().split(' ', method, rest));
+
+    rest.split(' ', path, version);
+
+    reqMethod = pool->intern(method);
+
+    StringView rawPath = path.empty() ? rest : path;
+    StringView pathPart, queryPart;
+
+    if (rawPath.split('?', pathPart, queryPart)) {
+        reqPath = pool->intern(pathPart);
+        reqQuery = pool->intern(queryPart);
+    } else {
+        reqPath = pool->intern(rawPath);
+    }
+
+    version = pool->intern(version);
+
+    for (;;) {
+        conn->line.reset();
+        conn->in->readLine(conn->line);
+
+        StringView name, val;
+
+        if (!StringView(conn->line).stripCr().split(':', name, val)) {
+            break;
+        }
+
+        headers.insert(name.lower(conn->lcName), pool->intern(val.stripSpace()));
+    }
+
+    if (auto* h = headers.find(StringView("connection")); h) {
+        keepAlive = h->lower(conn->line) == StringView("keep-alive");
+    } else {
+        keepAlive = version.lower(conn->line) == StringView("http/1.1");
+    }
+
+    if (auto te = headers.find(StringView("transfer-encoding")); te && te->lower(conn->line) == StringView("chunked")) {
+        reqIn = createChunked(pool.mutPtr(), conn->in);
+    } else if (auto cl = headers.find(StringView("content-length")); cl) {
+        reqIn = createLimited(pool.mutPtr(), conn->in, cl->stou());
+    } else {
+        reqIn = pool->make<ZeroInput>();
+    }
+}
+
+StringView HttpRequestImpl::method() {
+    return reqMethod;
+}
+
+StringView HttpRequestImpl::path() {
+    return reqPath;
+}
+
+StringView HttpRequestImpl::query() {
+    return reqQuery;
+}
+
+ZeroCopyInput* HttpRequestImpl::in() {
+    return reqIn;
+}
+
+StringView* HttpRequestImpl::header(StringView name) {
+    return headers.find(name);
+}
+
+HttpResponseImpl::HttpResponseImpl(HttpRequestImpl* req, HttpConnection* conn)
     : conn(conn)
     , req(req)
-    , rawOut(req->out)
+    , rawOut(conn->out)
     , status(200)
 {
 }
@@ -103,7 +195,7 @@ void HttpResponseImpl::setStatus(u32 code) {
 }
 
 void HttpResponseImpl::addHeader(StringView name, StringView value) {
-    auto h = req->opool->make<Header>();
+    auto h = req->pool.mutPtr()->make<Header>();
 
     h->name = name;
     h->value = value;
@@ -113,7 +205,7 @@ void HttpResponseImpl::addHeader(StringView name, StringView value) {
 }
 
 void HttpResponseImpl::endHeaders() {
-    auto* pool = req->opool;
+    auto* pool = req->pool.mutPtr();
 
     if (req->keepAlive && !headerIndex.find(StringView("content-length")) && !headerIndex.find(StringView("transfer-encoding"))) {
         addHeader(StringView("Transfer-Encoding"), StringView("chunked"));
@@ -249,65 +341,13 @@ bool HttpConnection::serve() {
         return false;
     }
 
-    auto pool = ObjPool::fromMemory();
+    HttpRequestImpl req;
 
-    HttpRequest req;
+    req.parse(this);
 
-    req.opool = pool.mutPtr();
-    req.in = in;
-    req.out = out;
-    req.keepAlive = false;
+    handler->serve(*req.pool->make<HttpResponseImpl>(&req, this));
 
-    StringView method, rest, path, version;
-
-    STD_VERIFY(StringView(line).stripCr().split(' ', method, rest));
-
-    rest.split(' ', path, version);
-
-    req.method = pool->intern(method);
-
-    StringView rawPath = path.empty() ? rest : path;
-    StringView pathPart, queryPart;
-
-    if (rawPath.split('?', pathPart, queryPart)) {
-        req.path = pool->intern(pathPart);
-        req.query = pool->intern(queryPart);
-    } else {
-        req.path = pool->intern(rawPath);
-    }
-
-    version = pool->intern(version);
-
-    for (;;) {
-        line.reset();
-        in->readLine(line);
-
-        StringView name, val;
-
-        if (!StringView(line).stripCr().split(':', name, val)) {
-            break;
-        }
-
-        req.headers.insert(name.lower(lcName), pool->intern(val.stripSpace()));
-    }
-
-    if (auto* conn = req.headers.find(StringView("connection")); conn) {
-        req.keepAlive = conn->lower(line) == StringView("keep-alive");
-    } else {
-        req.keepAlive = version.lower(line) == StringView("http/1.1");
-    }
-
-    if (auto te = req.headers.find(StringView("transfer-encoding")); te && te->lower(line) == StringView("chunked")) {
-        req.in = createChunked(pool.mutPtr(), in);
-    } else if (auto cl = req.headers.find(StringView("content-length")); cl) {
-        req.in = createLimited(pool.mutPtr(), in, cl->stou());
-    } else {
-        req.in = pool->make<ZeroInput>();
-    }
-
-    handler->serve(*req.opool->make<HttpResponseImpl>(&req, this));
-
-    req.in->drain();
+    req.reqIn->drain();
 
     return req.keepAlive;
 }
