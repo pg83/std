@@ -24,13 +24,22 @@ namespace {
         }
     }
 
+    struct SslContext: public mbedtls_ssl_context {
+        SslContext() noexcept {
+            mbedtls_ssl_init(this);
+        }
+
+        ~SslContext() noexcept {
+            mbedtls_ssl_free(this);
+        }
+    };
+
     struct SslSocketImpl: public SslSocket {
-        mbedtls_ssl_context ssl;
+        SslContext ssl;
         Input* in;
         Output* out;
 
         SslSocketImpl(mbedtls_ssl_config* conf, Input* in, Output* out);
-        ~SslSocketImpl() noexcept;
 
         size_t readImpl(void* data, size_t len) override;
         size_t writeImpl(const void* data, size_t len) override;
@@ -39,15 +48,64 @@ namespace {
         static int send(void* ctx, const unsigned char* buf, size_t len);
     };
 
+    struct SslConf: public mbedtls_ssl_config {
+        SslConf() noexcept {
+            mbedtls_ssl_config_init(this);
+        }
+
+        ~SslConf() noexcept {
+            mbedtls_ssl_config_free(this);
+        }
+    };
+
+    struct SslCert: public mbedtls_x509_crt {
+        SslCert() noexcept {
+            mbedtls_x509_crt_init(this);
+        }
+
+        ~SslCert() noexcept {
+            mbedtls_x509_crt_free(this);
+        }
+    };
+
+    struct SslKey: public mbedtls_pk_context {
+        SslKey() noexcept {
+            mbedtls_pk_init(this);
+        }
+
+        ~SslKey() noexcept {
+            mbedtls_pk_free(this);
+        }
+    };
+
+    struct SslEntropy: public mbedtls_entropy_context {
+        SslEntropy() noexcept {
+            mbedtls_entropy_init(this);
+        }
+
+        ~SslEntropy() noexcept {
+            mbedtls_entropy_free(this);
+        }
+    };
+
+    struct SslCtrDrbg: public mbedtls_ctr_drbg_context {
+        SslCtrDrbg() noexcept {
+            mbedtls_ctr_drbg_init(this);
+        }
+
+        ~SslCtrDrbg() noexcept {
+            mbedtls_ctr_drbg_free(this);
+        }
+    };
+
     struct SslCtxImpl: public SslCtx {
-        mbedtls_ssl_config conf;
-        mbedtls_x509_crt cert;
-        mbedtls_pk_context key;
-        mbedtls_entropy_context entropy;
-        mbedtls_ctr_drbg_context ctr_drbg;
+        SslConf conf;
+        SslCert cert;
+        SslKey key;
+        SslEntropy entropy;
+        SslCtrDrbg ctr_drbg;
 
         SslCtxImpl(StringView certData, StringView keyData);
-        ~SslCtxImpl() noexcept;
 
         SslSocket* create(ObjPool* pool, Input* in, Output* out) override;
     };
@@ -73,13 +131,8 @@ SslSocketImpl::SslSocketImpl(mbedtls_ssl_config* conf, Input* in, Output* out)
     : in(in)
     , out(out)
 {
-    mbedtls_ssl_init(&ssl);
     checkSsl(mbedtls_ssl_setup(&ssl, conf));
     mbedtls_ssl_set_bio(&ssl, this, send, recv, nullptr);
-}
-
-SslSocketImpl::~SslSocketImpl() noexcept {
-    mbedtls_ssl_free(&ssl);
 }
 
 size_t SslSocketImpl::readImpl(void* data, size_t len) {
@@ -107,12 +160,6 @@ size_t SslSocketImpl::writeImpl(const void* data, size_t len) {
 }
 
 SslCtxImpl::SslCtxImpl(StringView certData, StringView keyData) {
-    mbedtls_ssl_config_init(&conf);
-    mbedtls_x509_crt_init(&cert);
-    mbedtls_pk_init(&key);
-    mbedtls_entropy_init(&entropy);
-    mbedtls_ctr_drbg_init(&ctr_drbg);
-
     checkSsl(mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, nullptr, 0));
     checkSsl(mbedtls_x509_crt_parse(&cert, (const unsigned char*)certData.data(), certData.length() + 1));
     checkSsl(mbedtls_pk_parse_key(&key, (const unsigned char*)keyData.data(), keyData.length() + 1, nullptr, 0, mbedtls_ctr_drbg_random, &ctr_drbg));
@@ -121,14 +168,6 @@ SslCtxImpl::SslCtxImpl(StringView certData, StringView keyData) {
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
     mbedtls_ssl_conf_ca_chain(&conf, cert.next, nullptr);
     checkSsl(mbedtls_ssl_conf_own_cert(&conf, &cert, &key));
-}
-
-SslCtxImpl::~SslCtxImpl() noexcept {
-    mbedtls_ssl_config_free(&conf);
-    mbedtls_x509_crt_free(&cert);
-    mbedtls_pk_free(&key);
-    mbedtls_entropy_free(&entropy);
-    mbedtls_ctr_drbg_free(&ctr_drbg);
 }
 
 SslSocket* SslCtxImpl::create(ObjPool* pool, Input* in, Output* out) {
