@@ -629,9 +629,9 @@ STD_TEST_SUITE(CoroOffload) {
         auto f = async(exec.mutPtr(), [&] {
             int result = 0;
 
-            exec->offload(pool, makeRunable([&] {
+            exec->offload(pool, [&] {
                               result = 42;
-                          }));
+                          });
 
             return result;
         });
@@ -648,9 +648,9 @@ STD_TEST_SUITE(CoroOffload) {
             int sum = 0;
 
             for (int i = 0; i < 10; ++i) {
-                exec->offload(pool, makeRunable([&] {
+                exec->offload(pool, [&] {
                                   sum += 1;
-                              }));
+                              });
             }
 
             return sum;
@@ -667,9 +667,9 @@ STD_TEST_SUITE(CoroOffload) {
 
         for (int i = 0; i < 16; ++i) {
             exec->spawn([&] {
-                exec->offload(pool, makeRunable([&] {
+                exec->offload(pool, [&] {
                                   stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-                              }));
+                              });
             });
         }
 
@@ -685,11 +685,11 @@ STD_TEST_SUITE(CoroOffload) {
         auto f = async(exec.mutPtr(), [&] {
             int result = 0;
 
-            exec->offload(pool, makeRunable([&] {
+            exec->offload(pool, [&] {
                               for (volatile int i = 0; i < 1000000; ++i) {
                               }
                               result = 1;
-                          }));
+                          });
 
             return result;
         });

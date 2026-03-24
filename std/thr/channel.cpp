@@ -3,10 +3,10 @@
 #include "mutex.h"
 #include "guard.h"
 
-#include <std/lib/list.h>
-#include <std/lib/ring_buf.h>
-#include <std/dbg/insist.h>
 #include <std/sys/crt.h>
+#include <std/lib/list.h>
+#include <std/dbg/insist.h>
+#include <std/lib/ring_buf.h>
 
 using namespace stl;
 
@@ -113,6 +113,7 @@ struct Channel::Impl {
         w.valueSet = false;
 
         receivers_.pushBack(&w);
+
         ev.wait(makeRunable([&] {
             guard.drop();
             mu_.unlock();

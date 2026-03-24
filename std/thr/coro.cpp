@@ -148,8 +148,8 @@ namespace {
         ThreadIface* createThread(Runable& runable) override;
         SemaphoreIface* createSemaphore(size_t initial) override;
 
-        void offload(ThreadPool* pool, Runable&& work) override;
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
+        void offloadRun(ThreadPool* pool, Runable&& work) override;
         ssize_t pread(int fd, void* buf, size_t len, off_t offset) override;
         ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) override;
     };
@@ -167,7 +167,6 @@ namespace {
             ready.pushBack(cont);
         }
     };
-
 }
 
 CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
@@ -284,7 +283,7 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
     return req.result;
 }
 
-void CoroExecutorImpl::offload(ThreadPool* pool, Runable&& work) {
+void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {
     auto* cont = currentCont();
 
     cont->park([&] {
@@ -298,10 +297,12 @@ void CoroExecutorImpl::offload(ThreadPool* pool, Runable&& work) {
 ssize_t CoroExecutorImpl::pread(int fd, void* buf, size_t len, off_t offset) {
     ssize_t result = 0;
 
-    offload(fsPool_, makeRunable([&] {
-                ssize_t n = ::pread(fd, buf, len, offset);
-                result = n < 0 ? -errno : n;
-            }));
+    // clang-format off
+    offload(fsPool_, [&] {
+        ssize_t n = ::pread(fd, buf, len, offset);
+        result = n < 0 ? -errno : n;
+    });
+    // clang-format on
 
     return result;
 }
@@ -309,10 +310,12 @@ ssize_t CoroExecutorImpl::pread(int fd, void* buf, size_t len, off_t offset) {
 ssize_t CoroExecutorImpl::pwrite(int fd, const void* buf, size_t len, off_t offset) {
     ssize_t result = 0;
 
-    offload(fsPool_, makeRunable([&] {
-                ssize_t n = ::pwrite(fd, buf, len, offset);
-                result = n < 0 ? -errno : n;
-            }));
+    // clang-format off
+    offload(fsPool_, [&] {
+        ssize_t n = ::pwrite(fd, buf, len, offset);
+        result = n < 0 ? -errno : n;
+    });
+    // clang-format on
 
     return result;
 }
