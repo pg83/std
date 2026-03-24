@@ -133,6 +133,7 @@ SslSocketImpl::SslSocketImpl(mbedtls_ssl_config* conf, Input* in, Output* out)
 {
     checkSsl(mbedtls_ssl_setup(&ssl, conf));
     mbedtls_ssl_set_bio(&ssl, this, send, recv, nullptr);
+    checkSsl(mbedtls_ssl_handshake(&ssl));
 }
 
 size_t SslSocketImpl::readImpl(void* data, size_t len) {
@@ -164,18 +165,13 @@ SslCtxImpl::SslCtxImpl(StringView certData, StringView keyData) {
     checkSsl(mbedtls_x509_crt_parse(&cert, (const unsigned char*)certData.data(), certData.length() + 1));
     checkSsl(mbedtls_pk_parse_key(&key, (const unsigned char*)keyData.data(), keyData.length() + 1, nullptr, 0, mbedtls_ctr_drbg_random, &ctr_drbg));
     checkSsl(mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_SERVER, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT));
-
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
     mbedtls_ssl_conf_ca_chain(&conf, cert.next, nullptr);
     checkSsl(mbedtls_ssl_conf_own_cert(&conf, &cert, &key));
 }
 
 SslSocket* SslCtxImpl::create(ObjPool* pool, Input* in, Output* out) {
-    auto* sock = pool->make<SslSocketImpl>(&conf, in, out);
-
-    checkSsl(mbedtls_ssl_handshake(&sock->ssl));
-
-    return sock;
+    return pool->make<SslSocketImpl>(&conf, in, out);
 }
 
 SslCtx* stl::SslCtx::create(ObjPool* pool, StringView cert, StringView key) {
