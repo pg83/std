@@ -16,7 +16,6 @@ namespace stl {
 
     struct SslCtx;
     struct CoroExecutor;
-    struct HttpResponse;
 
     struct HttpRequest {
         virtual StringView path() = 0;

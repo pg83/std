@@ -9,13 +9,13 @@
 #include <std/thr/coro.h>
 #include <std/alg/defer.h>
 #include <std/ios/input.h>
+#include <std/sym/s_map.h>
 #include <std/dbg/insist.h>
 #include <std/dbg/verify.h>
 #include <std/ios/in_buf.h>
 #include <std/ios/output.h>
 #include <std/lib/buffer.h>
 #include <std/lib/vector.h>
-#include <std/sym/s_map.h>
 #include <std/sys/atomic.h>
 #include <std/thr/poller.h>
 #include <std/ios/out_buf.h>
