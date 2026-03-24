@@ -9,6 +9,8 @@ namespace stl {
         struct Impl;
         Impl* impl_;
 
+        Channel();
+        Channel(size_t cap);
         explicit Channel(CoroExecutor* exec);
         Channel(CoroExecutor* exec, size_t cap);
 

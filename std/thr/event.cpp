@@ -43,7 +43,7 @@ Event::Event()
 }
 
 Event::Event(CoroExecutor* exec)
-    : impl_(exec->createEvent())
+    : impl_(exec ? exec->createEvent() : new FutexEventImpl())
 {
 }
 

@@ -1,5 +1,6 @@
 #include "coro.h"
 #include "pool.h"
+#include "thread.h"
 #include "channel.h"
 #include "wait_group.h"
 
@@ -49,6 +50,118 @@ namespace {
 
         exec->join();
         STD_INSIST(sum == (i64)nMessages * (nMessages + 1) / 2);
+    }
+}
+
+STD_TEST_SUITE(ChannelThreaded) {
+    STD_TEST(Basic) {
+        Channel ch(1);
+        void* result = nullptr;
+
+        {
+            ScopedThread t([&] {
+                ch.dequeue(&result);
+            });
+
+            ch.enqueue((void*)42);
+        }
+
+        STD_INSIST(result == (void*)42);
+    }
+
+    STD_TEST(BlockingSender) {
+        Channel ch;
+        void* v1 = nullptr;
+        void* v2 = nullptr;
+
+        {
+            ScopedThread receiver([&] {
+                ch.dequeue(&v1);
+                ch.dequeue(&v2);
+            });
+
+            ch.enqueue((void*)1);
+            ch.enqueue((void*)2);
+        }
+
+        STD_INSIST(v1 == (void*)1);
+        STD_INSIST(v2 == (void*)2);
+    }
+
+    STD_TEST(ProducerConsumer) {
+        Channel ch(4);
+        const int N = 100;
+        int sum = 0;
+
+        {
+            ScopedThread producer([&] {
+                for (int i = 1; i <= N; ++i) {
+                    ch.enqueue((void*)(uintptr_t)i);
+                }
+                ch.close();
+            });
+
+            ScopedThread consumer([&] {
+                void* v;
+                while (ch.dequeue(&v)) {
+                    sum += (int)(uintptr_t)v;
+                }
+            });
+        }
+
+        STD_INSIST(sum == N * (N + 1) / 2);
+    }
+
+    STD_TEST(MPMC) {
+        Channel ch(8);
+        const int nProducers = 4;
+        const int nPerProducer = 50;
+        const int total = nProducers * nPerProducer;
+        int consumed = 0;
+        int prodDone = 0;
+
+        auto produce = [&] {
+            for (int j = 0; j < nPerProducer; ++j) {
+                ch.enqueue((void*)(uintptr_t)(j + 1));
+            }
+
+            if (stdAtomicAddAndFetch(&prodDone, 1, MemoryOrder::Release) == nProducers) {
+                ch.close();
+            }
+        };
+
+        auto consume = [&] {
+            void* v;
+            while (ch.dequeue(&v)) {
+                stdAtomicAddAndFetch(&consumed, 1, MemoryOrder::Relaxed);
+            }
+        };
+
+        {
+            ScopedThread p0(produce), p1(produce), p2(produce), p3(produce);
+            ScopedThread c0(consume), c1(consume), c2(consume), c3(consume);
+        }
+
+        STD_INSIST(consumed == total);
+    }
+
+    STD_TEST(TryEnqueueDequeue) {
+        Channel ch(2);
+        void* v;
+
+        STD_INSIST(!ch.tryDequeue(&v));
+
+        STD_INSIST(ch.tryEnqueue((void*)1));
+        STD_INSIST(ch.tryEnqueue((void*)2));
+        STD_INSIST(!ch.tryEnqueue((void*)3));
+
+        STD_INSIST(ch.tryDequeue(&v));
+        STD_INSIST(v == (void*)1);
+
+        STD_INSIST(ch.tryDequeue(&v));
+        STD_INSIST(v == (void*)2);
+
+        STD_INSIST(!ch.tryDequeue(&v));
     }
 }
 

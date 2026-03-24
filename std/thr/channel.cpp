@@ -17,13 +17,21 @@ struct Channel::Impl {
         bool valueSet;
     };
 
+    CoroExecutor* exec_;
     Mutex mu_;
     IntrusiveList senders_;
     IntrusiveList receivers_;
     bool closed_;
 
+    Impl() noexcept
+        : exec_(nullptr)
+        , closed_(false)
+    {
+    }
+
     Impl(CoroExecutor* exec) noexcept
-        : mu_(exec)
+        : exec_(exec)
+        , mu_(exec)
         , closed_(false)
     {
     }
@@ -72,7 +80,7 @@ struct Channel::Impl {
             return;
         }
 
-        Event ev(exec());
+        Event ev(exec_);
         Waiter w;
 
         w.ev = &ev;
@@ -97,7 +105,7 @@ struct Channel::Impl {
             return false;
         }
 
-        Event ev(exec());
+        Event ev(exec_);
         Waiter w;
 
         w.ev = &ev;
@@ -146,10 +154,6 @@ struct Channel::Impl {
         }
     }
 
-    CoroExecutor* exec() noexcept {
-        return (CoroExecutor*)mu_.nativeHandle();
-    }
-
     virtual ~Impl() noexcept {
     }
 };
@@ -157,6 +161,11 @@ struct Channel::Impl {
 namespace {
     struct BufferedImpl: public Channel::Impl {
         RingBuffer buf_;
+
+        BufferedImpl(size_t capacity) noexcept
+            : buf_((void**)(this + 1), capacity)
+        {
+        }
 
         BufferedImpl(CoroExecutor* exec, size_t capacity) noexcept
             : Impl(exec)
@@ -197,6 +206,18 @@ namespace {
             return false;
         }
     };
+}
+
+Channel::Channel()
+    : impl_(new Impl())
+{
+}
+
+Channel::Channel(size_t cap)
+    : impl_(cap == 0
+        ? new Impl()
+        : new (allocateMemory(sizeof(BufferedImpl) + cap * sizeof(void*))) BufferedImpl(cap))
+{
 }
 
 Channel::Channel(CoroExecutor* exec)
