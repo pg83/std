@@ -52,6 +52,7 @@ namespace stl {
         virtual Cont* me() const noexcept = 0;
         virtual Cont* spawnRun(SpawnParams params) = 0;
         virtual u32 poll(int fd, u32 flags, u64 deadlineUs) = 0;
+        virtual void offload(ThreadPool* pool, Runable&& work) = 0;
         virtual ssize_t pread(int fd, void* buf, size_t len, off_t offset) = 0;
         virtual ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) = 0;
 
