@@ -1,5 +1,6 @@
 #include "event.h"
 #include "coro.h"
+#include "mutex.h"
 #include "thread.h"
 
 #include <std/tst/ut.h>
@@ -26,6 +27,256 @@ STD_TEST_SUITE(EventDefault) {
 
         ev.wait(makeRunable([] {}));
         STD_INSIST(stdAtomicFetch(&value, MemoryOrder::Acquire) == 1);
+    }
+
+    STD_TEST(CallbackRunsBeforeBlock) {
+        Event ev;
+        int order = 0;
+
+        {
+            ScopedThread t([&] {
+                while (stdAtomicFetch(&order, MemoryOrder::Acquire) < 1) {
+                }
+
+                ev.signal();
+            });
+
+            ev.wait(makeRunable([&] {
+                stdAtomicStore(&order, 1, MemoryOrder::Release);
+            }));
+        }
+
+        STD_INSIST(order == 1);
+    }
+
+    STD_TEST(CallbackUnlocksMutex) {
+        Event ev;
+        Mutex mu;
+        int value = 0;
+
+        mu.lock();
+
+        {
+            ScopedThread t([&] {
+                mu.lock();
+                value = 42;
+                mu.unlock();
+                ev.signal();
+            });
+
+            ev.wait(makeRunable([&] {
+                mu.unlock();
+            }));
+        }
+
+        STD_INSIST(value == 42);
+    }
+
+    STD_TEST(StressManyEvents) {
+        const int N = 100;
+
+        for (int i = 0; i < N; ++i) {
+            Event ev;
+            int value = 0;
+
+            {
+                ScopedThread t([&] {
+                    value = i + 1;
+                    ev.signal();
+                });
+
+                ev.wait(makeRunable([] {}));
+            }
+
+            STD_INSIST(value == i + 1);
+        }
+    }
+
+    STD_TEST(StressSignalBeforeWait) {
+        const int N = 100;
+
+        for (int i = 0; i < N; ++i) {
+            Event ev;
+
+            ev.signal();
+            ev.wait(makeRunable([] {}));
+        }
+    }
+
+    STD_TEST(StressConcurrentPairs) {
+        const int N = 20;
+        const int THREADS = 8;
+        u32 counter = 0;
+
+        {
+            ScopedThread threads[THREADS] = {
+                ScopedThread([&] {
+                    for (int i = 0; i < N; ++i) {
+                        Event ev;
+                        int v = 0;
+
+                        {
+                            ScopedThread t([&] {
+                                v = 1;
+                                ev.signal();
+                            });
+
+                            ev.wait(makeRunable([] {}));
+                        }
+
+                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
+                    }
+                }),
+                ScopedThread([&] {
+                    for (int i = 0; i < N; ++i) {
+                        Event ev;
+                        int v = 0;
+
+                        {
+                            ScopedThread t([&] {
+                                v = 1;
+                                ev.signal();
+                            });
+
+                            ev.wait(makeRunable([] {}));
+                        }
+
+                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
+                    }
+                }),
+                ScopedThread([&] {
+                    for (int i = 0; i < N; ++i) {
+                        Event ev;
+                        int v = 0;
+
+                        {
+                            ScopedThread t([&] {
+                                v = 1;
+                                ev.signal();
+                            });
+
+                            ev.wait(makeRunable([] {}));
+                        }
+
+                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
+                    }
+                }),
+                ScopedThread([&] {
+                    for (int i = 0; i < N; ++i) {
+                        Event ev;
+                        int v = 0;
+
+                        {
+                            ScopedThread t([&] {
+                                v = 1;
+                                ev.signal();
+                            });
+
+                            ev.wait(makeRunable([] {}));
+                        }
+
+                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
+                    }
+                }),
+                ScopedThread([&] {
+                    for (int i = 0; i < N; ++i) {
+                        Event ev;
+                        int v = 0;
+
+                        {
+                            ScopedThread t([&] {
+                                v = 1;
+                                ev.signal();
+                            });
+
+                            ev.wait(makeRunable([] {}));
+                        }
+
+                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
+                    }
+                }),
+                ScopedThread([&] {
+                    for (int i = 0; i < N; ++i) {
+                        Event ev;
+                        int v = 0;
+
+                        {
+                            ScopedThread t([&] {
+                                v = 1;
+                                ev.signal();
+                            });
+
+                            ev.wait(makeRunable([] {}));
+                        }
+
+                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
+                    }
+                }),
+                ScopedThread([&] {
+                    for (int i = 0; i < N; ++i) {
+                        Event ev;
+                        int v = 0;
+
+                        {
+                            ScopedThread t([&] {
+                                v = 1;
+                                ev.signal();
+                            });
+
+                            ev.wait(makeRunable([] {}));
+                        }
+
+                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
+                    }
+                }),
+                ScopedThread([&] {
+                    for (int i = 0; i < N; ++i) {
+                        Event ev;
+                        int v = 0;
+
+                        {
+                            ScopedThread t([&] {
+                                v = 1;
+                                ev.signal();
+                            });
+
+                            ev.wait(makeRunable([] {}));
+                        }
+
+                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
+                    }
+                }),
+            };
+        }
+
+        STD_INSIST(counter == N * THREADS);
+    }
+
+    STD_TEST(StressDirectHandoff) {
+        const int N = 100;
+
+        for (int i = 0; i < N; ++i) {
+            Event ev;
+            Mutex mu;
+            int slot = 0;
+
+            mu.lock();
+
+            {
+                ScopedThread t([&] {
+                    mu.lock();
+                    slot = i + 1;
+                    mu.unlock();
+                    ev.signal();
+                });
+
+                ev.wait(makeRunable([&] {
+                    mu.unlock();
+                }));
+            }
+
+            STD_INSIST(slot == i + 1);
+        }
     }
 }
 
