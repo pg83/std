@@ -630,8 +630,8 @@ STD_TEST_SUITE(CoroOffload) {
             int result = 0;
 
             exec->offload(pool, makeRunable([&] {
-                result = 42;
-            }));
+                              result = 42;
+                          }));
 
             return result;
         });
@@ -649,8 +649,8 @@ STD_TEST_SUITE(CoroOffload) {
 
             for (int i = 0; i < 10; ++i) {
                 exec->offload(pool, makeRunable([&] {
-                    sum += 1;
-                }));
+                                  sum += 1;
+                              }));
             }
 
             return sum;
@@ -668,8 +668,8 @@ STD_TEST_SUITE(CoroOffload) {
         for (int i = 0; i < 16; ++i) {
             exec->spawn([&] {
                 exec->offload(pool, makeRunable([&] {
-                    stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-                }));
+                                  stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                              }));
             });
         }
 
@@ -686,10 +686,10 @@ STD_TEST_SUITE(CoroOffload) {
             int result = 0;
 
             exec->offload(pool, makeRunable([&] {
-                for (volatile int i = 0; i < 1000000; ++i) {
-                }
-                result = 1;
-            }));
+                              for (volatile int i = 0; i < 1000000; ++i) {
+                              }
+                              result = 1;
+                          }));
 
             return result;
         });

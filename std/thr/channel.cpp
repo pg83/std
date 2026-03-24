@@ -215,8 +215,8 @@ Channel::Channel()
 
 Channel::Channel(size_t cap)
     : impl_(cap == 0
-        ? new Impl()
-        : new (allocateMemory(sizeof(BufferedImpl) + cap * sizeof(void*))) BufferedImpl(cap))
+                ? new Impl()
+                : new (allocateMemory(sizeof(BufferedImpl) + cap * sizeof(void*))) BufferedImpl(cap))
 {
 }
 
@@ -227,8 +227,8 @@ Channel::Channel(CoroExecutor* exec)
 
 Channel::Channel(CoroExecutor* exec, size_t cap)
     : impl_(cap == 0
-        ? new Impl(exec)
-        : new (allocateMemory(sizeof(BufferedImpl) + cap * sizeof(void*))) BufferedImpl(exec, cap))
+                ? new Impl(exec)
+                : new (allocateMemory(sizeof(BufferedImpl) + cap * sizeof(void*))) BufferedImpl(exec, cap))
 {
 }
 
