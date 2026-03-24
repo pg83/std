@@ -29,10 +29,10 @@ namespace stl {
         bool keepAlive;
     };
 
-    struct HttpResponseImpl;
-
     struct HttpResponse {
-        HttpResponseImpl* impl;
+        struct Impl;
+
+        Impl* impl;
 
         HttpResponse(HttpRequest& req);
 

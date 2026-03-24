@@ -30,7 +30,7 @@
 
 using namespace stl;
 
-struct stl::HttpResponseImpl {
+struct stl::HttpResponse::Impl {
     struct Header {
         StringView name;
         StringView value;
@@ -43,25 +43,25 @@ struct stl::HttpResponseImpl {
     Buffer lcName;
     u32 status;
 
-    HttpResponseImpl(HttpRequest* req);
+    Impl(HttpRequest* req);
 
     void setStatus(u32 code);
     void addHeader(StringView name, StringView value);
     void endHeaders();
 };
 
-HttpResponseImpl::HttpResponseImpl(HttpRequest* req)
+HttpResponse::Impl::Impl(HttpRequest* req)
     : req(req)
     , out(req->out)
     , status(200)
 {
 }
 
-void HttpResponseImpl::setStatus(u32 code) {
+void HttpResponse::Impl::setStatus(u32 code) {
     status = code;
 }
 
-void HttpResponseImpl::addHeader(StringView name, StringView value) {
+void HttpResponse::Impl::addHeader(StringView name, StringView value) {
     auto h = req->opool->make<Header>();
 
     h->name = name;
@@ -71,7 +71,7 @@ void HttpResponseImpl::addHeader(StringView name, StringView value) {
     headerIndex.insert(name.lower(lcName), h);
 }
 
-void HttpResponseImpl::endHeaders() {
+void HttpResponse::Impl::endHeaders() {
     auto* pool = req->opool;
 
     if (req->keepAlive && !headerIndex.find(StringView("content-length")) && !headerIndex.find(StringView("transfer-encoding"))) {
@@ -110,7 +110,7 @@ void HttpResponseImpl::endHeaders() {
 }
 
 HttpResponse::HttpResponse(HttpRequest& req)
-    : impl(req.opool->make<HttpResponseImpl>(&req))
+    : impl(req.opool->make<HttpResponse::Impl>(&req))
 {
 }
 
