@@ -6,8 +6,8 @@ struct iovec;
 struct sockaddr;
 
 namespace stl {
-    struct CoroExecutor;
     struct ScopedFD;
+    struct CoroExecutor;
 
     struct TcpSocket {
         int fd;
