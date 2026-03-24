@@ -30,7 +30,7 @@
 
 using namespace stl;
 
-struct stl::HttpResponse::Impl {
+struct HttpResponse::Impl {
     struct Header {
         StringView name;
         StringView value;
