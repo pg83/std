@@ -191,15 +191,11 @@ Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
 }
 
 void CoroExecutorImpl::yield() noexcept {
-    struct Y: Runable {
-        ContImpl* c;
+    auto c = currentCont();
 
-        void run() noexcept override {
-            c->reSchedule();
-        }
-    } y;
-
-    (y.c = currentCont())->parkWith(&y);
+    c->parkWith(makeRunable([c] {
+        c->reSchedule();
+    }));
 }
 
 CoroExecutorImpl::~CoroExecutorImpl() noexcept {
