@@ -97,6 +97,8 @@ namespace {
 
         HttpResponseImpl(HttpRequestImpl* req);
 
+        void serialize(ZeroCopyOutput& out);
+
         Output* out() override;
         void endHeaders() override;
         HttpRequest* request() override;
@@ -213,6 +215,20 @@ void HttpResponseImpl::addHeader(StringView name, StringView value) {
     headerIndex.insert(name.lower(req->conn->lcName), h);
 }
 
+void HttpResponseImpl::serialize(ZeroCopyOutput& out) {
+    out << StringView(u8"HTTP/1.1 ")
+        << (u64)status
+        << StringView(u8" ")
+        << reasonPhrase(status)
+        << StringView(u8"\r\n");
+
+    for (auto* it = headers.begin(); it != headers.end(); ++it) {
+        out << (*it)->name << StringView(u8": ") << (*it)->value << StringView(u8"\r\n");
+    }
+
+    out << StringView(u8"\r\n");
+}
+
 void HttpResponseImpl::endHeaders() {
     auto* pool = req->pool.mutPtr();
 
@@ -225,19 +241,7 @@ void HttpResponseImpl::endHeaders() {
 
         sb.xchg(req->conn->line);
         sb.reset();
-
-        sb << StringView(u8"HTTP/1.1 ")
-           << (u64)status
-           << StringView(u8" ")
-           << reasonPhrase(status)
-           << StringView(u8"\r\n");
-
-        for (auto* it = headers.begin(); it != headers.end(); ++it) {
-            sb << (*it)->name << StringView(u8": ") << (*it)->value << StringView(u8"\r\n");
-        }
-
-        sb << StringView(u8"\r\n");
-
+        serialize(sb);
         rawOut->write(sb.data(), sb.used());
         sb.xchg(req->conn->line);
     }
