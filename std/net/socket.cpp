@@ -1,5 +1,6 @@
 #include "socket.h"
 
+#include <std/sys/fd.h>
 #include <std/sys/crt.h>
 #include <std/thr/coro.h>
 #include <std/thr/poller.h>
@@ -109,7 +110,7 @@ int TcpSocket::connectInf(const sockaddr* addr, u32 addrLen) {
     return connect(addr, addrLen, UINT64_MAX);
 }
 
-int TcpSocket::accept(TcpSocket& out, sockaddr* addr, u32* addrLen, u64 deadlineUs) {
+int TcpSocket::accept(ScopedFD& out, sockaddr* addr, u32* addrLen, u64 deadlineUs) {
     exec->poll(fd, PollFlag::In, deadlineUs);
 
     socklen_t slen = addrLen ? (socklen_t)*addrLen : 0;
@@ -121,17 +122,18 @@ int TcpSocket::accept(TcpSocket& out, sockaddr* addr, u32* addrLen, u64 deadline
             *addrLen = (u32)slen;
         }
 
-        out = TcpSocket(newFd, exec);
+        ScopedFD tmp(newFd);
+        out.xchg(tmp);
 
         return 0;
     }
 }
 
-int TcpSocket::acceptTout(TcpSocket& out, sockaddr* addr, u32* addrLen, u64 timeoutUs) {
+int TcpSocket::acceptTout(ScopedFD& out, sockaddr* addr, u32* addrLen, u64 timeoutUs) {
     return accept(out, addr, addrLen, monotonicNowUs() + timeoutUs);
 }
 
-int TcpSocket::acceptInf(TcpSocket& out, sockaddr* addr, u32* addrLen) {
+int TcpSocket::acceptInf(ScopedFD& out, sockaddr* addr, u32* addrLen) {
     return accept(out, addr, addrLen, UINT64_MAX);
 }
 

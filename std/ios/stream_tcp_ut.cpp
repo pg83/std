@@ -1,5 +1,6 @@
 #include "stream_tcp.h"
 
+#include <std/sys/fd.h>
 #include <std/tst/ut.h>
 #include <std/thr/coro.h>
 #include <std/thr/async.h>
@@ -43,12 +44,10 @@ STD_TEST_SUITE(TcpStream) {
         char recvBuf[32] = {};
 
         exec->spawn([&] {
-            TcpSocket client;
-            STD_INSIST(srv.acceptInf(client, nullptr, nullptr) == 0);
-            STD_DEFER {
-                client.close();
-            };
+            ScopedFD clientFd;
+            STD_INSIST(srv.acceptInf(clientFd, nullptr, nullptr) == 0);
 
+            TcpSocket client(clientFd.get(), exec.mutPtr());
             TcpStream stream(client);
 
             char buf[32] = {};

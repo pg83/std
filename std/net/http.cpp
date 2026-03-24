@@ -4,6 +4,7 @@
 #include "reason.h"
 #include "socket.h"
 
+#include <std/sys/fd.h>
 #include <std/sys/crt.h>
 #include <std/thr/coro.h>
 #include <std/alg/defer.h>
@@ -299,18 +300,20 @@ void HttpServerCtlImpl::run(Semaphore* sem) {
     sem->post();
 
     for (;;) {
-        TcpSocket client;
+        ScopedFD client;
 
         if (srv.acceptInf(client, nullptr, nullptr) != 0) {
             break;
         }
 
         if (stdAtomicFetch(&stopped, stl::MemoryOrder::Acquire)) {
-            client.close();
             break;
         }
 
-        exec->spawn([this, fd = client.fd] {
+        FD tmp;
+        client.xchg(tmp);
+
+        exec->spawn([this, fd = tmp.get()] {
             try {
                 HttpConnection conn(&handler, exec, fd);
 

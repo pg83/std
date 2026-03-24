@@ -1,5 +1,6 @@
 #include "socket.h"
 
+#include <std/sys/fd.h>
 #include <std/tst/ut.h>
 #include <std/thr/coro.h>
 #include <std/thr/async.h>
@@ -42,11 +43,10 @@ STD_TEST_SUITE(TcpSocket) {
         char recvBuf[32] = {};
 
         exec->spawn([&] {
-            TcpSocket client;
-            STD_INSIST(srv.acceptInf(client, nullptr, nullptr) == 0);
-            STD_DEFER {
-                client.close();
-            };
+            ScopedFD clientFd;
+            STD_INSIST(srv.acceptInf(clientFd, nullptr, nullptr) == 0);
+
+            TcpSocket client(clientFd.get(), exec.mutPtr());
 
             char buf[32] = {};
             size_t n = 0;
@@ -98,7 +98,7 @@ STD_TEST_SUITE(TcpSocket) {
         STD_INSIST(srv.listen(8) == 0);
 
         auto f = async(exec.mutPtr(), [&] {
-            TcpSocket client;
+            ScopedFD client;
             return srv.acceptTout(client, nullptr, nullptr, 1);
         });
 

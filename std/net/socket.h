@@ -7,6 +7,7 @@ struct sockaddr;
 
 namespace stl {
     struct CoroExecutor;
+    struct ScopedFD;
 
     struct TcpSocket {
         int fd;
@@ -29,9 +30,9 @@ namespace stl {
         int connect(const sockaddr* addr, u32 addrLen, u64 deadlineUs);
         int connectTout(const sockaddr* addr, u32 addrLen, u64 timeoutUs);
 
-        int acceptInf(TcpSocket& out, sockaddr* addr, u32* addrLen);
-        int accept(TcpSocket& out, sockaddr* addr, u32* addrLen, u64 deadlineUs);
-        int acceptTout(TcpSocket& out, sockaddr* addr, u32* addrLen, u64 timeoutUs);
+        int acceptInf(ScopedFD& out, sockaddr* addr, u32* addrLen);
+        int accept(ScopedFD& out, sockaddr* addr, u32* addrLen, u64 deadlineUs);
+        int acceptTout(ScopedFD& out, sockaddr* addr, u32* addrLen, u64 timeoutUs);
 
         int readInf(size_t* nRead, void* buf, size_t len);
         int read(size_t* nRead, void* buf, size_t len, u64 deadlineUs);
