@@ -45,8 +45,8 @@ namespace {
     };
 
     struct HttpConnection {
-        HttpServe* handler;
         ObjPool::Ref opool = ObjPool::fromMemory();
+        HttpServe* handler;
         TcpSocket sock;
         ZeroCopyInput* in;
         Output* out;
@@ -148,9 +148,6 @@ void HttpResponseImpl::endHeaders() {
             req->keepAlive = false;
         }
     }
-}
-
-namespace {
 }
 
 HttpServerCtlImpl::HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen)
