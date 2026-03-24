@@ -16,7 +16,11 @@ namespace stl {
 
         ~Event() noexcept;
 
-        void wait(Runable&& cb) noexcept;
         void signal() noexcept;
+        void wait(Runable* cb) noexcept;
+
+        void wait(Runable&& cb) noexcept {
+            wait(&cb);
+        }
     };
 }

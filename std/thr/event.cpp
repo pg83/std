@@ -26,7 +26,7 @@ namespace {
         {
         }
 
-        void wait(Runable&& cb) noexcept override {
+        void wait(Runable& cb) noexcept override {
             u32 cur = stdAtomicFetch(&state_, MemoryOrder::Acquire);
             cb.run();
 
@@ -54,7 +54,7 @@ namespace {
         {
         }
 
-        void wait(Runable&& cb) noexcept override {
+        void wait(Runable& cb) noexcept override {
             mu_.lock();
             cb.run();
 
@@ -95,8 +95,8 @@ Event::~Event() noexcept {
     delete impl_;
 }
 
-void Event::wait(Runable&& cb) noexcept {
-    impl_->wait(static_cast<Runable&&>(cb));
+void Event::wait(Runable* cb) noexcept {
+    impl_->wait(*cb);
 }
 
 void Event::signal() noexcept {

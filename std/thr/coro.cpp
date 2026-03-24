@@ -332,7 +332,7 @@ EventIface* CoroExecutorImpl::createEvent() {
         {
         }
 
-        void wait(Runable&& cb) noexcept override {
+        void wait(Runable& cb) noexcept override {
             (waiter_ = exec_->currentCont())->parkWith(&cb);
         }
 
