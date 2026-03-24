@@ -14,7 +14,7 @@ namespace stl {
     struct ThreadPool;
     struct ThreadIface;
     struct CondVarIface;
-    struct ChannelIface;
+    struct EventIface;
     struct CoroExecutor;
     struct SemaphoreIface;
 
@@ -56,8 +56,8 @@ namespace stl {
         virtual ssize_t pread(int fd, void* buf, size_t len, off_t offset) = 0;
         virtual ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) = 0;
 
+        virtual EventIface* createEvent() = 0;
         virtual CondVarIface* createCondVar() = 0;
-        virtual ChannelIface* createChannel(size_t cap) = 0;
         virtual ThreadIface* createThread(Runable& runable) = 0;
         virtual SemaphoreIface* createSemaphore(size_t initial) = 0;
 

@@ -10,8 +10,8 @@
 #include "semaphore.h"
 #include "thread_iface.h"
 #include "reactor_poll.h"
-#include "channel_iface.h"
 #include "cond_var_iface.h"
+#include "event_iface.h"
 #include "semaphore_iface.h"
 
 #include <std/sys/fd.h>
@@ -28,7 +28,6 @@
 #include <std/dbg/assert.h>
 #include <std/alg/exchange.h>
 #include <std/alg/destruct.h>
-#include <std/lib/ring_buf.h>
 #include <std/mem/obj_pool.h>
 #include <std/rng/split_mix_64.h>
 
@@ -139,8 +138,8 @@ namespace {
             currentCont()->parkWith(afterSuspend);
         }
 
+        EventIface* createEvent() override;
         CondVarIface* createCondVar() override;
-        ChannelIface* createChannel(size_t cap) override;
         ThreadIface* createThread(Runable& runable) override;
         SemaphoreIface* createSemaphore(size_t initial) override;
 
@@ -317,6 +316,30 @@ u64 Cont::id() const noexcept {
     return (u64)(size_t)this;
 }
 
+EventIface* CoroExecutorImpl::createEvent() {
+    struct CoroEventImpl: public EventIface {
+        CoroExecutorImpl* exec_;
+        ContImpl* waiter_;
+
+        CoroEventImpl(CoroExecutorImpl* exec) noexcept
+            : exec_(exec)
+            , waiter_(nullptr)
+        {
+        }
+
+        void wait(Runable&& cb) noexcept override {
+            waiter_ = exec_->currentCont();
+            waiter_->parkWith(&cb);
+        }
+
+        void signal() noexcept override {
+            waiter_->reSchedule();
+        }
+    };
+
+    return new CoroEventImpl(this);
+}
+
 CondVarIface* CoroExecutorImpl::createCondVar() {
     struct CoroCondVarImpl: public CondVarIface {
         struct ParkCtx: public Runable {
@@ -431,197 +454,6 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
     };
 
     return new CoroThreadImpl(new State(this, runable));
-}
-
-ChannelIface* CoroExecutorImpl::createChannel(size_t cap) {
-    struct CoroChannelImpl: public ChannelIface, public Runable {
-        struct Waiter: public IntrusiveNode {
-            ContImpl* cont;
-            void* value;
-            bool valueSet;
-        };
-
-        Mutex queueMutex_;
-        IntrusiveList senders_;
-        IntrusiveList receivers_;
-        bool closed_;
-
-        CoroChannelImpl(CoroExecutorImpl* exec) noexcept
-            : queueMutex_(exec)
-            , closed_(false)
-        {
-        }
-
-        CoroExecutorImpl* exec() noexcept {
-            return (CoroExecutorImpl*)queueMutex_.nativeHandle();
-        }
-
-        void run() override {
-            queueMutex_.unlock();
-        }
-
-        bool sendOne(void* v) noexcept {
-            if (auto* w = (Waiter*)receivers_.popFrontOrNull(); w) {
-                w->value = v;
-                w->valueSet = true;
-                w->cont->reSchedule();
-
-                return true;
-            }
-
-            return bufferOne(v);
-        }
-
-        bool recvOne(void** out) noexcept {
-            if (unbufferOne(out)) {
-                return true;
-            }
-
-            if (auto* w = (Waiter*)senders_.popFrontOrNull(); w) {
-                *out = w->value;
-                w->cont->reSchedule();
-
-                return true;
-            }
-
-            return false;
-        }
-
-        virtual bool bufferOne(void*) noexcept {
-            return false;
-        }
-
-        virtual bool unbufferOne(void**) noexcept {
-            return false;
-        }
-
-        void enqueue(void* v) noexcept override {
-            LockGuard guard(queueMutex_);
-
-            STD_INSIST(!closed_);
-
-            if (sendOne(v)) {
-                return;
-            }
-
-            Waiter w;
-
-            w.cont = exec()->currentCont();
-            w.value = v;
-            w.valueSet = true;
-
-            senders_.pushBack(&w);
-            guard.drop();
-            w.cont->parkWith(this);
-        }
-
-        bool dequeue(void** out) noexcept override {
-            LockGuard guard(queueMutex_);
-
-            if (recvOne(out)) {
-                return true;
-            }
-
-            if (closed_) {
-                return false;
-            }
-
-            Waiter w;
-
-            w.cont = exec()->currentCont();
-            w.value = nullptr;
-            w.valueSet = false;
-
-            receivers_.pushBack(&w);
-            guard.drop();
-            w.cont->parkWith(this);
-
-            if (w.valueSet) {
-                *out = w.value;
-
-                return true;
-            }
-
-            return false;
-        }
-
-        bool tryEnqueue(void* v) noexcept override {
-            LockGuard guard(queueMutex_);
-
-            STD_INSIST(!closed_);
-
-            return sendOne(v);
-        }
-
-        bool tryDequeue(void** out) noexcept override {
-            LockGuard guard(queueMutex_);
-
-            return recvOne(out);
-        }
-
-        void close() noexcept override {
-            LockGuard guard(queueMutex_);
-
-            STD_INSIST(!closed_);
-            STD_INSIST(senders_.empty());
-
-            closed_ = true;
-
-            while (auto w = (Waiter*)receivers_.popFrontOrNull()) {
-                w->cont->reSchedule();
-            }
-        }
-    };
-
-    // buffered channel (cap > 0)
-    struct CoroChannelImplN: public CoroChannelImpl {
-        RingBuffer buf_;
-
-        CoroChannelImplN(CoroExecutorImpl* exec, size_t capacity) noexcept
-            : CoroChannelImpl(exec)
-            , buf_((void**)(this + 1), capacity)
-        {
-        }
-
-        void* operator new(size_t, void* p) noexcept {
-            return p;
-        }
-
-        void operator delete(void* p) noexcept {
-            freeMemory(p);
-        }
-
-        bool bufferOne(void* v) noexcept override {
-            if (!buf_.full()) {
-                buf_.push(v);
-
-                return true;
-            }
-
-            return false;
-        }
-
-        bool unbufferOne(void** out) noexcept override {
-            if (!buf_.empty()) {
-                *out = buf_.pop();
-
-                if (auto* w = (Waiter*)senders_.popFrontOrNull(); w) {
-                    buf_.push(w->value);
-                    w->cont->reSchedule();
-                }
-
-                return true;
-            }
-
-            return false;
-        }
-    };
-
-    if (cap == 0) {
-        return new CoroChannelImpl(this);
-    }
-
-    return new (allocateMemory(sizeof(CoroChannelImplN) + cap * sizeof(void*))) CoroChannelImplN(this, cap);
 }
 
 SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {

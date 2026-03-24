@@ -3,16 +3,14 @@
 #include <std/sys/types.h>
 
 namespace stl {
-    struct ChannelIface;
     struct CoroExecutor;
 
-    class Channel {
-        ChannelIface* impl_;
+    struct Channel {
+        struct Impl;
+        Impl* impl_;
 
-    public:
         explicit Channel(CoroExecutor* exec);
         Channel(CoroExecutor* exec, size_t cap);
-        Channel(ChannelIface* iface) noexcept;
 
         ~Channel() noexcept;
 
