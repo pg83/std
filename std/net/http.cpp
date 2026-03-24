@@ -36,6 +36,7 @@ namespace {
 
     struct HttpRequestImpl: public HttpRequest {
         ObjPool::Ref pool = ObjPool::fromMemory();
+        HttpConnection* conn;
         StringView reqMethod;
         StringView reqPath;
         StringView reqQuery;
@@ -44,6 +45,8 @@ namespace {
         bool keepAlive = false;
 
         HttpRequestImpl(HttpConnection* conn);
+
+        bool serve();
 
         StringView path() override;
         StringView query() override;
@@ -86,14 +89,13 @@ namespace {
             StringView value;
         };
 
-        HttpConnection* conn;
         HttpRequestImpl* req;
         Output* rawOut;
         Vector<Header*> headers;
         SymbolMap<Header*> headerIndex;
         u32 status;
 
-        HttpResponseImpl(HttpRequestImpl* req, HttpConnection* conn);
+        HttpResponseImpl(HttpRequestImpl* req);
 
         Output* out() override;
         void endHeaders() override;
@@ -103,7 +105,9 @@ namespace {
     };
 }
 
-HttpRequestImpl::HttpRequestImpl(HttpConnection* conn) {
+HttpRequestImpl::HttpRequestImpl(HttpConnection* conn)
+    : conn(conn)
+{
     StringView method, rest, path, version;
 
     STD_VERIFY(StringView(conn->line).stripCr().split(' ', method, rest));
@@ -152,6 +156,14 @@ HttpRequestImpl::HttpRequestImpl(HttpConnection* conn) {
     }
 }
 
+bool HttpRequestImpl::serve() {
+    conn->handler->serve(*pool->make<HttpResponseImpl>(this));
+
+    reqIn->drain();
+
+    return keepAlive;
+}
+
 StringView HttpRequestImpl::method() {
     return reqMethod;
 }
@@ -172,10 +184,9 @@ StringView* HttpRequestImpl::header(StringView name) {
     return headers.find(name);
 }
 
-HttpResponseImpl::HttpResponseImpl(HttpRequestImpl* req, HttpConnection* conn)
-    : conn(conn)
-    , req(req)
-    , rawOut(conn->out)
+HttpResponseImpl::HttpResponseImpl(HttpRequestImpl* req)
+    : req(req)
+    , rawOut(req->conn->out)
     , status(200)
 {
 }
@@ -199,7 +210,7 @@ void HttpResponseImpl::addHeader(StringView name, StringView value) {
     h->value = value;
 
     headers.pushBack(h);
-    headerIndex.insert(name.lower(conn->lcName), h);
+    headerIndex.insert(name.lower(req->conn->lcName), h);
 }
 
 void HttpResponseImpl::endHeaders() {
@@ -339,13 +350,7 @@ bool HttpConnection::serve() {
         return false;
     }
 
-    HttpRequestImpl req(this);
-
-    handler->serve(*req.pool->make<HttpResponseImpl>(&req, this));
-
-    req.reqIn->drain();
-
-    return req.keepAlive;
+    return HttpRequestImpl(this).serve();
 }
 
 IntrusivePtr<HttpServerCtl> stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg) {
