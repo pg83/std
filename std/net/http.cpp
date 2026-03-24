@@ -31,31 +31,60 @@
 using namespace stl;
 
 namespace {
+    struct HttpServerCtlImpl: public HttpServerCtl {
+        HttpServe& handler;
+        CoroExecutor* exec;
+        sockaddr_storage addr;
+        u32 addrLen;
+        bool stopped;
+
+        HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen);
+
+        void stop() override;
+        void run(Semaphore* sem);
+    };
+
+    struct HttpConnection {
+        HttpServe* handler;
+        ObjPool::Ref opool = ObjPool::fromMemory();
+        TcpSocket sock;
+        ZeroCopyInput* in;
+        Output* out;
+        Buffer line;
+        Buffer lcName;
+
+        HttpConnection(HttpServe* handler, CoroExecutor* exec, int fd);
+        ~HttpConnection();
+
+        bool serve();
+    };
+
     struct HttpResponseImpl: public HttpResponse {
         struct Header {
             StringView name;
             StringView value;
         };
 
+        HttpConnection* conn;
         HttpRequest* req;
         Output* rawOut;
         Vector<Header*> headers;
         SymbolMap<Header*> headerIndex;
-        Buffer lcName;
         u32 status;
 
-        HttpResponseImpl(HttpRequest* req);
+        HttpResponseImpl(HttpRequest* req, HttpConnection* conn);
 
         Output* out() override;
+        void endHeaders() override;
         HttpRequest* request() override;
         void setStatus(u32 code) override;
         void addHeader(StringView name, StringView value) override;
-        void endHeaders() override;
     };
 }
 
-HttpResponseImpl::HttpResponseImpl(HttpRequest* req)
-    : req(req)
+HttpResponseImpl::HttpResponseImpl(HttpRequest* req, HttpConnection* conn)
+    : conn(conn)
+    , req(req)
     , rawOut(req->out)
     , status(200)
 {
@@ -80,7 +109,7 @@ void HttpResponseImpl::addHeader(StringView name, StringView value) {
     h->value = value;
 
     headers.pushBack(h);
-    headerIndex.insert(name.lower(lcName), h);
+    headerIndex.insert(name.lower(conn->lcName), h);
 }
 
 void HttpResponseImpl::endHeaders() {
@@ -121,38 +150,7 @@ void HttpResponseImpl::endHeaders() {
     }
 }
 
-HttpResponse* HttpRequest::response() {
-    return opool->make<HttpResponseImpl>(this);
-}
-
 namespace {
-    struct HttpServerCtlImpl: public HttpServerCtl {
-        HttpServe& handler;
-        CoroExecutor* exec;
-        sockaddr_storage addr;
-        u32 addrLen;
-        bool stopped;
-
-        HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen);
-
-        void stop() override;
-        void run(Semaphore* sem);
-    };
-
-    struct HttpConnection {
-        HttpServe* handler;
-        ObjPool::Ref opool = ObjPool::fromMemory();
-        TcpSocket sock;
-        ZeroCopyInput* in;
-        Output* out;
-        Buffer line;
-        Buffer lcName;
-
-        HttpConnection(HttpServe* handler, CoroExecutor* exec, int fd);
-        ~HttpConnection();
-
-        bool serve();
-    };
 }
 
 HttpServerCtlImpl::HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen)
@@ -310,7 +308,7 @@ bool HttpConnection::serve() {
         req.in = pool->make<ZeroInput>();
     }
 
-    handler->serve(*req.response());
+    handler->serve(*req.opool->make<HttpResponseImpl>(&req, this));
 
     req.in->drain();
 

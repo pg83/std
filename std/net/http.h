@@ -17,7 +17,6 @@ namespace stl {
 
     struct SslCtx;
     struct CoroExecutor;
-
     struct HttpResponse;
 
     struct HttpRequest {
@@ -29,8 +28,6 @@ namespace stl {
         ZeroCopyInput* in;
         Output* out;
         bool keepAlive;
-
-        HttpResponse* response();
     };
 
     struct HttpResponse {
