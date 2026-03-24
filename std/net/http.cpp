@@ -160,8 +160,9 @@ HttpRequestImpl::HttpRequestImpl(HttpConnection* conn)
 }
 
 bool HttpRequestImpl::serve() {
-    conn->handler->serve(*pool->make<HttpResponseImpl>(this));
+    HttpResponseImpl resp(this);
 
+    conn->handler->serve(resp);
     reqIn->drain();
 
     return keepAlive;
