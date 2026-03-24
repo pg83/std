@@ -80,6 +80,12 @@ ScopedFD::~ScopedFD() noexcept(false) {
     close();
 }
 
+FD ScopedFD::release() noexcept {
+    FD tmp;
+    xchg(tmp);
+    return tmp;
+}
+
 void stl::createPipeFD(ScopedFD& in, ScopedFD& out) {
     int fd[2];
 

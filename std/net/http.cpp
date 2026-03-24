@@ -310,12 +310,9 @@ void HttpServerCtlImpl::run(Semaphore* sem) {
             break;
         }
 
-        FD tmp;
-        client.xchg(tmp);
-
-        exec->spawn([this, fd = tmp.get()] {
+        exec->spawn([this, fd = client.release()] {
             try {
-                HttpConnection conn(&handler, exec, fd);
+                HttpConnection conn(&handler, exec, fd.get());
 
                 while (conn.serve()) {
                 }

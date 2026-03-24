@@ -43,6 +43,8 @@ namespace stl {
 #else
         ~ScopedFD() noexcept(false);
 #endif
+
+        FD release() noexcept;
     };
 
     void createPipeFD(ScopedFD& in, ScopedFD& out);
