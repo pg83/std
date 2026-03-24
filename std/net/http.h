@@ -18,6 +18,8 @@ namespace stl {
     struct SslCtx;
     struct CoroExecutor;
 
+    struct HttpResponse;
+
     struct HttpRequest {
         ObjPool* opool;
         StringView method;
@@ -27,22 +29,16 @@ namespace stl {
         ZeroCopyInput* in;
         Output* out;
         bool keepAlive;
+
+        HttpResponse* response();
     };
 
     struct HttpResponse {
-        struct Impl;
-
-        Impl* impl;
-
-        HttpResponse(HttpRequest& req);
-
-        Output* out();
-        HttpRequest* request();
-
-        void setStatus(u32 code);
-
-        void endHeaders();
-        void addHeader(StringView name, StringView value);
+        virtual Output* out() = 0;
+        virtual void endHeaders() = 0;
+        virtual HttpRequest* request() = 0;
+        virtual void setStatus(u32 code) = 0;
+        virtual void addHeader(StringView name, StringView value) = 0;
     };
 
     struct HttpServe {

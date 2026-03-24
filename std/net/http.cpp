@@ -30,38 +30,50 @@
 
 using namespace stl;
 
-struct HttpResponse::Impl {
-    struct Header {
-        StringView name;
-        StringView value;
+namespace {
+    struct HttpResponseImpl: public HttpResponse {
+        struct Header {
+            StringView name;
+            StringView value;
+        };
+
+        HttpRequest* req;
+        Output* rawOut;
+        Vector<Header*> headers;
+        SymbolMap<Header*> headerIndex;
+        Buffer lcName;
+        u32 status;
+
+        HttpResponseImpl(HttpRequest* req);
+
+        Output* out() override;
+        HttpRequest* request() override;
+        void setStatus(u32 code) override;
+        void addHeader(StringView name, StringView value) override;
+        void endHeaders() override;
     };
+}
 
-    HttpRequest* req;
-    Output* out;
-    Vector<Header*> headers;
-    SymbolMap<Header*> headerIndex;
-    Buffer lcName;
-    u32 status;
-
-    Impl(HttpRequest* req);
-
-    void setStatus(u32 code);
-    void addHeader(StringView name, StringView value);
-    void endHeaders();
-};
-
-HttpResponse::Impl::Impl(HttpRequest* req)
+HttpResponseImpl::HttpResponseImpl(HttpRequest* req)
     : req(req)
-    , out(req->out)
+    , rawOut(req->out)
     , status(200)
 {
 }
 
-void HttpResponse::Impl::setStatus(u32 code) {
+Output* HttpResponseImpl::out() {
+    return rawOut;
+}
+
+HttpRequest* HttpResponseImpl::request() {
+    return req;
+}
+
+void HttpResponseImpl::setStatus(u32 code) {
     status = code;
 }
 
-void HttpResponse::Impl::addHeader(StringView name, StringView value) {
+void HttpResponseImpl::addHeader(StringView name, StringView value) {
     auto h = req->opool->make<Header>();
 
     h->name = name;
@@ -71,7 +83,7 @@ void HttpResponse::Impl::addHeader(StringView name, StringView value) {
     headerIndex.insert(name.lower(lcName), h);
 }
 
-void HttpResponse::Impl::endHeaders() {
+void HttpResponseImpl::endHeaders() {
     auto* pool = req->opool;
 
     if (req->keepAlive && !headerIndex.find(StringView("content-length")) && !headerIndex.find(StringView("transfer-encoding"))) {
@@ -93,13 +105,13 @@ void HttpResponse::Impl::endHeaders() {
 
         sb << StringView(u8"\r\n");
 
-        out->write(sb.data(), sb.used());
+        rawOut->write(sb.data(), sb.used());
     }
 
     if (auto* cl = headerIndex.find(StringView("content-length")); cl) {
-        out = createLimitedOutput(pool, out, (*cl)->value.stou());
+        rawOut = createLimitedOutput(pool, rawOut, (*cl)->value.stou());
     } else if (auto* te = headerIndex.find(StringView("transfer-encoding")); te && (*te)->value == StringView("chunked")) {
-        out = createChunkedOutput(pool, out);
+        rawOut = createChunkedOutput(pool, rawOut);
     }
 
     if (auto* conn = headerIndex.find(StringView("connection")); conn) {
@@ -109,29 +121,8 @@ void HttpResponse::Impl::endHeaders() {
     }
 }
 
-HttpResponse::HttpResponse(HttpRequest& req)
-    : impl(req.opool->make<HttpResponse::Impl>(&req))
-{
-}
-
-HttpRequest* HttpResponse::request() {
-    return impl->req;
-}
-
-Output* HttpResponse::out() {
-    return impl->out;
-}
-
-void HttpResponse::setStatus(u32 code) {
-    impl->setStatus(code);
-}
-
-void HttpResponse::addHeader(StringView name, StringView value) {
-    impl->addHeader(name, value);
-}
-
-void HttpResponse::endHeaders() {
-    impl->endHeaders();
+HttpResponse* HttpRequest::response() {
+    return opool->make<HttpResponseImpl>(this);
 }
 
 namespace {
@@ -319,9 +310,7 @@ bool HttpConnection::serve() {
         req.in = pool->make<ZeroInput>();
     }
 
-    HttpResponse resp(req);
-
-    handler->serve(resp);
+    handler->serve(*req.response());
 
     req.in->drain();
 
