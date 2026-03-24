@@ -19,9 +19,9 @@ namespace stl {
     struct HttpResponse;
 
     struct HttpRequest {
-        virtual StringView method() = 0;
         virtual StringView path() = 0;
         virtual StringView query() = 0;
+        virtual StringView method() = 0;
         virtual ZeroCopyInput* in() = 0;
         virtual StringView* header(StringView name) = 0;
     };

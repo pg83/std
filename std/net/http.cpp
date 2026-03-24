@@ -41,13 +41,13 @@ namespace {
         StringView reqQuery;
         SymbolMap<StringView> headers;
         ZeroCopyInput* reqIn;
-        bool keepAlive;
+        bool keepAlive = false;
 
-        void parse(HttpConnection* conn);
+        HttpRequestImpl(HttpConnection* conn);
 
-        StringView method() override;
         StringView path() override;
         StringView query() override;
+        StringView method() override;
         ZeroCopyInput* in() override;
         StringView* header(StringView name) override;
     };
@@ -103,9 +103,7 @@ namespace {
     };
 }
 
-void HttpRequestImpl::parse(HttpConnection* conn) {
-    keepAlive = false;
-
+HttpRequestImpl::HttpRequestImpl(HttpConnection* conn) {
     StringView method, rest, path, version;
 
     STD_VERIFY(StringView(conn->line).stripCr().split(' ', method, rest));
@@ -341,9 +339,7 @@ bool HttpConnection::serve() {
         return false;
     }
 
-    HttpRequestImpl req;
-
-    req.parse(this);
+    HttpRequestImpl req(this);
 
     handler->serve(*req.pool->make<HttpResponseImpl>(&req, this));
 
