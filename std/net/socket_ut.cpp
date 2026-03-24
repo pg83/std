@@ -7,8 +7,8 @@
 #include <std/dbg/insist.h>
 
 #include <string.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
 using namespace stl;
 

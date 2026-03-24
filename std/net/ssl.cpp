@@ -54,8 +54,7 @@ namespace {
 }
 
 int SslSocketImpl::recv(void* ctx, unsigned char* buf, size_t len) {
-    auto* sock = (SslSocketImpl*)ctx;
-    size_t n = sock->in->read(buf, len);
+    size_t n = ((SslSocketImpl*)ctx)->in->read(buf, len);
 
     if (n == 0) {
         return MBEDTLS_ERR_SSL_WANT_READ;
@@ -65,9 +64,7 @@ int SslSocketImpl::recv(void* ctx, unsigned char* buf, size_t len) {
 }
 
 int SslSocketImpl::send(void* ctx, const unsigned char* buf, size_t len) {
-    auto* sock = (SslSocketImpl*)ctx;
-
-    sock->out->write(buf, len);
+    ((SslSocketImpl*)ctx)->out->write(buf, len);
 
     return (int)len;
 }

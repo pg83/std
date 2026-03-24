@@ -1,12 +1,12 @@
 #include "io.h"
 
 #include <std/sys/crt.h>
-#include <std/dbg/insist.h>
 #include <std/str/view.h>
 #include <std/ios/in_zc.h>
 #include <std/ios/output.h>
 #include <std/lib/buffer.h>
 #include <std/alg/minmax.h>
+#include <std/dbg/insist.h>
 #include <std/mem/obj_pool.h>
 
 #include <sys/uio.h>
