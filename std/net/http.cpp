@@ -316,6 +316,7 @@ void HttpServerCtlImpl::run(Semaphore* sem) {
                 HttpConnection conn(&handler, exec, fd.get());
 
                 while (conn.serve()) {
+                    conn.out->flush();
                 }
             } catch (...) {
             }
