@@ -620,6 +620,84 @@ STD_TEST_SUITE(CoroPoll) {
     }
 }
 
+STD_TEST_SUITE(CoroOffload) {
+    STD_TEST(Basic) {
+        auto exec = CoroExecutor::create(4);
+        auto opool = ObjPool::fromMemory();
+        auto* pool = ThreadPool::simple(opool.mutPtr(), 2);
+
+        auto f = async(exec.mutPtr(), [&] {
+            int result = 0;
+
+            exec->offload(pool, makeRunable([&] {
+                result = 42;
+            }));
+
+            return result;
+        });
+
+        STD_INSIST(f.wait() == 42);
+    }
+
+    STD_TEST(MultipleCalls) {
+        auto exec = CoroExecutor::create(4);
+        auto opool = ObjPool::fromMemory();
+        auto* pool = ThreadPool::simple(opool.mutPtr(), 2);
+
+        auto f = async(exec.mutPtr(), [&] {
+            int sum = 0;
+
+            for (int i = 0; i < 10; ++i) {
+                exec->offload(pool, makeRunable([&] {
+                    sum += 1;
+                }));
+            }
+
+            return sum;
+        });
+
+        STD_INSIST(f.wait() == 10);
+    }
+
+    STD_TEST(ConcurrentCoros) {
+        auto exec = CoroExecutor::create(4);
+        auto opool = ObjPool::fromMemory();
+        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
+        int counter = 0;
+
+        for (int i = 0; i < 16; ++i) {
+            exec->spawn([&] {
+                exec->offload(pool, makeRunable([&] {
+                    stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
+                }));
+            });
+        }
+
+        exec->join();
+        STD_INSIST(counter == 16);
+    }
+
+    STD_TEST(HeavyWork) {
+        auto exec = CoroExecutor::create(4);
+        auto opool = ObjPool::fromMemory();
+        auto* pool = ThreadPool::simple(opool.mutPtr(), 2);
+
+        auto f = async(exec.mutPtr(), [&] {
+            int result = 0;
+
+            exec->offload(pool, makeRunable([&] {
+                for (volatile int i = 0; i < 1000000; ++i) {
+                }
+                result = 1;
+            }));
+
+            return result;
+        });
+
+        STD_INSIST(f.wait() == 1);
+    }
+}
+
 namespace {
     int makeTmpFd() {
         return memfd_create("coro_fs_ut", 0);
