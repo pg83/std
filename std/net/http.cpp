@@ -223,6 +223,9 @@ void HttpResponseImpl::endHeaders() {
     {
         StringBuilder sb;
 
+        sb.xchg(req->conn->line);
+        sb.reset();
+
         sb << StringView(u8"HTTP/1.1 ")
            << (u64)status
            << StringView(u8" ")
@@ -236,6 +239,7 @@ void HttpResponseImpl::endHeaders() {
         sb << StringView(u8"\r\n");
 
         rawOut->write(sb.data(), sb.used());
+        sb.xchg(req->conn->line);
     }
 
     if (auto* cl = headerIndex.find(StringView("content-length")); cl) {
