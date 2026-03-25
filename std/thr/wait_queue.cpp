@@ -60,7 +60,58 @@ namespace {
         }
     };
 
-#if __SIZEOF_POINTER__ == 8
+#if defined(__x86_64__)
+    // No ABA here: each Item is a Worker that re-enqueues itself only after being
+    // dequeued and completing a full condvar sleep/wake cycle.
+    // Uses CMPXCHG16B to atomically update head pointer and count together.
+    struct alignas(16) PointerImpl: public WaitQueue {
+        struct State {
+            Item* head;
+            size_t count;
+        };
+
+        State state_ = {nullptr, 0};
+
+        void enqueue(Item* item) noexcept override {
+            State old;
+
+            __atomic_load(&state_, &old, __ATOMIC_RELAXED);
+
+            State desired;
+
+            do {
+                item->next = old.head;
+                desired = {item, old.count + 1};
+            } while (!__atomic_compare_exchange(&state_, &old, &desired, false, __ATOMIC_RELEASE, __ATOMIC_RELAXED));
+        }
+
+        Item* dequeue() noexcept override {
+            State old;
+
+            __atomic_load(&state_, &old, __ATOMIC_ACQUIRE);
+
+            for (;;) {
+                if (!old.head) {
+                    return nullptr;
+                }
+
+                State desired = {old.head->next, old.count - 1};
+
+                if (__atomic_compare_exchange(&state_, &old, &desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) {
+                    return old.head;
+                }
+            }
+        }
+
+        size_t sleeping() const noexcept override {
+            State s;
+
+            __atomic_load(&state_, &s, __ATOMIC_ACQUIRE);
+
+            return s.count;
+        }
+    };
+#elif __SIZEOF_POINTER__ == 8
     // No ABA here: each Item is a Worker that re-enqueues itself only after being
     // dequeued and completing a full condvar sleep/wake cycle. The tag would need
     // to wrap 65536 times while a competing CAS spins — impossible in practice.
@@ -167,7 +218,7 @@ WaitQueue* WaitQueue::construct(ObjPool* pool, size_t maxWaiters) {
         return pool->make<BitmaskImpl<u32>>();
     }
 
-#if __SIZEOF_POINTER__ == 8
+#if defined(__x86_64__) || __SIZEOF_POINTER__ == 8
     if (maxWaiters <= 64) {
         return pool->make<BitmaskImpl<u64>>();
     }
