@@ -21,6 +21,10 @@ STD_TEST_SUITE(Semaphore) {
         sem.wait();
         sem.wait();
         sem.wait();
+
+        sem.post();
+        sem.post();
+        sem.post();
     }
 
     STD_TEST(TwoThreads) {
@@ -79,6 +83,10 @@ STD_TEST_SUITE(Semaphore) {
             sem.wait();
             sem.wait();
             sem.wait();
+
+            sem.post();
+            sem.post();
+            sem.post();
         });
 
         exec->join();
