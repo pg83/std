@@ -5,6 +5,7 @@
 #include <std/thr/coro.h>
 #include <std/thr/poller.h>
 
+#include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/uio.h>
@@ -12,7 +13,38 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
+#ifndef SOCK_NONBLOCK
+#define SOCK_NONBLOCK 0
+#define STD_SOCK_EMULATE_NB 1
+#endif
+
+#ifndef SOCK_CLOEXEC
+#define SOCK_CLOEXEC 0
+#define STD_SOCK_EMULATE_CE 1
+#endif
+
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
+#endif
+
 using namespace stl;
+
+namespace {
+    void setSockFlags([[maybe_unused]] int fd) {
+#ifdef STD_SOCK_EMULATE_NB
+        ::fcntl(fd, F_SETFL, ::fcntl(fd, F_GETFL) | O_NONBLOCK);
+#endif
+
+#ifdef STD_SOCK_EMULATE_CE
+        ::fcntl(fd, F_SETFD, ::fcntl(fd, F_GETFD) | FD_CLOEXEC);
+#endif
+
+#ifdef SO_NOSIGPIPE
+        int one = 1;
+        ::setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
+#endif
+    }
+}
 
 TcpSocket::TcpSocket() noexcept
     : fd(-1)
@@ -36,6 +68,8 @@ int TcpSocket::socket(int domain, int type, int protocol) {
     if (fd = ::socket(domain, type | SOCK_NONBLOCK | SOCK_CLOEXEC, protocol); fd < 0) {
         return -errno;
     }
+
+    setSockFlags(fd);
 
     return 0;
 }
@@ -127,18 +161,26 @@ int TcpSocket::accept(ScopedFD& out, sockaddr* addr, u32* addrLen, u64 deadlineU
 
     socklen_t slen = addrLen ? (socklen_t)*addrLen : 0;
 
-    if (int newFd = ::accept4(fd, addr, addrLen ? &slen : nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC); newFd < 0) {
+#ifdef __linux__
+    int newFd = ::accept4(fd, addr, addrLen ? &slen : nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
+#else
+    int newFd = ::accept(fd, addr, addrLen ? &slen : nullptr);
+#endif
+
+    if (newFd < 0) {
         return -errno;
-    } else {
-        if (addrLen) {
-            *addrLen = (u32)slen;
-        }
-
-        ScopedFD tmp(newFd);
-        out.xchg(tmp);
-
-        return 0;
     }
+
+    setSockFlags(newFd);
+
+    if (addrLen) {
+        *addrLen = (u32)slen;
+    }
+
+    ScopedFD tmp(newFd);
+    out.xchg(tmp);
+
+    return 0;
 }
 
 int TcpSocket::acceptTout(ScopedFD& out, sockaddr* addr, u32* addrLen, u64 timeoutUs) {
