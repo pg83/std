@@ -7,7 +7,7 @@
 #include <std/lib/buffer.h>
 #include <std/lib/vector.h>
 
-#include <cstring>
+#include <string.h>
 #include <stdexcept>
 
 using namespace stl;

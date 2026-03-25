@@ -6,8 +6,8 @@
 #include <unistd.h>
 #include <sys/uio.h>
 
-#include <cstring>
-#include <cstdlib>
+#include <string.h>
+#include <stdlib.h>
 
 using namespace stl;
 

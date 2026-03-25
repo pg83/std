@@ -8,7 +8,7 @@
 #include <std/str/builder.h>
 #include <std/mem/obj_pool.h>
 
-#include <cstring>
+#include <string.h>
 
 using namespace stl;
 

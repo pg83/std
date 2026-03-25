@@ -9,7 +9,7 @@
 
 #include <unistd.h>
 #include <sys/uio.h>
-#include <cstring>
+#include <string.h>
 
 using namespace stl;
 

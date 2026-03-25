@@ -8,7 +8,7 @@
     #include <sys/mman.h>
 #else
     #include <unistd.h>
-    #include <cstdlib>
+    #include <stdlib.h>
 #endif
 
 namespace {

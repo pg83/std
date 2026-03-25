@@ -5,7 +5,7 @@
 #include <std/lib/buffer.h>
 #include <std/lib/vector.h>
 
-#include <cstring>
+#include <string.h>
 
 using namespace stl;
 
