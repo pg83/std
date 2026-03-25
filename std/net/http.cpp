@@ -333,7 +333,7 @@ HttpConnection::HttpConnection(HttpServe* handler, CoroExecutor* exec, int fd)
     auto stream = opool->make<TcpStream>(sock);
 
     Input* in = stream;
-    out = stream;
+    out = opool->make<OutBuf>(*stream);
 
     if (auto ssl = handler->ssl()) {
         unsigned char b;
