@@ -23,7 +23,7 @@ namespace {
     };
 }
 
-#if defined(__linux__) && defined(__x86_64__)
+#if defined(__x86_64__)
 namespace {
     struct ContextImpl: public ContextBase {
         u64 rsp = 0;
@@ -91,6 +91,106 @@ void ContextImpl::switchTo(Context& target) noexcept {
     auto& t = (ContextImpl&)target;
     ehg_ = exchange(*__cxxabiv1::__cxa_get_globals(), t.ehg_);
     swapContext(&rsp, &t.rsp);
+}
+#elif defined(__aarch64__)
+namespace {
+    struct ContextImpl: public ContextBase {
+        u64 sp_ = 0;
+        __cxxabiv1::__cxa_eh_globals ehg_;
+
+        ContextImpl() = default;
+        ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
+
+        void switchTo(Context& target) noexcept override;
+
+        __attribute__((naked, noinline)) static void swapContext(u64*, u64*);
+
+        [[noreturn]]
+        static void trampoline();
+    };
+}
+
+void ContextImpl::swapContext(u64*, u64*) {
+    __asm__(
+        "stp d8,  d9,  [sp, #-16]!\n\t"
+        "stp d10, d11, [sp, #-16]!\n\t"
+        "stp d12, d13, [sp, #-16]!\n\t"
+        "stp d14, d15, [sp, #-16]!\n\t"
+        "stp x19, x20, [sp, #-16]!\n\t"
+        "stp x21, x22, [sp, #-16]!\n\t"
+        "stp x23, x24, [sp, #-16]!\n\t"
+        "stp x25, x26, [sp, #-16]!\n\t"
+        "stp x27, x28, [sp, #-16]!\n\t"
+        "stp x29, x30, [sp, #-16]!\n\t"
+        "mov x2, sp\n\t"
+        "str x2, [x0]\n\t"
+        "ldr x2, [x1]\n\t"
+        "mov sp, x2\n\t"
+        "ldp x29, x30, [sp], #16\n\t"
+        "ldp x27, x28, [sp], #16\n\t"
+        "ldp x25, x26, [sp], #16\n\t"
+        "ldp x23, x24, [sp], #16\n\t"
+        "ldp x21, x22, [sp], #16\n\t"
+        "ldp x19, x20, [sp], #16\n\t"
+        "ldp d14, d15, [sp], #16\n\t"
+        "ldp d12, d13, [sp], #16\n\t"
+        "ldp d10, d11, [sp], #16\n\t"
+        "ldp d8,  d9,  [sp], #16\n\t"
+        "ret\n\t");
+}
+
+void ContextImpl::trampoline() {
+    Runable* r;
+
+    __asm__ volatile("mov %0, x19" : "=r"(r));
+
+    r->run();
+
+    STD_INSIST(false);
+}
+
+ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept {
+    auto* top = (u64*)(((uintptr_t)stackPtr + stackSize) & ~(uintptr_t)15);
+
+    // layout matches ldp pop order in swapContext (10 pairs = 20 slots)
+    // x29, x30 pair (popped first)
+    *--top = (u64)trampoline; // x30 (lr) — return address
+    *--top = 0;               // x29 (fp)
+    // x27, x28
+    *--top = 0;               // x28
+    *--top = 0;               // x27
+    // x25, x26
+    *--top = 0;               // x26
+    *--top = 0;               // x25
+    // x23, x24
+    *--top = 0;               // x24
+    *--top = 0;               // x23
+    // x21, x22
+    *--top = 0;               // x22
+    *--top = 0;               // x21
+    // x19, x20
+    *--top = 0;               // x20
+    *--top = (u64)&entry;     // x19 — Runable*
+    // d14, d15
+    *--top = 0;               // d15
+    *--top = 0;               // d14
+    // d12, d13
+    *--top = 0;               // d13
+    *--top = 0;               // d12
+    // d10, d11
+    *--top = 0;               // d11
+    *--top = 0;               // d10
+    // d8, d9
+    *--top = 0;               // d9
+    *--top = 0;               // d8
+
+    sp_ = (u64)top;
+}
+
+void ContextImpl::switchTo(Context& target) noexcept {
+    auto& t = (ContextImpl&)target;
+    ehg_ = exchange(*__cxxabiv1::__cxa_get_globals(), t.ehg_);
+    swapContext(&sp_, &t.sp_);
 }
 #else
     #include <ucontext.h>
