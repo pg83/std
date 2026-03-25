@@ -55,6 +55,8 @@ namespace stl {
         virtual void offloadRun(ThreadPool* pool, Runable&& work) = 0;
         virtual ssize_t pread(int fd, void* buf, size_t len, off_t offset) = 0;
         virtual ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) = 0;
+        virtual int fsync(int fd) = 0;
+        virtual int fdatasync(int fd) = 0;
 
         virtual EventIface* createEvent() = 0;
         virtual CondVarIface* createCondVar() = 0;

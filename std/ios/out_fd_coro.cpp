@@ -33,3 +33,19 @@ size_t CoroFDOutput::writeImpl(const void* data, size_t len) {
 size_t CoroFDOutput::hintImpl() const noexcept {
     return 1 << 14;
 }
+
+void CoroFDOutput::sync() {
+    auto n = exec->fsync(fd->get());
+
+    if (n < 0) {
+        Errno((int)-n).raise(StringBuilder() << StringView(u8"fsync() failed"));
+    }
+}
+
+void CoroFDOutput::dataSync() {
+    auto n = exec->fdatasync(fd->get());
+
+    if (n < 0) {
+        Errno((int)-n).raise(StringBuilder() << StringView(u8"fdatasync() failed"));
+    }
+}

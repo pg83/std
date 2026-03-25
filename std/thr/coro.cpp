@@ -152,6 +152,8 @@ namespace {
         void offloadRun(ThreadPool* pool, Runable&& work) override;
         ssize_t pread(int fd, void* buf, size_t len, off_t offset) override;
         ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) override;
+        int fsync(int fd) override;
+        int fdatasync(int fd) override;
     };
 
     struct PollRequestImpl: public PollRequest {
@@ -314,6 +316,30 @@ ssize_t CoroExecutorImpl::pwrite(int fd, const void* buf, size_t len, off_t offs
     offload(fsPool_, [&] {
         ssize_t n = ::pwrite(fd, buf, len, offset);
         result = n < 0 ? -errno : n;
+    });
+    // clang-format on
+
+    return result;
+}
+
+int CoroExecutorImpl::fsync(int fd) {
+    int result = 0;
+
+    // clang-format off
+    offload(fsPool_, [&] {
+        result = ::fsync(fd) < 0 ? -errno : 0;
+    });
+    // clang-format on
+
+    return result;
+}
+
+int CoroExecutorImpl::fdatasync(int fd) {
+    int result = 0;
+
+    // clang-format off
+    offload(fsPool_, [&] {
+        result = ::fdatasync(fd) < 0 ? -errno : 0;
     });
     // clang-format on
 

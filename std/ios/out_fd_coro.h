@@ -20,5 +20,8 @@ namespace stl {
 
         CoroFDOutput(FD& fd, CoroExecutor* exec) noexcept;
         ~CoroFDOutput() noexcept override;
+
+        void sync();
+        void dataSync();
     };
 }
