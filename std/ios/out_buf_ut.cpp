@@ -340,7 +340,7 @@ STD_TEST_SUITE(OutBufEdgeCases) {
         memcpy(ptr, "B", 1);
         buf.commit(1);
         buf.write("C", 1);
-        buf.imbue(&avail);
+        ptr = buf.imbue(&avail);
         memcpy(ptr, "D", 1);
         buf.commit(1);
         buf.finish();
