@@ -5,7 +5,7 @@ namespace stl {
         int argc;
         char** argv;
 
-        virtual void printTB() const = 0;
+        virtual void printTB() const;
 
         void run();
     };

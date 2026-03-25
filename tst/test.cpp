@@ -1,9 +1,10 @@
 #include <std/tst/ut.h>
 #include <std/tst/ctx.h>
 
-#undef noexcept
-
-#include <cpptrace/cpptrace.hpp>
+#if __has_include(<cpptrace/cpptrace.hpp>)
+    #undef noexcept
+    #include <cpptrace/cpptrace.hpp>
+#endif
 
 using namespace stl;
 
@@ -14,9 +15,11 @@ namespace {
             argv = v;
         }
 
+#if __has_include(<cpptrace/cpptrace.hpp>)
         void printTB() const override {
             cpptrace::generate_trace().print();
         }
+#endif
     };
 }
 
