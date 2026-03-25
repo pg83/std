@@ -6,8 +6,10 @@
 using namespace stl;
 
 void Disposer::dispose() noexcept {
-    while (end) {
-        destruct(exchange(end, end->prev));
+    auto cur = exchange(end, (Disposable*)0);
+
+    while (cur) {
+        destruct(exchange(cur, cur->prev));
     }
 }
 
