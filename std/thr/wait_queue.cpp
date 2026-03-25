@@ -61,6 +61,76 @@ namespace {
     };
 
 #if defined(__x86_64__)
+    struct alignas(16) Bitmask128Impl: public WaitQueue {
+        static constexpr u8 N = 128;
+
+        struct Bits {
+            u64 lo;
+            u64 hi;
+        };
+
+        Bits bits_ = {0, 0};
+        Item* items_[N] = {};
+
+        void enqueue(Item* item) noexcept override {
+            u8 idx = item->index;
+            STD_ASSERT(idx < N);
+
+            items_[idx] = item;
+
+            Bits old;
+
+            __atomic_load(&bits_, &old, __ATOMIC_RELAXED);
+
+            Bits desired;
+
+            do {
+                desired = old;
+
+                if (idx < 64) {
+                    desired.lo |= u64(1) << idx;
+                } else {
+                    desired.hi |= u64(1) << (idx - 64);
+                }
+            } while (!__atomic_compare_exchange(&bits_, &old, &desired, false, __ATOMIC_RELEASE, __ATOMIC_RELAXED));
+        }
+
+        Item* dequeue() noexcept override {
+            Bits old;
+
+            __atomic_load(&bits_, &old, __ATOMIC_ACQUIRE);
+
+            for (;;) {
+                if (!old.lo && !old.hi) {
+                    return nullptr;
+                }
+
+                int idx;
+                Bits desired = old;
+
+                if (old.lo) {
+                    idx = __builtin_ctzll(old.lo);
+                    desired.lo &= ~(u64(1) << idx);
+                } else {
+                    idx = 64 + __builtin_ctzll(old.hi);
+                    desired.hi &= ~(u64(1) << (idx - 64));
+                }
+
+                if (__atomic_compare_exchange(&bits_, &old, &desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) {
+                    return items_[idx];
+                }
+            }
+        }
+
+        size_t sleeping() const noexcept override {
+            Bits b;
+
+            __atomic_load(&bits_, &b, __ATOMIC_ACQUIRE);
+
+            return (size_t)__builtin_popcountll(b.lo) + (size_t)__builtin_popcountll(b.hi);
+        }
+    };
+
     // No ABA here: each Item is a Worker that re-enqueues itself only after being
     // dequeued and completing a full condvar sleep/wake cycle.
     // Uses CMPXCHG16B to atomically update head pointer and count together.
@@ -218,7 +288,17 @@ WaitQueue* WaitQueue::construct(ObjPool* pool, size_t maxWaiters) {
         return pool->make<BitmaskImpl<u32>>();
     }
 
-#if defined(__x86_64__) || __SIZEOF_POINTER__ == 8
+#if defined(__x86_64__)
+    if (maxWaiters <= 64) {
+        return pool->make<BitmaskImpl<u64>>();
+    }
+
+    if (maxWaiters <= 128) {
+        return pool->make<Bitmask128Impl>();
+    }
+
+    return pool->make<PointerImpl>();
+#elif __SIZEOF_POINTER__ == 8
     if (maxWaiters <= 64) {
         return pool->make<BitmaskImpl<u64>>();
     }
