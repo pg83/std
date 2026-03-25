@@ -288,23 +288,21 @@ WaitQueue* WaitQueue::construct(ObjPool* pool, size_t maxWaiters) {
         return pool->make<BitmaskImpl<u32>>();
     }
 
-#if defined(__x86_64__)
+#if __SIZEOF_POINTER__ == 8
     if (maxWaiters <= 64) {
         return pool->make<BitmaskImpl<u64>>();
     }
+#endif
 
+#if defined(__x86_64__)
     if (maxWaiters <= 128) {
         return pool->make<Bitmask128Impl>();
     }
-
-    return pool->make<PointerImpl>();
-#elif __SIZEOF_POINTER__ == 8
-    if (maxWaiters <= 64) {
-        return pool->make<BitmaskImpl<u64>>();
-    }
-
-    return pool->make<PointerImpl>();
-#else
-    return pool->make<MutexImpl>();
 #endif
+
+#if __SIZEOF_POINTER__ == 8
+    return pool->make<PointerImpl>();
+#endif
+
+    return pool->make<MutexImpl>();
 }
