@@ -78,12 +78,12 @@ STD_TEST_SUITE(HttpRequestParsing) {
         auto exec = CoroExecutor::create(4);
 
         struct Handler: HttpServe {
-            StringView path;
-            StringView query;
+            Buffer path;
+            Buffer query;
 
             void serve(HttpResponse& resp) override {
-                path = resp.request()->path();
-                query = resp.request()->query();
+                path = Buffer(resp.request()->path());
+                query = Buffer(resp.request()->query());
 
                 resp.addHeader(StringView("Content-Length"), StringView("0"));
                 resp.endHeaders();
@@ -118,20 +118,20 @@ STD_TEST_SUITE(HttpRequestParsing) {
         });
         exec->join();
 
-        STD_INSIST(handler.path == StringView("/foo/bar"));
-        STD_INSIST(handler.query.empty());
+        STD_INSIST(StringView(handler.path) == StringView("/foo/bar"));
+        STD_INSIST(StringView(handler.query).empty());
     }
 
     STD_TEST(PathWithQuery) {
         auto exec = CoroExecutor::create(4);
 
         struct Handler: HttpServe {
-            StringView path;
-            StringView query;
+            Buffer path;
+            Buffer query;
 
             void serve(HttpResponse& resp) override {
-                path = resp.request()->path();
-                query = resp.request()->query();
+                path = Buffer(resp.request()->path());
+                query = Buffer(resp.request()->query());
 
                 resp.addHeader(StringView("Content-Length"), StringView("0"));
                 resp.endHeaders();
@@ -166,8 +166,8 @@ STD_TEST_SUITE(HttpRequestParsing) {
         });
         exec->join();
 
-        STD_INSIST(handler.path == StringView("/search"));
-        STD_INSIST(handler.query == StringView("q=hello&page=2"));
+        STD_INSIST(StringView(handler.path) == StringView("/search"));
+        STD_INSIST(StringView(handler.query) == StringView("q=hello&page=2"));
     }
 }
 
