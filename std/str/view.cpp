@@ -77,6 +77,10 @@ bool StringView::endsWith(StringView suffix) const noexcept {
 }
 
 const u8* StringView::search(StringView substr) const noexcept {
+    if (substr.empty()) {
+        return data();
+    }
+
     return (const u8*)memmem(fix(data()), length(), fix(substr.data()), substr.length());
 }
 
