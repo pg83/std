@@ -188,13 +188,10 @@ SslSocket* SslCtxImpl::create(ObjPool* pool, Input* in, Output* out) {
 SslCtx* stl::SslCtx::create(ObjPool* pool, StringView cert, StringView key) {
     return pool->make<SslCtxImpl>(cert, key);
 }
-
 #else
-
 using namespace stl;
 
 SslCtx* stl::SslCtx::create(ObjPool*, StringView, StringView) {
-    Errno(1).raise(StringBuilder() << StringView(u8"ssl not available (mbedtls not found)"));
+    return nullptr;
 }
-
 #endif
