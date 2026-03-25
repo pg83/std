@@ -249,7 +249,6 @@ namespace {
 
         void join() noexcept override;
         Worker* localWorker() noexcept;
-        Worker* dequeueWorker() noexcept;
         PCG32& random() noexcept override;
         void** tls(u64 key) noexcept override;
         void submitTasks(IntrusiveList& tasks) noexcept override;
@@ -295,16 +294,6 @@ WorkStealingThreadPool::WorkStealingThreadPool(ObjPool* pool, size_t numThreads)
     workers_.visit([this](Worker& w) {
         w.mutex_.unlock();
     });
-}
-
-WorkStealingThreadPool::Worker* WorkStealingThreadPool::dequeueWorker() noexcept {
-    while (true) {
-        if (auto w = (Worker*)wq->dequeue(); w) {
-            return w;
-        }
-
-        sched_yield();
-    }
 }
 
 WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
