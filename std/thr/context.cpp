@@ -152,37 +152,38 @@ void ContextImpl::trampoline() {
 ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept {
     auto* top = (u64*)(((uintptr_t)stackPtr + stackSize) & ~(uintptr_t)15);
 
-    // layout matches ldp pop order in swapContext (10 pairs = 20 slots)
-    // x29, x30 pair (popped first)
-    *--top = (u64)trampoline; // x30 (lr) — return address
-    *--top = 0;               // x29 (fp)
-    // x27, x28
-    *--top = 0;               // x28
-    *--top = 0;               // x27
-    // x25, x26
-    *--top = 0;               // x26
-    *--top = 0;               // x25
-    // x23, x24
-    *--top = 0;               // x24
-    *--top = 0;               // x23
-    // x21, x22
-    *--top = 0;               // x22
-    *--top = 0;               // x21
-    // x19, x20
-    *--top = 0;               // x20
-    *--top = (u64)&entry;     // x19 — Runable*
-    // d14, d15
-    *--top = 0;               // d15
-    *--top = 0;               // d14
-    // d12, d13
-    *--top = 0;               // d13
-    *--top = 0;               // d12
+    // *--top fills high-to-low; ldp pops low-to-high
+    // last pushed = lowest address = first popped
+    // d8, d9 (popped last, filled first)
+    *--top = 0;               // d9
+    *--top = 0;               // d8
     // d10, d11
     *--top = 0;               // d11
     *--top = 0;               // d10
-    // d8, d9
-    *--top = 0;               // d9
-    *--top = 0;               // d8
+    // d12, d13
+    *--top = 0;               // d13
+    *--top = 0;               // d12
+    // d14, d15
+    *--top = 0;               // d15
+    *--top = 0;               // d14
+    // x19, x20
+    *--top = 0;               // x20
+    *--top = (u64)&entry;     // x19 — Runable*
+    // x21, x22
+    *--top = 0;               // x22
+    *--top = 0;               // x21
+    // x23, x24
+    *--top = 0;               // x24
+    *--top = 0;               // x23
+    // x25, x26
+    *--top = 0;               // x26
+    *--top = 0;               // x25
+    // x27, x28
+    *--top = 0;               // x28
+    *--top = 0;               // x27
+    // x29, x30 (popped first, filled last)
+    *--top = (u64)trampoline; // x30 (lr)
+    *--top = 0;               // x29 (fp)
 
     sp_ = (u64)top;
 }
