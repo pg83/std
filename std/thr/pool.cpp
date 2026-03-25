@@ -7,6 +7,7 @@
 #include "cond_var.h"
 #include "wait_queue.h"
 
+#include <std/rng/mix.h>
 #include <std/rng/pcg.h>
 #include <std/lib/list.h>
 #include <std/sym/i_map.h>
@@ -310,15 +311,14 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
 
 void WorkStealingThreadPool::submitTasks(IntrusiveList& tasks) noexcept {
     auto count = (i32)tasks.length();
-
-    stdAtomicAddAndFetch(&taskCount_, count, MemoryOrder::Release);
+    auto tc = stdAtomicAddAndFetch(&taskCount_, count, MemoryOrder::Release);
 
     if (auto w = localWorker(); w) {
         w->local_.pushBack(tasks);
     } else if (auto w = (Worker*)wq->dequeue(); w) {
         w->push(&tasks);
     } else {
-        index_[splitMix64((size_t)tasks.mutFront()) % index_.length()]->pushNoSignal(tasks);
+        index_[mix(tasks.mutFront(), &tasks, (void*)tc) % index_.length()]->pushNoSignal(tasks);
 
         if (auto w = (Worker*)wq->dequeue(); w) {
             IntrusiveList tmp;
