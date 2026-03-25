@@ -14,17 +14,17 @@
 #include <netinet/tcp.h>
 
 #ifndef SOCK_NONBLOCK
-#define SOCK_NONBLOCK 0
-#define STD_SOCK_EMULATE_NB 1
+    #define SOCK_NONBLOCK 0
+    #define STD_SOCK_EMULATE_NB 1
 #endif
 
 #ifndef SOCK_CLOEXEC
-#define SOCK_CLOEXEC 0
-#define STD_SOCK_EMULATE_CE 1
+    #define SOCK_CLOEXEC 0
+    #define STD_SOCK_EMULATE_CE 1
 #endif
 
 #ifndef MSG_NOSIGNAL
-#define MSG_NOSIGNAL 0
+    #define MSG_NOSIGNAL 0
 #endif
 
 using namespace stl;

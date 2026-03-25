@@ -3,8 +3,8 @@
 #if __has_include(<execinfo.h>)
     #include <execinfo.h>
 #else
-    extern "C" int backtrace(void**, int);
-    extern "C" void backtrace_symbols_fd(void* const*, int, int);
+extern "C" int backtrace(void**, int);
+extern "C" void backtrace_symbols_fd(void* const*, int, int);
 #endif
 
 using namespace stl;
