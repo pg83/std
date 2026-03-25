@@ -61,7 +61,7 @@ namespace {
     };
 
 #if defined(__x86_64__)
-    struct alignas(16) Bitmask128Impl: public WaitQueue {
+    struct alignas(64) Bitmask128Impl: public WaitQueue {
         static constexpr u8 N = 128;
 
         struct Bits {
@@ -134,7 +134,7 @@ namespace {
     // No ABA here: each Item is a Worker that re-enqueues itself only after being
     // dequeued and completing a full condvar sleep/wake cycle.
     // Uses CMPXCHG16B to atomically update head pointer and count together.
-    struct alignas(16) PointerImpl: public WaitQueue {
+    struct alignas(64) PointerImpl: public WaitQueue {
         struct State {
             Item* head;
             size_t count;
