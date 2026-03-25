@@ -320,6 +320,8 @@ void HttpServerCtlImpl::run(Semaphore* sem) {
                 while (conn.serve()) {
                     conn.out->flush();
                 }
+
+                conn.out->flush();
             } catch (...) {
             }
         });
