@@ -1,9 +1,9 @@
 #include "fd.h"
+#include "memfd.h"
 
 #include <std/tst/ut.h>
 
 #include <unistd.h>
-#include <sys/mman.h>
 #include <sys/uio.h>
 
 #include <cstring>
@@ -13,7 +13,7 @@ using namespace stl;
 
 STD_TEST_SUITE(FD) {
     STD_TEST(ReadWriteMemFd) {
-        int fd = memfd_create("test", 0);
+        int fd = memFD("test");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -35,7 +35,7 @@ STD_TEST_SUITE(FD) {
     }
 
     STD_TEST(ReadEmptyMemFd) {
-        int fd = memfd_create("test_empty", 0);
+        int fd = memFD("test_empty");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -48,7 +48,7 @@ STD_TEST_SUITE(FD) {
     }
 
     STD_TEST(WriteMultipleChunksMemFd) {
-        int fd = memfd_create("test_chunks", 0);
+        int fd = memFD("test_chunks");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -73,7 +73,7 @@ STD_TEST_SUITE(FD) {
     }
 
     STD_TEST(WriteVectorMemFd) {
-        int fd = memfd_create("test_writev", 0);
+        int fd = memFD("test_writev");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -103,7 +103,7 @@ STD_TEST_SUITE(FD) {
     }
 
     STD_TEST(FsyncMemFd) {
-        int fd = memfd_create("test_fsync", 0);
+        int fd = memFD("test_fsync");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -178,7 +178,7 @@ STD_TEST_SUITE(FD) {
     }
 
     STD_TEST(LargeDataMemFd) {
-        int fd = memfd_create("test_large", 0);
+        int fd = memFD("test_large");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -210,7 +210,7 @@ STD_TEST_SUITE(FD) {
 
 STD_TEST_SUITE(ScopedFD) {
     STD_TEST(AutoCloseOnDestroy) {
-        int fd = memfd_create("test_scoped", 0);
+        int fd = memFD("test_scoped");
         STD_INSIST(fd >= 0);
 
         {
@@ -221,7 +221,7 @@ STD_TEST_SUITE(ScopedFD) {
     }
 
     STD_TEST(ReadWriteScoped) {
-        int fd = memfd_create("test_scoped_rw", 0);
+        int fd = memFD("test_scoped_rw");
         STD_INSIST(fd >= 0);
 
         ScopedFD scoped(fd);
@@ -252,7 +252,7 @@ STD_TEST_SUITE(ScopedFD) {
     }
 
     STD_TEST(ScopedWriteV) {
-        int fd = memfd_create("test_scoped_writev", 0);
+        int fd = memFD("test_scoped_writev");
         STD_INSIST(fd >= 0);
 
         ScopedFD scoped(fd);
@@ -280,7 +280,7 @@ STD_TEST_SUITE(ScopedFD) {
     }
 
     STD_TEST(ScopedFsync) {
-        int fd = memfd_create("test_scoped_fsync", 0);
+        int fd = memFD("test_scoped_fsync");
         STD_INSIST(fd >= 0);
 
         ScopedFD scoped(fd);

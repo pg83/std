@@ -5,9 +5,9 @@
 #include <std/str/view.h>
 #include <std/lib/buffer.h>
 #include <std/lib/vector.h>
+#include <std/sys/memfd.h>
 
 #include <unistd.h>
-#include <sys/mman.h>
 #include <sys/uio.h>
 #include <cstring>
 
@@ -15,7 +15,7 @@ using namespace stl;
 
 STD_TEST_SUITE(FDRegular) {
     STD_TEST(BasicWrite) {
-        int fd = memfd_create("test_basic", 0);
+        int fd = memFD("test_basic");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -38,7 +38,7 @@ STD_TEST_SUITE(FDRegular) {
     }
 
     STD_TEST(MultipleWrites) {
-        int fd = memfd_create("test_multiple", 0);
+        int fd = memFD("test_multiple");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -65,7 +65,7 @@ STD_TEST_SUITE(FDRegular) {
     }
 
     STD_TEST(WriteV) {
-        int fd = memfd_create("test_writev", 0);
+        int fd = memFD("test_writev");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -99,7 +99,7 @@ STD_TEST_SUITE(FDRegular) {
     }
 
     STD_TEST(Flush) {
-        int fd = memfd_create("test_flush", 0);
+        int fd = memFD("test_flush");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -121,7 +121,7 @@ STD_TEST_SUITE(FDRegular) {
     }
 
     STD_TEST(MultipleFlushes) {
-        int fd = memfd_create("test_flushes", 0);
+        int fd = memFD("test_flushes");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -152,7 +152,7 @@ STD_TEST_SUITE(FDRegular) {
     }
 
     STD_TEST(LargeData) {
-        int fd = memfd_create("test_large", 0);
+        int fd = memFD("test_large");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -183,7 +183,7 @@ STD_TEST_SUITE(FDRegular) {
     }
 
     STD_TEST(EmptyWrite) {
-        int fd = memfd_create("test_empty", 0);
+        int fd = memFD("test_empty");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -201,7 +201,7 @@ STD_TEST_SUITE(FDRegular) {
     }
 
     STD_TEST(WriteStringView) {
-        int fd = memfd_create("test_strview", 0);
+        int fd = memFD("test_strview");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -228,7 +228,7 @@ STD_TEST_SUITE(FDRegular) {
     }
 
     STD_TEST(HintCheck) {
-        int fd = memfd_create("test_hint", 0);
+        int fd = memFD("test_hint");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -243,7 +243,7 @@ STD_TEST_SUITE(FDRegular) {
     }
 
     STD_TEST(FlushWithoutData) {
-        int fd = memfd_create("test_flush_empty", 0);
+        int fd = memFD("test_flush_empty");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -256,7 +256,7 @@ STD_TEST_SUITE(FDRegular) {
     }
 
     STD_TEST(WriteAfterFlush) {
-        int fd = memfd_create("test_write_after_flush", 0);
+        int fd = memFD("test_write_after_flush");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -281,7 +281,7 @@ STD_TEST_SUITE(FDRegular) {
     }
 
     STD_TEST(WriteMixedSizes) {
-        int fd = memfd_create("test_mixed", 0);
+        int fd = memFD("test_mixed");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -305,7 +305,7 @@ STD_TEST_SUITE(FDRegular) {
 
 STD_TEST_SUITE(FDCharacter) {
     STD_TEST(HintCheck) {
-        int fd = memfd_create("test_char_hint", 0);
+        int fd = memFD("test_char_hint");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);
@@ -320,7 +320,7 @@ STD_TEST_SUITE(FDCharacter) {
     }
 
     STD_TEST(BasicWrite) {
-        int fd = memfd_create("test_char_write", 0);
+        int fd = memFD("test_char_write");
         STD_INSIST(fd >= 0);
 
         FD fdWrapper(fd);

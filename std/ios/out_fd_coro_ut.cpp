@@ -4,17 +4,17 @@
 #include <std/sys/fd.h>
 #include <std/thr/coro.h>
 #include <std/dbg/insist.h>
+#include <std/sys/memfd.h>
 
 #include <string.h>
 #include <unistd.h>
-#include <sys/mman.h>
 
 using namespace stl;
 
 STD_TEST_SUITE(CoroFDOutput) {
     STD_TEST(WriteData) {
         auto exec = CoroExecutor::create(4);
-        ScopedFD sfd(memfd_create("test", 0));
+        ScopedFD sfd(memFD("test"));
         STD_INSIST(sfd.get() >= 0);
 
         const char* data = "hello coro";
@@ -35,7 +35,7 @@ STD_TEST_SUITE(CoroFDOutput) {
 
     STD_TEST(WriteAdvancesOffset) {
         auto exec = CoroExecutor::create(4);
-        ScopedFD sfd(memfd_create("test", 0));
+        ScopedFD sfd(memFD("test"));
         STD_INSIST(sfd.get() >= 0);
 
         exec->spawn([&] {

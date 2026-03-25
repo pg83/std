@@ -4,16 +4,16 @@
 #include <std/sys/fd.h>
 #include <std/thr/coro.h>
 #include <std/dbg/insist.h>
+#include <std/sys/memfd.h>
 
 #include <string.h>
-#include <sys/mman.h>
 
 using namespace stl;
 
 STD_TEST_SUITE(CoroFDInput) {
     STD_TEST(ReadData) {
         auto exec = CoroExecutor::create(4);
-        ScopedFD sfd(memfd_create("test", 0));
+        ScopedFD sfd(memFD("test"));
         STD_INSIST(sfd.get() >= 0);
 
         const char* data = "hello coro";
@@ -35,7 +35,7 @@ STD_TEST_SUITE(CoroFDInput) {
 
     STD_TEST(ReadEof) {
         auto exec = CoroExecutor::create(4);
-        ScopedFD sfd(memfd_create("test", 0));
+        ScopedFD sfd(memFD("test"));
         STD_INSIST(sfd.get() >= 0);
 
         exec->spawn([&] {
@@ -52,7 +52,7 @@ STD_TEST_SUITE(CoroFDInput) {
 
     STD_TEST(ReadAdvancesOffset) {
         auto exec = CoroExecutor::create(4);
-        ScopedFD sfd(memfd_create("test", 0));
+        ScopedFD sfd(memFD("test"));
         STD_INSIST(sfd.get() >= 0);
 
         sfd.write("abcdef", 6);

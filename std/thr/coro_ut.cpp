@@ -10,6 +10,7 @@
 #include <std/tst/ut.h>
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
+#include <std/sys/memfd.h>
 #include <std/lib/vector.h>
 #include <std/sys/atomic.h>
 #include <std/mem/obj_pool.h>
@@ -18,7 +19,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/mman.h>
 
 using namespace stl;
 
@@ -700,7 +700,7 @@ STD_TEST_SUITE(CoroOffload) {
 
 namespace {
     int makeTmpFd() {
-        return memfd_create("coro_fs_ut", 0);
+        return memFD("coro_fs_ut");
     }
 }
 
