@@ -13,7 +13,7 @@ using namespace stl;
 
 namespace {
     void dutchRudder(int nStages, int nMessages) {
-        auto exec = CoroExecutor::create(4);
+        auto exec = CoroExecutor::create(8);
         auto opool = ObjPool::fromMemory();
 
         Vector<Channel*> chArr;
@@ -380,7 +380,7 @@ STD_TEST_SUITE(Channel) {
     }
 
     STD_TEST(_Pipeline) {
-        dutchRudder(1000, 100000);
+        dutchRudder(2000, 200000);
     }
 
     STD_TEST(Stress) {

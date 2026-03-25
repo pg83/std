@@ -472,6 +472,11 @@ STD_TEST_SUITE(CoroPoll) {
 
         struct Pipe {
             ScopedFD r, w;
+            Pipe() {
+                createPipeFD(r, w);
+                r.setNonBlocking();
+                w.setNonBlocking();
+            }
             ~Pipe() noexcept {
             }
         };
@@ -482,11 +487,6 @@ STD_TEST_SUITE(CoroPoll) {
         for (int i = 0; i < N; i++) {
             auto* p = opool->make<Pipe>();
             pipes.pushBack(p);
-
-            createPipeFD(p->r, p->w);
-
-            p->r.setNonBlocking();
-            p->w.setNonBlocking();
 
             int rfd = p->r.get();
             int wfd = p->w.get();
