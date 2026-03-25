@@ -280,9 +280,6 @@ namespace {
     };
 }
 
-WaitQueue::~WaitQueue() noexcept {
-}
-
 WaitQueue* WaitQueue::construct(ObjPool* pool, size_t maxWaiters) {
     if (maxWaiters <= 32) {
         return pool->make<BitmaskImpl<u32>>();
