@@ -3,16 +3,20 @@
 #include "args.h"
 
 #include <std/ios/sys.h>
+#include <std/sys/crt.h>
 #include <std/str/view.h>
 #include <std/thr/pool.h>
+#include <std/thr/guard.h>
 #include <std/thr/mutex.h>
 #include <std/sys/throw.h>
 #include <std/dbg/color.h>
 #include <std/dbg/panic.h>
 #include <std/alg/range.h>
 #include <std/map/treap.h>
+#include <std/alg/qsort.h>
 #include <std/sys/atomic.h>
 #include <std/lib/vector.h>
+#include <std/alg/minmax.h>
 #include <std/str/builder.h>
 #include <std/mem/obj_pool.h>
 
@@ -94,6 +98,11 @@ namespace {
         }
     };
 
+    struct TestTiming {
+        u64 timeUs;
+        TestFunc* test;
+    };
+
     struct Tests: public Treap {
         Ctx* ctx = 0;
         GetOpt* opt = 0;
@@ -101,6 +110,8 @@ namespace {
         size_t err = 0;
         size_t skip = 0;
         size_t mute = 0;
+        Vector<TestTiming> timings;
+        Mutex* timingsMu = nullptr;
 
         bool cmp(void* l, void* r) const noexcept override {
             return compare(*(const TestFunc*)(l), *(const TestFunc*)(r));
@@ -143,6 +154,18 @@ void Tests::execute() {
     auto opool = ObjPool::fromMemory();
     auto pool = ThreadPool::simple(opool.mutPtr(), opt->threads());
 
+    size_t topN = 0;
+
+    if (auto* sv = opt->opts.find(StringView(u8"top")); sv) {
+        topN = (size_t)sv->stou();
+    }
+
+    Mutex mu;
+
+    if (topN) {
+        timingsMu = &mu;
+    }
+
     StringBuilder sb;
 
     visit([&](void* el) {
@@ -161,10 +184,18 @@ void Tests::execute() {
 
                 bctx.opts = &opt->opts;
 
+                u64 t0 = monotonicNowUs();
+
                 if (::execute(test, bctx)) {
                     stdAtomicAddAndFetch(&ok, 1, MemoryOrder::Relaxed);
                 } else {
                     stdAtomicAddAndFetch(&err, 1, MemoryOrder::Relaxed);
+                }
+
+                if (timingsMu) {
+                    u64 dt = monotonicNowUs() - t0;
+                    LockGuard guard(*timingsMu);
+                    timings.pushBack(TestTiming{dt, test});
                 }
 
                 stdoutStream().write(bctx.buf_.data(), bctx.buf_.length());
@@ -175,6 +206,30 @@ void Tests::execute() {
     pool->join();
 
     auto&& outb = sysO;
+
+    if (!timings.empty()) {
+        quickSort(timings.mutBegin(), timings.mutEnd(), [](const TestTiming& a, const TestTiming& b) {
+            return a.timeUs > b.timeUs;
+        });
+
+        outb << endL
+             << StringView(u8"Slowest tests:")
+             << endL;
+
+        size_t n = ::min(topN, timings.length());
+
+        for (size_t i = 0; i < n; ++i) {
+            auto& t = timings[i];
+
+            outb << StringView(u8"  ")
+                 << (t.timeUs / 1000)
+                 << StringView(u8" ms  ")
+                 << *t.test
+                 << endL;
+        }
+
+        outb << endL;
+    }
 
     outb << Color::bright(AnsiColor::Green)
          << StringView(u8"OK: ")
@@ -264,6 +319,7 @@ void GetOpt::help() const noexcept {
         << StringView(u8"Options:") << endL
         << StringView(u8"  --help         print this help") << endL
         << StringView(u8"  --threads=N    run tests in parallel using N threads") << endL
+        << StringView(u8"  --top=N        show N slowest tests") << endL
         << StringView(u8"  --OPT          equivalent to --OPT=1") << endL
         << StringView(u8"  --OPT=VALUE    set option OPT to VALUE") << endL
         << flsH;
