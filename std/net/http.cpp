@@ -313,6 +313,8 @@ void HttpServerCtlImpl::run(Semaphore* sem) {
 
         exec->spawn([this, fd = client.release()] {
             try {
+                TcpSocket(fd.get(), exec).setNoDelay(true);
+
                 HttpConnection conn(&handler, exec, fd.get());
 
                 while (conn.serve()) {

@@ -25,6 +25,7 @@ namespace stl {
         int socket(int domain, int type, int protocol);
 
         int setReuseAddr(bool on);
+        int setNoDelay(bool on);
 
         int connectInf(const sockaddr* addr, u32 addrLen);
         int connect(const sockaddr* addr, u32 addrLen, u64 deadlineUs);

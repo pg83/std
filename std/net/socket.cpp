@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <sys/uio.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 
 using namespace stl;
 
@@ -53,6 +55,16 @@ int TcpSocket::setReuseAddr(bool on) {
     int opt = on ? 1 : 0;
 
     if (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        return -errno;
+    }
+
+    return 0;
+}
+
+int TcpSocket::setNoDelay(bool on) {
+    int opt = on ? 1 : 0;
+
+    if (::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0) {
         return -errno;
     }
 
