@@ -6,6 +6,7 @@
 #include "poller.h"
 #include "channel.h"
 #include "cond_var.h"
+#include "semaphore.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/fd.h>
@@ -791,12 +792,13 @@ STD_TEST_SUITE(CoroExecutorFS) {
 
     STD_TEST(MultipleConcurrent) {
         auto exec = CoroExecutor::create(4);
-        int done = 0;
 
         exec->spawn([&] {
             int fd = makeTmpFd();
             const char data[] = "concurrent";
             ::write(fd, data, sizeof(data));
+
+            Semaphore sem(0, exec.mutPtr());
 
             for (int i = 0; i < 8; ++i) {
                 exec->spawn([&] {
@@ -804,12 +806,15 @@ STD_TEST_SUITE(CoroExecutorFS) {
                     ssize_t n = exec->pread(fd, buf, sizeof(buf), 0);
                     STD_INSIST(n == (ssize_t)sizeof(data));
                     STD_INSIST(memcmp(buf, data, sizeof(data)) == 0);
-
-                    if (++done == 8) {
-                        ::close(fd);
-                    }
+                    sem.post();
                 });
             }
+
+            for (int i = 0; i < 8; ++i) {
+                sem.wait();
+            }
+
+            ::close(fd);
         });
 
         exec->join();
