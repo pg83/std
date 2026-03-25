@@ -112,7 +112,11 @@ namespace {
 }
 
 int SslSocketImpl::recv(void* ctx, unsigned char* buf, size_t len) {
-    size_t n = ((SslSocketImpl*)ctx)->in->read(buf, len);
+    auto sock = (SslSocketImpl*)ctx;
+
+    sock->out->flush();
+
+    size_t n = sock->in->read(buf, len);
 
     if (n == 0) {
         return MBEDTLS_ERR_SSL_WANT_READ;
