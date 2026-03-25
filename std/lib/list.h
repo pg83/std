@@ -8,7 +8,6 @@ namespace stl {
 
     public:
         ~IntrusiveList() noexcept {
-            clear();
         }
 
         IntrusiveList() noexcept {
