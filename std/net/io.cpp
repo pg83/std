@@ -32,6 +32,7 @@ namespace {
         LimitedOutput(Output* inner, size_t limit);
 
         size_t writeImpl(const void* data, size_t len) override;
+        void flushImpl() override;
     };
 
     size_t fmtHex(u8* buf, size_t bufLen, size_t val) {
@@ -56,6 +57,7 @@ namespace {
         ChunkedOutput(Output* inner);
 
         size_t writeImpl(const void* data, size_t len) override;
+        void flushImpl() override;
         void finishImpl() override;
     };
 
@@ -164,6 +166,10 @@ size_t LimitedOutput::writeImpl(const void* data, size_t len) {
     return n;
 }
 
+void LimitedOutput::flushImpl() {
+    inner->flush();
+}
+
 ChunkedOutput::ChunkedOutput(Output* inner)
     : inner(inner)
 {
@@ -182,6 +188,10 @@ size_t ChunkedOutput::writeImpl(const void* data, size_t len) {
     inner->writeV(iov, 3);
 
     return len;
+}
+
+void ChunkedOutput::flushImpl() {
+    inner->flush();
 }
 
 void ChunkedOutput::finishImpl() {

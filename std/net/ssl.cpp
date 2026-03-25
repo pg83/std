@@ -43,6 +43,7 @@ namespace {
 
         size_t readImpl(void* data, size_t len) override;
         size_t writeImpl(const void* data, size_t len) override;
+        void flushImpl() override;
 
         static int recv(void* ctx, unsigned char* buf, size_t len);
         static int send(void* ctx, const unsigned char* buf, size_t len);
@@ -162,6 +163,10 @@ size_t SslSocketImpl::writeImpl(const void* data, size_t len) {
     }
 
     return (size_t)r;
+}
+
+void SslSocketImpl::flushImpl() {
+    out->flush();
 }
 
 SslCtxImpl::SslCtxImpl(StringView certData, StringView keyData) {
