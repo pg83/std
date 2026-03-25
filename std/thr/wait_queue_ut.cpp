@@ -151,4 +151,96 @@ STD_TEST_SUITE(WaitQueue) {
 
         STD_INSIST(found == 4);
     }
+
+    STD_TEST(Bitmask32) {
+        auto opool = ObjPool::fromMemory();
+        auto* wq = WaitQueue::construct(opool.mutPtr(), 32);
+
+        WaitQueue::Item items[32];
+
+        for (u8 i = 0; i < 32; ++i) {
+            items[i].index = i;
+            wq->enqueue(&items[i]);
+        }
+
+        STD_INSIST(wq->sleeping() == 32);
+
+        int found = 0;
+
+        while (wq->dequeue()) {
+            ++found;
+        }
+
+        STD_INSIST(found == 32);
+        STD_INSIST(wq->sleeping() == 0);
+    }
+
+    STD_TEST(Bitmask64) {
+        auto opool = ObjPool::fromMemory();
+        auto* wq = WaitQueue::construct(opool.mutPtr(), 64);
+
+        WaitQueue::Item items[64];
+
+        for (u8 i = 0; i < 64; ++i) {
+            items[i].index = i;
+            wq->enqueue(&items[i]);
+        }
+
+        STD_INSIST(wq->sleeping() == 64);
+
+        int found = 0;
+
+        while (wq->dequeue()) {
+            ++found;
+        }
+
+        STD_INSIST(found == 64);
+        STD_INSIST(wq->sleeping() == 0);
+    }
+
+    STD_TEST(Bitmask128) {
+        auto opool = ObjPool::fromMemory();
+        auto* wq = WaitQueue::construct(opool.mutPtr(), 128);
+
+        WaitQueue::Item items[128];
+
+        for (u8 i = 0; i < 128; ++i) {
+            items[i].index = i;
+            wq->enqueue(&items[i]);
+        }
+
+        STD_INSIST(wq->sleeping() == 128);
+
+        int found = 0;
+
+        while (wq->dequeue()) {
+            ++found;
+        }
+
+        STD_INSIST(found == 128);
+        STD_INSIST(wq->sleeping() == 0);
+    }
+
+    STD_TEST(Pointer256) {
+        auto opool = ObjPool::fromMemory();
+        auto* wq = WaitQueue::construct(opool.mutPtr(), 256);
+
+        WaitQueue::Item items[256];
+
+        for (int i = 0; i < 256; ++i) {
+            items[i].index = (u8)i;
+            wq->enqueue(&items[i]);
+        }
+
+        STD_INSIST(wq->sleeping() == 256);
+
+        int found = 0;
+
+        while (wq->dequeue()) {
+            ++found;
+        }
+
+        STD_INSIST(found == 256);
+        STD_INSIST(wq->sleeping() == 0);
+    }
 }
