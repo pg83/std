@@ -5,6 +5,8 @@
 #include <std/mem/obj_pool.h>
 #include <std/str/builder.h>
 
+#if __has_include(<mbedtls/ssl.h>)
+
 #include <mbedtls/ssl.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
@@ -186,3 +188,13 @@ SslSocket* SslCtxImpl::create(ObjPool* pool, Input* in, Output* out) {
 SslCtx* stl::SslCtx::create(ObjPool* pool, StringView cert, StringView key) {
     return pool->make<SslCtxImpl>(cert, key);
 }
+
+#else
+
+using namespace stl;
+
+SslCtx* stl::SslCtx::create(ObjPool*, StringView, StringView) {
+    Errno(1).raise(StringBuilder() << StringView(u8"ssl not available (mbedtls not found)"));
+}
+
+#endif
