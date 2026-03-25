@@ -4,11 +4,41 @@
 
 #include <std/dbg/insist.h>
 
-#include <semaphore.h>
+#if defined(__APPLE__)
+    #include <dispatch/dispatch.h>
+#else
+    #include <semaphore.h>
+#endif
 
 using namespace stl;
 
 namespace {
+#if defined(__APPLE__)
+    struct SemImpl: public SemaphoreIface {
+        dispatch_semaphore_t sem_;
+
+        SemImpl(size_t initial) noexcept
+            : sem_(dispatch_semaphore_create(initial))
+        {
+        }
+
+        ~SemImpl() noexcept override {
+            dispatch_release(sem_);
+        }
+
+        void post() noexcept override {
+            dispatch_semaphore_signal(sem_);
+        }
+
+        void wait() noexcept override {
+            dispatch_semaphore_wait(sem_, DISPATCH_TIME_FOREVER);
+        }
+
+        bool tryWait() noexcept override {
+            return dispatch_semaphore_wait(sem_, DISPATCH_TIME_NOW) == 0;
+        }
+    };
+#else
     struct SemImpl: public SemaphoreIface {
         sem_t sem_;
 
@@ -32,6 +62,7 @@ namespace {
             return sem_trywait(&sem_) == 0;
         }
     };
+#endif
 }
 
 Semaphore::Semaphore(size_t initial)
