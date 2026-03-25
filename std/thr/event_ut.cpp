@@ -4,7 +4,10 @@
 #include "thread.h"
 
 #include <std/tst/ut.h>
+#include <std/alg/range.h>
+#include <std/lib/vector.h>
 #include <std/sys/atomic.h>
+#include <std/mem/obj_pool.h>
 
 using namespace stl;
 
@@ -108,145 +111,33 @@ STD_TEST_SUITE(EventDefault) {
         const int THREADS = 8;
         u32 counter = 0;
 
-        {
-            ScopedThread threads[THREADS] = {
-                ScopedThread([&] {
-                    for (int i = 0; i < N; ++i) {
-                        Event ev;
-                        int v = 0;
+        auto pool = ObjPool::fromMemory();
+        Vector<Thread*> threads;
 
-                        {
-                            ScopedThread t([&] {
-                                v = 1;
-                                ev.signal();
-                            });
+        for (int j = 0; j < THREADS; ++j) {
+            auto* r = makeRunablePtr([&] {
+                for (int i = 0; i < N; ++i) {
+                    Event ev;
+                    int v = 0;
 
-                            ev.wait(makeRunable([] {}));
-                        }
+                    {
+                        ScopedThread t([&] {
+                            v = 1;
+                            ev.signal();
+                        });
 
-                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
+                        ev.wait(makeRunable([] {}));
                     }
-                }),
-                ScopedThread([&] {
-                    for (int i = 0; i < N; ++i) {
-                        Event ev;
-                        int v = 0;
 
-                        {
-                            ScopedThread t([&] {
-                                v = 1;
-                                ev.signal();
-                            });
+                    stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
+                }
+            });
 
-                            ev.wait(makeRunable([] {}));
-                        }
+            threads.pushBack(pool->make<Thread>(*r));
+        }
 
-                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
-                    }
-                }),
-                ScopedThread([&] {
-                    for (int i = 0; i < N; ++i) {
-                        Event ev;
-                        int v = 0;
-
-                        {
-                            ScopedThread t([&] {
-                                v = 1;
-                                ev.signal();
-                            });
-
-                            ev.wait(makeRunable([] {}));
-                        }
-
-                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
-                    }
-                }),
-                ScopedThread([&] {
-                    for (int i = 0; i < N; ++i) {
-                        Event ev;
-                        int v = 0;
-
-                        {
-                            ScopedThread t([&] {
-                                v = 1;
-                                ev.signal();
-                            });
-
-                            ev.wait(makeRunable([] {}));
-                        }
-
-                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
-                    }
-                }),
-                ScopedThread([&] {
-                    for (int i = 0; i < N; ++i) {
-                        Event ev;
-                        int v = 0;
-
-                        {
-                            ScopedThread t([&] {
-                                v = 1;
-                                ev.signal();
-                            });
-
-                            ev.wait(makeRunable([] {}));
-                        }
-
-                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
-                    }
-                }),
-                ScopedThread([&] {
-                    for (int i = 0; i < N; ++i) {
-                        Event ev;
-                        int v = 0;
-
-                        {
-                            ScopedThread t([&] {
-                                v = 1;
-                                ev.signal();
-                            });
-
-                            ev.wait(makeRunable([] {}));
-                        }
-
-                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
-                    }
-                }),
-                ScopedThread([&] {
-                    for (int i = 0; i < N; ++i) {
-                        Event ev;
-                        int v = 0;
-
-                        {
-                            ScopedThread t([&] {
-                                v = 1;
-                                ev.signal();
-                            });
-
-                            ev.wait(makeRunable([] {}));
-                        }
-
-                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
-                    }
-                }),
-                ScopedThread([&] {
-                    for (int i = 0; i < N; ++i) {
-                        Event ev;
-                        int v = 0;
-
-                        {
-                            ScopedThread t([&] {
-                                v = 1;
-                                ev.signal();
-                            });
-
-                            ev.wait(makeRunable([] {}));
-                        }
-
-                        stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
-                    }
-                }),
-            };
+        for (auto* t : range(threads)) {
+            t->join();
         }
 
         STD_INSIST(counter == N * THREADS);
