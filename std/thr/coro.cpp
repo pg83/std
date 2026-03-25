@@ -339,7 +339,11 @@ int CoroExecutorImpl::fdatasync(int fd) {
 
     // clang-format off
     offload(fsPool_, [&] {
+#if defined(__APPLE__)
+        result = ::fcntl(fd, F_FULLFSYNC) < 0 ? -errno : 0;
+#else
         result = ::fdatasync(fd) < 0 ? -errno : 0;
+#endif
     });
     // clang-format on
 
