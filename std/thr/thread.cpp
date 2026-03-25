@@ -1,6 +1,6 @@
 #include "thread.h"
 #include "coro.h"
-#include "mutex.h"
+#include "semaphore.h"
 #include "runable.h"
 #include "thread_iface.h"
 
@@ -92,12 +92,12 @@ u64 Thread::currentThreadId() noexcept {
 void stl::detach(Runable& runable) {
     struct Helper: public Runable {
         Runable* slave;
-        Mutex m;
+        Semaphore sem;
         Thread thr;
 
         Helper(Runable* r) noexcept
             : slave(r)
-            , m(true)
+            , sem(0)
             , thr(*this)
         {
         }
@@ -105,11 +105,11 @@ void stl::detach(Runable& runable) {
         void run() override {
             ScopedPtr<Helper> that(this);
             // race in musl libc
-            m.lock();
+            sem.wait();
             slave->run();
             thr.detach();
         }
     };
 
-    (new Helper(&runable))->m.unlock();
+    (new Helper(&runable))->sem.post();
 }
