@@ -1,6 +1,8 @@
 #include "hash.h"
 
-#include <rapidhash.h>
+#if __has_include(<rapidhash.h>)
+    #include <rapidhash.h>
+#endif
 
 using namespace stl;
 
@@ -11,6 +13,20 @@ namespace {
 
         return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
     }
+
+#if !__has_include(<rapidhash.h>)
+    static u64 fnv1a(const void* data, size_t len) noexcept {
+        u64 h = 14695981039346656037ull;
+        auto p = (const u8*)data;
+
+        for (size_t i = 0; i < len; ++i) {
+            h ^= p[i];
+            h *= 1099511628211ull;
+        }
+
+        return h;
+    }
+#endif
 }
 
 u32 stl::shash32(const void* data, size_t len) noexcept {
@@ -18,5 +34,9 @@ u32 stl::shash32(const void* data, size_t len) noexcept {
 }
 
 u64 stl::shash64(const void* data, size_t len) noexcept {
+#if __has_include(<rapidhash.h>)
     return rapidhash(data, len);
+#else
+    return fnv1a(data, len);
+#endif
 }
