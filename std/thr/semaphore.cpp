@@ -5,7 +5,9 @@
 #include <std/dbg/insist.h>
 
 #if defined(__APPLE__)
-    #include <dispatch/dispatch.h>
+    #include "mutex.h"
+    #include "cond_var.h"
+    #include "guard.h"
 #else
     #include <semaphore.h>
 #endif
@@ -15,27 +17,40 @@ using namespace stl;
 namespace {
 #if defined(__APPLE__)
     struct SemImpl: public SemaphoreIface {
-        dispatch_semaphore_t sem_;
+        Mutex mu_;
+        CondVar cv_;
+        size_t count_;
 
         SemImpl(size_t initial) noexcept
-            : sem_(dispatch_semaphore_create(initial))
+            : count_(initial)
         {
         }
 
-        ~SemImpl() noexcept override {
-            dispatch_release(sem_);
-        }
-
         void post() noexcept override {
-            dispatch_semaphore_signal(sem_);
+            LockGuard g(mu_);
+            ++count_;
+            cv_.signal();
         }
 
         void wait() noexcept override {
-            dispatch_semaphore_wait(sem_, DISPATCH_TIME_FOREVER);
+            LockGuard g(mu_);
+
+            while (count_ == 0) {
+                cv_.wait(mu_);
+            }
+
+            --count_;
         }
 
         bool tryWait() noexcept override {
-            return dispatch_semaphore_wait(sem_, DISPATCH_TIME_NOW) == 0;
+            LockGuard g(mu_);
+
+            if (count_ > 0) {
+                --count_;
+                return true;
+            }
+
+            return false;
         }
     };
 #else
