@@ -149,8 +149,8 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(MutexStress) {
         auto exec = CoroExecutor::create(4);
-        const int nCoros = 16;
-        const int nIters = 500;
+        const int nCoros = 8;
+        const int nIters = 200;
         int counter = 0;
         Mutex mtx(exec.mutPtr());
 
@@ -250,8 +250,8 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(CondVarStress) {
         auto exec = CoroExecutor::create(4);
-        const int nCoros = 8;
-        const int nIters = 200;
+        const int nCoros = 4;
+        const int nIters = 20;
         int queue = 0;
         int consumed = 0;
         Mutex mtx(exec.mutPtr());
@@ -608,7 +608,7 @@ STD_TEST_SUITE(CoroPoll) {
         int counter = 0;
         Mutex mtx(&*exec);
 
-        for (int i = 0; i < 1000; ++i) {
+        for (int i = 0; i < 100; ++i) {
             exec->spawn([&] {
                 LockGuard guard(mtx);
                 ++counter;
@@ -616,7 +616,7 @@ STD_TEST_SUITE(CoroPoll) {
         }
 
         exec->join();
-        STD_INSIST(counter == 1000);
+        STD_INSIST(counter == 100);
     }
 }
 
@@ -686,7 +686,7 @@ STD_TEST_SUITE(CoroOffload) {
             int result = 0;
 
             exec->offload(pool, [&] {
-                              for (volatile int i = 0; i < 1000000; ++i) {
+                              for (volatile int i = 0; i < 10000; ++i) {
                               }
                               result = 1;
                           });

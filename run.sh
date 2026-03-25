@@ -20,4 +20,4 @@ EXTRA=
     ${EXTRA} \
     -- ./build.sh
 
-time timeout 10s ./tst/test
+time timeout 10s ./tst/test --top=20

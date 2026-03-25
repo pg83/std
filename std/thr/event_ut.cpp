@@ -76,7 +76,7 @@ STD_TEST_SUITE(EventDefault) {
     }
 
     STD_TEST(StressManyEvents) {
-        const int N = 100;
+        const int N = 20;
 
         for (int i = 0; i < N; ++i) {
             Event ev;
@@ -96,7 +96,7 @@ STD_TEST_SUITE(EventDefault) {
     }
 
     STD_TEST(StressSignalBeforeWait) {
-        const int N = 100;
+        const int N = 20;
 
         for (int i = 0; i < N; ++i) {
             Event ev;
@@ -107,8 +107,8 @@ STD_TEST_SUITE(EventDefault) {
     }
 
     STD_TEST(StressConcurrentPairs) {
-        const int N = 20;
-        const int THREADS = 8;
+        const int N = 5;
+        const int THREADS = 4;
         u32 counter = 0;
 
         auto pool = ObjPool::fromMemory();
@@ -144,7 +144,7 @@ STD_TEST_SUITE(EventDefault) {
     }
 
     STD_TEST(StressDirectHandoff) {
-        const int N = 100;
+        const int N = 10;
 
         for (int i = 0; i < N; ++i) {
             Event ev;

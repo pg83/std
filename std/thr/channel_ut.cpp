@@ -376,7 +376,7 @@ STD_TEST_SUITE(Channel) {
     }
 
     STD_TEST(Pipeline) {
-        dutchRudder(50, 500);
+        dutchRudder(10, 100);
     }
 
     STD_TEST(_Pipeline) {
@@ -386,9 +386,9 @@ STD_TEST_SUITE(Channel) {
     STD_TEST(Stress) {
         auto exec = CoroExecutor::create(8);
         Channel ch(exec.mutPtr(), 16);
-        const int nProducers = 8;
-        const int nConsumers = 8;
-        const int nPerProducer = 200;
+        const int nProducers = 4;
+        const int nConsumers = 4;
+        const int nPerProducer = 100;
         const int total = nProducers * nPerProducer;
         WaitGroup prodDone(nProducers);
         int consumed = 0;

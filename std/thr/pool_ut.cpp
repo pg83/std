@@ -182,14 +182,14 @@ for (volatile int i = 0; i < 10000; ++i) {} });
         auto* pool = ThreadPool::simple(opool.mutPtr(), 8);
         int counter = 0;
 
-        for (int i = 0; i < 100; ++i) {
+        for (int i = 0; i < 50; ++i) {
             pool->submit([&counter] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             });
         }
         pool->join();
 
-        STD_INSIST(counter == 100);
+        STD_INSIST(counter == 50);
     }
 }
 

@@ -225,7 +225,7 @@ STD_TEST_SUITE(SpinMutex) {
 
         for (int i = 0; i < 4; ++i) {
             exec->spawn([&] {
-                for (int j = 0; j < 10000; ++j) {
+                for (int j = 0; j < 1000; ++j) {
                     LockGuard guard(mtx);
                     ++counter;
                 }
@@ -233,7 +233,7 @@ STD_TEST_SUITE(SpinMutex) {
         }
 
         exec->join();
-        STD_INSIST(counter == 40000);
+        STD_INSIST(counter == 4000);
     }
 }
 

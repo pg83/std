@@ -222,7 +222,7 @@ void Tests::execute() {
             auto& t = timings[i];
 
             outb << StringView(u8"  ")
-                 << (t.timeUs / 1000)
+                 << t.timeUs
                  << StringView(u8" ms  ")
                  << *t.test
                  << endL;

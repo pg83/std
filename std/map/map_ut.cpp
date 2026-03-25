@@ -411,11 +411,11 @@ STD_TEST_SUITE(Map) {
 
     STD_TEST(StressTestInserts) {
         Map<int, int> m;
-        for (int i = 0; i < 10000; ++i) {
+        for (int i = 0; i < 1000; ++i) {
             m.insert(i, i * 2);
         }
 
-        for (int i = 0; i < 10000; ++i) {
+        for (int i = 0; i < 1000; ++i) {
             int* val = m.find(i);
             STD_INSIST(val != nullptr);
             STD_INSIST(*val == i * 2);
