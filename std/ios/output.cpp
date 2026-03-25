@@ -29,7 +29,7 @@ size_t Output::writeV(iovec* iov, size_t iovcnt) {
 
         res += written;
 
-        while (written >= iov->iov_len) {
+        while (iovcnt > 0 && written >= iov->iov_len) {
             written -= iov->iov_len;
             iov++;
             iovcnt--;
