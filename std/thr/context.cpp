@@ -110,8 +110,8 @@ __attribute__((no_sanitize("address"))) void ContextImpl::trampoline() {
     ContextImpl* self;
 
     __asm__ volatile("movq %%rbx, %0" : "=r"(self));
-    self->afterSwitch();
 
+    self->afterSwitch();
     self->entry_->run();
 
     STD_INSIST(false);
@@ -196,8 +196,8 @@ __attribute__((no_sanitize("address"))) void ContextImpl::trampoline() {
     ContextImpl* self;
 
     __asm__ volatile("mov %0, x19" : "=r"(self));
-    self->afterSwitch();
 
+    self->afterSwitch();
     self->entry_->run();
 
     STD_INSIST(false);
