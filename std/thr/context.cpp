@@ -102,6 +102,7 @@ void ContextImpl::swapContext(u64*, u64*) {
         "retq\n\t");
 }
 
+__attribute__((no_sanitize("address")))
 void ContextImpl::trampoline() {
     ContextImpl* self;
 
@@ -188,6 +189,7 @@ void ContextImpl::swapContext(u64*, u64*) {
         "ret\n\t");
 }
 
+__attribute__((no_sanitize("address")))
 void ContextImpl::trampoline() {
     ContextImpl* self;
 
