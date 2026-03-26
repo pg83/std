@@ -406,9 +406,7 @@ SslCtx* stl::SslCtx::create(ObjPool* pool, StringView cert, StringView key) {
         }
     }
 
-    SslCtx* ctx = createOpenSsl(pool, cert, key);
-
-    if (ctx) {
+    if (auto ctx = createOpenSsl(pool, cert, key); ctx) {
         return ctx;
     }
 
