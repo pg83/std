@@ -17,6 +17,11 @@ using namespace stl;
     #define STD_HAVE_OPENSSL 1
 #endif
 
+#if __has_include(<s2n.h>)
+    #include <s2n.h>
+    #define STD_HAVE_S2N 1
+#endif
+
 #if __has_include(<mbedtls/ssl.h>)
     #include <mbedtls/ssl.h>
     #include <mbedtls/ctr_drbg.h>
@@ -198,6 +203,137 @@ ossl::SslCtxImpl::SslCtxImpl(StringView certData, StringView keyData) {
 
 SslSocket* ossl::SslCtxImpl::create(ObjPool* pool, Input* in, Output* out) {
     return pool->make<SslSocketImpl>(ctx, bioMethod.method, in, out);
+}
+#endif
+
+#if defined(STD_HAVE_S2N)
+namespace {
+    namespace s2n {
+        [[noreturn]]
+        void raiseSsl() {
+            Errno(s2n_errno).raise(StringBuilder() << StringView(s2n_strerror(s2n_errno, "EN")));
+        }
+
+        void checkSsl(int r) {
+            if (r < 0) {
+                raiseSsl();
+            }
+        }
+
+        struct SslSocketImpl: public SslSocket {
+            struct s2n_connection* conn;
+            Input* in;
+            Output* out;
+
+            SslSocketImpl(struct s2n_config* conf, Input* in, Output* out);
+
+            ~SslSocketImpl() noexcept {
+                s2n_connection_free(conn);
+            }
+
+            size_t readImpl(void* data, size_t len) override;
+            size_t writeImpl(const void* data, size_t len) override;
+            void flushImpl() override;
+
+            static int recvCb(void* ctx, uint8_t* buf, uint32_t len);
+            static int sendCb(void* ctx, const uint8_t* buf, uint32_t len);
+        };
+
+        struct SslCtxImpl: public SslCtx {
+            struct s2n_config* conf;
+            struct s2n_cert_chain_and_key* certKey;
+
+            SslCtxImpl(StringView certData, StringView keyData);
+
+            ~SslCtxImpl() noexcept {
+                s2n_cert_chain_and_key_free(certKey);
+                s2n_config_free(conf);
+            }
+
+            SslSocket* create(ObjPool* pool, Input* in, Output* out) override;
+        };
+    }
+}
+
+int s2n::SslSocketImpl::recvCb(void* ctx, uint8_t* buf, uint32_t len) {
+    auto sock = (SslSocketImpl*)ctx;
+
+    sock->out->flush();
+
+    size_t n = sock->in->read(buf, (size_t)len);
+
+    if (n == 0) {
+        errno = EWOULDBLOCK;
+
+        return -1;
+    }
+
+    return (int)n;
+}
+
+int s2n::SslSocketImpl::sendCb(void* ctx, const uint8_t* buf, uint32_t len) {
+    ((SslSocketImpl*)ctx)->out->write(buf, (size_t)len);
+
+    return (int)len;
+}
+
+s2n::SslSocketImpl::SslSocketImpl(struct s2n_config* conf, Input* in, Output* out)
+    : in(in)
+    , out(out)
+{
+    conn = s2n_connection_new(S2N_SERVER);
+    s2n_connection_set_config(conn, conf);
+    s2n_connection_set_recv_cb(conn, recvCb);
+    s2n_connection_set_send_cb(conn, sendCb);
+    s2n_connection_set_recv_ctx(conn, this);
+    s2n_connection_set_send_ctx(conn, this);
+
+    s2n_blocked_status blocked;
+
+    checkSsl(s2n_negotiate(conn, &blocked));
+}
+
+size_t s2n::SslSocketImpl::readImpl(void* data, size_t len) {
+    s2n_blocked_status blocked;
+    ssize_t r = s2n_recv(conn, data, (ssize_t)len, &blocked);
+
+    if (r == 0) {
+        return 0;
+    }
+
+    if (r < 0) {
+        raiseSsl();
+    }
+
+    return (size_t)r;
+}
+
+size_t s2n::SslSocketImpl::writeImpl(const void* data, size_t len) {
+    s2n_blocked_status blocked;
+    ssize_t r = s2n_send(conn, data, (ssize_t)len, &blocked);
+
+    if (r < 0) {
+        raiseSsl();
+    }
+
+    return (size_t)r;
+}
+
+void s2n::SslSocketImpl::flushImpl() {
+    out->flush();
+}
+
+s2n::SslCtxImpl::SslCtxImpl(StringView certData, StringView keyData) {
+    s2n_init();
+
+    conf = s2n_config_new();
+    certKey = s2n_cert_chain_and_key_new();
+    checkSsl(s2n_cert_chain_and_key_load_pem_bytes(certKey, (uint8_t*)certData.data(), (uint32_t)certData.length(), (uint8_t*)keyData.data(), (uint32_t)keyData.length()));
+    checkSsl(s2n_config_add_cert_chain_and_key_to_store(conf, certKey));
+}
+
+SslSocket* s2n::SslCtxImpl::create(ObjPool* pool, Input* in, Output* out) {
+    return pool->make<SslSocketImpl>(conf, in, out);
 }
 #endif
 
@@ -385,6 +521,14 @@ namespace {
 #endif
     }
 
+    SslCtx* createS2n([[maybe_unused]] ObjPool* pool, [[maybe_unused]] StringView cert, [[maybe_unused]] StringView key) {
+#if defined(STD_HAVE_S2N)
+        return pool->make<s2n::SslCtxImpl>(cert, key);
+#else
+        return nullptr;
+#endif
+    }
+
     SslCtx* createMbedTls([[maybe_unused]] ObjPool* pool, [[maybe_unused]] StringView cert, [[maybe_unused]] StringView key) {
 #if defined(STD_HAVE_MBEDTLS)
         return pool->make<mbed::SslCtxImpl>(cert, key);
@@ -402,12 +546,20 @@ SslCtx* stl::SslCtx::create(ObjPool* pool, StringView cert, StringView key) {
             return createOpenSsl(pool, cert, key);
         }
 
+        if (strcmp(env, "s2n") == 0) {
+            return createS2n(pool, cert, key);
+        }
+
         if (strcmp(env, "mbedtls") == 0) {
             return createMbedTls(pool, cert, key);
         }
     }
 
     if (auto ctx = createOpenSsl(pool, cert, key); ctx) {
+        return ctx;
+    }
+
+    if (auto ctx = createS2n(pool, cert, key); ctx) {
         return ctx;
     }
 
