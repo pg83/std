@@ -6,13 +6,21 @@
 #include <std/str/builder.h>
 
 #if __has_include(<openssl/ssl.h>)
-
     #include <openssl/ssl.h>
     #include <openssl/err.h>
     #include <openssl/bio.h>
+    #define HAVE_OPENSSL 1
+#elif __has_include(<mbedtls/ssl.h>)
+    #include <mbedtls/ssl.h>
+    #include <mbedtls/ctr_drbg.h>
+    #include <mbedtls/entropy.h>
+    #include <mbedtls/x509_crt.h>
+    #define HAVE_MBEDTLS 1
+#endif
 
 using namespace stl;
 
+#if defined(HAVE_OPENSSL)
 namespace {
     [[noreturn]]
     void raiseSsl() {
@@ -188,15 +196,7 @@ SslCtx* stl::SslCtx::create(ObjPool* pool, StringView cert, StringView key) {
     return pool->make<SslCtxImpl>(cert, key);
 }
 
-#elif __has_include(<mbedtls/ssl.h>)
-
-    #include <mbedtls/ssl.h>
-    #include <mbedtls/ctr_drbg.h>
-    #include <mbedtls/entropy.h>
-    #include <mbedtls/x509_crt.h>
-
-using namespace stl;
-
+#elif defined(HAVE_MBEDTLS)
 namespace {
     [[noreturn]]
     void raiseSsl(int err) {
