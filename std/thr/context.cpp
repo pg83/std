@@ -16,7 +16,7 @@ namespace {
 
     struct AsanFiberState {
         void* fakeStack_ = nullptr;
-        void* prevFakeStack_ = nullptr;
+        AsanFiberState* prev_ = nullptr;
         const void* stackBottom_ = nullptr;
         size_t stackSize_ = 0;
 
@@ -27,11 +27,11 @@ namespace {
 
         void beforeSwitch(AsanFiberState& target) noexcept {
             __sanitizer_start_switch_fiber(&fakeStack_, target.stackBottom_, target.stackSize_);
-            target.prevFakeStack_ = fakeStack_;
+            target.prev_ = this;
         }
 
         void afterSwitch() noexcept {
-            __sanitizer_finish_switch_fiber(prevFakeStack_, &stackBottom_, &stackSize_);
+            __sanitizer_finish_switch_fiber(prev_->fakeStack_, &prev_->stackBottom_, &prev_->stackSize_);
         }
     };
 #else
