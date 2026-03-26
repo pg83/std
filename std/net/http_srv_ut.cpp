@@ -390,8 +390,8 @@ STD_TEST_SUITE(HttpFileServe) {
 
                 ScopedFD fd(::open(Buffer(req->path()).cStr(), O_RDONLY));
 
-                if (1) {
-                    resp.setStatus(200);
+                if (fd.get() < 0) {
+                    resp.setStatus(404);
                     resp.addHeader(StringView("Content-Length"), StringView("0"));
                     resp.endHeaders();
 
