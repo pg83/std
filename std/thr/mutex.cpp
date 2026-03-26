@@ -30,6 +30,10 @@ namespace {
             }
         }
 
+        void* nativeHandle() noexcept {
+            return exec_;
+        }
+
         void wait() noexcept override {
             for (;;) {
                 if (!__atomic_test_and_set(&flag_, __ATOMIC_ACQUIRE)) {

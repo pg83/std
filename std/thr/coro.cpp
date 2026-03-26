@@ -480,21 +480,15 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
 }
 
 SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
-    struct CoroSemaphoreImpl: public SemaphoreIface, public Runable {
-        CoroExecutorImpl* exec_;
+    struct CoroSemaphoreImpl: public SemaphoreIface {
         Mutex lock_;
         IntrusiveList waiters_;
         size_t count_;
 
         CoroSemaphoreImpl(CoroExecutorImpl* exec, size_t initial) noexcept
-            : exec_(exec)
-            , lock_(Mutex::spinLock(exec))
+            : lock_(Mutex::spinLock(exec))
             , count_(initial)
         {
-        }
-
-        void run() override {
-            lock_.unlock();
         }
 
         void post() noexcept override {
@@ -518,13 +512,15 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
                 return;
             }
 
-            auto* cont = exec_->currentCont();
+            auto* cont = ((CoroExecutorImpl*)(CoroExecutor*)nativeHandle())->currentCont();
             waiters_.pushBack(cont);
-            cont->parkWith(this);
+            cont->park([&] {
+                lock_.unlock();
+            });
         }
 
         void* nativeHandle() noexcept override {
-            return exec_;
+            return lock_.nativeHandle();
         }
 
         bool tryWait() noexcept override {
