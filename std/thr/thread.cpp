@@ -1,7 +1,8 @@
 #include "thread.h"
+
 #include "coro.h"
-#include "semaphore.h"
 #include "runable.h"
+#include "semaphore.h"
 #include "thread_iface.h"
 
 #include <std/str/view.h>
