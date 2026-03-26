@@ -2,8 +2,8 @@
 
 #include <std/str/view.h>
 #include <std/sys/throw.h>
-#include <std/net/socket.h>
 #include <std/str/builder.h>
+#include <std/net/tcp_socket.h>
 
 #include <sys/uio.h>
 

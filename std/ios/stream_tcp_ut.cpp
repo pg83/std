@@ -5,8 +5,8 @@
 #include <std/thr/coro.h>
 #include <std/thr/async.h>
 #include <std/alg/defer.h>
-#include <std/net/socket.h>
 #include <std/dbg/insist.h>
+#include <std/net/tcp_socket.h>
 
 #include <string.h>
 #include <arpa/inet.h>
