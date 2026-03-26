@@ -16,6 +16,7 @@ namespace {
 
     struct AsanFiberState {
         void* fakeStack_ = nullptr;
+        void* prevFakeStack_ = nullptr;
         const void* stackBottom_ = nullptr;
         size_t stackSize_ = 0;
 
@@ -26,14 +27,11 @@ namespace {
 
         void beforeSwitch(AsanFiberState& target) noexcept {
             __sanitizer_start_switch_fiber(&fakeStack_, target.stackBottom_, target.stackSize_);
+            target.prevFakeStack_ = fakeStack_;
         }
 
         void afterSwitch() noexcept {
-            __sanitizer_finish_switch_fiber(fakeStack_, &stackBottom_, &stackSize_);
-        }
-
-        static void finishInitialSwitch() noexcept {
-            __sanitizer_finish_switch_fiber(nullptr, nullptr, nullptr);
+            __sanitizer_finish_switch_fiber(prevFakeStack_, &stackBottom_, &stackSize_);
         }
     };
 #else
@@ -45,9 +43,6 @@ namespace {
         }
 
         void afterSwitch() noexcept {
-        }
-
-        static void finishInitialSwitch() noexcept {
         }
     };
 #endif
@@ -74,6 +69,7 @@ namespace {
     struct ContextImpl: public ContextBase, public AsanFiberState {
         u64 rsp = 0;
         __cxxabiv1::__cxa_eh_globals ehg_;
+        Runable* entry_ = nullptr;
 
         ContextImpl() = default;
         ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
@@ -107,24 +103,26 @@ void ContextImpl::swapContext(u64*, u64*) {
 }
 
 void ContextImpl::trampoline() {
-    Runable* r;
+    ContextImpl* self;
 
-    __asm__ volatile("movq %%rbx, %0" : "=r"(r));
-    AsanFiberState::finishInitialSwitch();
+    __asm__ volatile("movq %%rbx, %0" : "=r"(self));
+    self->afterSwitch();
 
-    r->run();
+    self->entry_->run();
 
     STD_INSIST(false);
 }
 
 ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept {
+    entry_ = &entry;
+
     auto* top = (u64*)(((uintptr_t)stackPtr + stackSize) & ~(uintptr_t)15);
 
     // after swapContext pops 6 regs and does ret (7 * 8 = 56 bytes),
     // rsp = top - 8 which is 8-mod-16, matching the ABI for function entry
     *--top = 0;
     *--top = (u64)trampoline;
-    *--top = (u64)&entry; // rbx
+    *--top = (u64)this; // rbx
     *--top = 0;           // rbp
     *--top = 0;           // r12
     *--top = 0;           // r13
@@ -147,6 +145,7 @@ namespace {
     struct ContextImpl: public ContextBase, public AsanFiberState {
         u64 sp_ = 0;
         __cxxabiv1::__cxa_eh_globals ehg_;
+        Runable* entry_ = nullptr;
 
         ContextImpl() = default;
         ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
@@ -190,17 +189,19 @@ void ContextImpl::swapContext(u64*, u64*) {
 }
 
 void ContextImpl::trampoline() {
-    Runable* r;
+    ContextImpl* self;
 
-    __asm__ volatile("mov %0, x19" : "=r"(r));
-    AsanFiberState::finishInitialSwitch();
+    __asm__ volatile("mov %0, x19" : "=r"(self));
+    self->afterSwitch();
 
-    r->run();
+    self->entry_->run();
 
     STD_INSIST(false);
 }
 
 ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept {
+    entry_ = &entry;
+
     auto* top = (u64*)(((uintptr_t)stackPtr + stackSize) & ~(uintptr_t)15);
 
     // *--top fills high-to-low; ldp pops low-to-high
@@ -218,8 +219,8 @@ ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexc
     *--top = 0; // d15
     *--top = 0; // d14
     // x19, x20
-    *--top = 0;           // x20
-    *--top = (u64)&entry; // x19 — Runable*
+    *--top = 0;          // x20
+    *--top = (u64)this;  // x19 — ContextImpl*
     // x21, x22
     *--top = 0; // x22
     *--top = 0; // x21
