@@ -2,8 +2,8 @@
 
 #include <std/str/view.h>
 #include <std/sys/throw.h>
-#include <std/mem/obj_pool.h>
 #include <std/str/builder.h>
+#include <std/mem/obj_pool.h>
 
 #include <stdlib.h>
 #include <string.h>
