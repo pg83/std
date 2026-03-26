@@ -321,7 +321,7 @@ void HttpServerCtlImpl::run(Semaphore* sem) {
                     conn.out->flush();
                 }
 
-                conn.out->flush();
+                conn.out->finish();
             } catch (...) {
             }
         });
@@ -354,6 +354,11 @@ HttpConnection::HttpConnection(HttpServe* handler, CoroExecutor* exec, int fd)
 }
 
 HttpConnection::~HttpConnection() {
+    try {
+        out->finish();
+    } catch (...) {
+    }
+
     sock.close();
 }
 
