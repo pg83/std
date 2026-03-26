@@ -30,8 +30,12 @@ namespace {
             target.prev_ = this;
         }
 
+        void finishSwitch() noexcept {
+            __sanitizer_finish_switch_fiber(fakeStack_, &stackBottom_, &stackSize_);
+        }
+
         void afterSwitch() noexcept {
-            __sanitizer_finish_switch_fiber(prev_->fakeStack_, &prev_->stackBottom_, &prev_->stackSize_);
+            prev_->finishSwitch();
         }
     };
 #else
