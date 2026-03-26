@@ -31,6 +31,10 @@ namespace {
         void afterSwitch() noexcept {
             __sanitizer_finish_switch_fiber(fakeStack_, &stackBottom_, &stackSize_);
         }
+
+        static void finishInitialSwitch() noexcept {
+            __sanitizer_finish_switch_fiber(nullptr, nullptr, nullptr);
+        }
     };
 #else
     struct AsanFiberState {
@@ -41,6 +45,9 @@ namespace {
         }
 
         void afterSwitch() noexcept {
+        }
+
+        static void finishInitialSwitch() noexcept {
         }
     };
 #endif
@@ -103,6 +110,7 @@ void ContextImpl::trampoline() {
     Runable* r;
 
     __asm__ volatile("movq %%rbx, %0" : "=r"(r));
+    AsanFiberState::finishInitialSwitch();
 
     r->run();
 
@@ -185,6 +193,7 @@ void ContextImpl::trampoline() {
     Runable* r;
 
     __asm__ volatile("mov %0, x19" : "=r"(r));
+    AsanFiberState::finishInitialSwitch();
 
     r->run();
 
