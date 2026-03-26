@@ -13,7 +13,7 @@ EXTRA=
     ${EXTRA} \
     lib/c++ \
     lib/kernel \
-    lib/openssl/3 \
+    lib/aws/lc \
     ${EXTRA} \
     -- ./build.sh
 
