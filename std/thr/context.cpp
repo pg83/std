@@ -7,14 +7,8 @@
 
 using namespace stl;
 
-#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
-    #define STD_ASAN 1
-#else
-    #define STD_ASAN 0
-#endif
-
 namespace {
-#if STD_ASAN
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
     extern "C" {
         void __sanitizer_start_switch_fiber(void** fakeStackSave, const void* bottom, size_t size);
         void __sanitizer_finish_switch_fiber(void* fakeStackSave, const void** bottomOld, size_t* sizeOld);
@@ -62,7 +56,7 @@ namespace __cxxabiv1 {
 }
 
 namespace {
-    struct alignas(max_align_t) ContextBase: public Context, public Newable, public AsanFiberState {
+    struct alignas(max_align_t) ContextBase: public Context, public Newable {
         static void operator delete(void*) noexcept {
         }
     };
@@ -70,10 +64,9 @@ namespace {
 
 #if defined(__x86_64__)
 namespace {
-    struct ContextImpl: public ContextBase {
+    struct ContextImpl: public ContextBase, public AsanFiberState {
         u64 rsp = 0;
         __cxxabiv1::__cxa_eh_globals ehg_;
-
 
         ContextImpl() = default;
         ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
@@ -143,10 +136,9 @@ void ContextImpl::switchTo(Context& target) noexcept {
 }
 #elif defined(__aarch64__)
 namespace {
-    struct ContextImpl: public ContextBase {
+    struct ContextImpl: public ContextBase, public AsanFiberState {
         u64 sp_ = 0;
         __cxxabiv1::__cxa_eh_globals ehg_;
-
 
         ContextImpl() = default;
         ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
