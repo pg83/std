@@ -5,7 +5,190 @@
 #include <std/mem/obj_pool.h>
 #include <std/str/builder.h>
 
-#if __has_include(<mbedtls/ssl.h>)
+#if __has_include(<openssl/ssl.h>)
+
+    #include <openssl/ssl.h>
+    #include <openssl/err.h>
+    #include <openssl/bio.h>
+
+using namespace stl;
+
+namespace {
+    [[noreturn]]
+    void raiseSsl() {
+        unsigned long err = ERR_get_error();
+        char buf[256];
+
+        ERR_error_string_n(err, buf, sizeof(buf));
+        Errno((int)err).raise(StringBuilder() << StringView(buf));
+    }
+
+    void checkSsl(int r) {
+        if (r <= 0) {
+            raiseSsl();
+        }
+    }
+
+    struct BioMethod {
+        BIO_METHOD* method;
+
+        BioMethod();
+        ~BioMethod() noexcept;
+    };
+
+    struct SslSocketImpl: public SslSocket {
+        SSL* ssl;
+        Input* in;
+        Output* out;
+
+        SslSocketImpl(SSL_CTX* ctx, BIO_METHOD* bioMethod, Input* in, Output* out);
+
+        ~SslSocketImpl() noexcept {
+            SSL_free(ssl);
+        }
+
+        size_t readImpl(void* data, size_t len) override;
+        size_t writeImpl(const void* data, size_t len) override;
+        void flushImpl() override;
+
+        static int bioRead(BIO* bio, char* buf, int len);
+        static int bioWrite(BIO* bio, const char* buf, int len);
+        static long bioCtrl(BIO* bio, int cmd, long num, void* ptr);
+    };
+
+    struct SslCtxImpl: public SslCtx {
+        SSL_CTX* ctx;
+        BioMethod bioMethod;
+
+        SslCtxImpl(StringView certData, StringView keyData);
+
+        ~SslCtxImpl() noexcept {
+            SSL_CTX_free(ctx);
+        }
+
+        SslSocket* create(ObjPool* pool, Input* in, Output* out) override;
+    };
+}
+
+BioMethod::BioMethod() {
+    method = BIO_meth_new(BIO_get_new_index() | BIO_TYPE_SOURCE_SINK, "stl");
+
+    BIO_meth_set_read(method, SslSocketImpl::bioRead);
+    BIO_meth_set_write(method, SslSocketImpl::bioWrite);
+    BIO_meth_set_ctrl(method, SslSocketImpl::bioCtrl);
+}
+
+BioMethod::~BioMethod() noexcept {
+    BIO_meth_free(method);
+}
+
+int SslSocketImpl::bioRead(BIO* bio, char* buf, int len) {
+    auto sock = (SslSocketImpl*)BIO_get_data(bio);
+
+    sock->out->flush();
+
+    size_t n = sock->in->read(buf, (size_t)len);
+
+    if (n == 0) {
+        BIO_set_retry_read(bio);
+
+        return -1;
+    }
+
+    return (int)n;
+}
+
+int SslSocketImpl::bioWrite(BIO* bio, const char* buf, int len) {
+    auto sock = (SslSocketImpl*)BIO_get_data(bio);
+
+    sock->out->write(buf, (size_t)len);
+
+    return len;
+}
+
+long SslSocketImpl::bioCtrl(BIO* bio, int cmd, long num, void* ptr) {
+    (void)bio;
+    (void)num;
+    (void)ptr;
+
+    if (cmd == BIO_CTRL_FLUSH) {
+        return 1;
+    }
+
+    return 0;
+}
+
+SslSocketImpl::SslSocketImpl(SSL_CTX* ctx, BIO_METHOD* bioMethod, Input* in, Output* out)
+    : in(in)
+    , out(out)
+{
+    ssl = SSL_new(ctx);
+
+    BIO* bio = BIO_new(bioMethod);
+
+    BIO_set_data(bio, this);
+    BIO_set_init(bio, 1);
+    SSL_set_bio(ssl, bio, bio);
+    checkSsl(SSL_accept(ssl));
+}
+
+size_t SslSocketImpl::readImpl(void* data, size_t len) {
+    int r = SSL_read(ssl, data, (int)len);
+
+    if (r <= 0) {
+        int err = SSL_get_error(ssl, r);
+
+        if (err == SSL_ERROR_ZERO_RETURN) {
+            return 0;
+        }
+
+        raiseSsl();
+    }
+
+    return (size_t)r;
+}
+
+size_t SslSocketImpl::writeImpl(const void* data, size_t len) {
+    int r = SSL_write(ssl, data, (int)len);
+
+    if (r <= 0) {
+        raiseSsl();
+    }
+
+    return (size_t)r;
+}
+
+void SslSocketImpl::flushImpl() {
+    out->flush();
+}
+
+SslCtxImpl::SslCtxImpl(StringView certData, StringView keyData) {
+    ctx = SSL_CTX_new(TLS_server_method());
+
+    BIO* certBio = BIO_new_mem_buf(certData.data(), (int)certData.length());
+    X509* x509 = PEM_read_bio_X509(certBio, nullptr, nullptr, nullptr);
+
+    checkSsl(SSL_CTX_use_certificate(ctx, x509));
+    X509_free(x509);
+    BIO_free(certBio);
+
+    BIO* keyBio = BIO_new_mem_buf(keyData.data(), (int)keyData.length());
+    EVP_PKEY* pkey = PEM_read_bio_PrivateKey(keyBio, nullptr, nullptr, nullptr);
+
+    checkSsl(SSL_CTX_use_PrivateKey(ctx, pkey));
+    EVP_PKEY_free(pkey);
+    BIO_free(keyBio);
+}
+
+SslSocket* SslCtxImpl::create(ObjPool* pool, Input* in, Output* out) {
+    return pool->make<SslSocketImpl>(ctx, bioMethod.method, in, out);
+}
+
+SslCtx* stl::SslCtx::create(ObjPool* pool, StringView cert, StringView key) {
+    return pool->make<SslCtxImpl>(cert, key);
+}
+
+#elif __has_include(<mbedtls/ssl.h>)
 
     #include <mbedtls/ssl.h>
     #include <mbedtls/ctr_drbg.h>
