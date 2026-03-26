@@ -6,10 +6,13 @@
 
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
+#include <std/ios/sys.h>
 #include <std/thr/coro.h>
 #include <std/alg/defer.h>
 #include <std/ios/input.h>
 #include <std/sym/s_map.h>
+#include <std/sys/throw.h>
+#include <std/sys/atomic.h>
 #include <std/dbg/insist.h>
 #include <std/dbg/verify.h>
 #include <std/ios/in_buf.h>
@@ -323,6 +326,7 @@ void HttpServerCtlImpl::run(Semaphore* sem) {
 
                 conn.out->finish();
             } catch (...) {
+                sysE << Exception::current() << endL << flsH;
             }
         });
     }
@@ -357,6 +361,7 @@ HttpConnection::~HttpConnection() {
     try {
         out->finish();
     } catch (...) {
+        sysE << Exception::current() << endL << flsH;
     }
 
     sock.close();

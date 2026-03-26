@@ -390,8 +390,8 @@ STD_TEST_SUITE(HttpFileServe) {
 
                 ScopedFD fd(::open(Buffer(req->path()).cStr(), O_RDONLY));
 
-                if (fd.get() < 0) {
-                    resp.setStatus(404);
+                if (1) {
+                    resp.setStatus(200);
                     resp.addHeader(StringView("Content-Length"), StringView("0"));
                     resp.endHeaders();
 
@@ -401,6 +401,51 @@ STD_TEST_SUITE(HttpFileServe) {
                 resp.endHeaders();
 
                 CoroFDInput(fd, exec).sendTo(*resp.out());
+                resp.out()->finish();
+            }
+        } handler;
+
+        handler.exec = exec.mutPtr();
+        handler.sslCtx = sslCtx;
+
+        u16 port = 18080;
+
+        if (auto* v = _ctx.args().find(StringView("port"))) {
+            port = (u16)v->stou();
+        }
+
+        auto addr = makeAddr(port);
+
+        WaitGroup wg(exec.mutPtr());
+
+        serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
+
+        exec->spawn([&] {
+            wg.wait();
+        });
+
+        exec->join();
+    }
+
+    STD_TEST(_ServeOK) {
+        auto exec = CoroExecutor::create(8);
+        auto pool = ObjPool::fromMemory();
+        auto sslCtx = SslCtx::create(pool.mutPtr(), StringView(testCert), StringView(testKey));
+
+        struct Handler: HttpServe {
+            CoroExecutor* exec;
+            SslCtx* sslCtx;
+
+            SslCtx* ssl() override {
+                return sslCtx;
+            }
+
+            void serve(HttpResponse& resp) override {
+                auto req = resp.request();
+
+                resp.setStatus(200);
+                resp.addHeader(StringView("Content-Length"), StringView("0"));
+                resp.endHeaders();
                 resp.out()->finish();
             }
         } handler;

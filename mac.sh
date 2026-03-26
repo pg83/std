@@ -3,6 +3,8 @@
 set -xue
 
 COMMON="-fsanitize=address"
+COMMON="-flto"
+COMMON=
 
 make CXX=clang++ \
     CPPFLAGS="-D_XOPEN_SOURCE -isystem/Library/Developer/CommandLineTools/SDKs/MacOSX12.3.sdk/usr/include ${COMMON}" \
