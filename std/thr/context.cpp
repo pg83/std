@@ -106,8 +106,7 @@ void ContextImpl::swapContext(u64*, u64*) {
         "retq\n\t");
 }
 
-__attribute__((no_sanitize("address")))
-void ContextImpl::trampoline() {
+__attribute__((no_sanitize("address"))) void ContextImpl::trampoline() {
     ContextImpl* self;
 
     __asm__ volatile("movq %%rbx, %0" : "=r"(self));
@@ -128,11 +127,11 @@ ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexc
     *--top = 0;
     *--top = (u64)trampoline;
     *--top = (u64)this; // rbx
-    *--top = 0;           // rbp
-    *--top = 0;           // r12
-    *--top = 0;           // r13
-    *--top = 0;           // r14
-    *--top = 0;           // r15
+    *--top = 0;         // rbp
+    *--top = 0;         // r12
+    *--top = 0;         // r13
+    *--top = 0;         // r14
+    *--top = 0;         // r15
 
     rsp = (u64)top;
     initStack(stackPtr, stackSize);
@@ -193,8 +192,7 @@ void ContextImpl::swapContext(u64*, u64*) {
         "ret\n\t");
 }
 
-__attribute__((no_sanitize("address")))
-void ContextImpl::trampoline() {
+__attribute__((no_sanitize("address"))) void ContextImpl::trampoline() {
     ContextImpl* self;
 
     __asm__ volatile("mov %0, x19" : "=r"(self));
@@ -225,8 +223,8 @@ ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexc
     *--top = 0; // d15
     *--top = 0; // d14
     // x19, x20
-    *--top = 0;          // x20
-    *--top = (u64)this;  // x19 — ContextImpl*
+    *--top = 0;         // x20
+    *--top = (u64)this; // x19 — ContextImpl*
     // x21, x22
     *--top = 0; // x22
     *--top = 0; // x21

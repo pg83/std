@@ -5,8 +5,8 @@
 #include <std/mem/obj_pool.h>
 #include <std/str/builder.h>
 
-#include <cstdlib>
-#include <cstring>
+#include <stdlib.h>
+#include <string.h>
 
 using namespace stl;
 
@@ -377,19 +377,19 @@ SslSocket* mbed::SslCtxImpl::create(ObjPool* pool, Input* in, Output* out) {
 
 namespace {
     SslCtx* createOpenSsl([[maybe_unused]] ObjPool* pool, [[maybe_unused]] StringView cert, [[maybe_unused]] StringView key) {
-        #if defined(STD_HAVE_OPENSSL)
-            return pool->make<ossl::SslCtxImpl>(cert, key);
-        #else
-            return nullptr;
-        #endif
+#if defined(STD_HAVE_OPENSSL)
+        return pool->make<ossl::SslCtxImpl>(cert, key);
+#else
+        return nullptr;
+#endif
     }
 
     SslCtx* createMbedTls([[maybe_unused]] ObjPool* pool, [[maybe_unused]] StringView cert, [[maybe_unused]] StringView key) {
-        #if defined(STD_HAVE_MBEDTLS)
-            return pool->make<mbed::SslCtxImpl>(cert, key);
-        #else
-            return nullptr;
-        #endif
+#if defined(STD_HAVE_MBEDTLS)
+        return pool->make<mbed::SslCtxImpl>(cert, key);
+#else
+        return nullptr;
+#endif
     }
 }
 
