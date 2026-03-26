@@ -7,6 +7,51 @@
 
 using namespace stl;
 
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+    #define STD_ASAN 1
+#else
+    #define STD_ASAN 0
+#endif
+
+namespace {
+#if STD_ASAN
+    extern "C" {
+        void __sanitizer_start_switch_fiber(void** fakeStackSave, const void* bottom, size_t size);
+        void __sanitizer_finish_switch_fiber(void* fakeStackSave, const void** bottomOld, size_t* sizeOld);
+    }
+
+    struct AsanFiberState {
+        void* fakeStack_ = nullptr;
+        const void* stackBottom_ = nullptr;
+        size_t stackSize_ = 0;
+
+        void initStack(void* ptr, size_t size) noexcept {
+            stackBottom_ = ptr;
+            stackSize_ = size;
+        }
+
+        void beforeSwitch(AsanFiberState& target) noexcept {
+            __sanitizer_start_switch_fiber(&fakeStack_, target.stackBottom_, target.stackSize_);
+        }
+
+        void afterSwitch() noexcept {
+            __sanitizer_finish_switch_fiber(fakeStack_, &stackBottom_, &stackSize_);
+        }
+    };
+#else
+    struct AsanFiberState {
+        void initStack(void*, size_t) noexcept {
+        }
+
+        void beforeSwitch(AsanFiberState&) noexcept {
+        }
+
+        void afterSwitch() noexcept {
+        }
+    };
+#endif
+}
+
 namespace __cxxabiv1 {
     struct __cxa_eh_globals {
         void* caughtExceptions = nullptr;
@@ -17,7 +62,7 @@ namespace __cxxabiv1 {
 }
 
 namespace {
-    struct alignas(max_align_t) ContextBase: public Context, public Newable {
+    struct alignas(max_align_t) ContextBase: public Context, public Newable, public AsanFiberState {
         static void operator delete(void*) noexcept {
         }
     };
@@ -28,6 +73,7 @@ namespace {
     struct ContextImpl: public ContextBase {
         u64 rsp = 0;
         __cxxabiv1::__cxa_eh_globals ehg_;
+
 
         ContextImpl() = default;
         ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
@@ -85,18 +131,22 @@ ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexc
     *--top = 0;           // r15
 
     rsp = (u64)top;
+    initStack(stackPtr, stackSize);
 }
 
 void ContextImpl::switchTo(Context& target) noexcept {
     auto& t = (ContextImpl&)target;
     ehg_ = exchange(*__cxxabiv1::__cxa_get_globals(), t.ehg_);
+    beforeSwitch(t);
     swapContext(&rsp, &t.rsp);
+    afterSwitch();
 }
 #elif defined(__aarch64__)
 namespace {
     struct ContextImpl: public ContextBase {
         u64 sp_ = 0;
         __cxxabiv1::__cxa_eh_globals ehg_;
+
 
         ContextImpl() = default;
         ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
@@ -186,12 +236,15 @@ ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexc
     *--top = 0;               // x29 (fp)
 
     sp_ = (u64)top;
+    initStack(stackPtr, stackSize);
 }
 
 void ContextImpl::switchTo(Context& target) noexcept {
     auto& t = (ContextImpl&)target;
     ehg_ = exchange(*__cxxabiv1::__cxa_get_globals(), t.ehg_);
+    beforeSwitch(t);
     swapContext(&sp_, &t.sp_);
+    afterSwitch();
 }
 #else
     #include <ucontext.h>
