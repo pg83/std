@@ -1,7 +1,7 @@
 #include "http.h"
 #include "io.h"
 #include "reason.h"
-#include "socket.h"
+#include "tcp_socket.h"
 #include "ssl_socket.h"
 
 #include <std/sys/fd.h>

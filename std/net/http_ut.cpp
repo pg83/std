@@ -1,6 +1,6 @@
 #include "http.h"
 #include "ssl_socket.h"
-#include "socket.h"
+#include "tcp_socket.h"
 
 #include <std/sys/fd.h>
 #include <std/tst/ut.h>
