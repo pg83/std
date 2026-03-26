@@ -122,11 +122,12 @@ int ossl::SslSocketImpl::bioWrite(BIO* bio, const char* buf, int len) {
 }
 
 long ossl::SslSocketImpl::bioCtrl(BIO* bio, int cmd, long num, void* ptr) {
-    (void)bio;
     (void)num;
     (void)ptr;
 
     if (cmd == BIO_CTRL_FLUSH) {
+        ((SslSocketImpl*)BIO_get_data(bio))->out->flush();
+
         return 1;
     }
 
