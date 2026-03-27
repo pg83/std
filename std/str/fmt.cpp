@@ -31,6 +31,22 @@ void* stl::formatI64Base10(i64 v, void* ptr) noexcept {
     return formatU64Base10(v, b);
 }
 
+void* stl::formatU64Base16(u64 v, void* ptr) noexcept {
+    u8* b = (u8*)ptr;
+    u8* e = b;
+
+    do {
+        u8 d = v & 0xf;
+
+        *e++ = d < 10 ? u8'0' + d : u8'a' + d - 10;
+        v >>= 4;
+    } while (v);
+
+    reverse(b, e);
+
+    return e;
+}
+
 void* stl::formatLongDouble(long double v, void* buf) noexcept {
     return advancePtr(buf, sprintf((char*)buf, "%Lf", v));
 }

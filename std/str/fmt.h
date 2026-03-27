@@ -5,5 +5,6 @@
 namespace stl {
     void* formatU64Base10(u64 v, void* buf) noexcept;
     void* formatI64Base10(i64 v, void* buf) noexcept;
+    void* formatU64Base16(u64 v, void* buf) noexcept;
     void* formatLongDouble(long double v, void* buf) noexcept;
 }

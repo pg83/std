@@ -5,6 +5,7 @@
 #include <std/ios/in_zc.h>
 #include <std/ios/output.h>
 #include <std/lib/buffer.h>
+#include <std/str/fmt.h>
 #include <std/alg/minmax.h>
 #include <std/dbg/insist.h>
 #include <std/mem/obj_pool.h>
@@ -35,21 +36,6 @@ namespace {
         void flushImpl() override;
     };
 
-    size_t fmtHex(u8* buf, size_t bufLen, size_t val) {
-        size_t pos = bufLen;
-
-        buf[--pos] = '\n';
-        buf[--pos] = '\r';
-
-        do {
-            u8 d = val & 0xf;
-
-            buf[--pos] = d < 10 ? '0' + d : 'a' + d - 10;
-            val >>= 4;
-        } while (val);
-
-        return pos;
-    }
 
     struct ChunkedOutput: public Output {
         Output* inner;
@@ -177,10 +163,13 @@ ChunkedOutput::ChunkedOutput(Output* inner)
 
 size_t ChunkedOutput::writeImpl(const void* data, size_t len) {
     u8 buf[20];
-    size_t pos = fmtHex(buf, sizeof(buf), len);
+    u8* e = (u8*)formatU64Base16(len, buf);
+
+    *e++ = u8'\r';
+    *e++ = u8'\n';
 
     iovec iov[3] = {
-        {buf + pos, sizeof(buf) - pos},
+        {buf, (size_t)(e - buf)},
         {(void*)data, len},
         {(void*)u8"\r\n", 2},
     };
