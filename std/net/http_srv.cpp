@@ -75,15 +75,15 @@ namespace {
     };
 
     struct HttpConnection {
-        ObjPool::Ref opool = ObjPool::fromMemory();
         HttpServe* handler;
+        ObjPool* pool;
         TcpSocket sock;
         ZeroCopyInput* in;
         Output* out;
         Buffer line;
         Buffer lcName;
 
-        HttpConnection(HttpServe* handler, CoroExecutor* exec, int fd);
+        HttpConnection(HttpServe* handler, CoroExecutor* exec, ObjPool* pool, ScopedFD* client);
         ~HttpConnection();
 
         bool serve();
@@ -308,9 +308,10 @@ void HttpServerCtlImpl::run(TcpSocket* srv, WaitGroup* wg) {
     };
 
     for (;;) {
-        ScopedFD client;
+        auto cpool = ObjPool::fromMemory();
+        auto client = cpool->make<ScopedFD>();
 
-        if (srv->acceptInf(client, nullptr, nullptr) != 0) {
+        if (srv->acceptInf(*client, nullptr, nullptr) != 0) {
             break;
         }
 
@@ -318,11 +319,9 @@ void HttpServerCtlImpl::run(TcpSocket* srv, WaitGroup* wg) {
             break;
         }
 
-        exec->spawn([this, fd = client.release()] {
+        exec->spawn([this, cpool, client] mutable {
             try {
-                TcpSocket(fd.get(), exec).setNoDelay(true);
-
-                HttpConnection conn(&handler, exec, fd.get());
+                HttpConnection conn(&handler, exec, cpool.mutPtr(), client);
 
                 while (conn.serve()) {
                     conn.out->flush();
@@ -336,29 +335,33 @@ void HttpServerCtlImpl::run(TcpSocket* srv, WaitGroup* wg) {
     }
 }
 
-HttpConnection::HttpConnection(HttpServe* handler, CoroExecutor* exec, int fd)
+HttpConnection::HttpConnection(HttpServe* handler, CoroExecutor* exec, ObjPool* pool, ScopedFD* client)
     : handler(handler)
-    , sock(fd, exec)
+    , pool(pool)
+    , sock(client->get(), exec)
 {
-    auto stream = opool->make<TcpStream>(sock);
+    sock.setNoDelay(true);
+
+    auto* stream = pool->make<TcpStream>(sock);
 
     Input* in = stream;
-    out = opool->make<OutBuf>(*stream);
+    out = pool->make<OutBuf>(*stream);
 
     if (auto ssl = handler->ssl()) {
         unsigned char b;
+        int fd = sock.fd;
 
-        exec->poll(fd, PollFlag::In);
+        sock.exec->poll(fd, PollFlag::In);
 
         if (::recv(fd, &b, 1, MSG_PEEK) == 1 && b == 0x16) {
-            auto s = ssl->create(opool.mutPtr(), in, out);
+            auto s = ssl->create(pool, in, out);
 
             in = s;
             out = s;
         }
     }
 
-    this->in = opool->make<InBuf>(*in);
+    this->in = pool->make<InBuf>(*in);
 }
 
 HttpConnection::~HttpConnection() {
@@ -367,8 +370,6 @@ HttpConnection::~HttpConnection() {
     } catch (...) {
         sysE << Exception::current() << endL << flsH;
     }
-
-    sock.close();
 }
 
 bool HttpConnection::serve() {

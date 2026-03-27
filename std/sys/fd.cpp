@@ -72,11 +72,7 @@ void FD::xchg(FD& other) noexcept {
     ::stl::xchg(fd, other.fd);
 }
 
-#if defined(noexcept)
 ScopedFD::~ScopedFD() {
-#else
-ScopedFD::~ScopedFD() noexcept(false) {
-#endif
     close();
 }
 
