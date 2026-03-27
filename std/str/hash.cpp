@@ -2,6 +2,8 @@
 
 #if __has_include(<rapidhash.h>)
     #include <rapidhash.h>
+#else
+    #include <std/rng/split_mix_64.h>
 #endif
 
 using namespace stl;
@@ -37,6 +39,6 @@ u64 stl::shash64(const void* data, size_t len) noexcept {
 #if __has_include(<rapidhash.h>)
     return rapidhash(data, len);
 #else
-    return fnv1a(data, len);
+    return splitMix64(fnv1a(data, len));
 #endif
 }
