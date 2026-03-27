@@ -431,13 +431,16 @@ STD_TEST_SUITE(HttpFileServe) {
 
         WaitGroup wg(exec.mutPtr());
 
-        serve(pool.mutPtr(), {
-                                 .handler = &handler,
-                                 .exec = exec.mutPtr(),
-                                 .addr = (const sockaddr*)&addr,
-                                 .addrLen = sizeof(addr),
-                                 .wg = &wg,
-                             });
+        serve(
+            pool.mutPtr(),
+            {
+                .handler = &handler,
+                .exec = exec.mutPtr(),
+                .addr = (const sockaddr*)&addr,
+                .addrLen = sizeof(addr),
+                .wg = &wg,
+            } //
+        );
 
         exec->spawn([&] {
             wg.wait();
@@ -482,13 +485,16 @@ STD_TEST_SUITE(HttpFileServe) {
 
         WaitGroup wg(exec.mutPtr());
 
-        serve(pool.mutPtr(), {
-                                 .handler = &handler,
-                                 .exec = exec.mutPtr(),
-                                 .addr = (const sockaddr*)&addr,
-                                 .addrLen = sizeof(addr),
-                                 .wg = &wg,
-                             });
+        serve(
+            pool.mutPtr(),
+            {
+                .handler = &handler,
+                .exec = exec.mutPtr(),
+                .addr = (const sockaddr*)&addr,
+                .addrLen = sizeof(addr),
+                .wg = &wg,
+            } //
+        );
 
         exec->spawn([&] {
             wg.wait();
