@@ -9,8 +9,8 @@ namespace stl {
     struct HttpClient {
         virtual u32 status() = 0;
         virtual StringView reason() = 0;
-        virtual StringView* header(StringView name) = 0;
         virtual ZeroCopyInput* body() = 0;
+        virtual StringView* header(StringView name) = 0;
 
         static HttpClient* create(ObjPool* pool, ZeroCopyInput* in);
     };
