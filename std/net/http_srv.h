@@ -37,8 +37,6 @@ namespace stl {
     };
 
     struct HttpServerCtl {
-        virtual ~HttpServerCtl();
-
         virtual void stop() = 0;
     };
 

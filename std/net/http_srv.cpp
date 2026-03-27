@@ -403,9 +403,6 @@ HttpServerCtl* stl::serve(ObjPool* pool, HttpServeOpts opts) {
     return ctl;
 }
 
-HttpServerCtl::~HttpServerCtl() {
-}
-
 SslCtx* HttpServe::ssl() {
     return nullptr;
 }
