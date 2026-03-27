@@ -70,7 +70,7 @@ namespace {
         HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen);
 
         void stop() override;
-        TcpSocket* listen(ObjPool* pool);
+        TcpSocket* listen(ObjPool* pool, u32 backlog);
         void run(TcpSocket* srv, WaitGroup* wg);
     };
 
@@ -289,7 +289,7 @@ void HttpServerCtlImpl::stop() {
     });
 }
 
-TcpSocket* HttpServerCtlImpl::listen(ObjPool* pool) {
+TcpSocket* HttpServerCtlImpl::listen(ObjPool* pool, u32 backlog) {
     auto* srv = TcpSocket::create(pool, exec);
 
     STD_VERIFY(srv->socket(AF_INET, SOCK_STREAM, 0) == 0);
@@ -297,7 +297,7 @@ TcpSocket* HttpServerCtlImpl::listen(ObjPool* pool) {
     srv->setReuseAddr(true);
 
     STD_VERIFY(srv->bind((const sockaddr*)&addr, addrLen) == 0);
-    STD_VERIFY(srv->listen(128) == 0);
+    STD_VERIFY(srv->listen(backlog) == 0);
 
     return srv;
 }
@@ -389,7 +389,7 @@ HttpServerCtl* stl::serve(ObjPool* pool, HttpServeOpts opts) {
     }
 
     auto ctl = pool->make<HttpServerCtlImpl>(*opts.handler, opts.exec, opts.addr, opts.addrLen);
-    auto srv = ctl->listen(pool);
+    auto srv = ctl->listen(pool, opts.backlog);
 
     opts.wg->inc();
 

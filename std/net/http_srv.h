@@ -48,6 +48,7 @@ namespace stl {
         const sockaddr* addr = nullptr;
         u32 addrLen = 0;
         WaitGroup* wg = nullptr;
+        u32 backlog = 128;
     };
 
     HttpServerCtl* serve(ObjPool* pool, HttpServeOpts opts);
