@@ -166,7 +166,7 @@ STD_TEST_SUITE(SharedPtr) {
 
     STD_TEST(testMutPtr) {
         auto v = AtomicSharedPtr<IntValue>::make(10);
-        auto* ptr = v.mutPtr();
+        auto ptr = v.mutPtr();
 
         ptr->value = 999;
         STD_INSIST(v->value == 999);
@@ -174,7 +174,7 @@ STD_TEST_SUITE(SharedPtr) {
 
     STD_TEST(testPtr) {
         const auto v = AtomicSharedPtr<IntValue>::make(10);
-        const auto* ptr = v.ptr();
+        const auto ptr = v.ptr();
 
         STD_INSIST(ptr->value == 10);
     }

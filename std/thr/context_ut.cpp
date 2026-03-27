@@ -47,8 +47,8 @@ namespace {
 
 STD_TEST_SUITE(Context) {
     STD_TEST(SwitchBack) {
-        auto* mainBuf = alloca(Context::implSize());
-        auto* workerBuf = alloca(Context::implSize());
+        auto mainBuf = alloca(Context::implSize());
+        auto workerBuf = alloca(Context::implSize());
         SwitchState s;
         SwitchFn fn(&s);
 
@@ -61,8 +61,8 @@ STD_TEST_SUITE(Context) {
     }
 
     STD_TEST(MultiSwitch) {
-        auto* mainBuf = alloca(Context::implSize());
-        auto* workerBuf = alloca(Context::implSize());
+        auto mainBuf = alloca(Context::implSize());
+        auto workerBuf = alloca(Context::implSize());
         SwitchState s;
         MultiSwitchFn fn(&s);
 
@@ -77,8 +77,8 @@ STD_TEST_SUITE(Context) {
     }
 
     STD_TEST(EhStatePreserved) {
-        auto* mainBuf = alloca(Context::implSize());
-        auto* workerBuf = alloca(Context::implSize());
+        auto mainBuf = alloca(Context::implSize());
+        auto workerBuf = alloca(Context::implSize());
 
         struct State {
             Context* main;

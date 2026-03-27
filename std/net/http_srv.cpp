@@ -150,7 +150,7 @@ HttpServerRequestImpl::HttpServerRequestImpl(HttpConnection* conn)
         headers.insert(name.lower(conn->lcName), pool->intern(val.stripSpace()));
     }
 
-    if (auto* h = headers.find(StringView("connection")); h) {
+    if (auto h = headers.find(StringView("connection")); h) {
         keepAlive = h->lower(conn->line) == StringView("keep-alive");
     } else {
         keepAlive = version.lower(conn->line) == StringView("http/1.1");
@@ -230,7 +230,7 @@ void HttpServerResponseImpl::serialize(ZeroCopyOutput& out) {
         << reasonPhrase(status)
         << StringView(u8"\r\n");
 
-    for (auto* it = headers.begin(); it != headers.end(); ++it) {
+    for (auto it = headers.begin(); it != headers.end(); ++it) {
         out << (*it)->name << StringView(u8": ") << (*it)->value << StringView(u8"\r\n");
     }
 
@@ -238,7 +238,7 @@ void HttpServerResponseImpl::serialize(ZeroCopyOutput& out) {
 }
 
 void HttpServerResponseImpl::endHeaders() {
-    auto* pool = req->pool.mutPtr();
+    auto pool = req->pool.mutPtr();
 
     if (req->keepAlive && !headerIndex.find(StringView("content-length")) && !headerIndex.find(StringView("transfer-encoding"))) {
         addHeader(StringView("Transfer-Encoding"), StringView("chunked"));
@@ -254,13 +254,13 @@ void HttpServerResponseImpl::endHeaders() {
         sb.xchg(req->conn->line);
     }
 
-    if (auto* cl = headerIndex.find(StringView("content-length")); cl) {
+    if (auto cl = headerIndex.find(StringView("content-length")); cl) {
         rawOut = createLimitedOutput(pool, rawOut, (*cl)->value.stou());
-    } else if (auto* te = headerIndex.find(StringView("transfer-encoding")); te && (*te)->value == StringView("chunked")) {
+    } else if (auto te = headerIndex.find(StringView("transfer-encoding")); te && (*te)->value == StringView("chunked")) {
         rawOut = createChunkedOutput(pool, rawOut);
     }
 
-    if (auto* conn = headerIndex.find(StringView("connection")); conn) {
+    if (auto conn = headerIndex.find(StringView("connection")); conn) {
         if ((*conn)->value != StringView("keep-alive")) {
             req->keepAlive = false;
         }
@@ -291,7 +291,7 @@ void HttpServerCtlImpl::stop() {
 }
 
 TcpSocket* HttpServerCtlImpl::listen(ObjPool* pool, u32 backlog) {
-    auto* srv = TcpSocket::create(pool, exec);
+    auto srv = TcpSocket::create(pool, exec);
 
     STD_VERIFY(srv->socket(AF_INET, SOCK_STREAM, 0) == 0);
 
@@ -337,7 +337,7 @@ HttpConnection::HttpConnection(HttpServe* handler, CoroExecutor* exec, ObjPool* 
 {
     sock.setNoDelay(true);
 
-    auto* stream = pool->make<TcpStream>(sock);
+    auto stream = pool->make<TcpStream>(sock);
 
     Input* in = stream;
     out = pool->make<OutBuf>(*stream);

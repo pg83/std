@@ -22,8 +22,8 @@ using namespace stl;
 namespace {
     struct DeadlineTreap: public Treap {
         bool cmp(void* a, void* b) const noexcept override {
-            auto* ra = (PollRequest*)a;
-            auto* rb = (PollRequest*)b;
+            auto ra = (PollRequest*)a;
+            auto rb = (PollRequest*)b;
 
             if (ra->deadline != rb->deadline) {
                 return ra->deadline < rb->deadline;
@@ -87,7 +87,7 @@ ReactorState::ReactorState(CoroExecutor* exec, ThreadPool* p, ObjPool* opool)
 }
 
 void ReactorState::rearmOrDisarm(int fd) {
-    if (auto* entry = fdMap_.find(fd); !entry) {
+    if (auto entry = fdMap_.find(fd); !entry) {
         poller->disarm(fd);
     } else if (entry->empty()) {
         poller->disarm(fd);
@@ -153,9 +153,9 @@ void ReactorState::drainQueue() {
 void ReactorState::processEvent(PollEvent* ev, IntrusiveList& ready) noexcept {
     int fd = (uintptr_t)ev->data - 1;
 
-    if (auto* entry = fdMap_.find(fd); entry) {
+    if (auto entry = fdMap_.find(fd); entry) {
         for (auto n = entry->mutFront(), e = entry->mutEnd(); n != e;) {
-            if (auto* req = (PollRequest*)exchange(n, n->next); req->flags & ev->flags) {
+            if (auto req = (PollRequest*)exchange(n, n->next); req->flags & ev->flags) {
                 req->remove();
                 timers.remove(req);
                 req->complete(ev->flags, ready);
@@ -183,7 +183,7 @@ void ReactorState::run() noexcept {
 
         auto now = monotonicNowUs();
 
-        while (auto* req = (PollRequest*)timers.min()) {
+        while (auto req = (PollRequest*)timers.min()) {
             if (req->deadline > now) {
                 break;
             }
@@ -194,7 +194,7 @@ void ReactorState::run() noexcept {
             req->complete(0, ready);
         }
 
-        while (auto* req = (PollRequest*)sleepers.min()) {
+        while (auto req = (PollRequest*)sleepers.min()) {
             if (req->deadline > now) {
                 break;
             }

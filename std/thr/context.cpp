@@ -121,7 +121,7 @@ __attribute__((no_sanitize("address"))) void ContextImpl::trampoline() {
 ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept {
     entry_ = &entry;
 
-    auto* top = (u64*)(((uintptr_t)stackPtr + stackSize) & ~(uintptr_t)15);
+    auto top = (u64*)(((uintptr_t)stackPtr + stackSize) & ~(uintptr_t)15);
 
     // after swapContext pops 6 regs and does ret (7 * 8 = 56 bytes),
     // rsp = top - 8 which is 8-mod-16, matching the ABI for function entry
@@ -207,7 +207,7 @@ __attribute__((no_sanitize("address"))) void ContextImpl::trampoline() {
 ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept {
     entry_ = &entry;
 
-    auto* top = (u64*)(((uintptr_t)stackPtr + stackSize) & ~(uintptr_t)15);
+    auto top = (u64*)(((uintptr_t)stackPtr + stackSize) & ~(uintptr_t)15);
 
     // *--top fills high-to-low; ldp pops low-to-high
     // last pushed = lowest address = first popped

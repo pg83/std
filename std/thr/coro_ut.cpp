@@ -33,7 +33,7 @@ namespace {
 STD_TEST_SUITE(CoroExecutor) {
     STD_TEST(Basic) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         auto f = async(exec, [] {
             return 1;
@@ -44,7 +44,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(SingleYield) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         auto f = async(exec, [&] {
             int counter = 0;
@@ -59,7 +59,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(MultipleYields) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         auto f = async(exec, [&] {
             int counter = 0;
@@ -75,7 +75,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(ManyCoros) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
@@ -91,7 +91,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(NestedSpawn) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter = 0;
 
         exec->spawn([&] {
@@ -108,7 +108,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(YieldInterleave) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         auto fn = [&] {
             for (int i = 0; i < 5; ++i) {
@@ -124,7 +124,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(MutexBasic) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         auto f = async(exec, [&] {
             Mutex mtx(exec);
@@ -139,7 +139,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(MutexContention) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter = 0;
         Mutex mtx(exec);
 
@@ -158,7 +158,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(MutexStress) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int nCoros = 8;
         const int nIters = 200;
         int counter = 0;
@@ -179,7 +179,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(CondVarBasic) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int value = 0;
         Mutex mtx(exec);
         CondVar cv(exec);
@@ -203,7 +203,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(CondVarBroadcast) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int N = 5;
         int value = 0;
         Mutex mtx(exec);
@@ -230,7 +230,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(CondVarProducerConsumer) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int N = 10;
         int produced = 0;
         int consumed = 0;
@@ -263,7 +263,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(CondVarStress) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int nCoros = 4;
         const int nIters = 20;
         int queue = 0;
@@ -301,7 +301,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
     STD_TEST(_SW) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 16);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 16);
 
         int counter2 = 0;
 
@@ -338,7 +338,7 @@ STD_TEST_SUITE(CoroExecutor) {
 STD_TEST_SUITE(CoroRandom) {
     STD_TEST(NonZero) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         auto f = async(exec, [&] {
             return exec->random();
@@ -349,7 +349,7 @@ STD_TEST_SUITE(CoroRandom) {
 
     STD_TEST(DifferentPerCoro) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int N = 8;
         u32 values[N] = {};
 
@@ -370,7 +370,7 @@ STD_TEST_SUITE(CoroRandom) {
 
     STD_TEST(Successive) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         struct Pair {
             u32 a, b;
@@ -389,7 +389,7 @@ STD_TEST_SUITE(CoroPoll) {
     STD_TEST(PipeReadWrite) {
         // reader polls In on pipe, writer writes — verify data arrives
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         ScopedFD readEnd, writeEnd;
         createPipeFD(readEnd, writeEnd);
         int result = 0;
@@ -413,7 +413,7 @@ STD_TEST_SUITE(CoroPoll) {
 
     STD_TEST(Timeout) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         ScopedFD readEnd, writeEnd;
         createPipeFD(readEnd, writeEnd);
 
@@ -427,7 +427,7 @@ STD_TEST_SUITE(CoroPoll) {
     STD_TEST(MultiPipe) {
         // N coroutines each poll their own pipe, woken in reverse order
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int N = 8;
         ScopedFD readEnds[N], writeEnds[N];
         int order[N];
@@ -464,7 +464,7 @@ STD_TEST_SUITE(CoroPoll) {
         // Nobody reads, so the byte stays in the pipe — late-registering coroutines
         // are still woken when they arm the fd (level-triggered ONESHOT epoll).
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         ScopedFD readEnd, writeEnd;
         createPipeFD(readEnd, writeEnd);
         const int N = 40;
@@ -489,7 +489,7 @@ STD_TEST_SUITE(CoroPoll) {
 
     STD_TEST(_PipeThroughput) {
         auto opool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(opool.mutPtr(), 8);
+        auto exec = CoroExecutor::create(opool.mutPtr(), 8);
         const int N = 200;
         const size_t TOTAL = 500 * 1024 * 1024;
 
@@ -507,7 +507,7 @@ STD_TEST_SUITE(CoroPoll) {
         Vector<Pipe*> pipes;
 
         for (int i = 0; i < N; i++) {
-            auto* p = opool->make<Pipe>();
+            auto p = opool->make<Pipe>();
             pipes.pushBack(p);
 
             int rfd = p->r.get();
@@ -559,7 +559,7 @@ STD_TEST_SUITE(CoroPoll) {
         // coro B receives (waking A into the pool) then keeps its thread
         // busy with doW — leaving the other thread to pick up A.
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 2);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 2);
         Channel ch(exec, 0);
         int caught = 0;
 
@@ -591,7 +591,7 @@ STD_TEST_SUITE(CoroPoll) {
 
     STD_TEST(SleepZero) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         auto f = async(exec, [&] {
             exec->sleepTout(0);
@@ -603,7 +603,7 @@ STD_TEST_SUITE(CoroPoll) {
 
     STD_TEST(SleepZeroMultiple) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
@@ -619,7 +619,7 @@ STD_TEST_SUITE(CoroPoll) {
 
     STD_TEST(SleepZeroOrdering) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         auto f = async(exec, [&] {
             exec->sleepTout(0);
@@ -631,7 +631,7 @@ STD_TEST_SUITE(CoroPoll) {
 
     STD_TEST(SpawnFromMain) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter = 0;
         Mutex mtx(exec);
 
@@ -650,8 +650,8 @@ STD_TEST_SUITE(CoroPoll) {
 STD_TEST_SUITE(CoroOffload) {
     STD_TEST(Basic) {
         auto opool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(opool.mutPtr(), 4);
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 2);
+        auto exec = CoroExecutor::create(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 2);
 
         auto f = async(exec, [&] {
             int result = 0;
@@ -668,8 +668,8 @@ STD_TEST_SUITE(CoroOffload) {
 
     STD_TEST(MultipleCalls) {
         auto opool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(opool.mutPtr(), 4);
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 2);
+        auto exec = CoroExecutor::create(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 2);
 
         auto f = async(exec, [&] {
             int sum = 0;
@@ -688,8 +688,8 @@ STD_TEST_SUITE(CoroOffload) {
 
     STD_TEST(ConcurrentCoros) {
         auto opool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(opool.mutPtr(), 4);
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 4);
         int counter = 0;
 
         for (int i = 0; i < 16; ++i) {
@@ -706,8 +706,8 @@ STD_TEST_SUITE(CoroOffload) {
 
     STD_TEST(HeavyWork) {
         auto opool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(opool.mutPtr(), 4);
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 2);
+        auto exec = CoroExecutor::create(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 2);
 
         auto f = async(exec, [&] {
             int result = 0;
@@ -734,7 +734,7 @@ namespace {
 STD_TEST_SUITE(CoroExecutorFS) {
     STD_TEST(PreadFile) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 2);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 2);
 
         exec->spawn([&] {
             int fd = makeTmpFd();
@@ -756,7 +756,7 @@ STD_TEST_SUITE(CoroExecutorFS) {
 
     STD_TEST(PwriteFile) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 2);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 2);
 
         exec->spawn([&] {
             int fd = makeTmpFd();
@@ -778,7 +778,7 @@ STD_TEST_SUITE(CoroExecutorFS) {
 
     STD_TEST(PreadPwriteRoundtrip) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 2);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 2);
 
         exec->spawn([&] {
             int fd = makeTmpFd();
@@ -800,7 +800,7 @@ STD_TEST_SUITE(CoroExecutorFS) {
 
     STD_TEST(PreadOffset) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 2);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 2);
 
         exec->spawn([&] {
             int fd = makeTmpFd();
@@ -822,7 +822,7 @@ STD_TEST_SUITE(CoroExecutorFS) {
 
     STD_TEST(MultipleConcurrent) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         exec->spawn([&] {
             int fd = makeTmpFd();

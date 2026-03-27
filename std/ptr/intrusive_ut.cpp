@@ -147,7 +147,7 @@ STD_TEST_SUITE(IntrusivePtr) {
 
     STD_TEST(testMutPtr) {
         auto v = IntrusivePtr<Int>::make();
-        auto* ptr = v.mutPtr();
+        auto ptr = v.mutPtr();
 
         ptr->v = 999;
         STD_INSIST(v->v == 999);

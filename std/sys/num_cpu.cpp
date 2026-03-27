@@ -16,7 +16,7 @@ using namespace stl;
 
 namespace {
     static u32 fromEnv() noexcept {
-        if (auto* v = getenv("GOMAXPROCS")) {
+        if (auto v = getenv("GOMAXPROCS")) {
             auto n = StringView(v).stou();
 
             if (n > 0) {

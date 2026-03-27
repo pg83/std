@@ -26,9 +26,9 @@ namespace {
 STD_TEST_SUITE(TcpSocket) {
     STD_TEST(ConnectAcceptEcho) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
-        auto* srv = TcpSocket::create(pool.mutPtr(), exec);
+        auto srv = TcpSocket::create(pool.mutPtr(), exec);
         STD_INSIST(srv->socket(AF_INET, SOCK_STREAM, 0) == 0);
         srv->setReuseAddr(true);
 
@@ -55,7 +55,7 @@ STD_TEST_SUITE(TcpSocket) {
 
         exec->spawn([&] {
             auto cpool = ObjPool::fromMemory();
-            auto* cli = TcpSocket::create(cpool.mutPtr(), exec);
+            auto cli = TcpSocket::create(cpool.mutPtr(), exec);
             auto caddr = makeAddr(17654);
             STD_INSIST(cli->connectInf((sockaddr*)&caddr, sizeof(caddr)) == 0);
 
@@ -77,9 +77,9 @@ STD_TEST_SUITE(TcpSocket) {
 
     STD_TEST(AcceptTimeout) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
-        auto* srv = TcpSocket::create(pool.mutPtr(), exec);
+        auto srv = TcpSocket::create(pool.mutPtr(), exec);
         STD_INSIST(srv->socket(AF_INET, SOCK_STREAM, 0) == 0);
         srv->setReuseAddr(true);
 

@@ -90,7 +90,7 @@ namespace {
         bool matchesExclude(StringView testName) const noexcept;
 
         size_t threads() const noexcept {
-            if (auto* sv = opts.find(StringView(u8"threads")); sv) {
+            if (auto sv = opts.find(StringView(u8"threads")); sv) {
                 return (size_t)sv->stou();
             }
 
@@ -156,7 +156,7 @@ void Tests::execute() {
 
     size_t topN = 0;
 
-    if (auto* sv = opt->opts.find(StringView(u8"top")); sv) {
+    if (auto sv = opt->opts.find(StringView(u8"top")); sv) {
         topN = (size_t)sv->stou();
     }
 
@@ -286,7 +286,7 @@ GetOpt::GetOpt(Ctx& ctx) noexcept {
             StringView key(arg.data() + 2, arg.length() - 2);
             StringView value(u8"1");
 
-            if (auto* eq = key.memChr('='); eq) {
+            if (auto eq = key.memChr('='); eq) {
                 value = StringView(eq + 1, key.end());
                 key = StringView(key.begin(), eq);
             }

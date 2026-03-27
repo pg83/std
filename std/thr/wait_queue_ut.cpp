@@ -11,13 +11,13 @@ using namespace stl;
 STD_TEST_SUITE(WaitQueue) {
     STD_TEST(DequeueEmpty) {
         auto opool = ObjPool::fromMemory();
-        auto* wq = WaitQueue::construct(opool.mutPtr(), 4);
+        auto wq = WaitQueue::construct(opool.mutPtr(), 4);
         STD_INSIST(wq->dequeue() == nullptr);
     }
 
     STD_TEST(EnqueueDequeue) {
         auto opool = ObjPool::fromMemory();
-        auto* wq = WaitQueue::construct(opool.mutPtr(), 4);
+        auto wq = WaitQueue::construct(opool.mutPtr(), 4);
 
         WaitQueue::Item item;
         item.index = 0;
@@ -29,7 +29,7 @@ STD_TEST_SUITE(WaitQueue) {
 
     STD_TEST(MultipleItems) {
         auto opool = ObjPool::fromMemory();
-        auto* wq = WaitQueue::construct(opool.mutPtr(), 4);
+        auto wq = WaitQueue::construct(opool.mutPtr(), 4);
 
         WaitQueue::Item a, b, c;
         a.index = 0;
@@ -51,7 +51,7 @@ STD_TEST_SUITE(WaitQueue) {
     // construct(65) даёт PointerImpl / MutexImpl вместо BitmaskImpl
     STD_TEST(LargeCapacity) {
         auto opool = ObjPool::fromMemory();
-        auto* wq = WaitQueue::construct(opool.mutPtr(), 65);
+        auto wq = WaitQueue::construct(opool.mutPtr(), 65);
 
         WaitQueue::Item a, b;
         a.index = 0;
@@ -71,7 +71,7 @@ STD_TEST_SUITE(WaitQueue) {
     STD_TEST(ConcurrentEnqueue) {
         const int N = 8;
         auto opool = ObjPool::fromMemory();
-        auto* wq = WaitQueue::construct(opool.mutPtr(), N);
+        auto wq = WaitQueue::construct(opool.mutPtr(), N);
         WaitGroup ready(N);
 
         WaitQueue::Item items[N];
@@ -103,7 +103,7 @@ STD_TEST_SUITE(WaitQueue) {
     STD_TEST(ConcurrentEnqueueDequeue) {
         const int N = 8;
         auto opool = ObjPool::fromMemory();
-        auto* wq = WaitQueue::construct(opool.mutPtr(), 65);
+        auto wq = WaitQueue::construct(opool.mutPtr(), 65);
         WaitGroup ready(N);
         int enqueued = 0;
 
@@ -135,7 +135,7 @@ STD_TEST_SUITE(WaitQueue) {
 
     STD_TEST(EnqueueDequeueOrdering) {
         auto opool = ObjPool::fromMemory();
-        auto* wq = WaitQueue::construct(opool.mutPtr(), 65);
+        auto wq = WaitQueue::construct(opool.mutPtr(), 65);
 
         WaitQueue::Item items[4];
         for (int i = 0; i < 4; ++i) {
@@ -144,7 +144,7 @@ STD_TEST_SUITE(WaitQueue) {
         }
 
         int found = 0;
-        while (auto* item = wq->dequeue()) {
+        while (auto item = wq->dequeue()) {
             (void)item;
             ++found;
         }
@@ -154,7 +154,7 @@ STD_TEST_SUITE(WaitQueue) {
 
     STD_TEST(Bitmask32) {
         auto opool = ObjPool::fromMemory();
-        auto* wq = WaitQueue::construct(opool.mutPtr(), 32);
+        auto wq = WaitQueue::construct(opool.mutPtr(), 32);
 
         WaitQueue::Item items[32];
 
@@ -177,7 +177,7 @@ STD_TEST_SUITE(WaitQueue) {
 
     STD_TEST(Bitmask64) {
         auto opool = ObjPool::fromMemory();
-        auto* wq = WaitQueue::construct(opool.mutPtr(), 64);
+        auto wq = WaitQueue::construct(opool.mutPtr(), 64);
 
         WaitQueue::Item items[64];
 
@@ -200,7 +200,7 @@ STD_TEST_SUITE(WaitQueue) {
 
     STD_TEST(Bitmask128) {
         auto opool = ObjPool::fromMemory();
-        auto* wq = WaitQueue::construct(opool.mutPtr(), 128);
+        auto wq = WaitQueue::construct(opool.mutPtr(), 128);
 
         WaitQueue::Item items[128];
 
@@ -223,7 +223,7 @@ STD_TEST_SUITE(WaitQueue) {
 
     STD_TEST(Pointer256) {
         auto opool = ObjPool::fromMemory();
-        auto* wq = WaitQueue::construct(opool.mutPtr(), 256);
+        auto wq = WaitQueue::construct(opool.mutPtr(), 256);
 
         WaitQueue::Item items[256];
 

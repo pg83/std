@@ -63,7 +63,7 @@ STD_TEST_SUITE(Semaphore) {
 
     STD_TEST(CoroBasic) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         Semaphore sem(0, exec);
 
         exec->spawn([&] {
@@ -79,7 +79,7 @@ STD_TEST_SUITE(Semaphore) {
 
     STD_TEST(CoroInitialCount) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         Semaphore sem(3, exec);
 
         exec->spawn([&] {
@@ -98,7 +98,7 @@ STD_TEST_SUITE(Semaphore) {
     STD_TEST(CoroMultiple) {
         const int N = 8;
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         Semaphore sem(0, exec);
         int counter = 0;
 

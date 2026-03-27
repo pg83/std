@@ -52,7 +52,7 @@ STD_TEST_SUITE(ThreadAsync) {
 STD_TEST_SUITE(PoolAsync) {
     STD_TEST(Basic) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 4);
 
         auto f = async(pool, [] {
             return 42;
@@ -67,7 +67,7 @@ STD_TEST_SUITE(PoolAsync) {
             int x, y;
         };
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 4);
 
         auto f = async(pool, [] {
             return Point{3, 7};
@@ -80,7 +80,7 @@ STD_TEST_SUITE(PoolAsync) {
 
     STD_TEST(Multiple) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 4);
         const int N = 8;
 
         for (int i = 0; i < N; ++i) {
@@ -96,7 +96,7 @@ STD_TEST_SUITE(PoolAsync) {
 
     STD_TEST(Parallel) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 4);
 
         auto f1 = async(pool, [] {
             return 1;
@@ -146,7 +146,7 @@ STD_TEST_SUITE(AsyncLifetime) {
     STD_TEST(Pool) {
         int alive = 0;
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 4);
 
         {
             auto f = async(pool, [&] {
@@ -163,7 +163,7 @@ STD_TEST_SUITE(AsyncLifetime) {
     STD_TEST(PoolMultiple) {
         int alive = 0;
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 4);
 
         {
             auto f1 = async(pool, [&] {
@@ -188,7 +188,7 @@ STD_TEST_SUITE(AsyncLifetime) {
     STD_TEST(PoolLoop) {
         int alive = 0;
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 4);
 
         for (int i = 0; i < 10; ++i) {
             auto f = async(pool, [&, i] {
@@ -205,7 +205,7 @@ STD_TEST_SUITE(AsyncLifetime) {
     STD_TEST(Coro) {
         int alive = 0;
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         exec->spawn([&] {
             auto f1 = async(exec, [&] {
@@ -227,7 +227,7 @@ STD_TEST_SUITE(AsyncLifetime) {
 STD_TEST_SUITE(Async) {
     STD_TEST(Basic) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         exec->spawn([&] {
             auto f = async(exec, [] {
@@ -245,7 +245,7 @@ STD_TEST_SUITE(Async) {
             int x, y;
         };
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         exec->spawn([&] {
             auto f = async(exec, [] {
@@ -261,7 +261,7 @@ STD_TEST_SUITE(Async) {
 
     STD_TEST(Multiple) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int N = 8;
 
         exec->spawn([&] {
@@ -279,7 +279,7 @@ STD_TEST_SUITE(Async) {
 
     STD_TEST(Parallel) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         exec->spawn([&] {
             auto f1 = async(exec, [] {
@@ -304,7 +304,7 @@ STD_TEST_SUITE(Async) {
 
     STD_TEST(Parallel2) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         auto res = async(exec, [&] {
                        auto f1 = async(exec, [] {
@@ -328,7 +328,7 @@ STD_TEST_SUITE(Async) {
 
     STD_TEST(CoroRecursive) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         auto run = [&](auto& self, size_t depth) {
             if (depth == 0) {

@@ -468,7 +468,7 @@ STD_TEST_SUITE(Thread) {
 STD_TEST_SUITE(CoroThread) {
     STD_TEST(BasicCreationAndJoin) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter = 0;
         CounterRunable runnable(&counter);
 
@@ -483,7 +483,7 @@ STD_TEST_SUITE(CoroThread) {
 
     STD_TEST(MultipleThreads) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter1 = 0, counter2 = 0, counter3 = 0;
         CounterRunable r1(&counter1), r2(&counter2), r3(&counter3);
 
@@ -504,7 +504,7 @@ STD_TEST_SUITE(CoroThread) {
 
     STD_TEST(WithMultipleIncrements) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter = 0;
         MultiIncrementRunable runnable(&counter, 1000);
 
@@ -519,7 +519,7 @@ STD_TEST_SUITE(CoroThread) {
 
     STD_TEST(SequentialCreation) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int total = 0;
 
         exec->spawn([&] {
@@ -538,7 +538,7 @@ STD_TEST_SUITE(CoroThread) {
 
     STD_TEST(MultipleWithDifferentWorkloads) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter1 = 0, counter2 = 0, counter3 = 0;
         MultiIncrementRunable r1(&counter1, 100);
         MultiIncrementRunable r2(&counter2, 500);
@@ -561,7 +561,7 @@ STD_TEST_SUITE(CoroThread) {
 
     STD_TEST(JoinOrder) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter1 = 0, counter2 = 0;
         CounterRunable r1(&counter1), r2(&counter2);
 
@@ -579,7 +579,7 @@ STD_TEST_SUITE(CoroThread) {
 
     STD_TEST(ThreadId) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         u64 id = 0;
         bool executed = false;
 

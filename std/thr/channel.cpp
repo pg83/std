@@ -37,7 +37,7 @@ struct Channel::Impl {
     }
 
     bool sendOne(void* v) noexcept {
-        if (auto* w = (Waiter*)receivers_.popFrontOrNull(); w) {
+        if (auto w = (Waiter*)receivers_.popFrontOrNull(); w) {
             w->value = v;
             w->valueSet = true;
             w->ev->signal();
@@ -53,7 +53,7 @@ struct Channel::Impl {
             return true;
         }
 
-        if (auto* w = (Waiter*)senders_.popFrontOrNull(); w) {
+        if (auto w = (Waiter*)senders_.popFrontOrNull(); w) {
             *out = w->value;
             w->ev->signal();
 
@@ -150,7 +150,7 @@ struct Channel::Impl {
 
         closed_ = true;
 
-        while (auto* w = (Waiter*)receivers_.popFrontOrNull()) {
+        while (auto w = (Waiter*)receivers_.popFrontOrNull()) {
             w->ev->signal();
         }
     }
@@ -196,7 +196,7 @@ namespace {
             if (!buf_.empty()) {
                 *out = buf_.pop();
 
-                if (auto* w = (Waiter*)senders_.popFrontOrNull(); w) {
+                if (auto w = (Waiter*)senders_.popFrontOrNull(); w) {
                     buf_.push(w->value);
                     w->ev->signal();
                 }

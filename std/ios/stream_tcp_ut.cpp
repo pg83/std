@@ -29,7 +29,7 @@ namespace {
 STD_TEST_SUITE(TcpStream) {
     STD_TEST(Echo) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         TcpSocket srv(exec);
         STD_INSIST(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);

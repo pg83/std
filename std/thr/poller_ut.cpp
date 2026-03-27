@@ -10,13 +10,13 @@ using namespace stl;
 STD_TEST_SUITE(Poller) {
     STD_TEST(CreateDestroy) {
         auto pool = ObjPool::fromMemory();
-        auto* p = PollerIface::create(pool.mutPtr());
+        auto p = PollerIface::create(pool.mutPtr());
         (void)p;
     }
 
     STD_TEST(WaitTimeout) {
         auto pool = ObjPool::fromMemory();
-        auto* p = PollerIface::create(pool.mutPtr());
+        auto p = PollerIface::create(pool.mutPtr());
         u32 n = 0;
         p->wait([&](PollEvent*) {
             ++n;
@@ -26,7 +26,7 @@ STD_TEST_SUITE(Poller) {
 
     STD_TEST(ArmWritable) {
         auto pool = ObjPool::fromMemory();
-        auto* p = PollerIface::create(pool.mutPtr());
+        auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r, w;
         createPipeFD(r, w);
 
@@ -44,7 +44,7 @@ STD_TEST_SUITE(Poller) {
 
     STD_TEST(ArmReadable) {
         auto pool = ObjPool::fromMemory();
-        auto* p = PollerIface::create(pool.mutPtr());
+        auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r, w;
         createPipeFD(r, w);
 
@@ -65,7 +65,7 @@ STD_TEST_SUITE(Poller) {
 
     STD_TEST(DataPointer) {
         auto pool = ObjPool::fromMemory();
-        auto* p = PollerIface::create(pool.mutPtr());
+        auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r, w;
         createPipeFD(r, w);
 
@@ -83,7 +83,7 @@ STD_TEST_SUITE(Poller) {
 
     STD_TEST(Disarm) {
         auto pool = ObjPool::fromMemory();
-        auto* p = PollerIface::create(pool.mutPtr());
+        auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r, w;
         createPipeFD(r, w);
 
@@ -103,7 +103,7 @@ STD_TEST_SUITE(Poller) {
 
     STD_TEST(OneshotSemantics) {
         auto pool = ObjPool::fromMemory();
-        auto* p = PollerIface::create(pool.mutPtr());
+        auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r, w;
         createPipeFD(r, w);
 
@@ -128,7 +128,7 @@ STD_TEST_SUITE(Poller) {
 
     STD_TEST(RearmAfterOneshot) {
         auto pool = ObjPool::fromMemory();
-        auto* p = PollerIface::create(pool.mutPtr());
+        auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r, w;
         createPipeFD(r, w);
 
@@ -153,7 +153,7 @@ STD_TEST_SUITE(Poller) {
 
     STD_TEST(MultipleFds) {
         auto pool = ObjPool::fromMemory();
-        auto* p = PollerIface::create(pool.mutPtr());
+        auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r1, w1, r2, w2;
         createPipeFD(r1, w1);
         createPipeFD(r2, w2);
@@ -171,7 +171,7 @@ STD_TEST_SUITE(Poller) {
 
     STD_TEST(DisarmNonExistent) {
         auto pool = ObjPool::fromMemory();
-        auto* p = PollerIface::create(pool.mutPtr());
+        auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r, w;
         createPipeFD(r, w);
 

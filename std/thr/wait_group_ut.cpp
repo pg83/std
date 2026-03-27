@@ -127,7 +127,7 @@ STD_TEST_SUITE(WaitGroup) {
 
     STD_TEST(CoroBasic) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         WaitGroup wg(exec);
         int counter = 0;
 
@@ -149,7 +149,7 @@ STD_TEST_SUITE(WaitGroup) {
     STD_TEST(CoroMultiple) {
         const int N = 8;
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         WaitGroup wg(exec);
         int counter = 0;
 
@@ -172,7 +172,7 @@ STD_TEST_SUITE(WaitGroup) {
 
     STD_TEST(CoroReuseAfterWait) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         WaitGroup wg(exec);
         int counter = 0;
 

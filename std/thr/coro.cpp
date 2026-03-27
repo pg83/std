@@ -258,7 +258,7 @@ void ContImpl::run() noexcept {
     workerCtx_ = nullptr;
     *tls = nullptr;
 
-    if (auto* as = exchange(runable_, nullptr); as) {
+    if (auto as = exchange(runable_, nullptr); as) {
         return as->run();
     }
 
@@ -286,7 +286,7 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
 }
 
 void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {
-    auto* cont = currentCont();
+    auto cont = currentCont();
 
     cont->park([&] {
         pool->submit([&] {
@@ -393,7 +393,7 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
 
         void wait(Mutex& mutex) noexcept override {
             queueMutex_.lock();
-            auto* cont = exec()->currentCont();
+            auto cont = exec()->currentCont();
             waiters_.pushBack(cont);
             cont->park([&] {
                 queueMutex_.unlock();
@@ -405,7 +405,7 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
         void signal() noexcept override {
             LockGuard guard(queueMutex_);
 
-            if (auto* node = (ContImpl*)(Task*)waiters_.popFrontOrNull(); node) {
+            if (auto node = (ContImpl*)(Task*)waiters_.popFrontOrNull(); node) {
                 node->reSchedule();
             }
         }
@@ -413,7 +413,7 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
         void broadcast() noexcept override {
             LockGuard guard(queueMutex_);
 
-            while (auto* node = (ContImpl*)(Task*)waiters_.popFrontOrNull()) {
+            while (auto node = (ContImpl*)(Task*)waiters_.popFrontOrNull()) {
                 node->reSchedule();
             }
         }
@@ -494,7 +494,7 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
         void post() noexcept override {
             lock_.lock();
 
-            if (auto* cont = (ContImpl*)(Task*)waiters_.popFrontOrNull(); cont) {
+            if (auto cont = (ContImpl*)(Task*)waiters_.popFrontOrNull(); cont) {
                 lock_.unlock();
                 cont->reSchedule();
             } else {
@@ -512,7 +512,7 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
                 return;
             }
 
-            auto* cont = ((CoroExecutorImpl*)(CoroExecutor*)nativeHandle())->currentCont();
+            auto cont = ((CoroExecutorImpl*)(CoroExecutor*)nativeHandle())->currentCont();
             waiters_.pushBack(cont);
             cont->park([&] {
                 lock_.unlock();

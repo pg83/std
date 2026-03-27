@@ -115,7 +115,7 @@ STD_TEST_SUITE(EventDefault) {
         Vector<Thread*> threads;
 
         for (int j = 0; j < THREADS; ++j) {
-            auto* r = makeRunablePtr([&] {
+            auto r = makeRunablePtr([&] {
                 for (int i = 0; i < N; ++i) {
                     Event ev;
                     int v = 0;
@@ -136,7 +136,7 @@ STD_TEST_SUITE(EventDefault) {
             threads.pushBack(pool->make<Thread>(*r));
         }
 
-        for (auto* t : range(threads)) {
+        for (auto t : range(threads)) {
             t->join();
         }
 
@@ -174,7 +174,7 @@ STD_TEST_SUITE(EventDefault) {
 STD_TEST_SUITE(EventCoro) {
     STD_TEST(BasicSignal) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         exec->spawn([&] {
             Event ev(exec);
@@ -194,7 +194,7 @@ STD_TEST_SUITE(EventCoro) {
 
     STD_TEST(DirectHandoff) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int N = 100;
 
         exec->spawn([&] {
@@ -217,7 +217,7 @@ STD_TEST_SUITE(EventCoro) {
 
     STD_TEST(ManyPairs) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int N = 8;
         int counter = 0;
 

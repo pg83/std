@@ -15,7 +15,7 @@ using namespace stl;
 STD_TEST_SUITE(CoroFDInput) {
     STD_TEST(ReadData) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         ScopedFD sfd(memFD("test"));
         STD_INSIST(sfd.get() >= 0);
 
@@ -38,7 +38,7 @@ STD_TEST_SUITE(CoroFDInput) {
 
     STD_TEST(ReadEof) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         ScopedFD sfd(memFD("test"));
         STD_INSIST(sfd.get() >= 0);
 
@@ -56,7 +56,7 @@ STD_TEST_SUITE(CoroFDInput) {
 
     STD_TEST(ReadAdvancesOffset) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         ScopedFD sfd(memFD("test"));
         STD_INSIST(sfd.get() >= 0);
 

@@ -26,9 +26,9 @@ STD_TEST_SUITE(HashTable) {
         ht.insert(&node2);
         ht.insert(&node3);
 
-        auto* found1 = static_cast<TestNode*>(ht.find(1));
-        auto* found2 = static_cast<TestNode*>(ht.find(2));
-        auto* found3 = static_cast<TestNode*>(ht.find(3));
+        auto found1 = static_cast<TestNode*>(ht.find(1));
+        auto found2 = static_cast<TestNode*>(ht.find(2));
+        auto found3 = static_cast<TestNode*>(ht.find(3));
 
         STD_INSIST(found1 == &node1 && found1->value == 100);
         STD_INSIST(found2 == &node2 && found2->value == 200);
@@ -53,7 +53,7 @@ STD_TEST_SUITE(HashTable) {
         TestNode node1 = {{1, nullptr}, 100};
         TestNode node2 = {{1, nullptr}, 200};
 
-        auto* old = ht.insert(&node1);
+        auto old = ht.insert(&node1);
         STD_INSIST(old == nullptr);
         STD_INSIST(ht.find(1) == &node1);
         STD_INSIST(ht.size() == 1);
@@ -82,7 +82,7 @@ STD_TEST_SUITE(HashTable) {
         STD_INSIST(ht.size() == count);
 
         for (size_t i = 0; i < count; ++i) {
-            auto* found = static_cast<TestNode*>(ht.find(i + 1));
+            auto found = static_cast<TestNode*>(ht.find(i + 1));
             STD_INSIST(found != nullptr);
             STD_INSIST(found->value == (int)(i * 7));
         }
@@ -106,7 +106,7 @@ STD_TEST_SUITE(HashTable) {
         STD_INSIST(ht.size() == 200);
 
         for (int i = 0; i < 200; ++i) {
-            auto* found = static_cast<TestNode*>(ht.find(i + 1));
+            auto found = static_cast<TestNode*>(ht.find(i + 1));
             STD_INSIST(found != nullptr);
             STD_INSIST(found->value == i * 10);
         }
@@ -148,7 +148,7 @@ STD_TEST_SUITE(HashTable) {
 
         STD_INSIST(ht.size() == 3);
 
-        auto* erased = ht.erase(2);
+        auto erased = ht.erase(2);
 
         STD_INSIST(erased == &node2);
         STD_INSIST(ht.find(1) == &node1);
@@ -183,7 +183,7 @@ STD_TEST_SUITE(HashTable) {
         ht.insert(&node1);
         STD_INSIST(ht.find(1) == &node1);
 
-        auto* erased = ht.erase(1);
+        auto erased = ht.erase(1);
         STD_INSIST(erased == &node1);
         STD_INSIST(ht.find(1) == nullptr);
 
@@ -206,7 +206,7 @@ STD_TEST_SUITE(HashTable) {
         STD_INSIST(ht.size() == 5);
 
         for (int i = 0; i < 5; ++i) {
-            auto* erased = ht.erase(i + 1);
+            auto erased = ht.erase(i + 1);
             STD_INSIST(erased == &nodes[i]);
         }
 
@@ -273,7 +273,7 @@ STD_TEST_SUITE(HashTable) {
 
         int sum = 0;
         ht.visit([&sum](HashTable::Node* node) {
-            auto* tn = static_cast<TestNode*>(node);
+            auto tn = static_cast<TestNode*>(node);
             sum += tn->value;
         });
 
@@ -290,12 +290,12 @@ STD_TEST_SUITE(HashTable) {
         }
 
         ht.visit([](HashTable::Node* node) {
-            auto* tn = static_cast<TestNode*>(node);
+            auto tn = static_cast<TestNode*>(node);
             tn->value *= 2;
         });
 
         for (int i = 0; i < 5; ++i) {
-            auto* found = static_cast<TestNode*>(ht.find(i + 1));
+            auto found = static_cast<TestNode*>(ht.find(i + 1));
             STD_INSIST(found != nullptr);
             STD_INSIST(found->value == (i + 1) * 2);
         }
@@ -313,7 +313,7 @@ STD_TEST_SUITE(HashTable) {
             ht.insert(&nodes[i]);
         }
 
-        auto* erased = ht.erase(51);
+        auto erased = ht.erase(51);
         STD_INSIST(erased == &nodes[2]);
 
         STD_INSIST(ht.find(17) == &nodes[0]);
@@ -329,7 +329,7 @@ STD_TEST_SUITE(HashTable) {
         TestNode node = {{1, nullptr}, 42};
         ht.insert(&node);
 
-        auto* erased = ht.erase(1);
+        auto erased = ht.erase(1);
         STD_INSIST(erased == &node);
         STD_INSIST(ht.find(1) == nullptr);
 
@@ -345,12 +345,12 @@ STD_TEST_SUITE(HashTable) {
         TestNode node2 = {{1, nullptr}, 200};
 
         ht.insert(&node1);
-        auto* old = ht.insert(&node2);
+        auto old = ht.insert(&node2);
         STD_INSIST(old == &node1);
 
         STD_INSIST(ht.find(1) == &node2);
 
-        auto* erased = ht.erase(1);
+        auto erased = ht.erase(1);
         STD_INSIST(erased == &node2);
 
         STD_INSIST(ht.find(1) == nullptr);
@@ -395,7 +395,7 @@ STD_TEST_SUITE(HashTable) {
                     STD_INSIST(prev);
                 }
             } else if (op < 70) {
-                auto* result = ht.find(key);
+                auto result = ht.find(key);
                 if (shouldExist[idx]) {
                     STD_INSIST(result == expectedNodes[idx]);
                 } else {
@@ -437,7 +437,7 @@ STD_TEST_SUITE(HashTable) {
         }
 
         for (size_t i = 0; i < keyRange; ++i) {
-            auto* result = ht.find(i + 1);
+            auto result = ht.find(i + 1);
             if (shouldExist[i]) {
                 STD_INSIST(result == expectedNodes[i]);
             } else {
@@ -503,7 +503,7 @@ STD_TEST_SUITE(HashTable) {
 
         for (size_t i = 0; i < chainLength; ++i) {
             u64 key = i * capacity;
-            auto* result = ht.find(key);
+            auto result = ht.find(key);
             if (i % 3 == 0) {
                 STD_INSIST(result == nullptr);
             } else {

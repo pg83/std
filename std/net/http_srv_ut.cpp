@@ -41,7 +41,7 @@ namespace {
 STD_TEST_SUITE(HttpServerRequestParsing) {
     STD_TEST(PathNoQuery) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         struct Handler: HttpServe {
             Buffer path;
@@ -58,7 +58,7 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
 
         auto addr = makeAddr(17670);
         WaitGroup wg(exec);
-        auto* ctl = serve(pool.mutPtr(), {
+        auto ctl = serve(pool.mutPtr(), {
                                              .handler = &handler,
                                              .exec = exec,
                                              .addr = (const sockaddr*)&addr,
@@ -96,7 +96,7 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
 
     STD_TEST(PathWithQuery) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         struct Handler: HttpServe {
             Buffer path;
@@ -113,7 +113,7 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
 
         auto addr = makeAddr(17671);
         WaitGroup wg(exec);
-        auto* ctl = serve(pool.mutPtr(), {
+        auto ctl = serve(pool.mutPtr(), {
                                              .handler = &handler,
                                              .exec = exec,
                                              .addr = (const sockaddr*)&addr,
@@ -153,7 +153,7 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
 STD_TEST_SUITE(HttpServer) {
     STD_TEST(GetRequest) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         struct Handler: HttpServe {
             void serve(HttpServerResponse& resp) override {
@@ -165,7 +165,7 @@ STD_TEST_SUITE(HttpServer) {
 
         auto addr = makeAddr(17661);
         WaitGroup wg(exec);
-        auto* ctl = serve(pool.mutPtr(), {
+        auto ctl = serve(pool.mutPtr(), {
                                              .handler = &handler,
                                              .exec = exec,
                                              .addr = (const sockaddr*)&addr,
@@ -193,7 +193,7 @@ STD_TEST_SUITE(HttpServer) {
 
             InBuf in(stream);
             auto pool = ObjPool::fromMemory();
-            auto* resp = HttpClient::create(pool.mutPtr(), &in);
+            auto resp = HttpClient::create(pool.mutPtr(), &in);
 
             respStatus = resp->status();
             resp->body()->readAll(respBody);
@@ -213,7 +213,7 @@ STD_TEST_SUITE(HttpServer) {
 
     STD_TEST(KeepAliveChunked) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         struct Handler: HttpServe {
             void serve(HttpServerResponse& resp) override {
@@ -226,7 +226,7 @@ STD_TEST_SUITE(HttpServer) {
 
         auto addr = makeAddr(17663);
         WaitGroup wg(exec);
-        auto* ctl = serve(pool.mutPtr(), {
+        auto ctl = serve(pool.mutPtr(), {
                                              .handler = &handler,
                                              .exec = exec,
                                              .addr = (const sockaddr*)&addr,
@@ -259,7 +259,7 @@ STD_TEST_SUITE(HttpServer) {
                 "\r\n";
             stream.write(req1, ::strlen(req1));
 
-            auto* resp1 = HttpClient::create(pool.mutPtr(), &in);
+            auto resp1 = HttpClient::create(pool.mutPtr(), &in);
             STD_INSIST(resp1->status() == 200);
             resp1->body()->readAll(body1);
 
@@ -273,7 +273,7 @@ STD_TEST_SUITE(HttpServer) {
                 "\r\n";
             stream.write(req2, ::strlen(req2));
 
-            auto* resp2 = HttpClient::create(pool.mutPtr(), &in);
+            auto resp2 = HttpClient::create(pool.mutPtr(), &in);
             STD_INSIST(resp2->status() == 200);
             resp2->body()->readAll(body2);
 
@@ -292,7 +292,7 @@ STD_TEST_SUITE(HttpServer) {
 
     STD_TEST(KeepAlive) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         struct Handler: HttpServe {
             void serve(HttpServerResponse& resp) override {
@@ -305,7 +305,7 @@ STD_TEST_SUITE(HttpServer) {
 
         auto addr = makeAddr(17662);
         WaitGroup wg(exec);
-        auto* ctl = serve(pool.mutPtr(), {
+        auto ctl = serve(pool.mutPtr(), {
                                              .handler = &handler,
                                              .exec = exec,
                                              .addr = (const sockaddr*)&addr,
@@ -334,7 +334,7 @@ STD_TEST_SUITE(HttpServer) {
                 "\r\n";
             stream.write(req1, ::strlen(req1));
 
-            auto* resp1 = HttpClient::create(pool.mutPtr(), &in);
+            auto resp1 = HttpClient::create(pool.mutPtr(), &in);
             STD_INSIST(resp1->status() == 200);
             resp1->body()->readAll(body1);
 
@@ -344,7 +344,7 @@ STD_TEST_SUITE(HttpServer) {
                 "\r\n";
             stream.write(req2, ::strlen(req2));
 
-            auto* resp2 = HttpClient::create(pool.mutPtr(), &in);
+            auto resp2 = HttpClient::create(pool.mutPtr(), &in);
             STD_INSIST(resp2->status() == 200);
             resp2->body()->readAll(body2);
 
@@ -387,7 +387,7 @@ namespace {
 STD_TEST_SUITE(HttpFileServe) {
     STD_TEST(_ServeFiles) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 8);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 8);
         auto sslCtx = SslCtx::create(pool.mutPtr(), StringView(testCert), StringView(testKey));
 
         struct Handler: HttpServe {
@@ -423,7 +423,7 @@ STD_TEST_SUITE(HttpFileServe) {
 
         u16 port = 18080;
 
-        if (auto* v = _ctx.args().find(StringView("port"))) {
+        if (auto v = _ctx.args().find(StringView("port"))) {
             port = (u16)v->stou();
         }
 
@@ -451,7 +451,7 @@ STD_TEST_SUITE(HttpFileServe) {
 
     STD_TEST(_ServeOK) {
         auto pool = ObjPool::fromMemory();
-        auto* exec = CoroExecutor::create(pool.mutPtr(), 8);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 8);
         auto sslCtx = SslCtx::create(pool.mutPtr(), StringView(testCert), StringView(testKey));
 
         struct Handler: HttpServe {
@@ -475,7 +475,7 @@ STD_TEST_SUITE(HttpFileServe) {
 
         u16 port = 18080;
 
-        if (auto* v = _ctx.args().find(StringView("port"))) {
+        if (auto v = _ctx.args().find(StringView("port"))) {
             port = (u16)v->stou();
         }
 

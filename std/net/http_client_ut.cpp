@@ -16,7 +16,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto* cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = HttpClient::create(pool.mutPtr(), &in);
 
         STD_INSIST(cli->status() == 200);
         STD_INSIST(cli->reason() == StringView("OK"));
@@ -29,7 +29,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto* cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = HttpClient::create(pool.mutPtr(), &in);
 
         STD_INSIST(cli->status() == 404);
         STD_INSIST(cli->reason() == StringView("Not Found"));
@@ -44,14 +44,14 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto* cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = HttpClient::create(pool.mutPtr(), &in);
 
-        auto* ct = cli->header(StringView("content-type"));
+        auto ct = cli->header(StringView("content-type"));
 
         STD_INSIST(ct != nullptr);
         STD_INSIST(*ct == StringView("text/html"));
 
-        auto* xc = cli->header(StringView("x-custom"));
+        auto xc = cli->header(StringView("x-custom"));
 
         STD_INSIST(xc != nullptr);
         STD_INSIST(*xc == StringView("hello"));
@@ -68,7 +68,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto* cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = HttpClient::create(pool.mutPtr(), &in);
 
         Buffer body;
 
@@ -91,7 +91,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto* cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = HttpClient::create(pool.mutPtr(), &in);
 
         Buffer body;
 
@@ -107,7 +107,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto* cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = HttpClient::create(pool.mutPtr(), &in);
 
         Buffer body;
 
@@ -125,7 +125,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto* cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = HttpClient::create(pool.mutPtr(), &in);
 
         Buffer body;
 
@@ -144,7 +144,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto* cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = HttpClient::create(pool.mutPtr(), &in);
 
         STD_INSIST(cli->status() == 200);
         STD_INSIST(*cli->header(StringView("content-length")) == StringView("0"));
@@ -166,7 +166,7 @@ STD_TEST_SUITE(HttpClient) {
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
 
-        auto* r1 = HttpClient::create(pool.mutPtr(), &in);
+        auto r1 = HttpClient::create(pool.mutPtr(), &in);
 
         STD_INSIST(r1->status() == 200);
 
@@ -176,7 +176,7 @@ STD_TEST_SUITE(HttpClient) {
 
         STD_INSIST(StringView(b1) == StringView("ok"));
 
-        auto* r2 = HttpClient::create(pool.mutPtr(), &in);
+        auto r2 = HttpClient::create(pool.mutPtr(), &in);
 
         STD_INSIST(r2->status() == 404);
 

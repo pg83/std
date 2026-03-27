@@ -27,7 +27,7 @@ STD_TEST_SUITE(NumCpu) {
     STD_TEST(GomaxprocsOverride) {
         LockGuard g(envMutex());
 
-        auto* prev = getenv("GOMAXPROCS");
+        auto prev = getenv("GOMAXPROCS");
 
         setenv("GOMAXPROCS", "7", 1);
         STD_INSIST(numCpu() == 7);
@@ -45,7 +45,7 @@ STD_TEST_SUITE(NumCpu) {
     STD_TEST(GomaxprocsZeroIgnored) {
         LockGuard g(envMutex());
 
-        auto* prev = getenv("GOMAXPROCS");
+        auto prev = getenv("GOMAXPROCS");
 
         setenv("GOMAXPROCS", "0", 1);
         STD_INSIST(numCpu() > 0);
@@ -60,7 +60,7 @@ STD_TEST_SUITE(NumCpu) {
     STD_TEST(GomaxprocsGarbageIgnored) {
         LockGuard g(envMutex());
 
-        auto* prev = getenv("GOMAXPROCS");
+        auto prev = getenv("GOMAXPROCS");
 
         setenv("GOMAXPROCS", "abc", 1);
         STD_INSIST(numCpu() > 0);
@@ -75,7 +75,7 @@ STD_TEST_SUITE(NumCpu) {
     STD_TEST(WithoutEnvMatchesOs) {
         LockGuard g(envMutex());
 
-        auto* prev = getenv("GOMAXPROCS");
+        auto prev = getenv("GOMAXPROCS");
 
         unsetenv("GOMAXPROCS");
 

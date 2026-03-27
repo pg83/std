@@ -47,7 +47,7 @@ namespace {
 
         void schedule() {
             stdAtomicAddAndFetch(&state_->counter, 1, MemoryOrder::Relaxed);
-            auto* t = new StressTask(state_, depth_ - 1);
+            auto t = new StressTask(state_, depth_ - 1);
             state_->pool->submit([t] {
                 t->run();
             });
@@ -64,7 +64,7 @@ namespace {
             }
             doWork();
 
-            auto* state = state_;
+            auto state = state_;
             delete this;
 
             if (stdAtomicSubAndFetch(&state->counter, 1, MemoryOrder::Release) == 0) {
@@ -78,13 +78,13 @@ namespace {
 STD_TEST_SUITE(ThreadPool) {
     STD_TEST(BasicConstruction) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 4);
         pool->join();
     }
 
     STD_TEST(SingleTask) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 1);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 1);
         int counter = 0;
 
         pool->submit([&counter] {
@@ -97,7 +97,7 @@ STD_TEST_SUITE(ThreadPool) {
 
     STD_TEST(MultipleTasks) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 1);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 1);
         int counter = 0;
 
         pool->submit([&counter] {
@@ -116,7 +116,7 @@ STD_TEST_SUITE(ThreadPool) {
 
     STD_TEST(ManyTasksSingleThread) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 1);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 1);
         int counter = 0;
         const int numTasks = 100;
 
@@ -132,7 +132,7 @@ STD_TEST_SUITE(ThreadPool) {
 
     STD_TEST(ManyTasksMultipleThreads) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 4);
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
@@ -147,13 +147,13 @@ STD_TEST_SUITE(ThreadPool) {
 
     STD_TEST(EmptyPool) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 2);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 2);
         pool->join();
     }
 
     STD_TEST(TasksWithWork) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 4);
 
         for (int i = 0; i < 20; ++i) {
             pool->submit([] {
@@ -164,7 +164,7 @@ for (volatile int i = 0; i < 10000; ++i) {} });
 
     STD_TEST(SingleThreadPool) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 1);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 1);
         int counter = 0;
 
         for (int i = 0; i < 10; ++i) {
@@ -179,7 +179,7 @@ for (volatile int i = 0; i < 10000; ++i) {} });
 
     STD_TEST(ManyThreadsPool) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 8);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 8);
         int counter = 0;
 
         for (int i = 0; i < 50; ++i) {
@@ -196,13 +196,13 @@ for (volatile int i = 0; i < 10000; ++i) {} });
 STD_TEST_SUITE(WorkStealingThreadPool) {
     STD_TEST(BasicConstruction) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 4);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 4);
         pool->join();
     }
 
     STD_TEST(SingleTask) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 1);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 1);
         int counter = 0;
 
         pool->submit([&counter] {
@@ -215,7 +215,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
 
     STD_TEST(MultipleTasks) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 2);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 2);
         int counter = 0;
 
         for (int i = 0; i < 10; ++i) {
@@ -230,7 +230,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
 
     STD_TEST(ManyTasksSingleThread) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 1);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 1);
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
@@ -245,7 +245,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
 
     STD_TEST(ManyTasksMultipleThreads) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 4);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 4);
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
@@ -260,13 +260,13 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
 
     STD_TEST(EmptyPool) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 2);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 2);
         pool->join();
     }
 
     STD_TEST(TasksWithWork) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 4);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 4);
 
         for (int i = 0; i < 20; ++i) {
             pool->submit([] {
@@ -277,7 +277,7 @@ for (volatile int i = 0; i < 10000; ++i) {} });
 
     STD_TEST(SingleThreadPool) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 1);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 1);
         int counter = 0;
 
         for (int i = 0; i < 50; ++i) {
@@ -292,7 +292,7 @@ for (volatile int i = 0; i < 10000; ++i) {} });
 
     STD_TEST(ManyThreadsPool) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 8);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 8);
         int counter = 0;
 
         for (int i = 0; i < 200; ++i) {
@@ -307,7 +307,7 @@ for (volatile int i = 0; i < 10000; ++i) {} });
 
     STD_TEST(WorkStealing) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 4);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 4);
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
@@ -322,7 +322,7 @@ for (volatile int i = 0; i < 10000; ++i) {} });
 
     STD_TEST(MixedWorkload) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 4);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 4);
         int counter = 0;
 
         for (int i = 0; i < 50; ++i) {
@@ -350,10 +350,10 @@ for (volatile int i = 0; i < 10000; ++i) {} });
 
     STD_TEST(_SW) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 16);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 16);
         StressState state(pool, work);
 
-        auto* task = new StressTask(&state, depth);
+        auto task = new StressTask(&state, depth);
         pool->submit([task] {
             task->run();
         });
@@ -368,10 +368,10 @@ for (volatile int i = 0; i < 10000; ++i) {} });
 
     STD_TEST(_SS) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 16);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 16);
         StressState state(pool, work);
 
-        auto* task = new StressTask(&state, depth);
+        auto task = new StressTask(&state, depth);
         pool->submit([task] {
             task->run();
         });
@@ -410,7 +410,7 @@ STD_TEST_SUITE(TlsKeys) {
         int idx = 0;
 
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 4);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 4);
         for (int i = 0; i < N; ++i) {
             pool->submit([&keys, &idx] {
                 int i = stdAtomicAddAndFetch(&idx, 1, MemoryOrder::Relaxed) - 1;
@@ -430,14 +430,14 @@ STD_TEST_SUITE(TlsKeys) {
 STD_TEST_SUITE(SyncPoolTls) {
     STD_TEST(NotNull) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::sync(opool.mutPtr());
+        auto pool = ThreadPool::sync(opool.mutPtr());
         u64 key = ThreadPool::registerTlsKey();
         STD_INSIST(pool->tls(key) != nullptr);
     }
 
     STD_TEST(StoreAndRetrieve) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::sync(opool.mutPtr());
+        auto pool = ThreadPool::sync(opool.mutPtr());
         u64 key = ThreadPool::registerTlsKey();
         int sentinel = 42;
         *pool->tls(key) = &sentinel;
@@ -446,7 +446,7 @@ STD_TEST_SUITE(SyncPoolTls) {
 
     STD_TEST(MultipleKeysIndependent) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::sync(opool.mutPtr());
+        auto pool = ThreadPool::sync(opool.mutPtr());
         u64 k1 = ThreadPool::registerTlsKey();
         u64 k2 = ThreadPool::registerTlsKey();
         int v1 = 1, v2 = 2;
@@ -458,7 +458,7 @@ STD_TEST_SUITE(SyncPoolTls) {
 
     STD_TEST(PersistAcrossTasks) {
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::sync(opool.mutPtr());
+        auto pool = ThreadPool::sync(opool.mutPtr());
         u64 key = ThreadPool::registerTlsKey();
         int sentinel = 77;
         void* result = nullptr;
@@ -476,7 +476,7 @@ STD_TEST_SUITE(SimplePoolTls) {
     STD_TEST(NullFromOutside) {
         u64 key = ThreadPool::registerTlsKey();
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 2);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 2);
         STD_INSIST(pool->tls(key) == nullptr);
         pool->join();
     }
@@ -486,7 +486,7 @@ STD_TEST_SUITE(SimplePoolTls) {
         bool notNull = false;
 
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 1);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 1);
         pool->submit([pool, key, &notNull] {
             notNull = (pool->tls(key) != nullptr);
         });
@@ -501,7 +501,7 @@ STD_TEST_SUITE(SimplePoolTls) {
 
         // 1 thread => оба таска на одном воркере, TLS персистится
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 1);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 1);
         pool->submit([pool, key, &sentinel] {
             *pool->tls(key) = &sentinel;
         });
@@ -519,7 +519,7 @@ STD_TEST_SUITE(SimplePoolTls) {
         bool correct = true;
 
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), 1);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 1);
         pool->submit([pool, k1, k2, &v1, &v2, &correct] {
             *pool->tls(k1) = &v1;
             *pool->tls(k2) = &v2;
@@ -538,7 +538,7 @@ STD_TEST_SUITE(SimplePoolTls) {
         bool correct = true;
 
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::simple(opool.mutPtr(), N);
+        auto pool = ThreadPool::simple(opool.mutPtr(), N);
         for (int i = 0; i < N; ++i) {
             pool->submit([pool, key, &wg, id = i + 1, &correct] {
                 *pool->tls(key) = (void*)(uintptr_t)id;
@@ -558,7 +558,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
     STD_TEST(NullFromOutside) {
         u64 key = ThreadPool::registerTlsKey();
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 2);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 2);
         STD_INSIST(pool->tls(key) == nullptr);
         pool->join();
     }
@@ -568,7 +568,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         bool notNull = false;
 
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 2);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 2);
         pool->submit([pool, key, &notNull] {
             notNull = (pool->tls(key) != nullptr);
         });
@@ -583,7 +583,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         bool correct = true;
 
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), 2);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), 2);
         pool->submit([pool, k1, k2, &v1, &v2, &correct] {
             *pool->tls(k1) = &v1;
             *pool->tls(k2) = &v2;
@@ -602,7 +602,7 @@ STD_TEST_SUITE(WorkStealingPoolTls) {
         bool correct = true;
 
         auto opool = ObjPool::fromMemory();
-        auto* pool = ThreadPool::workStealing(opool.mutPtr(), N);
+        auto pool = ThreadPool::workStealing(opool.mutPtr(), N);
         for (int i = 0; i < N; ++i) {
             pool->submit([pool, key, &wg, id = i + 1, &correct] {
                 *pool->tls(key) = (void*)(uintptr_t)id;

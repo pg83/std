@@ -99,7 +99,7 @@ size_t Treap::length() const noexcept {
 }
 
 TreapNode* Treap::min() const noexcept {
-    auto* t = root;
+    auto t = root;
 
     while (t && t->left) {
         t = t->left;

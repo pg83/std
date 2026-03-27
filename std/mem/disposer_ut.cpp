@@ -54,7 +54,7 @@ STD_TEST_SUITE(Disposer) {
 
     STD_TEST(submit_single) {
         int counter = 0;
-        auto* obj = new TestDisposable(&counter);
+        auto obj = new TestDisposable(&counter);
 
         {
             Disposer disposer;
