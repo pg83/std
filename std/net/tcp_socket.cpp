@@ -252,3 +252,7 @@ int TcpSocket::writev(size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineU
 int TcpSocket::writevInf(size_t* nWritten, iovec* iov, size_t iovcnt) {
     return writev(nWritten, iov, iovcnt, UINT64_MAX);
 }
+
+ScopedTcpSocket::~ScopedTcpSocket() noexcept {
+    close();
+}

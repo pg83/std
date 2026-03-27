@@ -70,8 +70,8 @@ namespace {
         HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen);
 
         void stop() override;
-        TcpSocket listen();
-        void run(TcpSocket srv, WaitGroup* wg);
+        TcpSocket* listen(ObjPool* pool);
+        void run(TcpSocket* srv, WaitGroup* wg);
     };
 
     struct HttpConnection {
@@ -289,29 +289,28 @@ void HttpServerCtlImpl::stop() {
     });
 }
 
-TcpSocket HttpServerCtlImpl::listen() {
-    TcpSocket srv(exec);
+TcpSocket* HttpServerCtlImpl::listen(ObjPool* pool) {
+    auto* srv = pool->make<ScopedTcpSocket>(exec);
 
-    STD_VERIFY(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
+    STD_VERIFY(srv->socket(AF_INET, SOCK_STREAM, 0) == 0);
 
-    srv.setReuseAddr(true);
+    srv->setReuseAddr(true);
 
-    STD_VERIFY(srv.bind((const sockaddr*)&addr, addrLen) == 0);
-    STD_VERIFY(srv.listen(128) == 0);
+    STD_VERIFY(srv->bind((const sockaddr*)&addr, addrLen) == 0);
+    STD_VERIFY(srv->listen(128) == 0);
 
     return srv;
 }
 
-void HttpServerCtlImpl::run(TcpSocket srv, WaitGroup* wg) {
+void HttpServerCtlImpl::run(TcpSocket* srv, WaitGroup* wg) {
     STD_DEFER {
-        srv.close();
         wg->done();
     };
 
     for (;;) {
         ScopedFD client;
 
-        if (srv.acceptInf(client, nullptr, nullptr) != 0) {
+        if (srv->acceptInf(client, nullptr, nullptr) != 0) {
             break;
         }
 
@@ -392,7 +391,7 @@ HttpServerCtl* stl::serve(ObjPool* pool, HttpServeOpts opts) {
     }
 
     auto ctl = pool->make<HttpServerCtlImpl>(*opts.handler, opts.exec, opts.addr, opts.addrLen);
-    auto srv = ctl->listen();
+    auto srv = ctl->listen(pool);
 
     opts.wg->inc();
 

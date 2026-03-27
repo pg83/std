@@ -46,4 +46,10 @@ namespace stl {
         int writevInf(size_t* nWritten, iovec* iov, size_t iovcnt);
         int writev(size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs);
     };
+
+    struct ScopedTcpSocket: public TcpSocket {
+        using TcpSocket::TcpSocket;
+
+        ~ScopedTcpSocket() noexcept;
+    };
 }
