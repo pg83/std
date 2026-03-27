@@ -254,6 +254,12 @@ int TcpSocket::writevInf(size_t* nWritten, iovec* iov, size_t iovcnt) {
     return writev(nWritten, iov, iovcnt, UINT64_MAX);
 }
 
+bool TcpSocket::peek(u8& out) {
+    exec->poll(fd, PollFlag::In);
+
+    return ::recv(fd, &out, 1, MSG_PEEK) == 1;
+}
+
 namespace {
     struct ScopedTcpSocket: public TcpSocket {
         using TcpSocket::TcpSocket;

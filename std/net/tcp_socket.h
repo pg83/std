@@ -47,6 +47,8 @@ namespace stl {
         int writevInf(size_t* nWritten, iovec* iov, size_t iovcnt);
         int writev(size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs);
 
+        bool peek(u8& out);
+
         static TcpSocket* create(ObjPool* pool, CoroExecutor* exec);
         static TcpSocket* create(ObjPool* pool, int fd, CoroExecutor* exec);
     };

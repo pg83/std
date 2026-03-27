@@ -348,12 +348,9 @@ HttpConnection::HttpConnection(HttpServe* handler, CoroExecutor* exec, ObjPool* 
     out = pool->make<OutBuf>(*stream);
 
     if (auto ssl = handler->ssl()) {
-        unsigned char b;
-        int fd = sock.fd;
+        u8 b;
 
-        sock.exec->poll(fd, PollFlag::In);
-
-        if (::recv(fd, &b, 1, MSG_PEEK) == 1 && b == 0x16) {
+        if (sock.peek(b) && b == 0x16) {
             auto s = ssl->create(pool, in, out);
 
             in = s;
