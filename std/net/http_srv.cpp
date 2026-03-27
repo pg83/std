@@ -23,6 +23,7 @@
 #include <std/sys/atomic.h>
 #include <std/thr/poller.h>
 #include <std/ios/out_buf.h>
+#include <std/sys/num_cpu.h>
 #include <std/str/builder.h>
 #include <std/ios/in_zero.h>
 #include <std/mem/obj_pool.h>
@@ -386,7 +387,7 @@ HttpServerCtl* stl::serve(ObjPool* pool, const HttpServeOpts& opts) {
     CoroExecutor* exec = opts.exec;
 
     if (!exec) {
-        exec = pool->make<CoroExecutor::Ref>(CoroExecutor::create(4))->mutPtr();
+        exec = pool->make<CoroExecutor::Ref>(CoroExecutor::create(numCpu()))->mutPtr();
     }
 
     auto* ctl = pool->make<HttpServerCtlImpl>(*opts.handler, exec, opts.addr, opts.addrLen);
