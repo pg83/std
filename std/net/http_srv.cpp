@@ -290,7 +290,7 @@ void HttpServerCtlImpl::stop() {
 }
 
 TcpSocket* HttpServerCtlImpl::listen(ObjPool* pool) {
-    auto* srv = pool->make<ScopedTcpSocket>(exec);
+    auto* srv = TcpSocket::create(pool, exec);
 
     STD_VERIFY(srv->socket(AF_INET, SOCK_STREAM, 0) == 0);
 

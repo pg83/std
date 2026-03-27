@@ -6,6 +6,7 @@ struct iovec;
 struct sockaddr;
 
 namespace stl {
+    class ObjPool;
     struct ScopedFD;
     struct CoroExecutor;
 
@@ -45,11 +46,8 @@ namespace stl {
 
         int writevInf(size_t* nWritten, iovec* iov, size_t iovcnt);
         int writev(size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs);
-    };
 
-    struct ScopedTcpSocket: public TcpSocket {
-        using TcpSocket::TcpSocket;
-
-        ~ScopedTcpSocket() noexcept;
+        static TcpSocket* create(ObjPool* pool, CoroExecutor* exec);
+        static TcpSocket* create(ObjPool* pool, int fd, CoroExecutor* exec);
     };
 }

@@ -4,6 +4,7 @@
 #include <std/sys/crt.h>
 #include <std/thr/coro.h>
 #include <std/thr/poller.h>
+#include <std/mem/obj_pool.h>
 
 #include <fcntl.h>
 #include <errno.h>
@@ -253,6 +254,20 @@ int TcpSocket::writevInf(size_t* nWritten, iovec* iov, size_t iovcnt) {
     return writev(nWritten, iov, iovcnt, UINT64_MAX);
 }
 
-ScopedTcpSocket::~ScopedTcpSocket() noexcept {
-    close();
+namespace {
+    struct ScopedTcpSocket: public TcpSocket {
+        using TcpSocket::TcpSocket;
+
+        ~ScopedTcpSocket() noexcept {
+            close();
+        }
+    };
+}
+
+TcpSocket* TcpSocket::create(ObjPool* pool, CoroExecutor* exec) {
+    return pool->make<ScopedTcpSocket>(exec);
+}
+
+TcpSocket* TcpSocket::create(ObjPool* pool, int fd, CoroExecutor* exec) {
+    return pool->make<ScopedTcpSocket>(fd, exec);
 }
