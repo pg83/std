@@ -1,9 +1,9 @@
 #include "hash.h"
 
+#include <std/rng/split_mix_64.h>
+
 #if __has_include(<rapidhash.h>)
     #include <rapidhash.h>
-#else
-    #include <std/rng/split_mix_64.h>
 #endif
 
 using namespace stl;
