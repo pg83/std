@@ -83,7 +83,7 @@ namespace {
         Buffer line;
         Buffer lcName;
 
-        HttpConnection(HttpServe* handler, CoroExecutor* exec, ObjPool* pool, ScopedFD* client);
+        HttpConnection(HttpServe* handler, CoroExecutor* exec, ObjPool* pool, FD* client);
         ~HttpConnection();
 
         void run();
@@ -330,7 +330,7 @@ void HttpServerCtlImpl::run(TcpSocket* srv, WaitGroup* wg) {
     }
 }
 
-HttpConnection::HttpConnection(HttpServe* handler, CoroExecutor* exec, ObjPool* pool, ScopedFD* client)
+HttpConnection::HttpConnection(HttpServe* handler, CoroExecutor* exec, ObjPool* pool, FD* client)
     : handler(handler)
     , pool(pool)
     , sock(client->get(), exec)
