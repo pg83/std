@@ -39,7 +39,7 @@ using namespace stl;
 namespace {
     struct HttpConnection;
 
-    struct HttpRequestImpl: public HttpRequest {
+    struct HttpServerRequestImpl: public HttpServerRequest {
         ObjPool::Ref pool = ObjPool::fromMemory();
         HttpConnection* conn;
         StringView reqMethod;
@@ -49,7 +49,7 @@ namespace {
         ZeroCopyInput* reqIn;
         bool keepAlive = false;
 
-        HttpRequestImpl(HttpConnection* conn);
+        HttpServerRequestImpl(HttpConnection* conn);
 
         bool serve();
 
@@ -94,25 +94,25 @@ namespace {
             StringView value;
         };
 
-        HttpRequestImpl* req;
+        HttpServerRequestImpl* req;
         Output* rawOut;
         Vector<Header*> headers;
         SymbolMap<Header*> headerIndex;
         u32 status;
 
-        HttpResponseImpl(HttpRequestImpl* req);
+        HttpResponseImpl(HttpServerRequestImpl* req);
 
         void serialize(ZeroCopyOutput& out);
 
         Output* out() override;
         void endHeaders() override;
-        HttpRequest* request() override;
+        HttpServerRequest* request() override;
         void setStatus(u32 code) override;
         void addHeader(StringView name, StringView value) override;
     };
 }
 
-HttpRequestImpl::HttpRequestImpl(HttpConnection* conn)
+HttpServerRequestImpl::HttpServerRequestImpl(HttpConnection* conn)
     : conn(conn)
 {
     StringView method, rest, path, version;
@@ -163,7 +163,7 @@ HttpRequestImpl::HttpRequestImpl(HttpConnection* conn)
     }
 }
 
-bool HttpRequestImpl::serve() {
+bool HttpServerRequestImpl::serve() {
     HttpResponseImpl resp(this);
 
     conn->handler->serve(resp);
@@ -172,27 +172,27 @@ bool HttpRequestImpl::serve() {
     return keepAlive;
 }
 
-StringView HttpRequestImpl::method() {
+StringView HttpServerRequestImpl::method() {
     return reqMethod;
 }
 
-StringView HttpRequestImpl::path() {
+StringView HttpServerRequestImpl::path() {
     return reqPath;
 }
 
-StringView HttpRequestImpl::query() {
+StringView HttpServerRequestImpl::query() {
     return reqQuery;
 }
 
-ZeroCopyInput* HttpRequestImpl::in() {
+ZeroCopyInput* HttpServerRequestImpl::in() {
     return reqIn;
 }
 
-StringView* HttpRequestImpl::header(StringView name) {
+StringView* HttpServerRequestImpl::header(StringView name) {
     return headers.find(name);
 }
 
-HttpResponseImpl::HttpResponseImpl(HttpRequestImpl* req)
+HttpResponseImpl::HttpResponseImpl(HttpServerRequestImpl* req)
     : req(req)
     , rawOut(req->conn->out)
     , status(200)
@@ -203,7 +203,7 @@ Output* HttpResponseImpl::out() {
     return rawOut;
 }
 
-HttpRequest* HttpResponseImpl::request() {
+HttpServerRequest* HttpResponseImpl::request() {
     return req;
 }
 
@@ -375,7 +375,7 @@ bool HttpConnection::serve() {
         return false;
     }
 
-    return HttpRequestImpl(this).serve();
+    return HttpServerRequestImpl(this).serve();
 }
 
 IntrusivePtr<HttpServerCtl> stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg) {

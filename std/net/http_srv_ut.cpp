@@ -38,7 +38,7 @@ namespace {
     }
 }
 
-STD_TEST_SUITE(HttpRequestParsing) {
+STD_TEST_SUITE(HttpServerRequestParsing) {
     STD_TEST(PathNoQuery) {
         auto exec = CoroExecutor::create(4);
 

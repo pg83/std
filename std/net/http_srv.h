@@ -17,7 +17,7 @@ namespace stl {
     struct SslCtx;
     struct CoroExecutor;
 
-    struct HttpRequest {
+    struct HttpServerRequest {
         virtual StringView path() = 0;
         virtual StringView query() = 0;
         virtual StringView method() = 0;
@@ -28,7 +28,7 @@ namespace stl {
     struct HttpResponse {
         virtual Output* out() = 0;
         virtual void endHeaders() = 0;
-        virtual HttpRequest* request() = 0;
+        virtual HttpServerRequest* request() = 0;
         virtual void setStatus(u32 code) = 0;
         virtual void addHeader(StringView name, StringView value) = 0;
     };
