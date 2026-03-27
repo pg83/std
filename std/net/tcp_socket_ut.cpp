@@ -4,8 +4,8 @@
 #include <std/tst/ut.h>
 #include <std/thr/coro.h>
 #include <std/thr/async.h>
-#include <std/alg/defer.h>
 #include <std/dbg/insist.h>
+#include <std/mem/obj_pool.h>
 
 #include <string.h>
 #include <arpa/inet.h>
@@ -26,25 +26,21 @@ namespace {
 STD_TEST_SUITE(TcpSocket) {
     STD_TEST(ConnectAcceptEcho) {
         auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
 
-        TcpSocket srv(exec.mutPtr());
-        STD_INSIST(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
-        STD_DEFER {
-            srv.close();
-        };
-
-        int opt = 1;
-        ::setsockopt(srv.fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+        auto* srv = TcpSocket::create(pool.mutPtr(), exec.mutPtr());
+        STD_INSIST(srv->socket(AF_INET, SOCK_STREAM, 0) == 0);
+        srv->setReuseAddr(true);
 
         auto addr = makeAddr(17654);
-        STD_INSIST(srv.bind((sockaddr*)&addr, sizeof(addr)) == 0);
-        STD_INSIST(srv.listen(8) == 0);
+        STD_INSIST(srv->bind((sockaddr*)&addr, sizeof(addr)) == 0);
+        STD_INSIST(srv->listen(8) == 0);
 
         char recvBuf[32] = {};
 
         exec->spawn([&] {
             ScopedFD clientFd;
-            STD_INSIST(srv.acceptInf(clientFd, nullptr, nullptr) == 0);
+            STD_INSIST(srv->acceptInf(clientFd, nullptr, nullptr) == 0);
 
             TcpSocket client(clientFd.get(), exec.mutPtr());
 
@@ -58,21 +54,19 @@ STD_TEST_SUITE(TcpSocket) {
         });
 
         exec->spawn([&] {
-            TcpSocket cli(exec.mutPtr());
+            auto cpool = ObjPool::fromMemory();
+            auto* cli = TcpSocket::create(cpool.mutPtr(), exec.mutPtr());
             auto caddr = makeAddr(17654);
-            STD_INSIST(cli.connectInf((sockaddr*)&caddr, sizeof(caddr)) == 0);
-            STD_DEFER {
-                cli.close();
-            };
+            STD_INSIST(cli->connectInf((sockaddr*)&caddr, sizeof(caddr)) == 0);
 
             const char* msg = "hello";
             size_t msgLen = strlen(msg);
             size_t w = 0;
-            STD_INSIST(cli.writeInf(&w, msg, msgLen) == 0);
+            STD_INSIST(cli->writeInf(&w, msg, msgLen) == 0);
             STD_INSIST(w == msgLen);
 
             size_t n = 0;
-            STD_INSIST(cli.readInf(&n, recvBuf, sizeof(recvBuf)) == 0);
+            STD_INSIST(cli->readInf(&n, recvBuf, sizeof(recvBuf)) == 0);
             STD_INSIST(n == msgLen);
         });
 
@@ -83,23 +77,19 @@ STD_TEST_SUITE(TcpSocket) {
 
     STD_TEST(AcceptTimeout) {
         auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
 
-        TcpSocket srv(exec.mutPtr());
-        STD_INSIST(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
-        STD_DEFER {
-            srv.close();
-        };
-
-        int opt = 1;
-        ::setsockopt(srv.fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+        auto* srv = TcpSocket::create(pool.mutPtr(), exec.mutPtr());
+        STD_INSIST(srv->socket(AF_INET, SOCK_STREAM, 0) == 0);
+        srv->setReuseAddr(true);
 
         auto addr = makeAddr(17655);
-        STD_INSIST(srv.bind((sockaddr*)&addr, sizeof(addr)) == 0);
-        STD_INSIST(srv.listen(8) == 0);
+        STD_INSIST(srv->bind((sockaddr*)&addr, sizeof(addr)) == 0);
+        STD_INSIST(srv->listen(8) == 0);
 
         auto f = async(exec.mutPtr(), [&] {
             ScopedFD client;
-            return srv.acceptTout(client, nullptr, nullptr, 1);
+            return srv->acceptTout(client, nullptr, nullptr, 1);
         });
 
         STD_INSIST(f.wait() != 0);
