@@ -25,7 +25,7 @@ namespace stl {
         virtual StringView* header(StringView name) = 0;
     };
 
-    struct HttpResponse {
+    struct HttpServerResponse {
         virtual Output* out() = 0;
         virtual void endHeaders() = 0;
         virtual HttpServerRequest* request() = 0;
@@ -35,7 +35,7 @@ namespace stl {
 
     struct HttpServe {
         virtual SslCtx* ssl();
-        virtual void serve(HttpResponse& resp) = 0;
+        virtual void serve(HttpServerResponse& resp) = 0;
     };
 
     struct HttpServerCtl: public ARC {

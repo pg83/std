@@ -46,7 +46,7 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
             Buffer path;
             Buffer query;
 
-            void serve(HttpResponse& resp) override {
+            void serve(HttpServerResponse& resp) override {
                 path = Buffer(resp.request()->path());
                 query = Buffer(resp.request()->query());
 
@@ -94,7 +94,7 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
             Buffer path;
             Buffer query;
 
-            void serve(HttpResponse& resp) override {
+            void serve(HttpServerResponse& resp) override {
                 path = Buffer(resp.request()->path());
                 query = Buffer(resp.request()->query());
 
@@ -141,7 +141,7 @@ STD_TEST_SUITE(HttpServer) {
         auto exec = CoroExecutor::create(4);
 
         struct Handler: HttpServe {
-            void serve(HttpResponse& resp) override {
+            void serve(HttpServerResponse& resp) override {
                 resp.addHeader(StringView("Content-Length"), StringView("5"));
                 resp.endHeaders();
                 resp.out()->write("hello", 5);
@@ -194,7 +194,7 @@ STD_TEST_SUITE(HttpServer) {
         auto exec = CoroExecutor::create(4);
 
         struct Handler: HttpServe {
-            void serve(HttpResponse& resp) override {
+            void serve(HttpServerResponse& resp) override {
                 resp.addHeader(StringView("Content-Length"), StringView("2"));
                 resp.addHeader(StringView("Connection"), StringView("keep-alive"));
                 resp.endHeaders();
@@ -266,7 +266,7 @@ STD_TEST_SUITE(HttpServer) {
         auto exec = CoroExecutor::create(4);
 
         struct Handler: HttpServe {
-            void serve(HttpResponse& resp) override {
+            void serve(HttpServerResponse& resp) override {
                 resp.addHeader(StringView("Content-Length"), StringView("2"));
                 resp.addHeader(StringView("Connection"), StringView("keep-alive"));
                 resp.endHeaders();
@@ -363,7 +363,7 @@ STD_TEST_SUITE(HttpFileServe) {
                 return sslCtx;
             }
 
-            void serve(HttpResponse& resp) override {
+            void serve(HttpServerResponse& resp) override {
                 auto req = resp.request();
 
                 ScopedFD fd(::open(Buffer(req->path()).cStr(), O_RDONLY));
@@ -418,7 +418,7 @@ STD_TEST_SUITE(HttpFileServe) {
                 return sslCtx;
             }
 
-            void serve(HttpResponse& resp) override {
+            void serve(HttpServerResponse& resp) override {
                 auto req = resp.request();
 
                 resp.setStatus(200);

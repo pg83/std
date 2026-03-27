@@ -88,7 +88,7 @@ namespace {
         bool serve();
     };
 
-    struct HttpResponseImpl: public HttpResponse {
+    struct HttpServerResponseImpl: public HttpServerResponse {
         struct Header {
             StringView name;
             StringView value;
@@ -100,7 +100,7 @@ namespace {
         SymbolMap<Header*> headerIndex;
         u32 status;
 
-        HttpResponseImpl(HttpServerRequestImpl* req);
+        HttpServerResponseImpl(HttpServerRequestImpl* req);
 
         void serialize(ZeroCopyOutput& out);
 
@@ -164,7 +164,7 @@ HttpServerRequestImpl::HttpServerRequestImpl(HttpConnection* conn)
 }
 
 bool HttpServerRequestImpl::serve() {
-    HttpResponseImpl resp(this);
+    HttpServerResponseImpl resp(this);
 
     conn->handler->serve(resp);
     reqIn->drain();
@@ -192,26 +192,26 @@ StringView* HttpServerRequestImpl::header(StringView name) {
     return headers.find(name);
 }
 
-HttpResponseImpl::HttpResponseImpl(HttpServerRequestImpl* req)
+HttpServerResponseImpl::HttpServerResponseImpl(HttpServerRequestImpl* req)
     : req(req)
     , rawOut(req->conn->out)
     , status(200)
 {
 }
 
-Output* HttpResponseImpl::out() {
+Output* HttpServerResponseImpl::out() {
     return rawOut;
 }
 
-HttpServerRequest* HttpResponseImpl::request() {
+HttpServerRequest* HttpServerResponseImpl::request() {
     return req;
 }
 
-void HttpResponseImpl::setStatus(u32 code) {
+void HttpServerResponseImpl::setStatus(u32 code) {
     status = code;
 }
 
-void HttpResponseImpl::addHeader(StringView name, StringView value) {
+void HttpServerResponseImpl::addHeader(StringView name, StringView value) {
     auto h = req->pool.mutPtr()->make<Header>();
 
     h->name = name;
@@ -221,7 +221,7 @@ void HttpResponseImpl::addHeader(StringView name, StringView value) {
     headerIndex.insert(name.lower(req->conn->lcName), h);
 }
 
-void HttpResponseImpl::serialize(ZeroCopyOutput& out) {
+void HttpServerResponseImpl::serialize(ZeroCopyOutput& out) {
     out << StringView(u8"HTTP/1.1 ")
         << (u64)status
         << StringView(u8" ")
@@ -235,7 +235,7 @@ void HttpResponseImpl::serialize(ZeroCopyOutput& out) {
     out << StringView(u8"\r\n");
 }
 
-void HttpResponseImpl::endHeaders() {
+void HttpServerResponseImpl::endHeaders() {
     auto* pool = req->pool.mutPtr();
 
     if (req->keepAlive && !headerIndex.find(StringView("content-length")) && !headerIndex.find(StringView("transfer-encoding"))) {
