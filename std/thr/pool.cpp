@@ -210,7 +210,7 @@ namespace {
             }
 
             void flushLocal() noexcept {
-                tasks_.pushFront(local_);
+                tasks_.pushBack(local_);
             }
 
             Task* popNoLock() noexcept {
