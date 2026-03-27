@@ -1,4 +1,5 @@
 #include "http_srv.h"
+#include "http_client.h"
 #include "ssl_socket.h"
 #include "tcp_socket.h"
 
@@ -28,42 +29,6 @@
 using namespace stl;
 
 namespace {
-    void readResponse(InBuf& in, Buffer& out) {
-        Buffer line;
-        size_t contentLength = 0;
-
-        for (;;) {
-            line.reset();
-            in.readLine(line);
-
-            auto sv = StringView(line).stripCr();
-
-            if (sv.empty()) {
-                break;
-            }
-
-            out.append(line.data(), line.used());
-
-            StringView name, val;
-
-            if (sv.split(':', name, val)) {
-                Buffer lc;
-
-                if (name.lower(lc) == StringView("content-length")) {
-                    contentLength = val.stripSpace().stou();
-                }
-            }
-        }
-
-        for (size_t rem = contentLength; rem > 0;) {
-            u8 tmp[256];
-            size_t n = in.read(tmp, min(rem, sizeof(tmp)));
-
-            out.append(tmp, n);
-            rem -= n;
-        }
-    }
-
     sockaddr_in makeAddr(u16 port) {
         sockaddr_in addr{};
         addr.sin_family = AF_INET;
@@ -187,7 +152,8 @@ STD_TEST_SUITE(HttpServer) {
         WaitGroup wg(exec.mutPtr());
         auto ctl = serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
 
-        char recvBuf[256] = {};
+        u32 respStatus = 0;
+        Buffer respBody;
 
         exec->spawn([&] {
             TcpSocket cli(exec.mutPtr());
@@ -204,11 +170,12 @@ STD_TEST_SUITE(HttpServer) {
                 "\r\n";
             stream.write(req, ::strlen(req));
 
-            Buffer resp;
-            stream.readAll(resp);
+            InBuf in(stream);
+            auto pool = ObjPool::fromMemory();
+            auto* resp = HttpClient::create(pool.mutPtr(), &in);
 
-            STD_INSIST(!resp.empty());
-            memCpy(recvBuf, resp.data(), resp.used());
+            respStatus = resp->status();
+            resp->body()->readAll(respBody);
 
             ctl->stop();
         });
@@ -219,11 +186,8 @@ STD_TEST_SUITE(HttpServer) {
 
         exec->join();
 
-        if (!StringView(recvBuf).search(StringView(u8"hello"))) {
-            sysE << StringView(u8"recvBuf: [") << StringView(recvBuf) << StringView(u8"]\n");
-        }
-
-        STD_INSIST(StringView(recvBuf).search(StringView(u8"hello")) != nullptr);
+        STD_INSIST(respStatus == 200);
+        STD_INSIST(StringView(respBody) == StringView("hello"));
     }
 
     STD_TEST(KeepAliveChunked) {
@@ -242,8 +206,8 @@ STD_TEST_SUITE(HttpServer) {
         WaitGroup wg(exec.mutPtr());
         auto ctl = serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
 
-        Buffer resp1;
-        Buffer resp2;
+        Buffer body1;
+        Buffer body2;
 
         exec->spawn([&] {
             TcpSocket cli(exec.mutPtr());
@@ -255,6 +219,7 @@ STD_TEST_SUITE(HttpServer) {
 
             TcpStream stream(cli);
             InBuf in(stream);
+            auto pool = ObjPool::fromMemory();
 
             const char* req1 =
                 "POST /a HTTP/1.1\r\n"
@@ -265,7 +230,10 @@ STD_TEST_SUITE(HttpServer) {
                 "0\r\n"
                 "\r\n";
             stream.write(req1, ::strlen(req1));
-            readResponse(in, resp1);
+
+            auto* resp1 = HttpClient::create(pool.mutPtr(), &in);
+            STD_INSIST(resp1->status() == 200);
+            resp1->body()->readAll(body1);
 
             const char* req2 =
                 "POST /b HTTP/1.1\r\n"
@@ -276,7 +244,10 @@ STD_TEST_SUITE(HttpServer) {
                 "0\r\n"
                 "\r\n";
             stream.write(req2, ::strlen(req2));
-            readResponse(in, resp2);
+
+            auto* resp2 = HttpClient::create(pool.mutPtr(), &in);
+            STD_INSIST(resp2->status() == 200);
+            resp2->body()->readAll(body2);
 
             ctl->stop();
         });
@@ -287,8 +258,8 @@ STD_TEST_SUITE(HttpServer) {
 
         exec->join();
 
-        STD_INSIST(StringView(resp1).search(StringView(u8"ok")) != nullptr);
-        STD_INSIST(StringView(resp2).search(StringView(u8"ok")) != nullptr);
+        STD_INSIST(StringView(body1) == StringView("ok"));
+        STD_INSIST(StringView(body2) == StringView("ok"));
     }
 
     STD_TEST(KeepAlive) {
@@ -307,8 +278,8 @@ STD_TEST_SUITE(HttpServer) {
         WaitGroup wg(exec.mutPtr());
         auto ctl = serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
 
-        Buffer resp1;
-        Buffer resp2;
+        Buffer body1;
+        Buffer body2;
 
         exec->spawn([&] {
             TcpSocket cli(exec.mutPtr());
@@ -320,20 +291,27 @@ STD_TEST_SUITE(HttpServer) {
 
             TcpStream stream(cli);
             InBuf in(stream);
+            auto pool = ObjPool::fromMemory();
 
             const char* req1 =
                 "GET /a HTTP/1.1\r\n"
                 "Content-Length: 0\r\n"
                 "\r\n";
             stream.write(req1, ::strlen(req1));
-            readResponse(in, resp1);
+
+            auto* resp1 = HttpClient::create(pool.mutPtr(), &in);
+            STD_INSIST(resp1->status() == 200);
+            resp1->body()->readAll(body1);
 
             const char* req2 =
                 "GET /b HTTP/1.1\r\n"
                 "Content-Length: 0\r\n"
                 "\r\n";
             stream.write(req2, ::strlen(req2));
-            readResponse(in, resp2);
+
+            auto* resp2 = HttpClient::create(pool.mutPtr(), &in);
+            STD_INSIST(resp2->status() == 200);
+            resp2->body()->readAll(body2);
 
             ctl->stop();
         });
@@ -344,8 +322,8 @@ STD_TEST_SUITE(HttpServer) {
 
         exec->join();
 
-        STD_INSIST(StringView(resp1).search(StringView(u8"ok")) != nullptr);
-        STD_INSIST(StringView(resp2).search(StringView(u8"ok")) != nullptr);
+        STD_INSIST(StringView(body1) == StringView("ok"));
+        STD_INSIST(StringView(body2) == StringView("ok"));
     }
 }
 

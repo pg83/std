@@ -15,6 +15,10 @@ namespace stl {
         virtual ~Input() noexcept;
 
         size_t read(void* data, size_t len) {
+            if (!len) {
+                return 0;
+            }
+
             return readImpl(data, len);
         }
 
