@@ -105,13 +105,13 @@ namespace {
         alignas(64) int inflight_ = 0;
         ScopedFD joinR_;
         ScopedFD joinW_;
-        ObjPool::Ref opool_;
+        ObjPool* opool_;
         const u64 tlsKey_;
         Vector<ReactorIface*> reactors_;
         ThreadPool* fsPool_;
         ThreadPool* pool_;
 
-        CoroExecutorImpl(size_t threads, size_t reactors);
+        CoroExecutorImpl(ObjPool* pool, size_t threads, size_t reactors);
         ~CoroExecutorImpl() noexcept override;
 
         void join() noexcept override;
@@ -171,20 +171,20 @@ namespace {
     };
 }
 
-CoroExecutorImpl::CoroExecutorImpl(size_t threads, size_t reactors)
-    : opool_(ObjPool::fromMemory())
+CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads, size_t reactors)
+    : opool_(pool)
     , tlsKey_(ThreadPool::registerTlsKey())
-    , pool_(ThreadPool::workStealing(opool_.mutPtr(), threads))
+    , pool_(ThreadPool::workStealing(opool_, threads))
 {
     createPipeFD(joinR_, joinW_);
 
     joinW_.setNonBlocking();
 
     for (size_t i = 0; i < reactors; ++i) {
-        reactors_.pushBack(ReactorIface::create(this, pool_, opool_.mutPtr()));
+        reactors_.pushBack(ReactorIface::create(this, pool_, opool_));
     }
 
-    fsPool_ = ThreadPool::simple(opool_.mutPtr(), reactors);
+    fsPool_ = ThreadPool::simple(opool_, reactors);
 }
 
 Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
@@ -547,7 +547,7 @@ CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads) {
 }
 
 CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads, size_t reactors) {
-    return pool->make<CoroExecutorImpl>(threads, reactors);
+    return pool->make<CoroExecutorImpl>(pool, threads, reactors);
 }
 
 u64 CoroExecutor::currentCoroId() const noexcept {
