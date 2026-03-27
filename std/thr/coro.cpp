@@ -104,6 +104,11 @@ namespace {
     struct JoinPipe {
         ScopedFD r;
         ScopedFD w;
+
+        JoinPipe() {
+            createPipeFD(r, w);
+            w.setNonBlocking();
+        }
     };
 
     struct CoroExecutorImpl: public CoroExecutor {
@@ -179,10 +184,6 @@ CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads, size_t reactor
     , tlsKey_(ThreadPool::registerTlsKey())
     , pool_(ThreadPool::workStealing(pool, threads))
 {
-    createPipeFD(join_->r, join_->w);
-
-    join_->w.setNonBlocking();
-
     for (size_t i = 0; i < reactors; ++i) {
         reactors_.pushBack(ReactorIface::create(this, pool_, pool));
     }

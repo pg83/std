@@ -36,7 +36,6 @@ namespace {
         void flushImpl() override;
     };
 
-
     struct ChunkedOutput: public Output {
         Output* inner;
 

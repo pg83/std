@@ -59,12 +59,12 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
         auto addr = makeAddr(17670);
         WaitGroup wg(exec);
         auto ctl = serve(pool.mutPtr(), {
-                                             .handler = &handler,
-                                             .exec = exec,
-                                             .addr = (const sockaddr*)&addr,
-                                             .wg = &wg,
-                                             .addrLen = sizeof(addr),
-                                         });
+                                            .handler = &handler,
+                                            .exec = exec,
+                                            .addr = (const sockaddr*)&addr,
+                                            .wg = &wg,
+                                            .addrLen = sizeof(addr),
+                                        });
 
         exec->spawn([&] {
             TcpSocket cli(exec);
@@ -114,12 +114,12 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
         auto addr = makeAddr(17671);
         WaitGroup wg(exec);
         auto ctl = serve(pool.mutPtr(), {
-                                             .handler = &handler,
-                                             .exec = exec,
-                                             .addr = (const sockaddr*)&addr,
-                                             .wg = &wg,
-                                             .addrLen = sizeof(addr),
-                                         });
+                                            .handler = &handler,
+                                            .exec = exec,
+                                            .addr = (const sockaddr*)&addr,
+                                            .wg = &wg,
+                                            .addrLen = sizeof(addr),
+                                        });
 
         exec->spawn([&] {
             TcpSocket cli(exec);
@@ -166,12 +166,12 @@ STD_TEST_SUITE(HttpServer) {
         auto addr = makeAddr(17661);
         WaitGroup wg(exec);
         auto ctl = serve(pool.mutPtr(), {
-                                             .handler = &handler,
-                                             .exec = exec,
-                                             .addr = (const sockaddr*)&addr,
-                                             .wg = &wg,
-                                             .addrLen = sizeof(addr),
-                                         });
+                                            .handler = &handler,
+                                            .exec = exec,
+                                            .addr = (const sockaddr*)&addr,
+                                            .wg = &wg,
+                                            .addrLen = sizeof(addr),
+                                        });
 
         u32 respStatus = 0;
         Buffer respBody;
@@ -227,12 +227,12 @@ STD_TEST_SUITE(HttpServer) {
         auto addr = makeAddr(17663);
         WaitGroup wg(exec);
         auto ctl = serve(pool.mutPtr(), {
-                                             .handler = &handler,
-                                             .exec = exec,
-                                             .addr = (const sockaddr*)&addr,
-                                             .wg = &wg,
-                                             .addrLen = sizeof(addr),
-                                         });
+                                            .handler = &handler,
+                                            .exec = exec,
+                                            .addr = (const sockaddr*)&addr,
+                                            .wg = &wg,
+                                            .addrLen = sizeof(addr),
+                                        });
 
         Buffer body1;
         Buffer body2;
@@ -306,12 +306,12 @@ STD_TEST_SUITE(HttpServer) {
         auto addr = makeAddr(17662);
         WaitGroup wg(exec);
         auto ctl = serve(pool.mutPtr(), {
-                                             .handler = &handler,
-                                             .exec = exec,
-                                             .addr = (const sockaddr*)&addr,
-                                             .wg = &wg,
-                                             .addrLen = sizeof(addr),
-                                         });
+                                            .handler = &handler,
+                                            .exec = exec,
+                                            .addr = (const sockaddr*)&addr,
+                                            .wg = &wg,
+                                            .addrLen = sizeof(addr),
+                                        });
 
         Buffer body1;
         Buffer body2;
