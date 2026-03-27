@@ -383,14 +383,12 @@ bool HttpConnection::serve() {
     return HttpServerRequestImpl(this).serve();
 }
 
-HttpServerCtl* stl::serve(ObjPool* pool, const HttpServeOpts& opts) {
-    CoroExecutor* exec = opts.exec;
-
-    if (!exec) {
-        exec = pool->make<CoroExecutor::Ref>(CoroExecutor::create(numCpu()))->mutPtr();
+HttpServerCtl* stl::serve(ObjPool* pool, HttpServeOpts opts) {
+    if (!opts.exec) {
+        opts.exec = pool->make<CoroExecutor::Ref>(CoroExecutor::create(numCpu()))->mutPtr();
     }
 
-    auto* ctl = pool->make<HttpServerCtlImpl>(*opts.handler, exec, opts.addr, opts.addrLen);
+    auto* ctl = pool->make<HttpServerCtlImpl>(*opts.handler, opts.exec, opts.addr, opts.addrLen);
 
     if (opts.wg) {
         opts.wg->inc();
@@ -398,7 +396,7 @@ HttpServerCtl* stl::serve(ObjPool* pool, const HttpServeOpts& opts) {
 
     Semaphore sem(0);
 
-    exec->spawn([ctl, wg = opts.wg, &sem] {
+    opts.exec->spawn([ctl, wg = opts.wg, &sem] {
         ctl->run(&sem, wg);
     });
 

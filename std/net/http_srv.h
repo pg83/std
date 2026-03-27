@@ -50,5 +50,5 @@ namespace stl {
         WaitGroup* wg = nullptr;
     };
 
-    HttpServerCtl* serve(ObjPool* pool, const HttpServeOpts& opts);
+    HttpServerCtl* serve(ObjPool* pool, HttpServeOpts opts);
 }
