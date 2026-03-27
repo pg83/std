@@ -105,7 +105,6 @@ namespace {
         alignas(64) int inflight_ = 0;
         ScopedFD joinR_;
         ScopedFD joinW_;
-        ObjPool* opool_;
         const u64 tlsKey_;
         Vector<ReactorIface*> reactors_;
         ThreadPool* fsPool_;
@@ -172,19 +171,18 @@ namespace {
 }
 
 CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads, size_t reactors)
-    : opool_(pool)
-    , tlsKey_(ThreadPool::registerTlsKey())
-    , pool_(ThreadPool::workStealing(opool_, threads))
+    : tlsKey_(ThreadPool::registerTlsKey())
+    , pool_(ThreadPool::workStealing(pool, threads))
 {
     createPipeFD(joinR_, joinW_);
 
     joinW_.setNonBlocking();
 
     for (size_t i = 0; i < reactors; ++i) {
-        reactors_.pushBack(ReactorIface::create(this, pool_, opool_));
+        reactors_.pushBack(ReactorIface::create(this, pool_, pool));
     }
 
-    fsPool_ = ThreadPool::simple(opool_, reactors);
+    fsPool_ = ThreadPool::simple(pool, reactors);
 }
 
 Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
