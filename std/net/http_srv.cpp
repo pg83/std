@@ -27,7 +27,6 @@
 #include <std/str/builder.h>
 #include <std/ios/in_zero.h>
 #include <std/mem/obj_pool.h>
-#include <std/thr/semaphore.h>
 #include <std/ios/stream_tcp.h>
 #include <std/thr/wait_group.h>
 
@@ -71,7 +70,8 @@ namespace {
         HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen);
 
         void stop() override;
-        void run(Semaphore* sem, WaitGroup* wg);
+        TcpSocket listen();
+        void run(TcpSocket srv, WaitGroup* wg);
     };
 
     struct HttpConnection {
@@ -289,13 +289,8 @@ void HttpServerCtlImpl::stop() {
     });
 }
 
-void HttpServerCtlImpl::run(Semaphore* sem, WaitGroup* wg) {
+TcpSocket HttpServerCtlImpl::listen() {
     TcpSocket srv(exec);
-
-    STD_DEFER {
-        srv.close();
-        wg->done();
-    };
 
     STD_VERIFY(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
 
@@ -304,7 +299,14 @@ void HttpServerCtlImpl::run(Semaphore* sem, WaitGroup* wg) {
     STD_VERIFY(srv.bind((const sockaddr*)&addr, addrLen) == 0);
     STD_VERIFY(srv.listen(128) == 0);
 
-    sem->post();
+    return srv;
+}
+
+void HttpServerCtlImpl::run(TcpSocket srv, WaitGroup* wg) {
+    STD_DEFER {
+        srv.close();
+        wg->done();
+    };
 
     for (;;) {
         ScopedFD client;
@@ -389,17 +391,14 @@ HttpServerCtl* stl::serve(ObjPool* pool, HttpServeOpts opts) {
         opts.wg = pool->make<WaitGroup>();
     }
 
-    auto* ctl = pool->make<HttpServerCtlImpl>(*opts.handler, opts.exec, opts.addr, opts.addrLen);
+    auto ctl = pool->make<HttpServerCtlImpl>(*opts.handler, opts.exec, opts.addr, opts.addrLen);
+    auto srv = ctl->listen();
 
     opts.wg->inc();
 
-    Semaphore sem(0);
-
-    opts.exec->spawn([ctl, wg = opts.wg, &sem] {
-        ctl->run(&sem, wg);
+    opts.exec->spawn([ctl, srv, wg = opts.wg] {
+        ctl->run(srv, wg);
     });
-
-    sem.wait();
 
     return ctl;
 }
