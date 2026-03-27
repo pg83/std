@@ -46,8 +46,8 @@ namespace stl {
         HttpServe* handler = nullptr;
         CoroExecutor* exec = nullptr;
         const sockaddr* addr = nullptr;
-        u32 addrLen = 0;
         WaitGroup* wg = nullptr;
+        u32 addrLen = 0;
         u32 backlog = 128;
     };
 
