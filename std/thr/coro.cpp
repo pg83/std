@@ -262,7 +262,8 @@ void ContImpl::run() noexcept {
     workerCtx_ = nullptr;
     *tls = nullptr;
 
-    if (auto as = exchange(runable_, nullptr); as) {
+    if (auto as = runable_; as) {
+        runable_ = nullptr;
         return as->run();
     }
 
