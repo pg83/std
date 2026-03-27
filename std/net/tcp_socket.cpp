@@ -260,7 +260,11 @@ bool TcpSocket::peek(u8& out) {
     return ::recv(fd, &out, 1, MSG_PEEK) == 1;
 }
 
-namespace {
+TcpSocket* TcpSocket::create(ObjPool* pool, CoroExecutor* exec) {
+    return create(pool, -1, exec);
+}
+
+TcpSocket* TcpSocket::create(ObjPool* pool, int fd, CoroExecutor* exec) {
     struct ScopedTcpSocket: public TcpSocket {
         using TcpSocket::TcpSocket;
 
@@ -268,12 +272,6 @@ namespace {
             close();
         }
     };
-}
 
-TcpSocket* TcpSocket::create(ObjPool* pool, CoroExecutor* exec) {
-    return pool->make<ScopedTcpSocket>(exec);
-}
-
-TcpSocket* TcpSocket::create(ObjPool* pool, int fd, CoroExecutor* exec) {
     return pool->make<ScopedTcpSocket>(fd, exec);
 }
