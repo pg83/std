@@ -408,17 +408,23 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
         }
 
         void signal() noexcept override {
-            LockGuard guard(queueMutex_);
+            auto node = LockGuard(queueMutex_).run([&] {
+                return (ContImpl*)(Task*)waiters_.popFrontOrNull();
+            });
 
-            if (auto node = (ContImpl*)(Task*)waiters_.popFrontOrNull(); node) {
+            if (node) {
                 node->reSchedule();
             }
         }
 
         void broadcast() noexcept override {
-            LockGuard guard(queueMutex_);
+            IntrusiveList tmp;
 
-            while (auto node = (ContImpl*)(Task*)waiters_.popFrontOrNull()) {
+            LockGuard(queueMutex_).run([&] {
+                tmp.xchg(waiters_);
+            });
+
+            while (auto node = (ContImpl*)(Task*)tmp.popFrontOrNull()) {
                 node->reSchedule();
             }
         }
