@@ -17,9 +17,8 @@ namespace {
     }
 
 #if !__has_include(<rapidhash.h>)
-    static u64 fnv1a(const void* data, size_t len) noexcept {
+    static u64 fnv1a(const u8* p, size_t len) noexcept {
         u64 h = 14695981039346656037ull;
-        auto p = (const u8*)data;
 
         for (size_t i = 0; i < len; ++i) {
             h ^= p[i];
@@ -39,6 +38,6 @@ u64 stl::shash64(const void* data, size_t len) noexcept {
 #if __has_include(<rapidhash.h>)
     return rapidhash(data, len);
 #else
-    return splitMix64(fnv1a(data, len));
+    return splitMix64(fnv1a((const u8*)data, len));
 #endif
 }
