@@ -8,9 +8,9 @@ namespace stl {
     class ObjPool;
 
     struct ThreadPool;
+    struct EventIface;
     struct ThreadIface;
     struct CondVarIface;
-    struct EventIface;
     struct CoroExecutor;
     struct SemaphoreIface;
 
