@@ -170,7 +170,7 @@ STD_TEST_SUITE(FreeList) {
         double* ptr3 = static_cast<double*>(allocator->allocate());
         STD_INSIST(ptr3 == ptr1);
 
-        double* ptr4 = static_cast<double*>(allocator->allocate());
+        allocator->allocate();
 
         allocator->release(ptr2);
         allocator->release(ptr3);

@@ -137,7 +137,7 @@ void ReactorState::drainQueue() {
         req->left = nullptr;
         req->right = nullptr;
 
-        if (req->fd == -1) {
+        if (req->fd == (u32)-1) {
             sleepers.insert(req);
         } else {
             timers.insert(req);

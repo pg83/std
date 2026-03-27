@@ -30,7 +30,7 @@ namespace {
             }
         }
 
-        void* nativeHandle() noexcept {
+        void* nativeHandle() noexcept override {
             return exec_;
         }
 

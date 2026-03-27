@@ -157,7 +157,7 @@ STD_TEST_SUITE(IntMap) {
     STD_TEST(OperatorBracketCreatesNew) {
         IntMap<int> map;
 
-        int& value = map[100];
+        map[100];
 
         STD_INSIST(map.find(100) != nullptr);
     }

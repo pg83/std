@@ -188,7 +188,7 @@ STD_TEST_SUITE(SymbolMap) {
     STD_TEST(OperatorBracketCreatesNew) {
         SymbolMap<int> map;
 
-        int& value = map["newkey"];
+        map["newkey"];
 
         STD_INSIST(map.find("newkey") != nullptr);
     }

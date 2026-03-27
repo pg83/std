@@ -10,7 +10,7 @@ namespace stl {
     };
 
     template <typename V>
-    struct TaskImpl: public Task {
+    struct TaskImpl final: public Task {
         V v;
 
         TaskImpl(V vv)

@@ -1,3 +1,8 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#include <string.h>
+
 #include "view.h"
 #include "hash.h"
 
@@ -5,9 +10,6 @@
 #include <std/lib/buffer.h>
 #include <std/alg/minmax.h>
 #include <std/ios/out_zc.h>
-
-#define _GNU_SOURCE
-#include <string.h>
 
 using namespace stl;
 

@@ -50,7 +50,7 @@ namespace {
         Runable* runable_;
 
         ContImpl(CoroExecutorImpl* exec, void* ctxBuf, SpawnParams params) noexcept;
-        ~ContImpl();
+        virtual ~ContImpl();
 
         void operator delete(void* p) noexcept {
             freeMemory(p);
@@ -71,7 +71,7 @@ namespace {
         void reSchedule() noexcept;
     };
 
-    struct alignas(max_align_t) HeapContImpl: public ContImpl {
+    struct alignas(max_align_t) HeapContImpl final: public ContImpl {
         void* operator new(size_t, size_t stackSize) {
             return allocateMemory(sizeof(HeapContImpl) + Context::implSize() + stackSize);
         }
@@ -82,7 +82,7 @@ namespace {
         }
     };
 
-    struct alignas(max_align_t) ExtStackContImpl: public ContImpl {
+    struct alignas(max_align_t) ExtStackContImpl final: public ContImpl {
         void* operator new(size_t sz) {
             return allocateMemory(sz + Context::implSize());
         }
@@ -471,7 +471,7 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
         void detach() noexcept override {
         }
 
-        u64 threadId() const noexcept {
+        u64 threadId() const noexcept override {
             return cont_->id();
         }
     };

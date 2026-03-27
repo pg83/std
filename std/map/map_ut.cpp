@@ -388,7 +388,7 @@ STD_TEST_SUITE(Map) {
 
     STD_TEST(BracketOperatorDefaultValue) {
         Map<int, int> m;
-        int& val = m[99];
+        m[99];
         STD_INSIST(m.find(99) != nullptr);
     }
 
@@ -474,7 +474,7 @@ STD_TEST_SUITE(Map) {
         m[3] = 30;
         int count = 0;
         int sum = 0;
-        m.visit([&](int k, int v) {
+        m.visit([&](int, int v) {
             count++;
             sum += v;
         });
@@ -516,7 +516,7 @@ STD_TEST_SUITE(Map) {
         m[1] = 10;
         m[2] = 20;
         m[3] = 30;
-        m.visit([](int k, int& v) {
+        m.visit([](int, int& v) {
             v = v * 2;
         });
         STD_INSIST(*m.find(1) == 20);
@@ -533,7 +533,7 @@ STD_TEST_SUITE(Map) {
         m[10] = 100;
         int count = 0;
         int prev = -100;
-        m.visit([&](int k, int v) {
+        m.visit([&](int k, int) {
             STD_INSIST(k > prev);
             count++;
             prev = k;
@@ -548,7 +548,7 @@ STD_TEST_SUITE(Map) {
         m[3] = 30;
         m.erase(2);
         int count = 0;
-        m.visit([&](int k, int v) {
+        m.visit([&](int k, int) {
             STD_INSIST(k != 2);
             count++;
         });
@@ -577,7 +577,7 @@ STD_TEST_SUITE(Map) {
         m[2] = 200ULL;
         m[3] = 300ULL;
         u64 sum = 0;
-        m.visit([&](u32 k, u64 v) {
+        m.visit([&](u32, u64 v) {
             sum += v;
         });
         STD_INSIST(sum == 600ULL);
@@ -590,7 +590,7 @@ STD_TEST_SUITE(Map) {
         m[2] = &b;
         m[3] = &c;
         int sum = 0;
-        m.visit([&](int k, int* v) {
+        m.visit([&](int, int* v) {
             sum += *v;
         });
         STD_INSIST(sum == 60);
@@ -602,12 +602,12 @@ STD_TEST_SUITE(Map) {
         m[2] = 20;
 
         int sum1 = 0;
-        m.visit([&](int k, int v) {
+        m.visit([&](int, int v) {
             sum1 += v;
         });
 
         int sum2 = 0;
-        m.visit([&](int k, int v) {
+        m.visit([&](int, int v) {
             sum2 += v;
         });
 
@@ -661,7 +661,7 @@ STD_TEST_SUITE(Map) {
         m[2] = 200;
 
         int sum = 0;
-        m.visit([&](int k, int v) {
+        m.visit([&](int, int v) {
             sum += v;
         });
         STD_INSIST(sum == 240);
@@ -689,7 +689,7 @@ STD_TEST_SUITE(Map) {
 
         int trueCount = 0;
         int falseCount = 0;
-        m.visit([&](int k, bool v) {
+        m.visit([&](int, bool v) {
             if (v) {
                 trueCount++;
             } else {
@@ -709,7 +709,7 @@ STD_TEST_SUITE(Map) {
 
         char prevKey = 0;
         int count = 0;
-        m.visit([&](char k, int v) {
+        m.visit([&](char k, int) {
             STD_INSIST(k > prevKey);
             prevKey = k;
             count++;
@@ -728,7 +728,7 @@ STD_TEST_SUITE(Map) {
         int accumulator = 0;
         int multiplier = 2;
 
-        m.visit([&](int k, int v) {
+        m.visit([&](int, int v) {
             accumulator += v * multiplier;
         });
 

@@ -494,7 +494,7 @@ STD_TEST_SUITE(CoroPoll) {
 
             CoroExecutor* ex = exec.mutPtr();
 
-            exec->spawnRun(SpawnParams().setStackSize(64 * 1024).setRunable([ex, rfd, TOTAL] {
+            exec->spawnRun(SpawnParams().setStackSize(64 * 1024).setRunable([ex, rfd] {
                 char buf[16 * 1024];
                 size_t received = 0;
 
@@ -509,7 +509,7 @@ STD_TEST_SUITE(CoroPoll) {
                 }
             }));
 
-            exec->spawnRun(SpawnParams().setStackSize(64 * 1024).setRunable([ex, wfd, TOTAL] {
+            exec->spawnRun(SpawnParams().setStackSize(64 * 1024).setRunable([ex, wfd] {
                 char buf[16 * 1024] = {};
                 size_t sent = 0;
 

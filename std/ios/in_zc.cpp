@@ -54,7 +54,7 @@ bool ZeroCopyInput::readTo(Buffer& buf, u8 delim) {
             buf.append(part.begin(), part.length());
             commit(part.length());
         }
-    } while (len = next(&chunk));
+    } while ((len = next(&chunk)));
 
     return true;
 }

@@ -21,7 +21,7 @@ namespace stl {
             }
         };
 
-        struct Node: public TreapNode {
+        struct Node final: public TreapNode {
             K k;
             V v;
 

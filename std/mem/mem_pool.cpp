@@ -83,5 +83,5 @@ void MemoryPool::allocateNewChunk(size_t minSize) {
     currentChunkEnd = (u8*)newChunk + nextChunkSize;
     currentChunk = (u8*)(newChunk + 1);
 
-    STD_ASSERT(currentChunkEnd - currentChunk >= minSize);
+    STD_ASSERT((size_t)(currentChunkEnd - currentChunk) >= minSize);
 }

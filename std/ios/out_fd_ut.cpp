@@ -92,7 +92,7 @@ STD_TEST_SUITE(FDRegular) {
         lseek(fd, 0, SEEK_SET);
 
         char readBuf[64] = {0};
-        ssize_t readBytes = ::read(fd, readBuf, sizeof(readBuf));
+        (void)::read(fd, readBuf, sizeof(readBuf));
         STD_INSIST(strcmp(readBuf, "Hello World") == 0);
 
         close(fd);
@@ -221,7 +221,7 @@ STD_TEST_SUITE(FDRegular) {
         lseek(fd, 0, SEEK_SET);
 
         char readBuf[64] = {0};
-        ssize_t readBytes = ::read(fd, readBuf, sizeof(readBuf));
+        (void)::read(fd, readBuf, sizeof(readBuf));
         STD_INSIST(strcmp(readBuf, "Hello World") == 0);
 
         close(fd);
@@ -274,7 +274,7 @@ STD_TEST_SUITE(FDRegular) {
         lseek(fd, 0, SEEK_SET);
 
         char readBuf[64] = {0};
-        ssize_t readBytes = ::read(fd, readBuf, sizeof(readBuf));
+        (void)::read(fd, readBuf, sizeof(readBuf));
         STD_INSIST(strcmp(readBuf, "BeforeAfter") == 0);
 
         close(fd);
@@ -296,7 +296,7 @@ STD_TEST_SUITE(FDRegular) {
         lseek(fd, 0, SEEK_SET);
 
         char readBuf[64] = {0};
-        ssize_t readBytes = ::read(fd, readBuf, sizeof(readBuf));
+        (void)::read(fd, readBuf, sizeof(readBuf));
         STD_INSIST(strcmp(readBuf, "abcdefghij") == 0);
 
         close(fd);
@@ -333,7 +333,7 @@ STD_TEST_SUITE(FDCharacter) {
         lseek(fd, 0, SEEK_SET);
 
         char readBuf[64] = {0};
-        ssize_t readBytes = ::read(fd, readBuf, sizeof(readBuf));
+        (void)::read(fd, readBuf, sizeof(readBuf));
         STD_INSIST(strcmp(readBuf, testData) == 0);
 
         close(fd);

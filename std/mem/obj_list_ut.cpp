@@ -338,7 +338,7 @@ STD_TEST_SUITE(ObjList) {
         STD_INSIST(obj3 == obj1);
         STD_INSIST(*obj3 == 3);
 
-        int* obj4 = list.make(4);
+        list.make(4);
 
         list.release(obj2);
         list.release(obj3);

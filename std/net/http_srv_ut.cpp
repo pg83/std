@@ -62,8 +62,8 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
                                              .handler = &handler,
                                              .exec = exec.mutPtr(),
                                              .addr = (const sockaddr*)&addr,
-                                             .addrLen = sizeof(addr),
                                              .wg = &wg,
+                                             .addrLen = sizeof(addr),
                                          });
 
         exec->spawn([&] {
@@ -117,8 +117,8 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
                                              .handler = &handler,
                                              .exec = exec.mutPtr(),
                                              .addr = (const sockaddr*)&addr,
-                                             .addrLen = sizeof(addr),
                                              .wg = &wg,
+                                             .addrLen = sizeof(addr),
                                          });
 
         exec->spawn([&] {
@@ -169,8 +169,8 @@ STD_TEST_SUITE(HttpServer) {
                                              .handler = &handler,
                                              .exec = exec.mutPtr(),
                                              .addr = (const sockaddr*)&addr,
-                                             .addrLen = sizeof(addr),
                                              .wg = &wg,
+                                             .addrLen = sizeof(addr),
                                          });
 
         u32 respStatus = 0;
@@ -230,8 +230,8 @@ STD_TEST_SUITE(HttpServer) {
                                              .handler = &handler,
                                              .exec = exec.mutPtr(),
                                              .addr = (const sockaddr*)&addr,
-                                             .addrLen = sizeof(addr),
                                              .wg = &wg,
+                                             .addrLen = sizeof(addr),
                                          });
 
         Buffer body1;
@@ -309,8 +309,8 @@ STD_TEST_SUITE(HttpServer) {
                                              .handler = &handler,
                                              .exec = exec.mutPtr(),
                                              .addr = (const sockaddr*)&addr,
-                                             .addrLen = sizeof(addr),
                                              .wg = &wg,
+                                             .addrLen = sizeof(addr),
                                          });
 
         Buffer body1;
@@ -437,8 +437,8 @@ STD_TEST_SUITE(HttpFileServe) {
                 .handler = &handler,
                 .exec = exec.mutPtr(),
                 .addr = (const sockaddr*)&addr,
-                .addrLen = sizeof(addr),
                 .wg = &wg,
+                .addrLen = sizeof(addr),
             } //
         );
 
@@ -463,8 +463,6 @@ STD_TEST_SUITE(HttpFileServe) {
             }
 
             void serve(HttpServerResponse& resp) override {
-                auto req = resp.request();
-
                 resp.setStatus(200);
                 resp.addHeader(StringView("Content-Length"), StringView("0"));
                 resp.endHeaders();
@@ -491,8 +489,8 @@ STD_TEST_SUITE(HttpFileServe) {
                 .handler = &handler,
                 .exec = exec.mutPtr(),
                 .addr = (const sockaddr*)&addr,
-                .addrLen = sizeof(addr),
                 .wg = &wg,
+                .addrLen = sizeof(addr),
             } //
         );
 

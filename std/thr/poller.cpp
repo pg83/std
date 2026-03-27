@@ -270,6 +270,7 @@ namespace {
                 fds_.pushBack({
                     .fd = e.fd,
                     .events = toPollEvents(e.flags),
+                    .revents = 0,
                 });
             });
 

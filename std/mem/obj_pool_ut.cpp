@@ -335,7 +335,7 @@ STD_TEST_SUITE(ObjPool) {
 
             StringView s = pool->intern(StringView("test"));
             SimpleStruct* simple = pool->make<SimpleStruct>(1, 2);
-            WithDestructor* wd = pool->make<WithDestructor>(&counter);
+            pool->make<WithDestructor>(&counter);
             void* raw = pool->allocate(64);
 
             STD_INSIST(s == StringView("test"));

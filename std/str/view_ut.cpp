@@ -284,7 +284,7 @@ STD_TEST_SUITE(StringView) {
 
     STD_TEST(SelfAssignment) {
         StringView sv("test");
-        sv = sv;
+        sv = (const StringView&)sv;
         STD_INSIST(sv.length() == 4);
     }
 

@@ -6,7 +6,7 @@ namespace stl {
     };
 
     template <typename V, bool del>
-    struct RunableImpl: public Runable {
+    struct RunableImpl final: public Runable {
         V v;
 
         RunableImpl(V vv)

@@ -199,7 +199,7 @@ STD_TEST_SUITE(MemoryInputAsZeroCopy) {
         for (size_t i = 0; i < 10; ++i) {
             size_t available = input.next(&chunk);
             STD_INSIST(available == 10 - i);
-            STD_INSIST(*(const char*)chunk == '0' + i);
+            STD_INSIST(*(const char*)chunk == (char)('0' + i));
             input.commit(1);
         }
         size_t available = input.next(&chunk);

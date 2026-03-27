@@ -30,7 +30,7 @@ STD_TEST_SUITE(UT) {
             {
             }
 
-            size_t writeImpl(const void* buf, size_t len) override {
+            size_t writeImpl(const void*, size_t len) override {
                 out << len << endL;
 
                 return len;

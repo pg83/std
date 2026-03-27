@@ -64,7 +64,7 @@ namespace {
     struct alignas(64) Bitmask128Impl: public WaitQueue {
         static constexpr u8 N = 128;
 
-        struct Bits {
+        struct alignas(16) Bits {
             u64 lo;
             u64 hi;
         };
@@ -135,7 +135,7 @@ namespace {
     // dequeued and completing a full condvar sleep/wake cycle.
     // Uses CMPXCHG16B to atomically update head pointer and count together.
     struct alignas(64) PointerImpl: public WaitQueue {
-        struct State {
+        struct alignas(16) State {
             Item* head;
             size_t count;
         };

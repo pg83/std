@@ -84,7 +84,7 @@ STD_TEST_SUITE(HashTable) {
         for (size_t i = 0; i < count; ++i) {
             auto* found = static_cast<TestNode*>(ht.find(i + 1));
             STD_INSIST(found != nullptr);
-            STD_INSIST(found->value == i * 7);
+            STD_INSIST(found->value == (int)(i * 7));
         }
     }
 
@@ -221,7 +221,7 @@ STD_TEST_SUITE(HashTable) {
         HashTable ht;
 
         int count = 0;
-        ht.visit([&count](HashTable::Node* node) {
+        ht.visit([&count](HashTable::Node*) {
             count++;
         });
 
@@ -254,7 +254,7 @@ STD_TEST_SUITE(HashTable) {
         }
 
         int count = 0;
-        ht.visit([&count](HashTable::Node* node) {
+        ht.visit([&count](HashTable::Node*) {
             count++;
         });
 
@@ -429,7 +429,7 @@ STD_TEST_SUITE(HashTable) {
             }
 
             size_t cnt = 0;
-            ht.visit([&](auto x) {
+            ht.visit([&](auto) {
                 ++cnt;
             });
             STD_INSIST(ht.size() == expectedSize);
@@ -512,7 +512,6 @@ STD_TEST_SUITE(HashTable) {
         }
 
         for (size_t i = 0; i < chainLength; i += 3) {
-            u64 key = i * capacity;
             ht.insert(&nodes.mutData()[i]);
         }
 

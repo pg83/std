@@ -393,7 +393,6 @@ STD_TEST_SUITE(Buffer) {
     STD_TEST(CStrGrowsCapacity) {
         Buffer b(5);
         b.append("hello", 5);
-        size_t leftBefore = b.left();
         char* str = b.cStr();
         STD_INSIST(str[5] == 0);
         STD_INSIST(memCmp(str, "hello", 5) == 0);

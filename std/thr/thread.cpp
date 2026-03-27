@@ -91,7 +91,7 @@ u64 Thread::currentThreadId() noexcept {
 }
 
 void stl::detach(Runable& runable) {
-    struct Helper: public Runable {
+    struct Helper final: public Runable {
         Runable* slave;
         Semaphore sem;
         Thread thr;

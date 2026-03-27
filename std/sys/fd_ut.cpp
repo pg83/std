@@ -96,7 +96,7 @@ STD_TEST_SUITE(FD) {
         lseek(fd, 0, SEEK_SET);
 
         char readBuf[64] = {0};
-        size_t readBytes = fdWrapper.read(readBuf, sizeof(readBuf));
+        (void)fdWrapper.read(readBuf, sizeof(readBuf));
         STD_INSIST(strcmp(readBuf, "Hello World") == 0);
 
         close(fd);
@@ -173,7 +173,7 @@ STD_TEST_SUITE(FD) {
         STD_INSIST(written == 3);
 
         char readBuf[64] = {0};
-        size_t readBytes = readEnd.read(readBuf, 3);
+        (void)readEnd.read(readBuf, 3);
         STD_INSIST(strcmp(readBuf, "ABC") == 0);
     }
 

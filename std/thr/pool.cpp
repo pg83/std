@@ -292,7 +292,7 @@ WorkStealingThreadPool::WorkStealingThreadPool(ObjPool* pool, size_t numThreads)
         w.initStealOrder();
     });
 
-    workers_.visit([this](Worker& w) {
+    workers_.visit([](Worker& w) {
         w.mutex_.unlock();
     });
 }
@@ -318,7 +318,7 @@ void WorkStealingThreadPool::submitTasks(IntrusiveList& tasks) noexcept {
     } else if (auto w = (Worker*)wq->dequeue(); w) {
         w->push(&tasks);
     } else {
-        index_[mix(tasks.mutFront(), &tasks, (void*)tc) % index_.length()]->pushNoSignal(tasks);
+        index_[mix(tasks.mutFront(), &tasks, (void*)(uintptr_t)tc) % index_.length()]->pushNoSignal(tasks);
 
         if (auto w = (Worker*)wq->dequeue(); w) {
             IntrusiveList tmp;
