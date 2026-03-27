@@ -275,3 +275,125 @@ STD_TEST_SUITE(FormatI64Base10) {
         STD_INSIST(StringView(buf1) == StringView(buf2));
     }
 }
+
+STD_TEST_SUITE(FormatU64Base16) {
+    STD_TEST(Zero) {
+        char buf[32];
+        void* end = formatU64Base16(0, buf);
+        size_t len = (char*)end - buf;
+        STD_INSIST(len == 1);
+        STD_INSIST(buf[0] == '0');
+    }
+
+    STD_TEST(SingleDigit) {
+        char buf[32];
+        void* end = formatU64Base16(0xa, buf);
+        size_t len = (char*)end - buf;
+        STD_INSIST(len == 1);
+        STD_INSIST(buf[0] == 'a');
+    }
+
+    STD_TEST(TwoDigits) {
+        char buf[32];
+        void* end = formatU64Base16(0xff, buf);
+        size_t len = (char*)end - buf;
+        STD_INSIST(len == 2);
+        STD_INSIST(buf[0] == 'f');
+        STD_INSIST(buf[1] == 'f');
+    }
+
+    STD_TEST(SmallNumber) {
+        char buf[32];
+        void* end = formatU64Base16(0x1a, buf);
+        size_t len = (char*)end - buf;
+        STD_INSIST(len == 2);
+        STD_INSIST(buf[0] == '1');
+        STD_INSIST(buf[1] == 'a');
+    }
+
+    STD_TEST(PowerOfTwo) {
+        char buf[32];
+        void* end = formatU64Base16(0x100, buf);
+        size_t len = (char*)end - buf;
+        STD_INSIST(len == 3);
+        STD_INSIST(buf[0] == '1');
+        STD_INSIST(buf[1] == '0');
+        STD_INSIST(buf[2] == '0');
+    }
+
+    STD_TEST(DeadBeef) {
+        char buf[32];
+        void* end = formatU64Base16(0xdeadbeef, buf);
+        size_t len = (char*)end - buf;
+        STD_INSIST(len == 8);
+        STD_INSIST(buf[0] == 'd');
+        STD_INSIST(buf[1] == 'e');
+        STD_INSIST(buf[2] == 'a');
+        STD_INSIST(buf[3] == 'd');
+        STD_INSIST(buf[4] == 'b');
+        STD_INSIST(buf[5] == 'e');
+        STD_INSIST(buf[6] == 'e');
+        STD_INSIST(buf[7] == 'f');
+    }
+
+    STD_TEST(MaxU32) {
+        char buf[32];
+        void* end = formatU64Base16(0xffffffffULL, buf);
+        size_t len = (char*)end - buf;
+        STD_INSIST(len == 8);
+        for (size_t i = 0; i < 8; ++i) {
+            STD_INSIST(buf[i] == 'f');
+        }
+    }
+
+    STD_TEST(MaxU64) {
+        char buf[32];
+        void* end = formatU64Base16(0xffffffffffffffffULL, buf);
+        size_t len = (char*)end - buf;
+        STD_INSIST(len == 16);
+        for (size_t i = 0; i < 16; ++i) {
+            STD_INSIST(buf[i] == 'f');
+        }
+    }
+
+    STD_TEST(One) {
+        char buf[32];
+        void* end = formatU64Base16(1, buf);
+        size_t len = (char*)end - buf;
+        STD_INSIST(len == 1);
+        STD_INSIST(buf[0] == '1');
+    }
+
+    STD_TEST(Sixteen) {
+        char buf[32];
+        void* end = formatU64Base16(16, buf);
+        size_t len = (char*)end - buf;
+        STD_INSIST(len == 2);
+        STD_INSIST(buf[0] == '1');
+        STD_INSIST(buf[1] == '0');
+    }
+
+    STD_TEST(MixedDigits) {
+        char buf[32];
+        void* end = formatU64Base16(0x1234abcd, buf);
+        size_t len = (char*)end - buf;
+        STD_INSIST(len == 8);
+        STD_INSIST(buf[0] == '1');
+        STD_INSIST(buf[1] == '2');
+        STD_INSIST(buf[2] == '3');
+        STD_INSIST(buf[3] == '4');
+        STD_INSIST(buf[4] == 'a');
+        STD_INSIST(buf[5] == 'b');
+        STD_INSIST(buf[6] == 'c');
+        STD_INSIST(buf[7] == 'd');
+    }
+
+    STD_TEST(VsSprintf) {
+        char buf1[32];
+        char buf2[32];
+        u64 val = 0xfedcba9876543210ULL;
+        sprintf(buf1, "%llx", (unsigned long long)val);
+        *(u8*)formatU64Base16(val, buf2) = 0;
+        STD_INSIST(StringView(buf1) == StringView(buf2));
+    }
+}
