@@ -15,7 +15,7 @@
 using namespace stl;
 
 namespace {
-    u32 fromEnv() noexcept {
+    static u32 fromEnv() noexcept {
         if (auto* v = getenv("GOMAXPROCS")) {
             auto n = StringView(v).stou();
 
@@ -28,7 +28,7 @@ namespace {
     }
 
 #if defined(__linux__)
-    u32 readCgroupVal(const char* path) {
+    static u32 readCgroupVal(const char* path) {
         Buffer p{StringView(path)};
         Buffer buf;
 
@@ -37,7 +37,7 @@ namespace {
         return (u32)StringView(buf).stripCr().stou();
     }
 
-    u32 fromCgroupV2() {
+    static u32 fromCgroupV2() {
         Buffer p(StringView("/sys/fs/cgroup/cpu.max"));
         Buffer buf;
 
@@ -58,7 +58,7 @@ namespace {
         return 0;
     }
 
-    u32 fromCgroupV1() {
+    static u32 fromCgroupV1() {
         auto quota = readCgroupVal("/sys/fs/cgroup/cpu/cpu.cfs_quota_us");
         auto period = readCgroupVal("/sys/fs/cgroup/cpu/cpu.cfs_period_us");
 
@@ -73,7 +73,7 @@ namespace {
         return 0;
     }
 
-    u32 fromOs() noexcept {
+    static u32 fromOs() noexcept {
         cpu_set_t set;
 
         if (sched_getaffinity(0, sizeof(set), &set) == 0) {
@@ -83,7 +83,7 @@ namespace {
         return 1;
     }
 #elif defined(__APPLE__) || defined(__FreeBSD__)
-    u32 fromOs() noexcept {
+    static u32 fromOs() noexcept {
         int n = 0;
         size_t len = sizeof(n);
 
@@ -94,7 +94,7 @@ namespace {
         return 1;
     }
 #else
-    u32 fromOs() noexcept {
+    static u32 fromOs() noexcept {
         return 1;
     }
 #endif
