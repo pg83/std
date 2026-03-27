@@ -294,10 +294,7 @@ void HttpServerCtlImpl::run(Semaphore* sem, WaitGroup* wg) {
 
     STD_DEFER {
         srv.close();
-
-        if (wg) {
-            wg->done();
-        }
+        wg->done();
     };
 
     STD_VERIFY(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
@@ -388,11 +385,13 @@ HttpServerCtl* stl::serve(ObjPool* pool, HttpServeOpts opts) {
         opts.exec = pool->make<CoroExecutor::Ref>(CoroExecutor::create(numCpu()))->mutPtr();
     }
 
+    if (!opts.wg) {
+        opts.wg = pool->make<WaitGroup>();
+    }
+
     auto* ctl = pool->make<HttpServerCtlImpl>(*opts.handler, opts.exec, opts.addr, opts.addrLen);
 
-    if (opts.wg) {
-        opts.wg->inc();
-    }
+    opts.wg->inc();
 
     Semaphore sem(0);
 
