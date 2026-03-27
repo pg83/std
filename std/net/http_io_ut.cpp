@@ -23,7 +23,7 @@ STD_TEST_SUITE(LimitedInput) {
         const char* data = "hello world";
         MemoryInput inner(data, 11);
         auto pool = ObjPool::fromMemory();
-        auto* in = createLimited(pool.mutPtr(), &inner, 5);
+        auto* in = createLimitedInput(pool.mutPtr(), &inner, 5);
 
         Buffer out;
         drain(in, out);
@@ -35,7 +35,7 @@ STD_TEST_SUITE(LimitedInput) {
         const char* data = "hello";
         MemoryInput inner(data, 5);
         auto pool = ObjPool::fromMemory();
-        auto* in = createLimited(pool.mutPtr(), &inner, 5);
+        auto* in = createLimitedInput(pool.mutPtr(), &inner, 5);
 
         Buffer out;
         drain(in, out);
@@ -47,7 +47,7 @@ STD_TEST_SUITE(LimitedInput) {
         const char* data = "hello";
         MemoryInput inner(data, 5);
         auto pool = ObjPool::fromMemory();
-        auto* in = createLimited(pool.mutPtr(), &inner, 0);
+        auto* in = createLimitedInput(pool.mutPtr(), &inner, 0);
 
         Buffer out;
         drain(in, out);
@@ -59,7 +59,7 @@ STD_TEST_SUITE(LimitedInput) {
         const char* data = "hello world";
         MemoryInput inner(data, 11);
         auto pool = ObjPool::fromMemory();
-        auto* in = createLimited(pool.mutPtr(), &inner, 5);
+        auto* in = createLimitedInput(pool.mutPtr(), &inner, 5);
 
         u8 buf[10] = {};
         size_t n = in->read(buf, sizeof(buf));
@@ -72,7 +72,7 @@ STD_TEST_SUITE(LimitedInput) {
         const char* data = "hello world";
         MemoryInput inner(data, 11);
         auto pool = ObjPool::fromMemory();
-        auto* in = createLimited(pool.mutPtr(), &inner, 5);
+        auto* in = createLimitedInput(pool.mutPtr(), &inner, 5);
 
         u8 buf[10] = {};
         in->read(buf, 5);
@@ -86,7 +86,7 @@ STD_TEST_SUITE(LimitedInput) {
         const char* data = "helloworld";
         MemoryInput inner(data, 10);
         auto pool = ObjPool::fromMemory();
-        auto* in = createLimited(pool.mutPtr(), &inner, 5);
+        auto* in = createLimitedInput(pool.mutPtr(), &inner, 5);
 
         Buffer out;
         drain(in, out);
@@ -105,7 +105,7 @@ STD_TEST_SUITE(ChunkedInput) {
         const char* data = "5\r\nhello\r\n0\r\n\r\n";
         MemoryInput inner(data, strlen(data));
         auto pool = ObjPool::fromMemory();
-        auto* in = createChunked(pool.mutPtr(), &inner);
+        auto* in = createChunkedInput(pool.mutPtr(), &inner);
 
         Buffer out;
         drain(in, out);
@@ -117,7 +117,7 @@ STD_TEST_SUITE(ChunkedInput) {
         const char* data = "5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n";
         MemoryInput inner(data, strlen(data));
         auto pool = ObjPool::fromMemory();
-        auto* in = createChunked(pool.mutPtr(), &inner);
+        auto* in = createChunkedInput(pool.mutPtr(), &inner);
 
         Buffer out;
         drain(in, out);
@@ -129,7 +129,7 @@ STD_TEST_SUITE(ChunkedInput) {
         const char* data = "0\r\n\r\n";
         MemoryInput inner(data, strlen(data));
         auto pool = ObjPool::fromMemory();
-        auto* in = createChunked(pool.mutPtr(), &inner);
+        auto* in = createChunkedInput(pool.mutPtr(), &inner);
 
         Buffer out;
         drain(in, out);
@@ -141,7 +141,7 @@ STD_TEST_SUITE(ChunkedInput) {
         const char* data = "5\r\nhello\r\n0\r\n\r\n";
         MemoryInput inner(data, strlen(data));
         auto pool = ObjPool::fromMemory();
-        auto* in = createChunked(pool.mutPtr(), &inner);
+        auto* in = createChunkedInput(pool.mutPtr(), &inner);
 
         u8 buf[10] = {};
         size_t n = in->read(buf, sizeof(buf));
@@ -154,7 +154,7 @@ STD_TEST_SUITE(ChunkedInput) {
         const char* data = "1\r\na\r\n1\r\nb\r\n1\r\nc\r\n0\r\n\r\n";
         MemoryInput inner(data, strlen(data));
         auto pool = ObjPool::fromMemory();
-        auto* in = createChunked(pool.mutPtr(), &inner);
+        auto* in = createChunkedInput(pool.mutPtr(), &inner);
 
         Buffer out;
         drain(in, out);
@@ -167,7 +167,7 @@ STD_TEST_SUITE(ChunkedInput) {
         const char* data = "10\r\n0123456789abcdef\r\n0\r\n\r\n";
         MemoryInput inner(data, strlen(data));
         auto pool = ObjPool::fromMemory();
-        auto* in = createChunked(pool.mutPtr(), &inner);
+        auto* in = createChunkedInput(pool.mutPtr(), &inner);
 
         Buffer out;
         drain(in, out);
@@ -179,7 +179,7 @@ STD_TEST_SUITE(ChunkedInput) {
         const char* data = "3\r\nabc\r\n0\r\n\r\n";
         MemoryInput inner(data, strlen(data));
         auto pool = ObjPool::fromMemory();
-        auto* in = createChunked(pool.mutPtr(), &inner);
+        auto* in = createChunkedInput(pool.mutPtr(), &inner);
 
         Buffer out;
         drain(in, out);
@@ -202,7 +202,7 @@ STD_TEST_SUITE(LimitedOutputRoundtrip) {
         out->write("hello", 5);
 
         MemoryInput mi(sb.data(), sb.used());
-        auto* in = createLimited(pool.mutPtr(), &mi, 5);
+        auto* in = createLimitedInput(pool.mutPtr(), &mi, 5);
 
         Buffer result;
         drain(in, result);
@@ -218,7 +218,7 @@ STD_TEST_SUITE(LimitedOutputRoundtrip) {
         out->write("abc", 3);
 
         MemoryInput mi(sb.data(), sb.used());
-        auto* in = createLimited(pool.mutPtr(), &mi, 3);
+        auto* in = createLimitedInput(pool.mutPtr(), &mi, 3);
 
         Buffer result;
         drain(in, result);
@@ -235,7 +235,7 @@ STD_TEST_SUITE(LimitedOutputRoundtrip) {
         out->write("world", 5);
 
         MemoryInput mi(sb.data(), sb.used());
-        auto* in = createLimited(pool.mutPtr(), &mi, 10);
+        auto* in = createLimitedInput(pool.mutPtr(), &mi, 10);
 
         Buffer result;
         drain(in, result);
@@ -254,7 +254,7 @@ STD_TEST_SUITE(LimitedOutputRoundtrip) {
         out->write("d", 1);
 
         MemoryInput mi(sb.data(), sb.used());
-        auto* in = createLimited(pool.mutPtr(), &mi, 4);
+        auto* in = createLimitedInput(pool.mutPtr(), &mi, 4);
 
         Buffer result;
         drain(in, result);
@@ -274,7 +274,7 @@ STD_TEST_SUITE(ChunkedOutputRoundtrip) {
 
         MemoryInput mi(sb.data(), sb.used());
         InBuf ib(mi);
-        auto* in = createChunked(pool.mutPtr(), &ib);
+        auto* in = createChunkedInput(pool.mutPtr(), &ib);
 
         Buffer result;
         drain(in, result);
@@ -294,7 +294,7 @@ STD_TEST_SUITE(ChunkedOutputRoundtrip) {
 
         MemoryInput mi(sb.data(), sb.used());
         InBuf ib(mi);
-        auto* in = createChunked(pool.mutPtr(), &ib);
+        auto* in = createChunkedInput(pool.mutPtr(), &ib);
 
         Buffer result;
         drain(in, result);
@@ -311,7 +311,7 @@ STD_TEST_SUITE(ChunkedOutputRoundtrip) {
 
         MemoryInput mi(sb.data(), sb.used());
         InBuf ib(mi);
-        auto* in = createChunked(pool.mutPtr(), &ib);
+        auto* in = createChunkedInput(pool.mutPtr(), &ib);
 
         Buffer result;
         drain(in, result);
@@ -331,7 +331,7 @@ STD_TEST_SUITE(ChunkedOutputRoundtrip) {
 
         MemoryInput mi(sb.data(), sb.used());
         InBuf ib(mi);
-        auto* in = createChunked(pool.mutPtr(), &ib);
+        auto* in = createChunkedInput(pool.mutPtr(), &ib);
 
         Buffer result;
         drain(in, result);
@@ -355,7 +355,7 @@ STD_TEST_SUITE(ChunkedOutputRoundtrip) {
 
         MemoryInput mi(sb.data(), sb.used());
         InBuf ib(mi);
-        auto* in = createChunked(pool.mutPtr(), &ib);
+        auto* in = createChunkedInput(pool.mutPtr(), &ib);
 
         Buffer result;
         drain(in, result);
@@ -377,7 +377,7 @@ STD_TEST_SUITE(ChunkedOutputRoundtrip) {
 
         MemoryInput mi(sb.data(), sb.used());
         InBuf ib(mi);
-        auto* in = createChunked(pool.mutPtr(), &ib);
+        auto* in = createChunkedInput(pool.mutPtr(), &ib);
 
         Buffer result;
         drain(in, result);
@@ -406,7 +406,7 @@ STD_TEST_SUITE(ChunkedOutputRoundtrip) {
 
         MemoryInput mi(sb.data(), sb.used());
         InBuf ib(mi);
-        auto* in = createChunked(pool.mutPtr(), &ib);
+        auto* in = createChunkedInput(pool.mutPtr(), &ib);
 
         Buffer result;
         drain(in, result);

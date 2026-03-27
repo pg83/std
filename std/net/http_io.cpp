@@ -198,11 +198,11 @@ void ChunkedOutput::finishImpl() {
     inner->write(u8"0\r\n\r\n", 5);
 }
 
-ZeroCopyInput* stl::createLimited(ObjPool* pool, ZeroCopyInput* inner, size_t limit) {
+ZeroCopyInput* stl::createLimitedInput(ObjPool* pool, ZeroCopyInput* inner, size_t limit) {
     return pool->make<LimitedInput>(inner, limit);
 }
 
-ZeroCopyInput* stl::createChunked(ObjPool* pool, ZeroCopyInput* inner) {
+ZeroCopyInput* stl::createChunkedInput(ObjPool* pool, ZeroCopyInput* inner) {
     return pool->make<ChunkedInput>(inner);
 }
 

@@ -155,9 +155,9 @@ HttpRequestImpl::HttpRequestImpl(HttpConnection* conn)
     }
 
     if (auto te = headers.find(StringView("transfer-encoding")); te && te->lower(conn->line) == StringView("chunked")) {
-        reqIn = createChunked(pool.mutPtr(), conn->in);
+        reqIn = createChunkedInput(pool.mutPtr(), conn->in);
     } else if (auto cl = headers.find(StringView("content-length")); cl) {
-        reqIn = createLimited(pool.mutPtr(), conn->in, cl->stou());
+        reqIn = createLimitedInput(pool.mutPtr(), conn->in, cl->stou());
     } else {
         reqIn = pool->make<ZeroInput>();
     }
