@@ -1,18 +1,32 @@
 #include "num_cpu.h"
 
 #include <std/tst/ut.h>
+#include <std/thr/mutex.h>
+#include <std/thr/guard.h>
 #include <std/dbg/insist.h>
 
 #include <stdlib.h>
 
 using namespace stl;
 
+namespace {
+    Mutex& envMutex() {
+        static Mutex m;
+
+        return m;
+    }
+}
+
 STD_TEST_SUITE(NumCpu) {
     STD_TEST(ReturnsPositive) {
+        LockGuard g(envMutex());
+
         STD_INSIST(numCpu() > 0);
     }
 
     STD_TEST(GomaxprocsOverride) {
+        LockGuard g(envMutex());
+
         auto* prev = getenv("GOMAXPROCS");
 
         setenv("GOMAXPROCS", "7", 1);
@@ -29,6 +43,8 @@ STD_TEST_SUITE(NumCpu) {
     }
 
     STD_TEST(GomaxprocsZeroIgnored) {
+        LockGuard g(envMutex());
+
         auto* prev = getenv("GOMAXPROCS");
 
         setenv("GOMAXPROCS", "0", 1);
@@ -42,6 +58,8 @@ STD_TEST_SUITE(NumCpu) {
     }
 
     STD_TEST(GomaxprocsGarbageIgnored) {
+        LockGuard g(envMutex());
+
         auto* prev = getenv("GOMAXPROCS");
 
         setenv("GOMAXPROCS", "abc", 1);
@@ -55,6 +73,8 @@ STD_TEST_SUITE(NumCpu) {
     }
 
     STD_TEST(WithoutEnvMatchesOs) {
+        LockGuard g(envMutex());
+
         auto* prev = getenv("GOMAXPROCS");
 
         unsetenv("GOMAXPROCS");
