@@ -7,6 +7,7 @@
 #include "cond_var.h"
 
 #include <std/tst/ut.h>
+#include <std/mem/obj_pool.h>
 
 using namespace stl;
 
@@ -466,12 +467,13 @@ STD_TEST_SUITE(Thread) {
 
 STD_TEST_SUITE(CoroThread) {
     STD_TEST(BasicCreationAndJoin) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter = 0;
         CounterRunable runnable(&counter);
 
         exec->spawn([&] {
-            Thread thread(exec.mutPtr(), runnable);
+            Thread thread(exec, runnable);
             thread.join();
         });
 
@@ -480,14 +482,15 @@ STD_TEST_SUITE(CoroThread) {
     }
 
     STD_TEST(MultipleThreads) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter1 = 0, counter2 = 0, counter3 = 0;
         CounterRunable r1(&counter1), r2(&counter2), r3(&counter3);
 
         exec->spawn([&] {
-            Thread t1(exec.mutPtr(), r1);
-            Thread t2(exec.mutPtr(), r2);
-            Thread t3(exec.mutPtr(), r3);
+            Thread t1(exec, r1);
+            Thread t2(exec, r2);
+            Thread t3(exec, r3);
             t1.join();
             t2.join();
             t3.join();
@@ -500,12 +503,13 @@ STD_TEST_SUITE(CoroThread) {
     }
 
     STD_TEST(WithMultipleIncrements) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter = 0;
         MultiIncrementRunable runnable(&counter, 1000);
 
         exec->spawn([&] {
-            Thread thread(exec.mutPtr(), runnable);
+            Thread thread(exec, runnable);
             thread.join();
         });
 
@@ -514,14 +518,15 @@ STD_TEST_SUITE(CoroThread) {
     }
 
     STD_TEST(SequentialCreation) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         int total = 0;
 
         exec->spawn([&] {
             for (int i = 0; i < 10; ++i) {
                 int counter = 0;
                 CounterRunable runnable(&counter);
-                Thread thread(exec.mutPtr(), runnable);
+                Thread thread(exec, runnable);
                 thread.join();
                 total += counter;
             }
@@ -532,16 +537,17 @@ STD_TEST_SUITE(CoroThread) {
     }
 
     STD_TEST(MultipleWithDifferentWorkloads) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter1 = 0, counter2 = 0, counter3 = 0;
         MultiIncrementRunable r1(&counter1, 100);
         MultiIncrementRunable r2(&counter2, 500);
         MultiIncrementRunable r3(&counter3, 1000);
 
         exec->spawn([&] {
-            Thread t1(exec.mutPtr(), r1);
-            Thread t2(exec.mutPtr(), r2);
-            Thread t3(exec.mutPtr(), r3);
+            Thread t1(exec, r1);
+            Thread t2(exec, r2);
+            Thread t3(exec, r3);
             t1.join();
             t2.join();
             t3.join();
@@ -554,13 +560,14 @@ STD_TEST_SUITE(CoroThread) {
     }
 
     STD_TEST(JoinOrder) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter1 = 0, counter2 = 0;
         CounterRunable r1(&counter1), r2(&counter2);
 
         exec->spawn([&] {
-            Thread t1(exec.mutPtr(), r1);
-            Thread t2(exec.mutPtr(), r2);
+            Thread t1(exec, r1);
+            Thread t2(exec, r2);
             t2.join();
             t1.join();
         });
@@ -571,7 +578,8 @@ STD_TEST_SUITE(CoroThread) {
     }
 
     STD_TEST(ThreadId) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         u64 id = 0;
         bool executed = false;
 
@@ -589,7 +597,7 @@ STD_TEST_SUITE(CoroThread) {
         BoolRunable runnable(&executed);
 
         exec->spawn([&] {
-            Thread thread(exec.mutPtr(), runnable);
+            Thread thread(exec, runnable);
             id = thread.threadId();
             thread.join();
         });

@@ -13,13 +13,13 @@ using namespace stl;
 
 namespace {
     void dutchRudder(int nStages, int nMessages) {
-        auto exec = CoroExecutor::create(8);
         auto opool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(opool.mutPtr(), 8);
 
         Vector<Channel*> chArr;
 
         for (int i = 0; i <= nStages; ++i) {
-            chArr.pushBack(opool->make<Channel>(exec.mutPtr(), (size_t)5));
+            chArr.pushBack(opool->make<Channel>(exec, (size_t)5));
         }
 
         for (int i = 0; i < nStages; ++i) {
@@ -167,8 +167,9 @@ STD_TEST_SUITE(ChannelThreaded) {
 
 STD_TEST_SUITE(Channel) {
     STD_TEST(Basic) {
-        auto exec = CoroExecutor::create(4);
-        Channel ch(exec.mutPtr(), 1);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Channel ch(exec, 1);
         void* result = nullptr;
 
         exec->spawn([&] {
@@ -181,9 +182,10 @@ STD_TEST_SUITE(Channel) {
     }
 
     STD_TEST(Buffered) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         const size_t cap = 8;
-        Channel ch(exec.mutPtr(), cap);
+        Channel ch(exec, cap);
         int count = 0;
 
         exec->spawn([&] {
@@ -205,8 +207,9 @@ STD_TEST_SUITE(Channel) {
     }
 
     STD_TEST(BlockingSender) {
-        auto exec = CoroExecutor::create(4);
-        Channel ch(exec.mutPtr(), 1);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Channel ch(exec, 1);
         void* received = nullptr;
 
         // sender: will block after first enqueue since cap=1
@@ -229,8 +232,9 @@ STD_TEST_SUITE(Channel) {
     }
 
     STD_TEST(BlockingReceiver) {
-        auto exec = CoroExecutor::create(4);
-        Channel ch(exec.mutPtr(), 1);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Channel ch(exec, 1);
         void* received = nullptr;
 
         // receiver: blocks waiting for value
@@ -248,8 +252,9 @@ STD_TEST_SUITE(Channel) {
     }
 
     STD_TEST(Close) {
-        auto exec = CoroExecutor::create(4);
-        Channel ch(exec.mutPtr(), 4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Channel ch(exec, 4);
         bool got = true;
 
         exec->spawn([&] {
@@ -266,8 +271,9 @@ STD_TEST_SUITE(Channel) {
     }
 
     STD_TEST(CloseWithPendingReceivers) {
-        auto exec = CoroExecutor::create(4);
-        Channel ch(exec.mutPtr(), 1);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Channel ch(exec, 1);
         const int N = 4;
         int falseCount = 0;
 
@@ -290,8 +296,9 @@ STD_TEST_SUITE(Channel) {
     }
 
     STD_TEST(ProducerConsumer) {
-        auto exec = CoroExecutor::create(4);
-        Channel ch(exec.mutPtr(), 4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Channel ch(exec, 4);
         const int N = 100;
         int sum = 0;
 
@@ -314,8 +321,9 @@ STD_TEST_SUITE(Channel) {
     }
 
     STD_TEST(MPMC) {
-        auto exec = CoroExecutor::create(4);
-        Channel ch(exec.mutPtr(), 8);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Channel ch(exec, 8);
         const int nProducers = 4;
         const int nConsumers = 4;
         const int nPerProducer = 50;
@@ -351,8 +359,9 @@ STD_TEST_SUITE(Channel) {
     }
 
     STD_TEST(TryEnqueueDequeue) {
-        auto exec = CoroExecutor::create(4);
-        Channel ch(exec.mutPtr(), 2);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Channel ch(exec, 2);
 
         exec->spawn([&] {
             void* v;
@@ -384,8 +393,9 @@ STD_TEST_SUITE(Channel) {
     }
 
     STD_TEST(Stress) {
-        auto exec = CoroExecutor::create(8);
-        Channel ch(exec.mutPtr(), 16);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 8);
+        Channel ch(exec, 16);
         const int nProducers = 4;
         const int nConsumers = 4;
         const int nPerProducer = 100;

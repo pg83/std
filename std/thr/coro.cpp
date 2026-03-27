@@ -542,12 +542,12 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
 CoroExecutor::~CoroExecutor() noexcept {
 }
 
-CoroExecutor::Ref CoroExecutor::create(size_t threads) {
-    return create(threads, max(threads / 2, (size_t)1));
+CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads) {
+    return create(pool, threads, max(threads / 2, (size_t)1));
 }
 
-CoroExecutor::Ref CoroExecutor::create(size_t threads, size_t reactors) {
-    return new CoroExecutorImpl(threads, reactors);
+CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads, size_t reactors) {
+    return pool->make<CoroExecutorImpl>(threads, reactors);
 }
 
 u64 CoroExecutor::currentCoroId() const noexcept {

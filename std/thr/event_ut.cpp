@@ -173,10 +173,11 @@ STD_TEST_SUITE(EventDefault) {
 
 STD_TEST_SUITE(EventCoro) {
     STD_TEST(BasicSignal) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         exec->spawn([&] {
-            Event ev(exec.mutPtr());
+            Event ev(exec);
             int value = 0;
 
             exec->spawn([&] {
@@ -192,12 +193,13 @@ STD_TEST_SUITE(EventCoro) {
     }
 
     STD_TEST(DirectHandoff) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int N = 100;
 
         exec->spawn([&] {
             for (int i = 0; i < N; ++i) {
-                Event ev(exec.mutPtr());
+                Event ev(exec);
                 int result = 0;
 
                 exec->spawn([&] {
@@ -214,14 +216,15 @@ STD_TEST_SUITE(EventCoro) {
     }
 
     STD_TEST(ManyPairs) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int N = 8;
         int counter = 0;
 
         exec->spawn([&] {
             for (int i = 0; i < N; ++i) {
                 exec->spawn([&] {
-                    Event ev(exec.mutPtr());
+                    Event ev(exec);
                     int val = 0;
 
                     exec->spawn([&] {

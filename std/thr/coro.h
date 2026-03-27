@@ -2,9 +2,7 @@
 
 #include "runable.h"
 
-#include <std/ptr/arc.h>
 #include <std/sys/types.h>
-#include <std/ptr/intrusive.h>
 
 #include <sys/types.h>
 
@@ -41,9 +39,7 @@ namespace stl {
         }
     };
 
-    struct CoroExecutor: public ARC {
-        using Ref = IntrusivePtr<CoroExecutor>;
-
+    struct CoroExecutor {
         virtual ~CoroExecutor() noexcept;
 
         virtual void join() noexcept = 0;
@@ -81,7 +77,7 @@ namespace stl {
             offloadRun(pool, makeRunable(f));
         }
 
-        static Ref create(size_t threads);
-        static Ref create(size_t threads, size_t reactors);
+        static CoroExecutor* create(ObjPool* pool, size_t threads);
+        static CoroExecutor* create(ObjPool* pool, size_t threads, size_t reactors);
     };
 }

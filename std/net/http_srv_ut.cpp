@@ -40,7 +40,8 @@ namespace {
 
 STD_TEST_SUITE(HttpServerRequestParsing) {
     STD_TEST(PathNoQuery) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         struct Handler: HttpServe {
             Buffer path;
@@ -56,18 +57,17 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
         } handler;
 
         auto addr = makeAddr(17670);
-        auto pool = ObjPool::fromMemory();
-        WaitGroup wg(exec.mutPtr());
+        WaitGroup wg(exec);
         auto* ctl = serve(pool.mutPtr(), {
                                              .handler = &handler,
-                                             .exec = exec.mutPtr(),
+                                             .exec = exec,
                                              .addr = (const sockaddr*)&addr,
                                              .wg = &wg,
                                              .addrLen = sizeof(addr),
                                          });
 
         exec->spawn([&] {
-            TcpSocket cli(exec.mutPtr());
+            TcpSocket cli(exec);
             auto caddr = makeAddr(17670);
             STD_INSIST(cli.connectInf((const sockaddr*)&caddr, sizeof(caddr)) == 0);
             STD_DEFER {
@@ -95,7 +95,8 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
     }
 
     STD_TEST(PathWithQuery) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         struct Handler: HttpServe {
             Buffer path;
@@ -111,18 +112,17 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
         } handler;
 
         auto addr = makeAddr(17671);
-        auto pool = ObjPool::fromMemory();
-        WaitGroup wg(exec.mutPtr());
+        WaitGroup wg(exec);
         auto* ctl = serve(pool.mutPtr(), {
                                              .handler = &handler,
-                                             .exec = exec.mutPtr(),
+                                             .exec = exec,
                                              .addr = (const sockaddr*)&addr,
                                              .wg = &wg,
                                              .addrLen = sizeof(addr),
                                          });
 
         exec->spawn([&] {
-            TcpSocket cli(exec.mutPtr());
+            TcpSocket cli(exec);
             auto caddr = makeAddr(17671);
             STD_INSIST(cli.connectInf((const sockaddr*)&caddr, sizeof(caddr)) == 0);
             STD_DEFER {
@@ -152,7 +152,8 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
 
 STD_TEST_SUITE(HttpServer) {
     STD_TEST(GetRequest) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         struct Handler: HttpServe {
             void serve(HttpServerResponse& resp) override {
@@ -163,11 +164,10 @@ STD_TEST_SUITE(HttpServer) {
         } handler;
 
         auto addr = makeAddr(17661);
-        auto pool = ObjPool::fromMemory();
-        WaitGroup wg(exec.mutPtr());
+        WaitGroup wg(exec);
         auto* ctl = serve(pool.mutPtr(), {
                                              .handler = &handler,
-                                             .exec = exec.mutPtr(),
+                                             .exec = exec,
                                              .addr = (const sockaddr*)&addr,
                                              .wg = &wg,
                                              .addrLen = sizeof(addr),
@@ -177,7 +177,7 @@ STD_TEST_SUITE(HttpServer) {
         Buffer respBody;
 
         exec->spawn([&] {
-            TcpSocket cli(exec.mutPtr());
+            TcpSocket cli(exec);
             auto caddr = makeAddr(17661);
             STD_INSIST(cli.connectInf((const sockaddr*)&caddr, sizeof(caddr)) == 0);
             STD_DEFER {
@@ -212,7 +212,8 @@ STD_TEST_SUITE(HttpServer) {
     }
 
     STD_TEST(KeepAliveChunked) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         struct Handler: HttpServe {
             void serve(HttpServerResponse& resp) override {
@@ -224,11 +225,10 @@ STD_TEST_SUITE(HttpServer) {
         } handler;
 
         auto addr = makeAddr(17663);
-        auto pool = ObjPool::fromMemory();
-        WaitGroup wg(exec.mutPtr());
+        WaitGroup wg(exec);
         auto* ctl = serve(pool.mutPtr(), {
                                              .handler = &handler,
-                                             .exec = exec.mutPtr(),
+                                             .exec = exec,
                                              .addr = (const sockaddr*)&addr,
                                              .wg = &wg,
                                              .addrLen = sizeof(addr),
@@ -238,7 +238,7 @@ STD_TEST_SUITE(HttpServer) {
         Buffer body2;
 
         exec->spawn([&] {
-            TcpSocket cli(exec.mutPtr());
+            TcpSocket cli(exec);
             auto caddr = makeAddr(17663);
             STD_INSIST(cli.connectInf((const sockaddr*)&caddr, sizeof(caddr)) == 0);
             STD_DEFER {
@@ -291,7 +291,8 @@ STD_TEST_SUITE(HttpServer) {
     }
 
     STD_TEST(KeepAlive) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         struct Handler: HttpServe {
             void serve(HttpServerResponse& resp) override {
@@ -303,11 +304,10 @@ STD_TEST_SUITE(HttpServer) {
         } handler;
 
         auto addr = makeAddr(17662);
-        auto pool = ObjPool::fromMemory();
-        WaitGroup wg(exec.mutPtr());
+        WaitGroup wg(exec);
         auto* ctl = serve(pool.mutPtr(), {
                                              .handler = &handler,
-                                             .exec = exec.mutPtr(),
+                                             .exec = exec,
                                              .addr = (const sockaddr*)&addr,
                                              .wg = &wg,
                                              .addrLen = sizeof(addr),
@@ -317,7 +317,7 @@ STD_TEST_SUITE(HttpServer) {
         Buffer body2;
 
         exec->spawn([&] {
-            TcpSocket cli(exec.mutPtr());
+            TcpSocket cli(exec);
             auto caddr = makeAddr(17662);
             STD_INSIST(cli.connectInf((const sockaddr*)&caddr, sizeof(caddr)) == 0);
             STD_DEFER {
@@ -386,8 +386,8 @@ namespace {
 
 STD_TEST_SUITE(HttpFileServe) {
     STD_TEST(_ServeFiles) {
-        auto exec = CoroExecutor::create(8);
         auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 8);
         auto sslCtx = SslCtx::create(pool.mutPtr(), StringView(testCert), StringView(testKey));
 
         struct Handler: HttpServe {
@@ -418,7 +418,7 @@ STD_TEST_SUITE(HttpFileServe) {
             }
         } handler;
 
-        handler.exec = exec.mutPtr();
+        handler.exec = exec;
         handler.sslCtx = sslCtx;
 
         u16 port = 18080;
@@ -429,13 +429,13 @@ STD_TEST_SUITE(HttpFileServe) {
 
         auto addr = makeAddr(port);
 
-        WaitGroup wg(exec.mutPtr());
+        WaitGroup wg(exec);
 
         serve(
             pool.mutPtr(),
             {
                 .handler = &handler,
-                .exec = exec.mutPtr(),
+                .exec = exec,
                 .addr = (const sockaddr*)&addr,
                 .wg = &wg,
                 .addrLen = sizeof(addr),
@@ -450,8 +450,8 @@ STD_TEST_SUITE(HttpFileServe) {
     }
 
     STD_TEST(_ServeOK) {
-        auto exec = CoroExecutor::create(8);
         auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 8);
         auto sslCtx = SslCtx::create(pool.mutPtr(), StringView(testCert), StringView(testKey));
 
         struct Handler: HttpServe {
@@ -470,7 +470,7 @@ STD_TEST_SUITE(HttpFileServe) {
             }
         } handler;
 
-        handler.exec = exec.mutPtr();
+        handler.exec = exec;
         handler.sslCtx = sslCtx;
 
         u16 port = 18080;
@@ -481,13 +481,13 @@ STD_TEST_SUITE(HttpFileServe) {
 
         auto addr = makeAddr(port);
 
-        WaitGroup wg(exec.mutPtr());
+        WaitGroup wg(exec);
 
         serve(
             pool.mutPtr(),
             {
                 .handler = &handler,
-                .exec = exec.mutPtr(),
+                .exec = exec,
                 .addr = (const sockaddr*)&addr,
                 .wg = &wg,
                 .addrLen = sizeof(addr),

@@ -384,7 +384,7 @@ bool HttpConnection::serve() {
 
 HttpServerCtl* stl::serve(ObjPool* pool, HttpServeOpts opts) {
     if (!opts.exec) {
-        opts.exec = pool->make<CoroExecutor::Ref>(CoroExecutor::create(numCpu()))->mutPtr();
+        opts.exec = CoroExecutor::create(pool, numCpu());
     }
 
     if (!opts.wg) {

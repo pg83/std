@@ -8,6 +8,7 @@
 #include "wait_group.h"
 
 #include <std/tst/ut.h>
+#include <std/mem/obj_pool.h>
 
 using namespace stl;
 
@@ -609,9 +610,10 @@ STD_TEST_SUITE(CondVar) {
 
 STD_TEST_SUITE(CoroCondVar) {
     STD_TEST(SignalWithoutWaiters) {
-        auto exec = CoroExecutor::create(4);
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         exec->spawn([&] {
             cv.signal();
@@ -623,8 +625,9 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(BroadcastWithoutWaiters) {
-        auto exec = CoroExecutor::create(4);
-        CondVar cv(exec.mutPtr());
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        CondVar cv(exec);
 
         exec->spawn([&] {
             cv.broadcast();
@@ -636,11 +639,12 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(WaitAndSignal) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         bool ready = false;
         bool executed = false;
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         exec->spawn([&] {
             LockGuard lock(mtx);
@@ -661,11 +665,12 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(WaitAndBroadcast) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         bool ready = false;
         bool executed = false;
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         exec->spawn([&] {
             LockGuard lock(mtx);
@@ -686,12 +691,13 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(MultipleWaitersBroadcast) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int N = 3;
         bool ready = false;
         int counter = 0;
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         for (int i = 0; i < N; ++i) {
             exec->spawn([&] {
@@ -714,11 +720,12 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(SignalWakesOneWaiter) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         bool ready = false;
         int counter = 0;
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         for (int i = 0; i < 2; ++i) {
             exec->spawn([&] {
@@ -742,11 +749,12 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(ProducerConsumerPattern) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         int data = 0;
         bool dataReady = false;
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         exec->spawn([&] {
             LockGuard lock(mtx);
@@ -767,12 +775,13 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(MultipleProducersConsumers) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int N = 3;
         int data = 0;
         bool dataReady = false;
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         for (int i = 0; i < N; ++i) {
             exec->spawn([&] {
@@ -795,11 +804,12 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(SequentialWaitSignal) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         bool ready1 = false, ready2 = false;
         bool executed1 = false, executed2 = false;
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         {
             WaitGroup done(1);
@@ -844,10 +854,11 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(WaitWithSpuriousWakeup) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         int value = 0;
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         exec->spawn([&] {
             LockGuard lock(mtx);
@@ -869,12 +880,13 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(MultipleCondVarsOneMutex) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         bool ready1 = false, ready2 = false;
         bool executed1 = false, executed2 = false;
-        Mutex mtx(exec.mutPtr());
-        CondVar cv1(exec.mutPtr());
-        CondVar cv2(exec.mutPtr());
+        Mutex mtx(exec);
+        CondVar cv1(exec);
+        CondVar cv2(exec);
 
         exec->spawn([&] {
             LockGuard lock(mtx);
@@ -910,11 +922,12 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(BroadcastMultipleTimes) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         bool ready = false;
         int counter = 0;
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         for (int i = 0; i < 2; ++i) {
             exec->spawn([&] {
@@ -939,11 +952,12 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(WaitWithPredicatePattern) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         bool predicate = false;
         int result = 0;
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         exec->spawn([&] {
             LockGuard lock(mtx);
@@ -964,10 +978,11 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(ComplexSynchronizationPattern) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         int phase = 0;
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         exec->spawn([&] {
             LockGuard lock(mtx);
@@ -1001,9 +1016,10 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(RapidSignaling) {
-        auto exec = CoroExecutor::create(4);
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         exec->spawn([&] {
             for (int i = 0; i < 1000; ++i) {
@@ -1016,9 +1032,10 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(RapidBroadcasting) {
-        auto exec = CoroExecutor::create(4);
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         exec->spawn([&] {
             for (int i = 0; i < 1000; ++i) {
@@ -1031,12 +1048,13 @@ STD_TEST_SUITE(CoroCondVar) {
     }
 
     STD_TEST(ManyWaitersBroadcast) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int N = 10;
         bool ready = false;
         int counter = 0;
-        Mutex mtx(exec.mutPtr());
-        CondVar cv(exec.mutPtr());
+        Mutex mtx(exec);
+        CondVar cv(exec);
 
         for (int i = 0; i < N; ++i) {
             exec->spawn([&] {

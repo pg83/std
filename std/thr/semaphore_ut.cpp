@@ -3,6 +3,7 @@
 #include "thread.h"
 
 #include <std/tst/ut.h>
+#include <std/mem/obj_pool.h>
 #include <std/sys/atomic.h>
 
 using namespace stl;
@@ -61,8 +62,9 @@ STD_TEST_SUITE(Semaphore) {
     }
 
     STD_TEST(CoroBasic) {
-        auto exec = CoroExecutor::create(4);
-        Semaphore sem(0, exec.mutPtr());
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Semaphore sem(0, exec);
 
         exec->spawn([&] {
             exec->spawn([&] {
@@ -76,8 +78,9 @@ STD_TEST_SUITE(Semaphore) {
     }
 
     STD_TEST(CoroInitialCount) {
-        auto exec = CoroExecutor::create(4);
-        Semaphore sem(3, exec.mutPtr());
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Semaphore sem(3, exec);
 
         exec->spawn([&] {
             sem.wait();
@@ -94,8 +97,9 @@ STD_TEST_SUITE(Semaphore) {
 
     STD_TEST(CoroMultiple) {
         const int N = 8;
-        auto exec = CoroExecutor::create(4);
-        Semaphore sem(0, exec.mutPtr());
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Semaphore sem(0, exec);
         int counter = 0;
 
         exec->spawn([&] {

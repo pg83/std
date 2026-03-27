@@ -204,13 +204,14 @@ STD_TEST_SUITE(AsyncLifetime) {
 
     STD_TEST(Coro) {
         int alive = 0;
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         exec->spawn([&] {
-            auto f1 = async(exec.mutPtr(), [&] {
+            auto f1 = async(exec, [&] {
                 return Tracked(10, &alive);
             });
-            auto f2 = async(exec.mutPtr(), [&] {
+            auto f2 = async(exec, [&] {
                 return Tracked(20, &alive);
             });
 
@@ -225,10 +226,11 @@ STD_TEST_SUITE(AsyncLifetime) {
 
 STD_TEST_SUITE(Async) {
     STD_TEST(Basic) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         exec->spawn([&] {
-            auto f = async(exec.mutPtr(), [] {
+            auto f = async(exec, [] {
                 return 42;
             });
 
@@ -242,10 +244,11 @@ STD_TEST_SUITE(Async) {
         struct Point {
             int x, y;
         };
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         exec->spawn([&] {
-            auto f = async(exec.mutPtr(), [] {
+            auto f = async(exec, [] {
                 return Point{3, 7};
             });
 
@@ -257,12 +260,13 @@ STD_TEST_SUITE(Async) {
     }
 
     STD_TEST(Multiple) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int N = 8;
 
         exec->spawn([&] {
             for (int i = 0; i < N; ++i) {
-                auto f = async(exec.mutPtr(), [i] {
+                auto f = async(exec, [i] {
                     return i * i;
                 });
 
@@ -274,19 +278,20 @@ STD_TEST_SUITE(Async) {
     }
 
     STD_TEST(Parallel) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         exec->spawn([&] {
-            auto f1 = async(exec.mutPtr(), [] {
+            auto f1 = async(exec, [] {
                 return 1;
             });
-            auto f2 = async(exec.mutPtr(), [] {
+            auto f2 = async(exec, [] {
                 return 2;
             });
-            auto f3 = async(exec.mutPtr(), [] {
+            auto f3 = async(exec, [] {
                 return 3;
             });
-            auto f4 = async(exec.mutPtr(), [] {
+            auto f4 = async(exec, [] {
                 return 4;
             });
 
@@ -298,19 +303,20 @@ STD_TEST_SUITE(Async) {
     }
 
     STD_TEST(Parallel2) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
 
-        auto res = async(exec.mutPtr(), [&] {
-                       auto f1 = async(exec.mutPtr(), [] {
+        auto res = async(exec, [&] {
+                       auto f1 = async(exec, [] {
                            return 1;
                        });
-                       auto f2 = async(exec.mutPtr(), [] {
+                       auto f2 = async(exec, [] {
                            return 2;
                        });
-                       auto f3 = async(exec.mutPtr(), [] {
+                       auto f3 = async(exec, [] {
                            return 3;
                        });
-                       auto f4 = async(exec.mutPtr(), [] {
+                       auto f4 = async(exec, [] {
                            return 4;
                        });
 
@@ -321,25 +327,26 @@ STD_TEST_SUITE(Async) {
     }
 
     STD_TEST(CoroRecursive) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         auto run = [&](auto& self, size_t depth) {
             if (depth == 0) {
                 return 1;
             }
 
-            auto f1 = async(exec.mutPtr(), [&] {
+            auto f1 = async(exec, [&] {
                 return self(self, depth - 1);
             });
 
-            auto f2 = async(exec.mutPtr(), [&] {
+            auto f2 = async(exec, [&] {
                 return self(self, depth - 1);
             });
 
             return f1.wait() + f2.wait();
         };
 
-        auto f = async(exec.mutPtr(), [&] {
+        auto f = async(exec, [&] {
             return run(run, 7);
         });
 

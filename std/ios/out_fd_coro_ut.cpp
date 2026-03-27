@@ -6,6 +6,8 @@
 #include <std/dbg/insist.h>
 #include <std/sys/memfd.h>
 
+#include <std/mem/obj_pool.h>
+
 #include <string.h>
 #include <unistd.h>
 
@@ -13,14 +15,15 @@ using namespace stl;
 
 STD_TEST_SUITE(CoroFDOutput) {
     STD_TEST(WriteData) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         ScopedFD sfd(memFD("test"));
         STD_INSIST(sfd.get() >= 0);
 
         const char* data = "hello coro";
 
         exec->spawn([&] {
-            CoroFDOutput out(sfd, exec.mutPtr());
+            CoroFDOutput out(sfd, exec);
             out.write(data, strlen(data));
             STD_INSIST(out.offset == (off_t)strlen(data));
         });
@@ -34,12 +37,13 @@ STD_TEST_SUITE(CoroFDOutput) {
     }
 
     STD_TEST(WriteAdvancesOffset) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         ScopedFD sfd(memFD("test"));
         STD_INSIST(sfd.get() >= 0);
 
         exec->spawn([&] {
-            CoroFDOutput out(sfd, exec.mutPtr());
+            CoroFDOutput out(sfd, exec);
             out.write("abc", 3);
             STD_INSIST(out.offset == 3);
             out.write("def", 3);

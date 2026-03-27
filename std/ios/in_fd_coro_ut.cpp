@@ -6,13 +6,16 @@
 #include <std/dbg/insist.h>
 #include <std/sys/memfd.h>
 
+#include <std/mem/obj_pool.h>
+
 #include <string.h>
 
 using namespace stl;
 
 STD_TEST_SUITE(CoroFDInput) {
     STD_TEST(ReadData) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         ScopedFD sfd(memFD("test"));
         STD_INSIST(sfd.get() >= 0);
 
@@ -20,7 +23,7 @@ STD_TEST_SUITE(CoroFDInput) {
         sfd.write(data, strlen(data));
 
         exec->spawn([&] {
-            CoroFDInput in(sfd, exec.mutPtr());
+            CoroFDInput in(sfd, exec);
 
             char buf[32] = {};
             auto n = in.read(buf, sizeof(buf));
@@ -34,12 +37,13 @@ STD_TEST_SUITE(CoroFDInput) {
     }
 
     STD_TEST(ReadEof) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         ScopedFD sfd(memFD("test"));
         STD_INSIST(sfd.get() >= 0);
 
         exec->spawn([&] {
-            CoroFDInput in(sfd, exec.mutPtr());
+            CoroFDInput in(sfd, exec);
 
             char buf[32];
             auto n = in.read(buf, sizeof(buf));
@@ -51,14 +55,15 @@ STD_TEST_SUITE(CoroFDInput) {
     }
 
     STD_TEST(ReadAdvancesOffset) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
         ScopedFD sfd(memFD("test"));
         STD_INSIST(sfd.get() >= 0);
 
         sfd.write("abcdef", 6);
 
         exec->spawn([&] {
-            CoroFDInput in(sfd, exec.mutPtr());
+            CoroFDInput in(sfd, exec);
 
             char buf[3];
             STD_INSIST(in.read(buf, 3) == 3);

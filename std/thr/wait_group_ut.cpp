@@ -4,6 +4,7 @@
 #include "thread.h"
 
 #include <std/tst/ut.h>
+#include <std/mem/obj_pool.h>
 #include <std/sys/atomic.h>
 
 using namespace stl;
@@ -125,8 +126,9 @@ STD_TEST_SUITE(WaitGroup) {
     }
 
     STD_TEST(CoroBasic) {
-        auto exec = CoroExecutor::create(4);
-        WaitGroup wg(exec.mutPtr());
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        WaitGroup wg(exec);
         int counter = 0;
 
         exec->spawn([&] {
@@ -146,8 +148,9 @@ STD_TEST_SUITE(WaitGroup) {
 
     STD_TEST(CoroMultiple) {
         const int N = 8;
-        auto exec = CoroExecutor::create(4);
-        WaitGroup wg(exec.mutPtr());
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        WaitGroup wg(exec);
         int counter = 0;
 
         exec->spawn([&] {
@@ -168,8 +171,9 @@ STD_TEST_SUITE(WaitGroup) {
     }
 
     STD_TEST(CoroReuseAfterWait) {
-        auto exec = CoroExecutor::create(4);
-        WaitGroup wg(exec.mutPtr());
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
+        WaitGroup wg(exec);
         int counter = 0;
 
         exec->spawn([&] {

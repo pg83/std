@@ -8,6 +8,8 @@
 #include <std/dbg/insist.h>
 #include <std/net/tcp_socket.h>
 
+#include <std/mem/obj_pool.h>
+
 #include <string.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -26,9 +28,10 @@ namespace {
 
 STD_TEST_SUITE(TcpStream) {
     STD_TEST(Echo) {
-        auto exec = CoroExecutor::create(4);
+        auto pool = ObjPool::fromMemory();
+        auto* exec = CoroExecutor::create(pool.mutPtr(), 4);
 
-        TcpSocket srv(exec.mutPtr());
+        TcpSocket srv(exec);
         STD_INSIST(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
         STD_DEFER {
             srv.close();
@@ -47,7 +50,7 @@ STD_TEST_SUITE(TcpStream) {
             ScopedFD clientFd;
             STD_INSIST(srv.acceptInf(clientFd, nullptr, nullptr) == 0);
 
-            TcpSocket client(clientFd.get(), exec.mutPtr());
+            TcpSocket client(clientFd.get(), exec);
             TcpStream stream(client);
 
             char buf[32] = {};
@@ -57,7 +60,7 @@ STD_TEST_SUITE(TcpStream) {
         });
 
         exec->spawn([&] {
-            TcpSocket cli(exec.mutPtr());
+            TcpSocket cli(exec);
             auto caddr = makeAddr(17660);
             STD_INSIST(cli.connectInf((sockaddr*)&caddr, sizeof(caddr)) == 0);
             STD_DEFER {
