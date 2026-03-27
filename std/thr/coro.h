@@ -4,8 +4,6 @@
 
 #include <std/sys/types.h>
 
-#include <sys/types.h>
-
 namespace stl {
     class ObjPool;
 
