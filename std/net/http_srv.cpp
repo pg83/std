@@ -86,6 +86,7 @@ namespace {
         HttpConnection(HttpServe* handler, CoroExecutor* exec, ObjPool* pool, ScopedFD* client);
         ~HttpConnection();
 
+        void run();
         bool serve();
     };
 
@@ -321,13 +322,7 @@ void HttpServerCtlImpl::run(TcpSocket* srv, WaitGroup* wg) {
 
         exec->spawn([this, cpool, client] mutable {
             try {
-                HttpConnection conn(&handler, exec, cpool.mutPtr(), client);
-
-                while (conn.serve()) {
-                    conn.out->flush();
-                }
-
-                conn.out->finish();
+                HttpConnection(&handler, exec, cpool.mutPtr(), client).run();
             } catch (...) {
                 sysE << Exception::current() << endL << flsH;
             }
@@ -367,6 +362,14 @@ HttpConnection::~HttpConnection() {
     } catch (...) {
         sysE << Exception::current() << endL << flsH;
     }
+}
+
+void HttpConnection::run() {
+    while (serve()) {
+        out->flush();
+    }
+
+    out->finish();
 }
 
 bool HttpConnection::serve() {
