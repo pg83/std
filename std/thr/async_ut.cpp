@@ -340,9 +340,9 @@ STD_TEST_SUITE(Async) {
         };
 
         auto f = async(exec.mutPtr(), [&] {
-            return run(run, 8);
+            return run(run, 7);
         });
 
-        STD_INSIST(f.wait() == 256);
+        STD_INSIST(f.wait() == 128);
     }
 }

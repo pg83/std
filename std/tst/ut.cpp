@@ -223,7 +223,7 @@ void Tests::execute() {
 
             outb << StringView(u8"  ")
                  << t.timeUs
-                 << StringView(u8" ms  ")
+                 << StringView(u8" us ")
                  << *t.test
                  << endL;
         }
