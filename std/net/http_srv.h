@@ -28,8 +28,8 @@ namespace stl {
     struct HttpServerResponse {
         virtual Output* out() = 0;
         virtual void endHeaders() = 0;
-        virtual HttpServerRequest* request() = 0;
         virtual void setStatus(u32 code) = 0;
+        virtual HttpServerRequest* request() = 0;
         virtual void addHeader(StringView name, StringView value) = 0;
     };
 
