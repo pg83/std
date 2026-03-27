@@ -1,9 +1,7 @@
 #pragma once
 
-#include <std/ptr/arc.h>
 #include <std/str/view.h>
 #include <std/sys/types.h>
-#include <std/ptr/intrusive.h>
 
 struct sockaddr;
 
@@ -38,11 +36,19 @@ namespace stl {
         virtual void serve(HttpServerResponse& resp) = 0;
     };
 
-    struct HttpServerCtl: public ARC {
+    struct HttpServerCtl {
         virtual ~HttpServerCtl();
 
         virtual void stop() = 0;
     };
 
-    IntrusivePtr<HttpServerCtl> serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg);
+    struct HttpServeOpts {
+        HttpServe* handler = nullptr;
+        CoroExecutor* exec = nullptr;
+        const sockaddr* addr = nullptr;
+        u32 addrLen = 0;
+        WaitGroup* wg = nullptr;
+    };
+
+    HttpServerCtl* serve(ObjPool* pool, const HttpServeOpts& opts);
 }

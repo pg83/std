@@ -70,7 +70,7 @@ namespace {
         HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen);
 
         void stop() override;
-        void run(Semaphore* sem);
+        void run(Semaphore* sem, WaitGroup* wg);
     };
 
     struct HttpConnection {
@@ -288,11 +288,15 @@ void HttpServerCtlImpl::stop() {
     });
 }
 
-void HttpServerCtlImpl::run(Semaphore* sem) {
+void HttpServerCtlImpl::run(Semaphore* sem, WaitGroup* wg) {
     TcpSocket srv(exec);
 
     STD_DEFER {
         srv.close();
+
+        if (wg) {
+            wg->done();
+        }
     };
 
     STD_VERIFY(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
@@ -378,21 +382,28 @@ bool HttpConnection::serve() {
     return HttpServerRequestImpl(this).serve();
 }
 
-IntrusivePtr<HttpServerCtl> stl::serve(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, WaitGroup& wg) {
-    auto ctl = makeIntrusivePtr(new HttpServerCtlImpl(handler, exec, addr, addrLen));
+HttpServerCtl* stl::serve(ObjPool* pool, const HttpServeOpts& opts) {
+    CoroExecutor* exec = opts.exec;
 
-    wg.inc();
+    if (!exec) {
+        exec = pool->make<CoroExecutor::Ref>(CoroExecutor::create(4))->mutPtr();
+    }
+
+    auto* ctl = pool->make<HttpServerCtlImpl>(*opts.handler, exec, opts.addr, opts.addrLen);
+
+    if (opts.wg) {
+        opts.wg->inc();
+    }
 
     Semaphore sem(0);
 
-    exec->spawn([ctl, &wg, &sem] mutable {
-        ctl->run(&sem);
-        wg.done();
+    exec->spawn([ctl, wg = opts.wg, &sem] {
+        ctl->run(&sem, wg);
     });
 
     sem.wait();
 
-    return ctl.mutPtr();
+    return ctl;
 }
 
 HttpServerCtl::~HttpServerCtl() {

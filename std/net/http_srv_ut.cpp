@@ -56,8 +56,15 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
         } handler;
 
         auto addr = makeAddr(17670);
+        auto pool = ObjPool::fromMemory();
         WaitGroup wg(exec.mutPtr());
-        auto ctl = serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
+        auto* ctl = serve(pool.mutPtr(), {
+            .handler = &handler,
+            .exec = exec.mutPtr(),
+            .addr = (const sockaddr*)&addr,
+            .addrLen = sizeof(addr),
+            .wg = &wg,
+        });
 
         exec->spawn([&] {
             TcpSocket cli(exec.mutPtr());
@@ -104,8 +111,15 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
         } handler;
 
         auto addr = makeAddr(17671);
+        auto pool = ObjPool::fromMemory();
         WaitGroup wg(exec.mutPtr());
-        auto ctl = serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
+        auto* ctl = serve(pool.mutPtr(), {
+            .handler = &handler,
+            .exec = exec.mutPtr(),
+            .addr = (const sockaddr*)&addr,
+            .addrLen = sizeof(addr),
+            .wg = &wg,
+        });
 
         exec->spawn([&] {
             TcpSocket cli(exec.mutPtr());
@@ -149,8 +163,15 @@ STD_TEST_SUITE(HttpServer) {
         } handler;
 
         auto addr = makeAddr(17661);
+        auto pool = ObjPool::fromMemory();
         WaitGroup wg(exec.mutPtr());
-        auto ctl = serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
+        auto* ctl = serve(pool.mutPtr(), {
+            .handler = &handler,
+            .exec = exec.mutPtr(),
+            .addr = (const sockaddr*)&addr,
+            .addrLen = sizeof(addr),
+            .wg = &wg,
+        });
 
         u32 respStatus = 0;
         Buffer respBody;
@@ -203,8 +224,15 @@ STD_TEST_SUITE(HttpServer) {
         } handler;
 
         auto addr = makeAddr(17663);
+        auto pool = ObjPool::fromMemory();
         WaitGroup wg(exec.mutPtr());
-        auto ctl = serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
+        auto* ctl = serve(pool.mutPtr(), {
+            .handler = &handler,
+            .exec = exec.mutPtr(),
+            .addr = (const sockaddr*)&addr,
+            .addrLen = sizeof(addr),
+            .wg = &wg,
+        });
 
         Buffer body1;
         Buffer body2;
@@ -275,8 +303,15 @@ STD_TEST_SUITE(HttpServer) {
         } handler;
 
         auto addr = makeAddr(17662);
+        auto pool = ObjPool::fromMemory();
         WaitGroup wg(exec.mutPtr());
-        auto ctl = serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
+        auto* ctl = serve(pool.mutPtr(), {
+            .handler = &handler,
+            .exec = exec.mutPtr(),
+            .addr = (const sockaddr*)&addr,
+            .addrLen = sizeof(addr),
+            .wg = &wg,
+        });
 
         Buffer body1;
         Buffer body2;
@@ -396,7 +431,13 @@ STD_TEST_SUITE(HttpFileServe) {
 
         WaitGroup wg(exec.mutPtr());
 
-        serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
+        serve(pool.mutPtr(), {
+            .handler = &handler,
+            .exec = exec.mutPtr(),
+            .addr = (const sockaddr*)&addr,
+            .addrLen = sizeof(addr),
+            .wg = &wg,
+        });
 
         exec->spawn([&] {
             wg.wait();
@@ -441,7 +482,13 @@ STD_TEST_SUITE(HttpFileServe) {
 
         WaitGroup wg(exec.mutPtr());
 
-        serve(handler, exec.mutPtr(), (const sockaddr*)&addr, sizeof(addr), wg);
+        serve(pool.mutPtr(), {
+            .handler = &handler,
+            .exec = exec.mutPtr(),
+            .addr = (const sockaddr*)&addr,
+            .addrLen = sizeof(addr),
+            .wg = &wg,
+        });
 
         exec->spawn([&] {
             wg.wait();
