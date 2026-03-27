@@ -101,10 +101,14 @@ namespace {
         }
     }
 
+    struct JoinPipe {
+        ScopedFD r;
+        ScopedFD w;
+    };
+
     struct CoroExecutorImpl: public CoroExecutor {
         alignas(64) int inflight_ = 0;
-        ScopedFD joinR_;
-        ScopedFD joinW_;
+        JoinPipe* join_;
         const u64 tlsKey_;
         Vector<ReactorIface*> reactors_;
         ThreadPool* fsPool_;
@@ -171,12 +175,13 @@ namespace {
 }
 
 CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads, size_t reactors)
-    : tlsKey_(ThreadPool::registerTlsKey())
+    : join_(pool->make<JoinPipe>())
+    , tlsKey_(ThreadPool::registerTlsKey())
     , pool_(ThreadPool::workStealing(pool, threads))
 {
-    createPipeFD(joinR_, joinW_);
+    createPipeFD(join_->r, join_->w);
 
-    joinW_.setNonBlocking();
+    join_->w.setNonBlocking();
 
     for (size_t i = 0; i < reactors; ++i) {
         reactors_.pushBack(ReactorIface::create(this, pool_, pool));
@@ -209,7 +214,7 @@ void CoroExecutorImpl::join() noexcept {
     while (stdAtomicFetch(&inflight_, MemoryOrder::Acquire) > 0) {
         char b;
 
-        joinR_.read(&b, 1);
+        join_->r.read(&b, 1);
     }
 }
 
@@ -226,7 +231,7 @@ ContImpl::~ContImpl() {
     if (stdAtomicAddAndFetch(&exec_->inflight_, -1, MemoryOrder::Release) == 0) {
         char b = 1;
 
-        exec_->joinW_.write(&b, 1);
+        exec_->join_->w.write(&b, 1);
     }
 }
 
