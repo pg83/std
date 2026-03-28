@@ -109,6 +109,16 @@ namespace {
         void setStatus(u32 code) override;
         void addHeader(StringView name, StringView value) override;
     };
+
+    HttpServeOpts* internOpts(ObjPool* pool, HttpServeOpts opts) {
+        auto storage = pool->make<sockaddr_storage>();
+
+        memCpy(storage, opts.addr, opts.addrLen);
+
+        opts.addr = (const sockaddr*)storage;
+
+        return pool->make<HttpServeOpts>(opts);
+    }
 }
 
 HttpServerRequestImpl::HttpServerRequestImpl(HttpConnection* conn)
@@ -384,13 +394,7 @@ HttpServerCtl* stl::serve(ObjPool* pool, HttpServeOpts opts) {
         opts.wg = pool->make<WaitGroup>();
     }
 
-    auto storage = pool->make<sockaddr_storage>();
-
-    memCpy(storage, opts.addr, opts.addrLen);
-
-    opts.addr = (const sockaddr*)storage;
-
-    auto popts = pool->make<HttpServeOpts>(opts);
+    auto popts = internOpts(pool, opts);
     auto ctl = pool->make<HttpServerCtlImpl>(popts);
     auto srv = ctl->listen(pool);
 
