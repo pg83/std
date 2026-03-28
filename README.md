@@ -12,7 +12,7 @@ Interfaces (pure virtual classes) solve the header problem — a forward-declare
 
 What if a single bump allocator owned every object in a logical unit of work, and every sub-object lived in the same contiguous arena?
 
-```
+```cpp
 ObjPool pool = ObjPool::fromMemory();
 
 auto* reactor = ReactorIface::create(exec, threadPool, &pool);
