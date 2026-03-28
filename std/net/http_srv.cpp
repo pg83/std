@@ -61,21 +61,18 @@ namespace {
     };
 
     struct HttpServerCtlImpl: public HttpServerCtl {
-        HttpServe& handler;
-        CoroExecutor* exec;
-        sockaddr_storage addr;
-        u32 addrLen;
+        HttpServeOpts* opts_;
         bool stopped;
 
-        HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen);
+        HttpServerCtlImpl(HttpServeOpts* opts);
 
         void stop() override;
-        TcpSocket* listen(ObjPool* pool, u32 backlog);
-        void run(TcpSocket* srv, WaitGroup* wg);
+        TcpSocket* listen(ObjPool* pool);
+        void run(TcpSocket* srv);
     };
 
     struct HttpConnection {
-        HttpServe* handler;
+        HttpServeOpts* opts;
         ObjPool* pool;
         TcpSocket sock;
         ZeroCopyInput* in;
@@ -83,7 +80,7 @@ namespace {
         Buffer line;
         Buffer lcName;
 
-        HttpConnection(HttpServe* handler, CoroExecutor* exec, ObjPool* pool, FD* client);
+        HttpConnection(HttpServeOpts* opts, ObjPool* pool, FD* client);
         ~HttpConnection();
 
         void run();
@@ -168,7 +165,7 @@ HttpServerRequestImpl::HttpServerRequestImpl(HttpConnection* conn)
 bool HttpServerRequestImpl::serve() {
     HttpServerResponseImpl resp(this);
 
-    conn->handler->serve(resp);
+    conn->opts->handler->serve(resp);
     reqIn->drain();
 
     return keepAlive;
@@ -267,45 +264,41 @@ void HttpServerResponseImpl::endHeaders() {
     }
 }
 
-HttpServerCtlImpl::HttpServerCtlImpl(HttpServe& handler, CoroExecutor* exec, const sockaddr* addr, u32 addrLen)
-    : handler(handler)
-    , exec(exec)
-    , addr{}
-    , addrLen(addrLen)
+HttpServerCtlImpl::HttpServerCtlImpl(HttpServeOpts* opts)
+    : opts_(opts)
     , stopped(false)
 {
-    memCpy(&this->addr, addr, addrLen);
 }
 
 void HttpServerCtlImpl::stop() {
     stdAtomicStore(&stopped, true, stl::MemoryOrder::Release);
 
-    exec->spawn([this] {
-        TcpSocket sock(exec);
+    opts_->exec->spawn([this] {
+        TcpSocket sock(opts_->exec);
 
-        if (sock.socket(addr.ss_family, SOCK_STREAM, 0) == 0) {
-            sock.connectInf((const sockaddr*)&addr, addrLen);
+        if (sock.socket(opts_->addr->sa_family, SOCK_STREAM, 0) == 0) {
+            sock.connectInf(opts_->addr, opts_->addrLen);
             sock.close();
         }
     });
 }
 
-TcpSocket* HttpServerCtlImpl::listen(ObjPool* pool, u32 backlog) {
-    auto srv = TcpSocket::create(pool, exec);
+TcpSocket* HttpServerCtlImpl::listen(ObjPool* pool) {
+    auto srv = TcpSocket::create(pool, opts_->exec);
 
-    STD_VERIFY(srv->socket(AF_INET, SOCK_STREAM, 0) == 0);
+    STD_VERIFY(srv->socket(opts_->addr->sa_family, SOCK_STREAM, 0) == 0);
 
     srv->setReuseAddr(true);
 
-    STD_VERIFY(srv->bind((const sockaddr*)&addr, addrLen) == 0);
-    STD_VERIFY(srv->listen(backlog) == 0);
+    STD_VERIFY(srv->bind(opts_->addr, opts_->addrLen) == 0);
+    STD_VERIFY(srv->listen(opts_->backlog) == 0);
 
     return srv;
 }
 
-void HttpServerCtlImpl::run(TcpSocket* srv, WaitGroup* wg) {
+void HttpServerCtlImpl::run(TcpSocket* srv) {
     STD_DEFER {
-        wg->done();
+        opts_->wg->done();
     };
 
     for (;;) {
@@ -320,9 +313,9 @@ void HttpServerCtlImpl::run(TcpSocket* srv, WaitGroup* wg) {
             break;
         }
 
-        exec->spawn([this, cpool, client] mutable {
+        opts_->exec->spawn([this, cpool, client] mutable {
             try {
-                HttpConnection(&handler, exec, cpool.mutPtr(), client).run();
+                HttpConnection(opts_, cpool.mutPtr(), client).run();
             } catch (...) {
                 sysE << Exception::current() << endL << flsH;
             }
@@ -330,10 +323,10 @@ void HttpServerCtlImpl::run(TcpSocket* srv, WaitGroup* wg) {
     }
 }
 
-HttpConnection::HttpConnection(HttpServe* handler, CoroExecutor* exec, ObjPool* pool, FD* client)
-    : handler(handler)
+HttpConnection::HttpConnection(HttpServeOpts* opts, ObjPool* pool, FD* client)
+    : opts(opts)
     , pool(pool)
-    , sock(client->get(), exec)
+    , sock(client->get(), opts->exec)
 {
     sock.setNoDelay(true);
 
@@ -342,7 +335,7 @@ HttpConnection::HttpConnection(HttpServe* handler, CoroExecutor* exec, ObjPool* 
     Input* in = stream;
     out = pool->make<OutBuf>(*stream);
 
-    if (auto ssl = handler->ssl()) {
+    if (auto ssl = opts->handler->ssl()) {
         u8 b;
 
         if (sock.peek(b) && b == 0x16) {
@@ -391,13 +384,20 @@ HttpServerCtl* stl::serve(ObjPool* pool, HttpServeOpts opts) {
         opts.wg = pool->make<WaitGroup>();
     }
 
-    auto ctl = pool->make<HttpServerCtlImpl>(*opts.handler, opts.exec, opts.addr, opts.addrLen);
-    auto srv = ctl->listen(pool, opts.backlog);
+    auto storage = pool->make<sockaddr_storage>();
 
-    opts.wg->inc();
+    memCpy(storage, opts.addr, opts.addrLen);
 
-    opts.exec->spawn([ctl, srv, wg = opts.wg] {
-        ctl->run(srv, wg);
+    opts.addr = (const sockaddr*)storage;
+
+    auto popts = pool->make<HttpServeOpts>(opts);
+    auto ctl = pool->make<HttpServerCtlImpl>(popts);
+    auto srv = ctl->listen(pool);
+
+    popts->wg->inc();
+
+    popts->exec->spawn([ctl, srv] {
+        ctl->run(srv);
     });
 
     return ctl;
