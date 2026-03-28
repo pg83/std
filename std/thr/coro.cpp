@@ -120,7 +120,7 @@ namespace {
         ThreadPool* pool_;
 
         CoroExecutorImpl(ObjPool* pool, size_t threads, size_t reactors);
-        ~CoroExecutorImpl() noexcept override;
+        ~CoroExecutorImpl() noexcept;
 
         void join() noexcept override;
         Cont* spawnRun(SpawnParams params) override;
@@ -550,9 +550,6 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
     };
 
     return new CoroSemaphoreImpl(this, initial);
-}
-
-CoroExecutor::~CoroExecutor() noexcept {
 }
 
 CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads) {

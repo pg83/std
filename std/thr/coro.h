@@ -38,8 +38,6 @@ namespace stl {
     };
 
     struct CoroExecutor {
-        virtual ~CoroExecutor() noexcept;
-
         virtual void join() noexcept = 0;
         virtual void yield() noexcept = 0;
         virtual u32 random() noexcept = 0;
