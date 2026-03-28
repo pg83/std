@@ -108,7 +108,7 @@ See for yourself — these headers define rich subsystems in remarkably few line
 
 - **[coro.h](std/thr/coro.h)** — a full coroutine executor with scheduling, I/O polling, synchronization primitives, and thread offloading. 81 lines.
 - **[http_srv.h](std/net/http_srv.h)** — an HTTP server with request/response interfaces, SSL support, and server lifecycle control. 53 lines.
-- **[obj_pool.h](std/mem/obj_pool.h)** — the arena allocator itself: bump allocation, automatic destructor chaining, and zero-cost trivial-type fast path. 62 lines.
+- **[pool.h](std/thr/pool.h)** — a thread pool with sync, simple, and work-stealing backends, task submission, and per-thread local storage. 33 lines.
 
 ## Storing Complex Objects in Vector
 
