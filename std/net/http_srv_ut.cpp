@@ -455,7 +455,6 @@ STD_TEST_SUITE(HttpFileServe) {
         auto sslCtx = SslCtx::create(pool.mutPtr(), StringView(testCert), StringView(testKey));
 
         struct Handler: HttpServe {
-            CoroExecutor* exec;
             SslCtx* sslCtx;
 
             SslCtx* ssl() override {
@@ -470,7 +469,6 @@ STD_TEST_SUITE(HttpFileServe) {
             }
         } handler;
 
-        handler.exec = exec;
         handler.sslCtx = sslCtx;
 
         u16 port = 18080;
