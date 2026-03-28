@@ -169,9 +169,6 @@ void ThreadPoolImpl::workerLoop() {
     }
 }
 
-ThreadPool::~ThreadPool() noexcept {
-}
-
 void ThreadPool::submitTask(Task* task) noexcept {
     IntrusiveList list;
     list.pushBack(task);

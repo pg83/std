@@ -10,8 +10,6 @@ namespace stl {
     class IntrusiveList;
 
     struct ThreadPool {
-        virtual ~ThreadPool() noexcept;
-
         virtual void join() noexcept = 0;
         virtual PCG32& random() noexcept = 0;
         virtual void** tls(u64 key) noexcept = 0;
