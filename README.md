@@ -2,6 +2,8 @@
 
 A C++ standard library replacement built around a single idea: **ObjPool owns everything, and everything lives close together.**
 
+This one decision compounds across the entire stack. Code runs faster — objects that work together sit next to each other in memory, so the CPU prefetcher does its job instead of chasing scattered heap pointers. Projects build faster — public headers traffic in interface pointers, not template-heavy containers, so changing an implementation does not recompile half the codebase. Memory management is safer — there are no manual `delete` calls, no `shared_ptr` ref-count races, no use-after-free from dangling owners; the pool owns everything and destroys it in one shot. And the mental model is simpler — instead of tracking which `unique_ptr` owns which object and in what order destructors fire, you know the answer up front: the pool owns it, and when the pool dies, everything dies.
+
 ## The Problem
 
 A typical C++ class accumulates heap-allocated members — `std::vector`, `std::map`, `std::deque`, `std::string` — each managing its own little island of memory. When an object holds five containers, its data is scattered across six or more disjoint heap regions. The CPU prefetcher cannot help you. Cache lines are wasted on allocator metadata. And every header that declares those containers drags in thousands of lines of template machinery, punishing build times across the entire project.
