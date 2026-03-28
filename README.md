@@ -110,6 +110,40 @@ See for yourself — these headers define rich subsystems in remarkably few line
 - **[http_srv.h](std/net/http_srv.h)** — an HTTP server with request/response interfaces, SSL support, and server lifecycle control. 53 lines.
 - **[obj_pool.h](std/mem/obj_pool.h)** — the arena allocator itself: bump allocation, automatic destructor chaining, and zero-cost trivial-type fast path. 62 lines.
 
+## Storing Complex Objects in Vector
+
+`Vector<T>` requires `T` to be trivially destructible — no strings, no containers, no objects with custom destructors. This is by design: it lets `Vector` use raw `memcpy` for growth and avoids destructor bookkeeping entirely.
+
+To store complex objects, use a hybrid scheme: **ObjPool holds the objects, Vector holds the pointers.**
+
+```cpp
+ObjPool pool;
+
+Vector<Connection*> conns;
+
+auto* c = pool.make<Connection>(addr, port);
+conns.pushBack(c);
+```
+
+This gives you the best of both worlds:
+
+- **Objects still live close together.** `pool.make` bump-allocates them sequentially, so iterating through the vector and dereferencing each pointer hits nearly-contiguous memory.
+- **Vector operations are trivial.** Every element is 8 bytes. Growth is always a `memcpy` of pointers — no move constructors, no exception safety gymnastics. `Vector<T*>` is exactly `sizeof(void*)` in size.
+- **No move/copy requirement on T.** The objects themselves are never relocated. You can store types with self-referential pointers, mutex members, or anything else that cannot be moved.
+- **Destruction is automatic.** The pool tracks non-trivial destructors and fires them in reverse order when it dies. The vector of pointers is trivially destructible — nothing to clean up.
+
+This pattern appears throughout the codebase: `Vector<ReactorIface*>` for reactor lists, `Vector<Header*>` for HTTP headers, `Vector<Worker*>` for thread pool indices. In each case, the objects are pool-allocated and the vector is just a lightweight index over them.
+
+Compared to `std::vector<T>` for non-trivial `T`:
+
+| | `std::vector<T>` | `ObjPool` + `Vector<T*>` |
+|---|---|---|
+| Element size in vector | `sizeof(T)` (often large) | 8 bytes (pointer) |
+| Growth cost | move/copy every element | `memcpy` pointers |
+| Requires movable `T` | Yes | No |
+| Data locality | Elements contiguous, but growth copies them | Elements arena-contiguous, pointers contiguous |
+| Destructor tracking | Per-element in vector | Per-element in pool |
+
 ## Lifetime
 
 ObjPool uses atomic reference counting (`ARC`) for its own lifetime. You hold an `IntrusivePtr<ObjPool>`, and when the last reference drops, the pool destroys every tracked object and frees every chunk.
