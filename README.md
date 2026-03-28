@@ -104,6 +104,12 @@ Because public APIs traffic in interface pointers, headers are minimal. A file t
 
 The concrete implementations — often hundreds of lines with platform-specific includes — live in `.cpp` files. Changes to an implementation do not trigger recompilation of its users.
 
+See for yourself — these headers define rich subsystems in remarkably few lines:
+
+- **[coro.h](std/thr/coro.h)** — a full coroutine executor with scheduling, I/O polling, synchronization primitives, and thread offloading. 81 lines.
+- **[http_srv.h](std/net/http_srv.h)** — an HTTP server with request/response interfaces, SSL support, and server lifecycle control. 53 lines.
+- **[obj_pool.h](std/mem/obj_pool.h)** — the arena allocator itself: bump allocation, automatic destructor chaining, and zero-cost trivial-type fast path. 62 lines.
+
 ## Lifetime
 
 ObjPool uses atomic reference counting (`ARC`) for its own lifetime. You hold an `IntrusivePtr<ObjPool>`, and when the last reference drops, the pool destroys every tracked object and frees every chunk.
