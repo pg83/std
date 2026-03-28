@@ -112,6 +112,8 @@ See for yourself — these headers define rich subsystems in remarkably few line
 - **[http_srv.h](std/net/http_srv.h)** — an HTTP server with request/response interfaces, SSL support, and server lifecycle control. 53 lines.
 - **[pool.h](std/thr/pool.h)** — a thread pool with sync, simple, and work-stealing backends, task submission, and per-thread local storage. 33 lines.
 
+The library's own build system does not track header dependencies at all — any header change rebuilds everything. This is practical because the entire library compiles in a couple of seconds from scratch, making fine-grained dependency tracking pointless overhead.
+
 ## Storing Complex Objects in Vector
 
 `Vector<T>` requires `T` to be trivially destructible — no strings, no containers, no objects with custom destructors. This is by design: it lets `Vector` use raw `memcpy` for growth and avoids destructor bookkeeping entirely.
