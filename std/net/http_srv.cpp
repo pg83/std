@@ -81,7 +81,6 @@ namespace {
         Buffer lcName;
 
         HttpConnection(HttpServeOpts* opts, ObjPool* pool, FD* client);
-        ~HttpConnection();
 
         void run();
         bool serve();
@@ -365,14 +364,6 @@ HttpConnection::HttpConnection(HttpServeOpts* opts, ObjPool* pool, FD* client)
     }
 
     this->in = pool->make<InBuf>(*in);
-}
-
-HttpConnection::~HttpConnection() {
-    try {
-        out->finish();
-    } catch (...) {
-        sysE << Exception::current() << endL << flsH;
-    }
 }
 
 void HttpConnection::run() {
