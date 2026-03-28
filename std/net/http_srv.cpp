@@ -227,10 +227,11 @@ void HttpServerResponseImpl::setStatus(u32 code) {
 }
 
 void HttpServerResponseImpl::addHeader(StringView name, StringView value) {
-    auto h = req->pool.mutPtr()->make<Header>();
+    auto pool = req->pool.mutPtr();
+    auto h = pool->make<Header>();
 
-    h->name = name;
-    h->value = value;
+    h->name = pool->intern(name);
+    h->value = pool->intern(value);
 
     headers.pushBack(h);
     headerIndex.insert(name.lower(req->conn->lcName), h);
