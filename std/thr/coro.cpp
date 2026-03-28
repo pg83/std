@@ -153,7 +153,7 @@ namespace {
 
         EventIface* createEvent() override;
         CondVarIface* createCondVar() override;
-        ThreadIface* createThread(Runable& runable) override;
+        ThreadIface* createThread() override;
         SemaphoreIface* createSemaphore(size_t initial) override;
 
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
@@ -433,14 +433,12 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
     return new CoroCondVarImpl(this);
 }
 
-ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
+ThreadIface* CoroExecutorImpl::createThread() {
     struct State: public ARC {
-        Runable* runable_;
         Semaphore sem_;
 
-        State(CoroExecutorImpl* exec, Runable& runable)
-            : runable_(&runable)
-            , sem_(0, exec)
+        State(CoroExecutorImpl* exec)
+            : sem_(0, exec)
         {
         }
 
@@ -448,14 +446,14 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
             return (CoroExecutorImpl*)sem_.nativeHandle();
         }
 
-        void run() {
-            runable_->run();
+        void run(Runable& runable) {
+            runable.run();
             sem_.post();
         }
 
-        auto start() {
-            return exec()->spawn([ref = makeIntrusivePtr(this)] mutable {
-                ref->run();
+        auto start(Runable& runable) {
+            return exec()->spawn([ref = makeIntrusivePtr(this), &runable] mutable {
+                ref->run(runable);
             });
         }
 
@@ -473,8 +471,8 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
         {
         }
 
-        void start() override {
-            cont_ = state_->start();
+        void start(Runable& runable) override {
+            cont_ = state_->start(runable);
         }
 
         void join() noexcept override {
@@ -489,7 +487,7 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
         }
     };
 
-    return new CoroThreadImpl(new State(this, runable));
+    return new CoroThreadImpl(new State(this));
 }
 
 SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {

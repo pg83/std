@@ -20,15 +20,9 @@ using namespace stl;
 namespace {
     struct PosixThreadImpl: public ThreadIface {
         pthread_t thread;
-        Runable* runable;
-
-        explicit PosixThreadImpl(Runable& r)
-            : runable(&r)
-        {
-        }
 
         static void* threadFunc(void* arg) {
-            return (((PosixThreadImpl*)arg)->runable->run(), nullptr);
+            return (((Runable*)arg)->run(), nullptr);
         }
 
         void join() noexcept override {
@@ -44,8 +38,8 @@ namespace {
             return (u64)thread;
         }
 
-        void start() override {
-            if (pthread_create(&thread, nullptr, threadFunc, this)) {
+        void start(Runable& runable) override {
+            if (pthread_create(&thread, nullptr, threadFunc, &runable)) {
                 Errno().raise(StringBuilder() << StringView(u8"pthread_create failed"));
             }
         }
@@ -53,19 +47,20 @@ namespace {
 }
 
 Thread::Thread(Runable& runable)
-    : Thread(new PosixThreadImpl(runable))
+    : impl(new PosixThreadImpl())
 {
+    impl->start(runable);
 }
 
 Thread::Thread(ThreadIface* iface)
     : impl(iface)
 {
-    impl->start();
 }
 
 Thread::Thread(CoroExecutor* exec, Runable& runable)
-    : Thread(exec->createThread(runable))
+    : impl(exec->createThread())
 {
+    impl->start(runable);
 }
 
 Thread::~Thread() noexcept {

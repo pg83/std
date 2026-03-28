@@ -53,7 +53,7 @@ namespace stl {
 
         virtual EventIface* createEvent() = 0;
         virtual CondVarIface* createCondVar() = 0;
-        virtual ThreadIface* createThread(Runable& runable) = 0;
+        virtual ThreadIface* createThread() = 0;
         virtual SemaphoreIface* createSemaphore(size_t initial) = 0;
 
         void sleep();
