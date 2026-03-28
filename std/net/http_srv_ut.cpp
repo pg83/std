@@ -464,6 +464,7 @@ STD_TEST_SUITE(HttpFileServe) {
             void serve(HttpServerResponse& resp) override {
                 resp.setStatus(200);
                 resp.addHeader(StringView("Content-Length"), StringView("0"));
+                resp.addHeader(StringView("Payload"), StringView("12345678901234567890123456789012345"));
                 resp.endHeaders();
                 resp.out()->finish();
             }
