@@ -236,7 +236,7 @@ namespace {
             void pushNoSignal(IntrusiveList& tasks) noexcept;
         };
 
-        IntMap<Worker> workers_;
+        IntMap<Worker*> workers_;
         Vector<Worker*> index_;
         WaitQueue* wq;
         i32 taskCount_ = 0;
@@ -281,16 +281,17 @@ WorkStealingThreadPool::WorkStealingThreadPool(ObjPool* pool, size_t numThreads)
     PCG32 rng(this);
 
     for (size_t i = 0; i < numThreads; ++i) {
-        workers_.insertKeyed(this, i, rng.nextU64());
+        auto w = pool->make<Worker>(this, i, rng.nextU64());
+        workers_.insert(w->key(), w);
     }
 
-    workers_.visit([this](Worker& w) {
-        index_.pushBack(&w);
-        w.initStealOrder();
+    workers_.visit([this](Worker* w) {
+        index_.pushBack(w);
+        w->initStealOrder();
     });
 
-    workers_.visit([](Worker& w) {
-        w.mutex_.unlock();
+    workers_.visit([](Worker* w) {
+        w->mutex_.unlock();
     });
 }
 
@@ -300,7 +301,7 @@ WorkStealingThreadPool::Worker* WorkStealingThreadPool::localWorker() noexcept {
     if (curw) {
         return curw;
     } else if (auto w = workers_.find(Thread::currentThreadId()); w) {
-        return curw = w;
+        return curw = *w;
     }
 
     return nullptr;
@@ -345,8 +346,8 @@ void WorkStealingThreadPool::join() noexcept {
 WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
     join();
 
-    workers_.visit([](Worker& w) {
-        w.join();
+    workers_.visit([](Worker* w) {
+        w->join();
     });
 
     STD_INSIST(taskCount_ == 0);
@@ -369,9 +370,9 @@ void WorkStealingThreadPool::Worker::join() noexcept {
 }
 
 void WorkStealingThreadPool::Worker::initStealOrder() noexcept {
-    pool_->workers_.visit([this](Worker& w) {
-        if (&w != this) {
-            so_.pushBack(&w);
+    pool_->workers_.visit([this](Worker* w) {
+        if (w != this) {
+            so_.pushBack(w);
         }
     });
 
