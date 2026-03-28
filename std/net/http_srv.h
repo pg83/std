@@ -43,8 +43,8 @@ namespace stl {
     struct HttpServeOpts {
         HttpServe* handler = nullptr;
         CoroExecutor* exec = nullptr;
-        const sockaddr* addr = nullptr;
         WaitGroup* wg = nullptr;
+        const sockaddr* addr = nullptr;
         u32 addrLen = 0;
         u32 backlog = 128;
     };

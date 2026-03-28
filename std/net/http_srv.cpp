@@ -100,12 +100,11 @@ namespace {
 
         HttpServerResponseImpl(HttpServerRequestImpl* req);
 
-        void serialize(ZeroCopyOutput& out);
-
         Output* out() override;
         void endHeaders() override;
-        HttpServerRequest* request() override;
         void setStatus(u32 code) override;
+        void serialize(ZeroCopyOutput& out);
+        HttpServerRequest* request() override;
         void addHeader(StringView name, StringView value) override;
     };
 

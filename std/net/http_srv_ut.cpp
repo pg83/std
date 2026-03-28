@@ -61,8 +61,8 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
                                             .exec = exec,
-                                            .addr = (const sockaddr*)&addr,
                                             .wg = &wg,
+                                            .addr = (const sockaddr*)&addr,
                                             .addrLen = sizeof(addr),
                                         });
 
@@ -116,8 +116,8 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
                                             .exec = exec,
-                                            .addr = (const sockaddr*)&addr,
                                             .wg = &wg,
+                                            .addr = (const sockaddr*)&addr,
                                             .addrLen = sizeof(addr),
                                         });
 
@@ -168,8 +168,8 @@ STD_TEST_SUITE(HttpServer) {
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
                                             .exec = exec,
-                                            .addr = (const sockaddr*)&addr,
                                             .wg = &wg,
+                                            .addr = (const sockaddr*)&addr,
                                             .addrLen = sizeof(addr),
                                         });
 
@@ -229,8 +229,8 @@ STD_TEST_SUITE(HttpServer) {
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
                                             .exec = exec,
-                                            .addr = (const sockaddr*)&addr,
                                             .wg = &wg,
+                                            .addr = (const sockaddr*)&addr,
                                             .addrLen = sizeof(addr),
                                         });
 
@@ -308,8 +308,8 @@ STD_TEST_SUITE(HttpServer) {
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
                                             .exec = exec,
-                                            .addr = (const sockaddr*)&addr,
                                             .wg = &wg,
+                                            .addr = (const sockaddr*)&addr,
                                             .addrLen = sizeof(addr),
                                         });
 
@@ -436,8 +436,8 @@ STD_TEST_SUITE(HttpFileServe) {
             {
                 .handler = &handler,
                 .exec = exec,
-                .addr = (const sockaddr*)&addr,
                 .wg = &wg,
+                .addr = (const sockaddr*)&addr,
                 .addrLen = sizeof(addr),
             } //
         );
@@ -487,8 +487,8 @@ STD_TEST_SUITE(HttpFileServe) {
             {
                 .handler = &handler,
                 .exec = exec,
-                .addr = (const sockaddr*)&addr,
                 .wg = &wg,
+                .addr = (const sockaddr*)&addr,
                 .addrLen = sizeof(addr),
             } //
         );
