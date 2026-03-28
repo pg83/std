@@ -111,6 +111,14 @@ namespace {
     };
 
     HttpServeOpts* internOpts(ObjPool* pool, HttpServeOpts opts) {
+        if (!opts.exec) {
+            opts.exec = CoroExecutor::create(pool, numCpu());
+        }
+
+        if (!opts.wg) {
+            opts.wg = pool->make<WaitGroup>();
+        }
+
         auto storage = pool->make<sockaddr_storage>();
 
         memCpy(storage, opts.addr, opts.addrLen);
@@ -386,14 +394,6 @@ bool HttpConnection::serve() {
 }
 
 HttpServerCtl* stl::serve(ObjPool* pool, HttpServeOpts opts) {
-    if (!opts.exec) {
-        opts.exec = CoroExecutor::create(pool, numCpu());
-    }
-
-    if (!opts.wg) {
-        opts.wg = pool->make<WaitGroup>();
-    }
-
     auto popts = internOpts(pool, opts);
     auto ctl = pool->make<HttpServerCtlImpl>(popts);
     auto srv = ctl->listen(pool);
