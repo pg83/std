@@ -18,5 +18,6 @@ namespace stl {
         void post() noexcept;
         void wait() noexcept;
         bool tryWait() noexcept;
+        void* nativeHandle() noexcept;
     };
 }

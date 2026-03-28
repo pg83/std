@@ -133,3 +133,7 @@ void Semaphore::wait() noexcept {
 bool Semaphore::tryWait() noexcept {
     return impl_->tryWait();
 }
+
+void* Semaphore::nativeHandle() noexcept {
+    return impl_->nativeHandle();
+}

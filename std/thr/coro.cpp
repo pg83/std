@@ -435,15 +435,17 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
 
 ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
     struct State: public ARC {
-        CoroExecutorImpl* exec_;
         Runable* runable_;
         Semaphore sem_;
 
         State(CoroExecutorImpl* exec, Runable& runable)
-            : exec_(exec)
-            , runable_(&runable)
+            : runable_(&runable)
             , sem_(0, exec)
         {
+        }
+
+        CoroExecutorImpl* exec() noexcept {
+            return (CoroExecutorImpl*)sem_.nativeHandle();
         }
 
         void run() {
@@ -452,7 +454,7 @@ ThreadIface* CoroExecutorImpl::createThread(Runable& runable) {
         }
 
         auto start() {
-            return exec_->spawn([ref = makeIntrusivePtr(this)] mutable {
+            return exec()->spawn([ref = makeIntrusivePtr(this)] mutable {
                 ref->run();
             });
         }
