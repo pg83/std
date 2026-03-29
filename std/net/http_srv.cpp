@@ -314,10 +314,6 @@ TcpSocket* HttpServerCtlImpl::listen(ObjPool* pool) {
 }
 
 void HttpServerCtlImpl::run(TcpSocket* srv) {
-    STD_DEFER {
-        opts_->wg->done();
-    };
-
     for (;;) {
         auto cpool = ObjPool::fromMemory();
         auto client = cpool->make<ScopedFD>();
@@ -391,7 +387,11 @@ HttpServerCtl* stl::serve(ObjPool* pool, HttpServeOpts opts) {
 
     popts->wg->inc();
 
-    popts->exec->spawn([ctl, srv] {
+    popts->exec->spawn([popts, ctl, srv] {
+        STD_DEFER {
+            popts->wg->done();
+        };
+
         ctl->run(srv);
     });
 
