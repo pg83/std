@@ -45,7 +45,7 @@ namespace {
         StringView reqMethod;
         StringView reqPath;
         StringView reqQuery;
-        SymbolMap<StringView> headers;
+        SymbolMap<StringView> headers{pool.mutPtr()};
         ZeroCopyInput* reqIn;
         bool keepAlive = false;
 
@@ -95,7 +95,7 @@ namespace {
         HttpServerRequestImpl* req;
         Output* rawOut;
         Vector<Header*> headers;
-        SymbolMap<Header*> headerIndex;
+        SymbolMap<Header*> headerIndex{req->pool.mutPtr()};
         u32 status;
 
         HttpServerResponseImpl(HttpServerRequestImpl* req);

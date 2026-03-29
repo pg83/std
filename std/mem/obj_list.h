@@ -8,6 +8,8 @@
 #include <std/alg/destruct.h>
 
 namespace stl {
+    class ObjPool;
+
     template <typename T>
     class ObjList {
         struct TT: public Embed<T>, public Newable {
@@ -16,9 +18,14 @@ namespace stl {
 
         static_assert(sizeof(TT) == sizeof(T));
 
-        FreeList::Ref fl = FreeList::fromMemory(sizeof(TT));
+        FreeList* fl;
 
     public:
+        ObjList(ObjPool* pool)
+            : fl(FreeList::create(pool, sizeof(TT)))
+        {
+        }
+
         template <typename... A>
         T* make(A&&... a) {
             return &(new (fl->allocate()) TT(forward<A>(a)...))->t;

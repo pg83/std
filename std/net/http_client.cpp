@@ -17,7 +17,7 @@ namespace {
         ObjPool* pool;
         u32 statusCode;
         StringView statusReason;
-        SymbolMap<StringView> headers;
+        SymbolMap<StringView> headers{pool};
         ZeroCopyInput* bodyIn;
         Buffer line;
         Buffer lcName;

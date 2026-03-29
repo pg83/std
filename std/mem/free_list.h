@@ -1,19 +1,17 @@
 #pragma once
 
-#include <std/ptr/arc.h>
 #include <std/sys/types.h>
-#include <std/ptr/intrusive.h>
 
 namespace stl {
-    class FreeList: public ARC {
-    public:
-        using Ref = IntrusivePtr<FreeList>;
+    class ObjPool;
 
+    class FreeList {
+    public:
         virtual ~FreeList() noexcept;
 
         virtual void* allocate() = 0;
         virtual void release(void* ptr) noexcept = 0;
 
-        static Ref fromMemory(size_t objSize);
+        static FreeList* create(ObjPool* pool, size_t objSize);
     };
 }

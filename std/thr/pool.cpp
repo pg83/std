@@ -42,6 +42,11 @@ namespace {
         IntMap<void*> tls_;
         PCG32 rng_{this};
 
+        SyncThreadPool(ObjPool* pool)
+            : tls_(pool)
+        {
+        }
+
         void submitTasks(IntrusiveList& tasks) noexcept override {
             while (auto t = (Task*)tasks.popFrontOrNull()) {
                 t->run();
@@ -63,7 +68,8 @@ namespace {
     class ThreadPoolImpl: public ThreadPool {
         struct Worker: public Runable {
             ThreadPoolImpl* pool_;
-            IntMap<void*> tls_;
+            ObjPool::Ref opool_ = ObjPool::fromMemory();
+            IntMap<void*> tls_{opool_.mutPtr()};
             PCG32 rng_;
             Thread thread_;
 
@@ -96,7 +102,7 @@ namespace {
         void workerLoop();
 
     public:
-        ThreadPoolImpl(size_t numThreads);
+        ThreadPoolImpl(ObjPool* pool, size_t numThreads);
         ~ThreadPoolImpl() noexcept;
 
         void submitTasks(IntrusiveList& tasks) noexcept override;
@@ -106,7 +112,9 @@ namespace {
     };
 }
 
-ThreadPoolImpl::ThreadPoolImpl(size_t numThreads) {
+ThreadPoolImpl::ThreadPoolImpl(ObjPool* pool, size_t numThreads)
+    : workers_(pool)
+{
     for (size_t i = 0; i < numThreads; ++i) {
         workers_.insertKeyed(this);
     }
@@ -176,7 +184,7 @@ void ThreadPool::submitTask(Task* task) noexcept {
 }
 
 ThreadPool* ThreadPool::sync(ObjPool* pool) {
-    return pool->make<SyncThreadPool>();
+    return pool->make<SyncThreadPool>(pool);
 }
 
 ThreadPool* ThreadPool::simple(ObjPool* pool, size_t threads) {
@@ -184,14 +192,15 @@ ThreadPool* ThreadPool::simple(ObjPool* pool, size_t threads) {
         return sync(pool);
     }
 
-    return pool->make<ThreadPoolImpl>(threads);
+    return pool->make<ThreadPoolImpl>(pool, threads);
 }
 
 namespace {
     struct WorkStealingThreadPool: public ThreadPool {
         struct Worker: public Runable, public WaitQueue::Item {
             WorkStealingThreadPool* pool_;
-            IntMap<void*> tls_;
+            ObjPool::Ref opool_ = ObjPool::fromMemory();
+            IntMap<void*> tls_{opool_.mutPtr()};
             PCG32 rng_;
             Vector<Worker*> so_;
             Mutex mutex_;
@@ -276,7 +285,8 @@ void WorkStealingThreadPool::Worker::push(IntrusiveList* tasks) noexcept {
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(ObjPool* pool, size_t numThreads)
-    : wq(WaitQueue::construct(pool, numThreads))
+    : workers_(pool)
+    , wq(WaitQueue::construct(pool, numThreads))
 {
     PCG32 rng(this);
 

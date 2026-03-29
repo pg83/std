@@ -66,7 +66,8 @@ STD_TEST_SUITE(UT) {
     }
 
     STD_TEST(_MapPerf) {
-        Map<int, int> m;
+        auto pool = ObjPool::fromMemory();
+        Map<int, int> m(pool.mutPtr());
         // std::map<int, int> m;
 
         for (size_t i = 0; i < 20000000; ++i) {
@@ -75,7 +76,8 @@ STD_TEST_SUITE(UT) {
     }
 
     STD_TEST(_HashPerf) {
-        IntMap<int> m;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> m(pool.mutPtr());
         // std::unordered_map<u64, int> m;
 
         for (size_t i = 0; i < 200000000; ++i) {

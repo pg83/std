@@ -1,4 +1,5 @@
 #include "free_list.h"
+#include "obj_pool.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/types.h>
@@ -20,7 +21,8 @@ namespace {
 
 STD_TEST_SUITE(FreeList) {
     STD_TEST(AllocateReturnsNonNull) {
-        FreeList::Ref allocator = FreeList::fromMemory(64);
+        auto pool = ObjPool::fromMemory();
+        auto* allocator = FreeList::create(pool.mutPtr(), 64);
 
         void* ptr = allocator->allocate();
 
@@ -28,7 +30,8 @@ STD_TEST_SUITE(FreeList) {
     }
 
     STD_TEST(AllocateReturnsDifferentAddresses) {
-        FreeList::Ref allocator = FreeList::fromMemory(32);
+        auto pool = ObjPool::fromMemory();
+        auto* allocator = FreeList::create(pool.mutPtr(), 32);
 
         void* ptr1 = allocator->allocate();
         void* ptr2 = allocator->allocate();
@@ -39,7 +42,8 @@ STD_TEST_SUITE(FreeList) {
     }
 
     STD_TEST(AllocateAfterRelease) {
-        FreeList::Ref allocator = FreeList::fromMemory(64);
+        auto pool = ObjPool::fromMemory();
+        auto* allocator = FreeList::create(pool.mutPtr(), 64);
 
         void* ptr1 = allocator->allocate();
         allocator->release(ptr1);
@@ -49,7 +53,8 @@ STD_TEST_SUITE(FreeList) {
     }
 
     STD_TEST(AllocateAfterMultipleReleases) {
-        FreeList::Ref allocator = FreeList::fromMemory(64);
+        auto pool = ObjPool::fromMemory();
+        auto* allocator = FreeList::create(pool.mutPtr(), 64);
 
         void* ptr1 = allocator->allocate();
         void* ptr2 = allocator->allocate();
@@ -69,7 +74,8 @@ STD_TEST_SUITE(FreeList) {
     }
 
     STD_TEST(AllocateAndReleasePattern) {
-        FreeList::Ref allocator = FreeList::fromMemory(sizeof(int));
+        auto pool = ObjPool::fromMemory();
+        auto* allocator = FreeList::create(pool.mutPtr(), sizeof(int));
 
         void* ptr1 = allocator->allocate();
         void* ptr2 = allocator->allocate();
@@ -86,7 +92,8 @@ STD_TEST_SUITE(FreeList) {
     }
 
     STD_TEST(WorksWithSmallObjectSize) {
-        FreeList::Ref allocator = FreeList::fromMemory(1);
+        auto pool = ObjPool::fromMemory();
+        auto* allocator = FreeList::create(pool.mutPtr(), 1);
 
         void* ptr1 = allocator->allocate();
         void* ptr2 = allocator->allocate();
@@ -101,7 +108,8 @@ STD_TEST_SUITE(FreeList) {
     }
 
     STD_TEST(WorksWithLargeObjects) {
-        FreeList::Ref allocator = FreeList::fromMemory(sizeof(LargeStruct));
+        auto pool = ObjPool::fromMemory();
+        auto* allocator = FreeList::create(pool.mutPtr(), sizeof(LargeStruct));
 
         LargeStruct* obj1 = static_cast<LargeStruct*>(allocator->allocate());
         LargeStruct* obj2 = static_cast<LargeStruct*>(allocator->allocate());
@@ -120,7 +128,8 @@ STD_TEST_SUITE(FreeList) {
     }
 
     STD_TEST(AllocateAndAccessManyObjects) {
-        FreeList::Ref allocator = FreeList::fromMemory(sizeof(TestStruct));
+        auto pool = ObjPool::fromMemory();
+        auto* allocator = FreeList::create(pool.mutPtr(), sizeof(TestStruct));
 
         constexpr size_t count = 100;
         TestStruct* objects[count];
@@ -140,7 +149,8 @@ STD_TEST_SUITE(FreeList) {
     }
 
     STD_TEST(ReleaseAndReallocateMany) {
-        FreeList::Ref allocator = FreeList::fromMemory(sizeof(int));
+        auto pool = ObjPool::fromMemory();
+        auto* allocator = FreeList::create(pool.mutPtr(), sizeof(int));
 
         constexpr size_t count = 50;
         int* pointers[count];
@@ -160,7 +170,8 @@ STD_TEST_SUITE(FreeList) {
     }
 
     STD_TEST(InterleavedAllocateAndRelease) {
-        FreeList::Ref allocator = FreeList::fromMemory(sizeof(double));
+        auto pool = ObjPool::fromMemory();
+        auto* allocator = FreeList::create(pool.mutPtr(), sizeof(double));
 
         double* ptr1 = static_cast<double*>(allocator->allocate());
         double* ptr2 = static_cast<double*>(allocator->allocate());
@@ -183,8 +194,9 @@ STD_TEST_SUITE(FreeList) {
     }
 
     STD_TEST(MultipleAllocators) {
-        FreeList::Ref allocator1 = FreeList::fromMemory(32);
-        FreeList::Ref allocator2 = FreeList::fromMemory(64);
+        auto pool = ObjPool::fromMemory();
+        auto* allocator1 = FreeList::create(pool.mutPtr(), 32);
+        auto* allocator2 = FreeList::create(pool.mutPtr(), 64);
 
         void* ptr1 = allocator1->allocate();
         void* ptr2 = allocator2->allocate();
@@ -200,18 +212,5 @@ STD_TEST_SUITE(FreeList) {
 
         STD_INSIST(ptr3 == ptr1);
         STD_INSIST(ptr4 == ptr2);
-    }
-
-    STD_TEST(RefCounting) {
-        FreeList::Ref allocator1 = FreeList::fromMemory(32);
-
-        {
-            FreeList::Ref allocator2 = allocator1;
-            void* ptr = allocator2->allocate();
-            STD_INSIST(ptr != nullptr);
-        }
-
-        void* ptr = allocator1->allocate();
-        STD_INSIST(ptr != nullptr);
     }
 }

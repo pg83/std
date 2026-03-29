@@ -1,4 +1,5 @@
 #include "obj_list.h"
+#include "obj_pool.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/types.h>
@@ -84,7 +85,8 @@ namespace {
 
 STD_TEST_SUITE(ObjList) {
     STD_TEST(MakeReturnsNonNull) {
-        ObjList<SimpleStruct> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<SimpleStruct> list(pool.mutPtr());
 
         SimpleStruct* obj = list.make(10, 20);
 
@@ -92,7 +94,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(MakeInitializesValues) {
-        ObjList<SimpleStruct> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<SimpleStruct> list(pool.mutPtr());
 
         SimpleStruct* obj = list.make(10, 20);
 
@@ -101,7 +104,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(MakeMultipleObjects) {
-        ObjList<SimpleStruct> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<SimpleStruct> list(pool.mutPtr());
 
         SimpleStruct* obj1 = list.make(1, 2);
         SimpleStruct* obj2 = list.make(3, 4);
@@ -116,7 +120,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(MakeDifferentAddresses) {
-        ObjList<SimpleStruct> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<SimpleStruct> list(pool.mutPtr());
 
         SimpleStruct* obj1 = list.make(1, 2);
         SimpleStruct* obj2 = list.make(3, 4);
@@ -125,7 +130,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(ReleaseObject) {
-        ObjList<int> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<int> list(pool.mutPtr());
 
         int* obj = list.make(42);
         STD_INSIST(*obj == 42);
@@ -134,7 +140,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(ReleaseAndReallocate) {
-        ObjList<int> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<int> list(pool.mutPtr());
 
         int* obj1 = list.make(100);
         void* addr1 = obj1;
@@ -149,7 +156,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(ReleaseMultiple) {
-        ObjList<SimpleStruct> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<SimpleStruct> list(pool.mutPtr());
 
         SimpleStruct* obj1 = list.make(1, 2);
         SimpleStruct* obj2 = list.make(3, 4);
@@ -161,7 +169,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(ReleaseAndReallocateMultiple) {
-        ObjList<int> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<int> list(pool.mutPtr());
 
         int* obj1 = list.make(1);
         int* obj2 = list.make(2);
@@ -188,7 +197,8 @@ STD_TEST_SUITE(ObjList) {
         int counter = 0;
 
         {
-            ObjList<WithDestructor> list;
+            auto pool = ObjPool::fromMemory();
+            ObjList<WithDestructor> list(pool.mutPtr());
             WithDestructor* obj = list.make(&counter);
 
             STD_INSIST(counter == 1);
@@ -201,7 +211,8 @@ STD_TEST_SUITE(ObjList) {
 
     STD_TEST(DestructorCalledMultipleTimes) {
         int counter = 0;
-        ObjList<WithDestructor> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<WithDestructor> list(pool.mutPtr());
 
         WithDestructor* obj1 = list.make(&counter);
         WithDestructor* obj2 = list.make(&counter);
@@ -220,7 +231,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(MakeDefaultConstructible) {
-        ObjList<DefaultConstructible> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<DefaultConstructible> list(pool.mutPtr());
 
         DefaultConstructible* obj = list.make();
 
@@ -229,7 +241,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(MakeMultipleArgs) {
-        ObjList<MultipleArgs> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<MultipleArgs> list(pool.mutPtr());
 
         MultipleArgs* obj = list.make(1, 2, 3, 4);
 
@@ -241,7 +254,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(MakePODType) {
-        ObjList<PODType> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<PODType> list(pool.mutPtr());
 
         PODType* obj = list.make();
 
@@ -249,7 +263,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(MakePrimitiveInt) {
-        ObjList<int> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<int> list(pool.mutPtr());
 
         int* p = list.make(42);
 
@@ -258,7 +273,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(MakePrimitiveDouble) {
-        ObjList<double> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<double> list(pool.mutPtr());
 
         double* p = list.make(3.14);
 
@@ -267,7 +283,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(MakeLargeObject) {
-        ObjList<LargeObject> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<LargeObject> list(pool.mutPtr());
 
         LargeObject* obj = list.make(123);
 
@@ -277,7 +294,8 @@ STD_TEST_SUITE(ObjList) {
 
     STD_TEST(MakeLargeObjectWithDestructor) {
         int counter = 0;
-        ObjList<LargeWithDestructor> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<LargeWithDestructor> list(pool.mutPtr());
 
         LargeWithDestructor* obj = list.make(&counter);
 
@@ -289,7 +307,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(ObjectAlignment) {
-        ObjList<SimpleStruct> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<SimpleStruct> list(pool.mutPtr());
 
         SimpleStruct* obj = list.make(1, 2);
 
@@ -297,7 +316,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(ManySmallAllocations) {
-        ObjList<SimpleStruct> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<SimpleStruct> list(pool.mutPtr());
 
         for (int i = 0; i < 1000; ++i) {
             SimpleStruct* obj = list.make(i, i * 2);
@@ -307,7 +327,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(ManyAllocationsAndReleases) {
-        ObjList<int> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<int> list(pool.mutPtr());
         constexpr int count = 100;
         int* objects[count];
 
@@ -327,7 +348,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(InterleavedAllocateAndRelease) {
-        ObjList<int> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<int> list(pool.mutPtr());
 
         int* obj1 = list.make(1);
         int* obj2 = list.make(2);
@@ -351,8 +373,9 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(MultipleLists) {
-        ObjList<int> list1;
-        ObjList<int> list2;
+        auto pool = ObjPool::fromMemory();
+        ObjList<int> list1(pool.mutPtr());
+        ObjList<int> list2(pool.mutPtr());
 
         int* obj1 = list1.make(10);
         int* obj2 = list2.make(20);
@@ -365,9 +388,10 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(DifferentTypes) {
-        ObjList<int> intList;
-        ObjList<double> doubleList;
-        ObjList<SimpleStruct> structList;
+        auto pool = ObjPool::fromMemory();
+        ObjList<int> intList(pool.mutPtr());
+        ObjList<double> doubleList(pool.mutPtr());
+        ObjList<SimpleStruct> structList(pool.mutPtr());
 
         int* i = intList.make(42);
         double* d = doubleList.make(3.14);
@@ -385,7 +409,8 @@ STD_TEST_SUITE(ObjList) {
 
     STD_TEST(ReuseAfterRelease) {
         int counter = 0;
-        ObjList<WithDestructor> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<WithDestructor> list(pool.mutPtr());
 
         WithDestructor* obj1 = list.make(&counter);
         STD_INSIST(counter == 1);
@@ -402,7 +427,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(StressTest) {
-        ObjList<SimpleStruct> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<SimpleStruct> list(pool.mutPtr());
 
         for (int i = 0; i < 10000; ++i) {
             SimpleStruct* obj = list.make(i, i * 2);
@@ -412,7 +438,8 @@ STD_TEST_SUITE(ObjList) {
     }
 
     STD_TEST(StressTestWithReleases) {
-        ObjList<int> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<int> list(pool.mutPtr());
         constexpr int count = 1000;
         int* objects[count];
 
@@ -433,7 +460,8 @@ STD_TEST_SUITE(ObjList) {
 
     STD_TEST(StressTestWithDestructors) {
         int counter = 0;
-        ObjList<WithDestructor> list;
+        auto pool = ObjPool::fromMemory();
+        ObjList<WithDestructor> list(pool.mutPtr());
 
         for (int i = 0; i < 1000; ++i) {
             WithDestructor* obj = list.make(&counter);

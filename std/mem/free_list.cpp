@@ -1,5 +1,5 @@
 #include "free_list.h"
-#include "mem_pool.h"
+#include "obj_pool.h"
 
 #include <std/alg/minmax.h>
 #include <std/alg/exchange.h>
@@ -11,24 +11,15 @@ namespace {
         Node* next;
     };
 
-    struct alignas(max_align_t) Base: public FreeList {
-        MemoryPool mp;
+    struct Impl: public FreeList {
+        ObjPool* pool;
         size_t objSize;
         Node* freeList;
 
-        Base(void* buf, size_t len, size_t os)
-            : mp(buf, len)
+        Impl(ObjPool* pool, size_t os) noexcept
+            : pool(pool)
             , objSize(max(os, sizeof(Node)))
             , freeList(nullptr)
-        {
-        }
-    };
-
-    struct Impl: public Base {
-        alignas(max_align_t) u8 buf[256 - sizeof(Base)];
-
-        Impl(size_t os) noexcept
-            : Base(buf, sizeof(buf), os)
         {
         }
 
@@ -37,7 +28,7 @@ namespace {
                 return exchange(freeList, freeList->next);
             }
 
-            return mp.allocate(objSize);
+            return pool->allocate(objSize);
         }
 
         void release(void* ptr) noexcept override {
@@ -46,14 +37,11 @@ namespace {
             freeList = node;
         }
     };
-
-    static_assert(sizeof(Impl) == 256);
-    static_assert(sizeof(Base) % sizeof(max_align_t) == 0);
 }
 
 FreeList::~FreeList() noexcept {
 }
 
-FreeList::Ref FreeList::fromMemory(size_t objSize) {
-    return new Impl(objSize);
+FreeList* FreeList::create(ObjPool* pool, size_t objSize) {
+    return pool->make<Impl>(pool, objSize);
 }

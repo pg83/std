@@ -252,7 +252,8 @@ namespace {
             void* data;
         };
 
-        IntMap<Entry> armed_;
+        ObjPool::Ref pool_ = ObjPool::fromMemory();
+        IntMap<Entry> armed_{pool_.mutPtr()};
         Vector<struct pollfd> fds_; // rebuilt each wait()
 
         void arm(int fd, u32 flags, void* data) override {

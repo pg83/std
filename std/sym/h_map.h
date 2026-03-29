@@ -8,6 +8,8 @@
 #include <std/mem/obj_list.h>
 
 namespace stl {
+    class ObjPool;
+
     template <typename T, typename K, typename H>
     class HashMap {
         struct Node: public HashTable::Node, public Embed<T> {
@@ -26,6 +28,11 @@ namespace stl {
         }
 
     public:
+        HashMap(ObjPool* pool)
+            : ol(pool)
+        {
+        }
+
         ~HashMap() {
             if constexpr (!stdHasTrivialDestructor(Node)) {
                 st.visit([](auto node) {

@@ -2,6 +2,7 @@
 
 #include <std/tst/ut.h>
 #include <std/lib/vector.h>
+#include <std/mem/obj_pool.h>
 
 #include <stdio.h>
 
@@ -9,7 +10,8 @@ using namespace stl;
 
 STD_TEST_SUITE(SymbolMap) {
     STD_TEST(test1) {
-        SymbolMap<int> s;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> s(pool.mutPtr());
 
         s["qw1"] = 1;
         s["qw2"] = 2;
@@ -20,7 +22,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(test2) {
-        SymbolMap<Vector<int>> s;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<Vector<int>> s(pool.mutPtr());
 
         s["qw1"].pushBack(1);
         s["qw1"].pushBack(2);
@@ -34,13 +37,15 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(DefaultConstructor) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
 
         STD_INSIST(map.find("nonexistent") == nullptr);
     }
 
     STD_TEST(FindNonExistent) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
 
         int* result = map.find("key");
 
@@ -48,7 +53,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(FindExisting) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
         map.insert("key", 42);
 
         int* result = map.find("key");
@@ -58,7 +64,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(FindEmptyKey) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
         map.insert("", 100);
 
         int* result = map.find("");
@@ -68,7 +75,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(FindAfterMultipleInserts) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
 
         map.insert("a", 1);
         map.insert("b", 2);
@@ -80,7 +88,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(FindConstCorrectness) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
         map.insert("key", 42);
 
         const SymbolMap<int>& constMap = map;
@@ -91,7 +100,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(InsertBasic) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
 
         int* result = map.insert("key", 42);
 
@@ -100,7 +110,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(InsertReturnsPointerToValue) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
 
         int* inserted = map.insert("key", 42);
         int* found = map.find("key");
@@ -109,7 +120,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(InsertDefaultConstructed) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
 
         int* result = map.insert("key");
 
@@ -127,7 +139,8 @@ STD_TEST_SUITE(SymbolMap) {
             }
         };
 
-        SymbolMap<Point> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<Point> map(pool.mutPtr());
 
         Point* result = map.insert("origin", 10, 20);
 
@@ -137,7 +150,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(InsertOverwritesExisting) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
         map.insert("key", 1);
 
         map.insert("key", 2);
@@ -148,7 +162,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(InsertEmptyKey) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
 
         int* result = map.insert("", 42);
 
@@ -157,7 +172,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(InsertLongKey) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
         StringView longKey = "this_is_a_very_long_key_that_should_still_work_correctly";
 
         int* result = map.insert(longKey, 42);
@@ -168,7 +184,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(InsertManyKeys) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
 
         for (int i = 0; i < 100; ++i) {
             char key[16];
@@ -186,7 +203,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(OperatorBracketCreatesNew) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
 
         map["newkey"];
 
@@ -194,7 +212,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(OperatorBracketReturnsExisting) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
         map.insert("key", 42);
 
         int& value = map["key"];
@@ -203,7 +222,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(OperatorBracketModifiable) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
         map.insert("key", 10);
 
         map["key"] = 20;
@@ -212,7 +232,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(OperatorBracketSamePointer) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
         map.insert("key", 42);
 
         int* found = map.find("key");
@@ -222,7 +243,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(OperatorBracketNewValueModifiable) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
 
         map["key"] = 100;
 
@@ -230,7 +252,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(OperatorBracketChained) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
 
         map["a"] = 1;
         map["b"] = 2;
@@ -240,7 +263,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(StringValue) {
-        SymbolMap<StringView> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<StringView> map(pool.mutPtr());
 
         map.insert("greeting", "hello");
 
@@ -266,7 +290,8 @@ STD_TEST_SUITE(SymbolMap) {
             }
         };
 
-        SymbolMap<Data> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<Data> map(pool.mutPtr());
         map.insert("item", 42, 3.14f);
 
         Data* result = map.find("item");
@@ -276,8 +301,9 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(PointerValue) {
+        auto pool = ObjPool::fromMemory();
         int x = 42;
-        SymbolMap<int*> map;
+        SymbolMap<int*> map(pool.mutPtr());
 
         map.insert("ptr", &x);
 
@@ -288,7 +314,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(SimilarKeys) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
         map.insert("key", 1);
         map.insert("key1", 2);
         map.insert("key12", 3);
@@ -301,7 +328,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(KeysWithSpecialChars) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
 
         map.insert("key with spaces", 1);
         map.insert("key\twith\ttabs", 2);
@@ -315,7 +343,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(NumericStringKeys) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
 
         map.insert("0", 0);
         map.insert("1", 1);
@@ -329,7 +358,8 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(ModifyThroughFind) {
-        SymbolMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map(pool.mutPtr());
         map.insert("key", 10);
 
         int* ptr = map.find("key");
@@ -339,8 +369,9 @@ STD_TEST_SUITE(SymbolMap) {
     }
 
     STD_TEST(MultipleMapInstances) {
-        SymbolMap<int> map1;
-        SymbolMap<int> map2;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<int> map1(pool.mutPtr());
+        SymbolMap<int> map2(pool.mutPtr());
 
         map1.insert("key", 1);
         map2.insert("key", 2);
@@ -368,7 +399,8 @@ STD_TEST_SUITE(SymbolMap) {
             MoveOnly(const MoveOnly&) = delete;
         };
 
-        SymbolMap<MoveOnly> map;
+        auto pool = ObjPool::fromMemory();
+        SymbolMap<MoveOnly> map(pool.mutPtr());
 
         MoveOnly* result = map.insert("key", 42);
 

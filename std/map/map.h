@@ -9,6 +9,8 @@
 #include <std/mem/obj_list.h>
 
 namespace stl {
+    class ObjPool;
+
     template <typename K, typename V>
     class Map {
         static void* tov(const K& k) noexcept {
@@ -48,6 +50,11 @@ namespace stl {
         }
 
     public:
+        Map(ObjPool* pool)
+            : ol(pool)
+        {
+        }
+
         ~Map() noexcept {
             if constexpr (!stdHasTrivialDestructor(Node)) {
                 map.visit([](auto ptr) {

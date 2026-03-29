@@ -77,9 +77,10 @@ namespace {
     }
 
     struct GetOpt {
+        ObjPool::Ref pool_ = ObjPool::fromMemory();
         Vector<StringView> includes;
         Vector<StringView> excludes;
-        TestArgs opts;
+        TestArgs opts{pool_.mutPtr()};
 
         GetOpt(Ctx& ctx) noexcept;
 

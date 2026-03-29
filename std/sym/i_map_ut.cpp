@@ -1,13 +1,17 @@
 #include "i_map.h"
 
+#include <std/mem/obj_pool.h>
+
 #include <std/tst/ut.h>
 #include <std/lib/vector.h>
+#include <std/mem/obj_pool.h>
 
 using namespace stl;
 
 STD_TEST_SUITE(IntMap) {
     STD_TEST(Simple) {
-        IntMap<int> m;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> m(pool.mutPtr());
 
         m[0] = 0;
         m[1] = 1;
@@ -17,13 +21,15 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(DefaultConstructor) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         STD_INSIST(map.find(42) == nullptr);
     }
 
     STD_TEST(FindNonExistent) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         int* result = map.find(100);
 
@@ -31,7 +37,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(FindExisting) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map.insert(42, 100);
 
         int* result = map.find(42);
@@ -41,7 +48,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(FindZeroKey) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map.insert(0, 999);
 
         int* result = map.find(0);
@@ -51,7 +59,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(FindAfterMultipleInserts) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         map.insert(1, 10);
         map.insert(2, 20);
@@ -63,7 +72,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(FindConstCorrectness) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map.insert(42, 100);
 
         const IntMap<int>& constMap = map;
@@ -74,7 +84,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(InsertBasic) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         int* result = map.insert(10, 42);
 
@@ -83,7 +94,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(InsertReturnsPointerToValue) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         int* inserted = map.insert(5, 123);
         int* found = map.find(5);
@@ -92,7 +104,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(InsertDefaultConstructed) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         int* result = map.insert(7);
 
@@ -101,6 +114,7 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(InsertWithMultipleArgs) {
+        auto pool = ObjPool::fromMemory();
         struct Point {
             int x, y;
             Point(int x_, int y_)
@@ -110,7 +124,7 @@ STD_TEST_SUITE(IntMap) {
             }
         };
 
-        IntMap<Point> map;
+        IntMap<Point> map(pool.mutPtr());
 
         Point* result = map.insert(100, 10, 20);
 
@@ -120,7 +134,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(InsertOverwritesExisting) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map.insert(50, 1);
 
         map.insert(50, 2);
@@ -131,7 +146,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(InsertLargeKeys) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         map.insert(1000000, 42);
         map.insert(999999999, 43);
@@ -141,7 +157,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(InsertManyKeys) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         for (int i = 0; i < 100; ++i) {
             map.insert(i, i * 10);
@@ -155,7 +172,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(OperatorBracketCreatesNew) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         map[100];
 
@@ -163,7 +181,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(OperatorBracketReturnsExisting) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map.insert(25, 42);
 
         int& value = map[25];
@@ -172,7 +191,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(OperatorBracketModifiable) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map.insert(30, 10);
 
         map[30] = 20;
@@ -181,7 +201,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(OperatorBracketSamePointer) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map.insert(15, 42);
 
         int* found = map.find(15);
@@ -191,7 +212,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(OperatorBracketNewValueModifiable) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         map[99] = 100;
 
@@ -199,7 +221,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(OperatorBracketChained) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         map[1] = 10;
         map[2] = 20;
@@ -209,6 +232,7 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(StructValue) {
+        auto pool = ObjPool::fromMemory();
         struct Data {
             int id;
             float value;
@@ -225,7 +249,7 @@ STD_TEST_SUITE(IntMap) {
             }
         };
 
-        IntMap<Data> map;
+        IntMap<Data> map(pool.mutPtr());
         map.insert(42, 100, 3.14f);
 
         Data* result = map.find(42);
@@ -235,8 +259,9 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(PointerValue) {
+        auto pool = ObjPool::fromMemory();
         int x = 42;
-        IntMap<int*> map;
+        IntMap<int*> map(pool.mutPtr());
 
         map.insert(1, &x);
 
@@ -247,7 +272,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(NegativeKeys) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         map.insert((u64)-1, 10);
         map.insert((u64)-100, 20);
@@ -259,7 +285,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(ModifyThroughFind) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map.insert(10, 100);
 
         int* ptr = map.find(10);
@@ -269,8 +296,9 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(MultipleMapInstances) {
-        IntMap<int> map1;
-        IntMap<int> map2;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map1(pool.mutPtr());
+        IntMap<int> map2(pool.mutPtr());
 
         map1.insert(1, 10);
         map2.insert(1, 20);
@@ -280,6 +308,7 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(InsertWithMove) {
+        auto pool = ObjPool::fromMemory();
         struct MoveOnly {
             int value;
             bool moved = false;
@@ -298,7 +327,7 @@ STD_TEST_SUITE(IntMap) {
             MoveOnly(const MoveOnly&) = delete;
         };
 
-        IntMap<MoveOnly> map;
+        IntMap<MoveOnly> map(pool.mutPtr());
 
         MoveOnly* result = map.insert(42, 100);
 
@@ -307,7 +336,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(KeyCollisions) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         for (u64 i = 0; i < 1000; ++i) {
             map.insert(i, (int)(i * 2));
@@ -321,7 +351,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(LargeKeyValues) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         map.insert(0xFFFFFFFFFFFFFFFFULL, 100);
         map.insert(0x8000000000000000ULL, 200);
@@ -333,7 +364,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(SequentialKeys) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         for (u64 i = 0; i < 50; ++i) {
             map[i] = (int)(i + 1);
@@ -345,7 +377,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(SparseKeys) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         map[0] = 1;
         map[1000] = 2;
@@ -359,7 +392,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(OverwriteAndFind) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         map[42] = 1;
         map[42] = 2;
@@ -369,7 +403,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(DifferentTypesInt) {
-        IntMap<u8> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<u8> map(pool.mutPtr());
 
         map[1] = 255;
         map[2] = 128;
@@ -379,7 +414,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(DifferentTypesFloat) {
-        IntMap<float> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<float> map(pool.mutPtr());
 
         map[1] = 3.14f;
         map[2] = 2.71f;
@@ -389,7 +425,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(EraseNonExistent) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         map.erase(42);
 
@@ -397,7 +434,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(EraseExisting) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map[10] = 100;
 
         map.erase(10);
@@ -406,7 +444,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(EraseAndReinsert) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map[5] = 50;
 
         map.erase(5);
@@ -416,7 +455,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(EraseMultiple) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map[1] = 10;
         map[2] = 20;
         map[3] = 30;
@@ -429,7 +469,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(EraseAllElements) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map[1] = 10;
         map[2] = 20;
         map[3] = 30;
@@ -444,7 +485,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(EraseZeroKey) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map[0] = 999;
         map[1] = 111;
 
@@ -455,7 +497,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(EraseLargeKey) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map[0xFFFFFFFFFFFFFFFFULL] = 100;
         map[1] = 10;
 
@@ -466,6 +509,7 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(EraseComplexType) {
+        auto pool = ObjPool::fromMemory();
         struct Data {
             int id;
             float value;
@@ -482,7 +526,7 @@ STD_TEST_SUITE(IntMap) {
             }
         };
 
-        IntMap<Data> map;
+        IntMap<Data> map(pool.mutPtr());
         map.insert(1, 10, 1.5f);
         map.insert(2, 20, 2.5f);
 
@@ -496,7 +540,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(EraseWithVector) {
-        IntMap<Vector<int>> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<Vector<int>> map(pool.mutPtr());
         map[1].pushBack(10);
         map[1].pushBack(20);
         map[2].pushBack(30);
@@ -508,7 +553,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(EraseManyElements) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         for (int i = 0; i < 100; ++i) {
             map[i] = i * 10;
@@ -528,7 +574,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(EraseAlternatingElements) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         for (int i = 0; i < 20; ++i) {
             map[i] = i;
@@ -548,7 +595,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(EraseSameKeyTwice) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map[10] = 100;
 
         map.erase(10);
@@ -558,6 +606,7 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(EraseCallsDestructor) {
+        auto pool = ObjPool::fromMemory();
         struct TrackedObject {
             int* destructorCount;
 
@@ -574,7 +623,7 @@ STD_TEST_SUITE(IntMap) {
         };
 
         int destructorCount = 0;
-        IntMap<TrackedObject> map;
+        IntMap<TrackedObject> map(pool.mutPtr());
         map.insert(1, &destructorCount);
         map.insert(2, &destructorCount);
         map.insert(3, &destructorCount);
@@ -587,6 +636,7 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(EraseCallsDestructorMultipleTimes) {
+        auto pool = ObjPool::fromMemory();
         struct TrackedObject {
             int* destructorCount;
 
@@ -605,7 +655,7 @@ STD_TEST_SUITE(IntMap) {
         int destructorCount = 0;
 
         {
-            IntMap<TrackedObject> map;
+            IntMap<TrackedObject> map(pool.mutPtr());
 
             map.insert(10, &destructorCount);
             map.insert(20, &destructorCount);
@@ -629,7 +679,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(VisitEmpty) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         int count = 0;
         map.visit([&count](int&) {
@@ -640,7 +691,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(VisitSingleElement) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map[10] = 100;
 
         int count = 0;
@@ -655,7 +707,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(VisitMultipleElements) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map[1] = 10;
         map[2] = 20;
         map[3] = 30;
@@ -672,7 +725,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(VisitModifyValues) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map[1] = 10;
         map[2] = 20;
         map[3] = 30;
@@ -687,6 +741,7 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(VisitComplexType) {
+        auto pool = ObjPool::fromMemory();
         struct Data {
             int id;
             float value;
@@ -703,7 +758,7 @@ STD_TEST_SUITE(IntMap) {
             }
         };
 
-        IntMap<Data> map;
+        IntMap<Data> map(pool.mutPtr());
         map.insert(1, 10, 1.5f);
         map.insert(2, 20, 2.5f);
 
@@ -719,6 +774,7 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(VisitModifyComplexType) {
+        auto pool = ObjPool::fromMemory();
         struct Data {
             int id;
             float value;
@@ -735,7 +791,7 @@ STD_TEST_SUITE(IntMap) {
             }
         };
 
-        IntMap<Data> map;
+        IntMap<Data> map(pool.mutPtr());
         map.insert(1, 10, 1.0f);
         map.insert(2, 20, 2.0f);
 
@@ -754,7 +810,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(VisitWithVector) {
-        IntMap<Vector<int>> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<Vector<int>> map(pool.mutPtr());
         map[1].pushBack(10);
         map[1].pushBack(20);
         map[2].pushBack(30);
@@ -770,7 +827,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(VisitManyElements) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
 
         for (int i = 0; i < 100; ++i) {
             map[i] = i * 2;
@@ -788,7 +846,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(VisitAfterErase) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map[1] = 10;
         map[2] = 20;
         map[3] = 30;
@@ -807,7 +866,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(VisitZeroKey) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map[0] = 999;
         map[1] = 111;
 
@@ -823,7 +883,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(VisitReadOnly) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map[1] = 10;
         map[2] = 20;
         map[3] = 30;
@@ -839,7 +900,8 @@ STD_TEST_SUITE(IntMap) {
     }
 
     STD_TEST(VisitCollectKeys) {
-        IntMap<int> map;
+        auto pool = ObjPool::fromMemory();
+        IntMap<int> map(pool.mutPtr());
         map[10] = 100;
         map[20] = 200;
         map[30] = 300;
