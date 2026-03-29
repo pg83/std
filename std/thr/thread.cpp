@@ -2,12 +2,10 @@
 
 #include "coro.h"
 #include "runable.h"
-#include "semaphore.h"
 #include "thread_iface.h"
 
 #include <std/str/view.h>
 #include <std/sys/throw.h>
-#include <std/ptr/scoped.h>
 #include <std/dbg/insist.h>
 #include <std/str/builder.h>
 #include <std/alg/exchange.h>
@@ -86,26 +84,5 @@ u64 Thread::currentThreadId() noexcept {
 }
 
 void stl::detach(Runable& runable) {
-    struct Helper final: public Runable {
-        Runable* slave;
-        Semaphore sem;
-        Thread thr;
-
-        Helper(Runable* r) noexcept
-            : slave(r)
-            , sem(0)
-            , thr(*this)
-        {
-        }
-
-        void run() override {
-            ScopedPtr<Helper> that(this);
-            // race in musl libc
-            sem.wait();
-            slave->run();
-            thr.detach();
-        }
-    };
-
-    (new Helper(&runable))->sem.post();
+    Thread(runable).detach();
 }
