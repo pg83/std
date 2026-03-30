@@ -34,7 +34,7 @@ struct alignas(max_align_t) Deque::Impl: public RingBuffer {
 };
 
 Deque::Impl::Impl(size_t capacity) noexcept
-    : RingBuffer((void**)(this + 1), capacity)
+    : Impl(capacity, 0)
 {
 }
 
