@@ -202,6 +202,7 @@ __attribute__((no_sanitize("address"))) void ContextImpl::trampoline() {
     self->entry_->run();
 
     STD_INSIST(false);
+    __builtin_unreachable();
 }
 
 ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept {

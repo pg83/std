@@ -25,7 +25,7 @@ using namespace stl;
 
 namespace {
     static void doW(int work) {
-        for (volatile int i = 0; i < work; ++i) {
+        for (volatile int i = 0; i < work; i = i + 1) {
         }
     }
 }
@@ -713,7 +713,7 @@ STD_TEST_SUITE(CoroOffload) {
             int result = 0;
 
             exec->offload(pool, [&] {
-                for (volatile int i = 0; i < 10000; ++i) {
+                for (volatile int i = 0; i < 10000; i = i + 1) {
                 }
                 result = 1;
             });

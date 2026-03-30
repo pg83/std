@@ -12,7 +12,7 @@ using namespace stl;
 
 namespace {
     static void doW(int work) {
-        for (volatile int i = 0; i < work; ++i) {
+        for (volatile int i = 0; i < work; i = i + 1) {
         }
     }
 
@@ -157,7 +157,7 @@ STD_TEST_SUITE(ThreadPool) {
 
         for (int i = 0; i < 20; ++i) {
             pool->submit([] {
-for (volatile int i = 0; i < 10000; ++i) {} });
+for (volatile int i = 0; i < 10000; i = i + 1) {} });
         }
         pool->join();
     }
@@ -270,7 +270,7 @@ STD_TEST_SUITE(WorkStealingThreadPool) {
 
         for (int i = 0; i < 20; ++i) {
             pool->submit([] {
-for (volatile int i = 0; i < 10000; ++i) {} });
+for (volatile int i = 0; i < 10000; i = i + 1) {} });
         }
         pool->join();
     }
@@ -331,7 +331,7 @@ for (volatile int i = 0; i < 10000; ++i) {} });
             });
         }
 
-        for (volatile int i = 0; i < 5000; ++i) {
+        for (volatile int i = 0; i < 5000; i = i + 1) {
         }
 
         for (int i = 0; i < 50; ++i) {
@@ -361,7 +361,7 @@ for (volatile int i = 0; i < 10000; ++i) {} });
     }
 
     STD_TEST(_SD) {
-        for (volatile int i = 0; i < 10000000; i++) {
+        for (volatile int i = 0; i < 10000000; i = i + 1) {
             doW(work);
         }
     }

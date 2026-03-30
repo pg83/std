@@ -3,6 +3,7 @@
 #include <std/tst/ut.h>
 
 #include <stdio.h>
+#include <inttypes.h>
 
 using namespace stl;
 
@@ -270,7 +271,7 @@ STD_TEST_SUITE(FormatI64Base10) {
     STD_TEST(TestMin) {
         char buf1[32];
         char buf2[32];
-        sprintf(buf1, "%ld", INT64_MIN);
+        sprintf(buf1, "%" PRId64, INT64_MIN);
         *(u8*)formatI64Base10(INT64_MIN, buf2) = 0;
         STD_INSIST(StringView(buf1) == StringView(buf2));
     }
