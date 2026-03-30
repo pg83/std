@@ -317,9 +317,9 @@ PollerIface* PollerIface::create(ObjPool* pool) {
     return pool->make<EpollPoller>();
 #elif defined(__APPLE__) || defined(__FreeBSD__)
     return pool->make<KqueuePoller>();
-#else
-    return pool->make<PollPoller>(pool);
 #endif
+
+    return pool->make<PollPoller>(pool);
 }
 
 void PollerIface::waitBase(VisitorFace&& v, u64 deadlineUs) {
