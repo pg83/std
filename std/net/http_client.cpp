@@ -17,7 +17,7 @@ namespace {
         ObjPool* pool;
         u32 statusCode;
         StringView statusReason;
-        SymbolMap<StringView> headers{pool};
+        SymbolMap<StringView> headers;
         ZeroCopyInput* bodyIn;
         Buffer line;
         Buffer lcName;
@@ -34,6 +34,7 @@ namespace {
 HttpClientImpl::HttpClientImpl(ObjPool* pool, ZeroCopyInput* in)
     : pool(pool)
     , statusCode(0)
+    , headers(pool)
     , bodyIn(nullptr)
 {
     in->readLine(line);
