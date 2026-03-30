@@ -252,9 +252,13 @@ namespace {
             void* data;
         };
 
-        ObjPool::Ref pool_ = ObjPool::fromMemory();
-        IntMap<Entry> armed_{pool_.mutPtr()};
+        IntMap<Entry> armed_;
         Vector<struct pollfd> fds_; // rebuilt each wait()
+
+        PollPoller(ObjPool* pool)
+            : armed_(ObjPool::create(pool))
+        {
+        }
 
         void arm(int fd, u32 flags, void* data) override {
             armed_[fd] = {fd, flags, data};
@@ -306,7 +310,7 @@ namespace {
 
 PollerIface* PollerIface::create(ObjPool* pool) {
     if (getenv("USE_POLL_POLLER")) {
-        return pool->make<PollPoller>();
+        return pool->make<PollPoller>(pool);
     }
 
 #if defined(__linux__)
@@ -314,7 +318,7 @@ PollerIface* PollerIface::create(ObjPool* pool) {
 #elif defined(__APPLE__) || defined(__FreeBSD__)
     return pool->make<KqueuePoller>();
 #else
-    return pool->make<PollPoller>();
+    return pool->make<PollPoller>(pool);
 #endif
 }
 
