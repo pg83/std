@@ -7,7 +7,7 @@
 
 using namespace stl;
 
-struct Deque::Impl: public RingBuffer {
+struct alignas(max_align_t) Deque::Impl: public RingBuffer {
     Impl(size_t capacity) noexcept;
     Impl(size_t capacity, size_t prefilled) noexcept;
 
