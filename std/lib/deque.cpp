@@ -8,15 +8,8 @@
 using namespace stl;
 
 struct Deque::Impl: public RingBuffer {
-    Impl(size_t capacity) noexcept
-        : RingBuffer((void**)(this + 1), capacity)
-    {
-    }
-
-    Impl(size_t capacity, size_t prefilled) noexcept
-        : RingBuffer((void**)(this + 1), capacity, prefilled)
-    {
-    }
+    Impl(size_t capacity) noexcept;
+    Impl(size_t capacity, size_t prefilled) noexcept;
 
     void* operator new(size_t, void* p) noexcept {
         return p;
@@ -26,30 +19,10 @@ struct Deque::Impl: public RingBuffer {
         freeMemory(p);
     }
 
-    static void* allocRaw(size_t minCap, size_t* realCap) {
-        auto alloc = clp2(sizeof(Impl) + minCap * sizeof(void*));
-        auto mem = allocateMemory(alloc);
+    static void* allocRaw(size_t minCap, size_t* realCap);
+    static Impl* create(size_t minCap);
 
-        *realCap = (alloc - sizeof(Impl)) / sizeof(void*);
-
-        return mem;
-    }
-
-    static Impl* create(size_t minCap) {
-        size_t cap;
-        auto mem = allocRaw(minCap, &cap);
-
-        return new (mem) Impl(cap);
-    }
-
-    Impl* regrow() {
-        size_t cap;
-        auto mem = allocRaw(capacity() * 2, &cap);
-
-        linearizeTo((void**)((u8*)mem + sizeof(Impl)));
-
-        return new (mem) Impl(cap, size());
-    }
+    Impl* regrow();
 
     void pushBack(void* v) {
         push(v);
@@ -59,6 +32,41 @@ struct Deque::Impl: public RingBuffer {
         return pop();
     }
 };
+
+Deque::Impl::Impl(size_t capacity) noexcept
+    : RingBuffer((void**)(this + 1), capacity)
+{
+}
+
+Deque::Impl::Impl(size_t capacity, size_t prefilled) noexcept
+    : RingBuffer((void**)(this + 1), capacity, prefilled)
+{
+}
+
+void* Deque::Impl::allocRaw(size_t minCap, size_t* realCap) {
+    auto alloc = clp2(sizeof(Impl) + minCap * sizeof(void*));
+    auto mem = allocateMemory(alloc);
+
+    *realCap = (alloc - sizeof(Impl)) / sizeof(void*);
+
+    return mem;
+}
+
+Deque::Impl* Deque::Impl::create(size_t minCap) {
+    size_t cap;
+    auto mem = allocRaw(minCap, &cap);
+
+    return new (mem) Impl(cap);
+}
+
+Deque::Impl* Deque::Impl::regrow() {
+    size_t cap;
+    auto mem = allocRaw(capacity() * 2, &cap);
+
+    linearizeTo((void**)((u8*)mem + sizeof(Impl)));
+
+    return new (mem) Impl(cap, size());
+}
 
 Deque::Deque()
     : Deque(8)
