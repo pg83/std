@@ -2,6 +2,7 @@
 #include "ring_buf.h"
 
 #include <std/sys/crt.h>
+#include <std/alg/bits.h>
 #include <std/alg/exchange.h>
 
 using namespace stl;
@@ -25,18 +26,29 @@ struct Deque::Impl: public RingBuffer {
         freeMemory(p);
     }
 
-    static Impl* create(size_t capacity) {
-        return new (allocateMemory(sizeof(Impl) + capacity * sizeof(void*))) Impl(capacity);
+    static void* allocRaw(size_t minCap, size_t* realCap) {
+        auto alloc = clp2(sizeof(Impl) + minCap * sizeof(void*));
+        auto mem = allocateMemory(alloc);
+
+        *realCap = (alloc - sizeof(Impl)) / sizeof(void*);
+
+        return mem;
+    }
+
+    static Impl* create(size_t minCap) {
+        size_t cap;
+        auto mem = allocRaw(minCap, &cap);
+
+        return new (mem) Impl(cap);
     }
 
     Impl* regrow() {
-        auto n = size();
-        auto cap = capacity() * 2;
-        auto mem = allocateMemory(sizeof(Impl) + cap * sizeof(void*));
+        size_t cap;
+        auto mem = allocRaw(capacity() * 2, &cap);
 
         linearizeTo((void**)((u8*)mem + sizeof(Impl)));
 
-        return new (mem) Impl(cap, n);
+        return new (mem) Impl(cap, size());
     }
 
     void pushBack(void* v) {
