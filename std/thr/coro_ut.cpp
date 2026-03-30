@@ -11,7 +11,7 @@
 #include <std/tst/ut.h>
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
-#include <std/sys/memfd.h>
+#include <std/sys/mem_fd.h>
 #include <std/lib/vector.h>
 #include <std/sys/atomic.h>
 #include <std/mem/obj_pool.h>
