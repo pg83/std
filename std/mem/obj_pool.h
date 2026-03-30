@@ -59,6 +59,7 @@ namespace stl {
             return fromMemoryRaw();
         }
 
+        static ObjPool* create(ObjPool* pool);
         static ObjPool* fromMemoryRaw();
     };
 }

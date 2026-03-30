@@ -45,6 +45,10 @@ namespace {
 ObjPool::~ObjPool() noexcept {
 }
 
+ObjPool* ObjPool::create(ObjPool* pool) {
+    return pool->make<Pool>();
+}
+
 ObjPool* ObjPool::fromMemoryRaw() {
     return new Pool();
 }

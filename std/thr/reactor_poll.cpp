@@ -56,8 +56,7 @@ namespace {
         PollerIface* poller;
         DeadlineTreap timers;
         DeadlineTreap sleepers;
-        ObjPool::Ref fdPool_ = ObjPool::fromMemory();
-        IntMap<FdEntry> fdMap_{fdPool_.mutPtr()};
+        IntMap<FdEntry> fdMap_;
         Mutex queueMutex_;
         DeadlineTreap queue_;
         EventFD wakeEv_;
@@ -81,6 +80,7 @@ namespace {
 ReactorState::ReactorState(CoroExecutor* exec, ThreadPool* p, ObjPool* opool)
     : pool(p)
     , poller(PollerIface::create(opool))
+    , fdMap_(ObjPool::create(opool))
     , queueMutex_(Mutex::spinLock(exec))
 {
     poller->arm(wakeEv_.fd(), PollFlag::In, nullptr);
