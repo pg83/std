@@ -40,16 +40,16 @@ namespace {
     struct HttpConnection;
 
     struct HttpServerRequestImpl: public HttpServerRequest {
-        ObjPool::Ref pool = ObjPool::fromMemory();
+        ObjPool* pool;
         HttpConnection* conn;
         StringView reqMethod;
         StringView reqPath;
         StringView reqQuery;
-        SymbolMap<StringView> headers{pool.mutPtr()};
+        SymbolMap<StringView> headers{pool};
         ZeroCopyInput* reqIn;
         bool keepAlive = false;
 
-        HttpServerRequestImpl(HttpConnection* conn);
+        HttpServerRequestImpl(ObjPool* pool, HttpConnection* conn);
 
         bool serve();
 
@@ -95,7 +95,7 @@ namespace {
         HttpServerRequestImpl* req;
         Output* rawOut;
         Vector<Header*> headers;
-        SymbolMap<Header*> headerIndex{req->pool.mutPtr()};
+        SymbolMap<Header*> headerIndex{req->pool};
         u32 status;
 
         HttpServerResponseImpl(HttpServerRequestImpl* req);
@@ -127,8 +127,9 @@ namespace {
     }
 }
 
-HttpServerRequestImpl::HttpServerRequestImpl(HttpConnection* conn)
-    : conn(conn)
+HttpServerRequestImpl::HttpServerRequestImpl(ObjPool* pool, HttpConnection* conn)
+    : pool(pool)
+    , conn(conn)
 {
     StringView method, rest, path, version;
 
@@ -170,9 +171,9 @@ HttpServerRequestImpl::HttpServerRequestImpl(HttpConnection* conn)
     }
 
     if (auto te = headers.find(StringView("transfer-encoding")); te && te->lower(conn->line) == StringView("chunked")) {
-        reqIn = createChunkedInput(pool.mutPtr(), conn->in);
+        reqIn = createChunkedInput(pool, conn->in);
     } else if (auto cl = headers.find(StringView("content-length")); cl) {
-        reqIn = createLimitedInput(pool.mutPtr(), conn->in, cl->stou());
+        reqIn = createLimitedInput(pool, conn->in, cl->stou());
     } else {
         reqIn = pool->make<ZeroInput>();
     }
@@ -227,7 +228,7 @@ void HttpServerResponseImpl::setStatus(u32 code) {
 }
 
 void HttpServerResponseImpl::addHeader(StringView name, StringView value) {
-    auto pool = req->pool.mutPtr();
+    auto pool = req->pool;
     auto h = pool->make<Header>();
 
     h->name = pool->intern(name);
@@ -252,7 +253,7 @@ void HttpServerResponseImpl::serialize(ZeroCopyOutput& out) {
 }
 
 void HttpServerResponseImpl::endHeaders() {
-    auto pool = req->pool.mutPtr();
+    auto pool = req->pool;
 
     if (req->keepAlive && !headerIndex.find(StringView("content-length")) && !headerIndex.find(StringView("transfer-encoding"))) {
         addHeader(StringView("Transfer-Encoding"), StringView("chunked"));
@@ -377,7 +378,9 @@ bool HttpConnection::serve() {
         return false;
     }
 
-    return HttpServerRequestImpl(this).serve();
+    auto pool = ObjPool::fromMemory();
+
+    return HttpServerRequestImpl(pool.mutPtr(), this).serve();
 }
 
 HttpServerCtl* stl::serve(ObjPool* pool, HttpServeOpts opts) {
