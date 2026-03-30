@@ -33,6 +33,10 @@ namespace {
         void submit(Disposable* d) noexcept override {
             ds.submit(d);
         }
+
+        MemoryPool* memoryPool() noexcept override {
+            return &mp;
+        }
     };
 
     static_assert(sizeof(Pool) == 256);

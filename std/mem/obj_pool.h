@@ -10,6 +10,7 @@
 #include <std/ptr/intrusive.h>
 
 namespace stl {
+    class MemoryPool;
     class StringView;
 
     class ObjPool: public ARC {
@@ -26,6 +27,7 @@ namespace stl {
         virtual ~ObjPool() noexcept;
 
         virtual void* allocate(size_t len) = 0;
+        virtual MemoryPool* memoryPool() noexcept = 0;
 
         StringView intern(StringView s);
 

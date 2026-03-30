@@ -1,4 +1,5 @@
 #include "free_list.h"
+#include "mem_pool.h"
 #include "obj_pool.h"
 
 #include <std/alg/minmax.h>
@@ -12,12 +13,12 @@ namespace {
     };
 
     struct Impl: public FreeList {
-        ObjPool* pool;
+        MemoryPool* mp;
         size_t objSize;
         Node* freeList;
 
-        Impl(ObjPool* pool, size_t os) noexcept
-            : pool(pool)
+        Impl(MemoryPool* mp, size_t os) noexcept
+            : mp(mp)
             , objSize(max(os, sizeof(Node)))
             , freeList(nullptr)
         {
@@ -28,7 +29,7 @@ namespace {
                 return exchange(freeList, freeList->next);
             }
 
-            return pool->allocate(objSize);
+            return mp->allocate(objSize);
         }
 
         void release(void* ptr) noexcept override {
@@ -43,5 +44,5 @@ FreeList::~FreeList() noexcept {
 }
 
 FreeList* FreeList::create(ObjPool* pool, size_t objSize) {
-    return pool->make<Impl>(pool, objSize);
+    return pool->make<Impl>(pool->memoryPool(), objSize);
 }
