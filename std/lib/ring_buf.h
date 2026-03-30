@@ -13,6 +13,7 @@ namespace stl {
 
     public:
         RingBuffer(void** buf, size_t capacity) noexcept;
+        RingBuffer(void** buf, size_t capacity, size_t prefilled) noexcept;
 
         bool empty() const noexcept {
             return size_ == 0;
@@ -26,7 +27,13 @@ namespace stl {
             return size_;
         }
 
+        size_t capacity() const noexcept {
+            return capa_;
+        }
+
         void push(void* v) noexcept;
         void* pop() noexcept;
+
+        void linearizeTo(void** dst) const noexcept;
     };
 }

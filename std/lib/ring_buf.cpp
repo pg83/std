@@ -1,5 +1,6 @@
 #include "ring_buf.h"
 
+#include <std/sys/crt.h>
 #include <std/dbg/assert.h>
 
 using namespace stl;
@@ -10,6 +11,15 @@ RingBuffer::RingBuffer(void** buf, size_t capacity) noexcept
     , head_(0)
     , tail_(0)
     , size_(0)
+{
+}
+
+RingBuffer::RingBuffer(void** buf, size_t capacity, size_t prefilled) noexcept
+    : buf_(buf)
+    , capa_(capacity)
+    , head_(0)
+    , tail_(prefilled)
+    , size_(prefilled)
 {
 }
 
@@ -30,4 +40,19 @@ void* RingBuffer::pop() noexcept {
     --size_;
 
     return v;
+}
+
+void RingBuffer::linearizeTo(void** dst) const noexcept {
+    if (!size_) {
+        return;
+    }
+
+    if (head_ < tail_) {
+        memCpy(dst, buf_ + head_, size_ * sizeof(void*));
+    } else {
+        auto first = capa_ - head_;
+
+        memCpy(dst, buf_ + head_, first * sizeof(void*));
+        memCpy(dst + first, buf_, tail_ * sizeof(void*));
+    }
 }

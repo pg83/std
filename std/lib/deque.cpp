@@ -12,6 +12,11 @@ struct Deque::Impl: public RingBuffer {
     {
     }
 
+    Impl(size_t capacity, size_t prefilled) noexcept
+        : RingBuffer((void**)(this + 1), capacity, prefilled)
+    {
+    }
+
     void* operator new(size_t, void* p) noexcept {
         return p;
     }
@@ -26,13 +31,12 @@ struct Deque::Impl: public RingBuffer {
 
     Impl* regrow() {
         auto n = size();
-        auto next = create(n * 2);
+        auto cap = capacity() * 2;
+        auto mem = allocateMemory(sizeof(Impl) + cap * sizeof(void*));
 
-        for (size_t i = 0; i < n; ++i) {
-            next->push(pop());
-        }
+        linearizeTo((void**)((u8*)mem + sizeof(Impl)));
 
-        return next;
+        return new (mem) Impl(cap, n);
     }
 
     void pushBack(void* v) {
