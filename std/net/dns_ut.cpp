@@ -14,7 +14,6 @@ STD_TEST_SUITE(DnsResolver) {
     STD_TEST(ResolveLocalhost) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-
         auto resolver = DnsResolver::create(pool.mutPtr(), exec);
 
         auto f = async(exec, [&, rpool = pool->create(pool.mutPtr())] {
@@ -29,7 +28,6 @@ STD_TEST_SUITE(DnsResolver) {
     STD_TEST(ResolveParallel) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-
         auto resolver = DnsResolver::create(pool.mutPtr(), exec);
 
         auto f1 = async(exec, [&, rpool = pool->create(pool.mutPtr())] {
@@ -50,7 +48,6 @@ STD_TEST_SUITE(DnsResolver) {
     STD_TEST(ResolveBadName) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-
         auto resolver = DnsResolver::create(pool.mutPtr(), exec);
 
         auto f = async(exec, [&, rpool = pool->create(pool.mutPtr())] {
