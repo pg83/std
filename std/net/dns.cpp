@@ -1,20 +1,21 @@
 #include "dns.h"
 
+#include <std/sys/crt.h>
+#include <std/lib/list.h>
+#include <std/lib/node.h>
 #include <std/thr/coro.h>
 #include <std/thr/event.h>
 #include <std/thr/mutex.h>
+#include <std/alg/defer.h>
 #include <std/thr/poller.h>
-#include <std/lib/list.h>
-#include <std/lib/node.h>
 #include <std/mem/obj_pool.h>
 
-#include <std/sys/crt.h>
+#include <ares.h>
 
 #include <string.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <ares.h>
 
 using namespace stl;
 
@@ -53,6 +54,12 @@ namespace {
 }
 
 void DnsRequest::complete(int status, struct ares_addrinfo* ai) {
+    STD_DEFER {
+        if (ai) {
+            ares_freeaddrinfo(ai);
+        }
+    };
+
     if (status != ARES_SUCCESS) {
         result.error = status;
         result.addr = nullptr;
@@ -81,8 +88,6 @@ void DnsRequest::complete(int status, struct ares_addrinfo* ai) {
             result.addr = nullptr;
             result.addrLen = 0;
         }
-
-        ares_freeaddrinfo(ai);
     }
 
     ready = true;
