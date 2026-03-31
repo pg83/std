@@ -22,12 +22,15 @@ using namespace stl;
 namespace {
     struct DnsResolverImpl;
 
+    struct DnsResultImpl: public DnsResult {
+        DnsResultImpl(ObjPool* pool, int status, struct ares_addrinfo* ai);
+    };
+
     struct DnsRequest: public IntrusiveNode {
         DnsResolverImpl* resolver;
         ObjPool* pool;
         Event* event;
-        DnsResult result;
-        bool ready = false;
+        DnsResult* result = nullptr;
 
         void complete(int status, struct ares_addrinfo* ai);
 
@@ -47,50 +50,46 @@ namespace {
         DnsResolverImpl(CoroExecutor* exec);
         ~DnsResolverImpl() noexcept;
 
-        DnsResult resolve(ObjPool* pool, const StringView& name) override;
+        DnsResult* resolve(ObjPool* pool, const StringView& name) override;
 
         void driverLoop(DnsRequest& req);
     };
 }
 
-void DnsRequest::complete(int status, struct ares_addrinfo* ai) {
+DnsResultImpl::DnsResultImpl(ObjPool* pool, int status, struct ares_addrinfo* ai) {
     STD_DEFER {
         if (ai) {
             ares_freeaddrinfo(ai);
         }
     };
 
-    if (status != ARES_SUCCESS) {
-        result.error = status;
-        result.addr = nullptr;
-        result.addrLen = 0;
+    if (status != ARES_SUCCESS || !ai || !ai->nodes) {
+        error = status ? status : ARES_ENODATA;
+        addr = nullptr;
+        addrLen = 0;
     } else {
         auto node = ai->nodes;
 
-        if (node) {
-            result.error = 0;
+        error = 0;
 
-            if (node->ai_family == AF_INET) {
-                auto dst = (struct sockaddr_in*)pool->allocate(sizeof(struct sockaddr_in));
+        if (node->ai_family == AF_INET) {
+            auto dst = (struct sockaddr_in*)pool->allocate(sizeof(struct sockaddr_in));
 
-                memcpy(dst, node->ai_addr, sizeof(struct sockaddr_in));
-                result.addr = (sockaddr*)dst;
-                result.addrLen = sizeof(struct sockaddr_in);
-            } else {
-                auto dst = (struct sockaddr_in6*)pool->allocate(sizeof(struct sockaddr_in6));
-
-                memcpy(dst, node->ai_addr, sizeof(struct sockaddr_in6));
-                result.addr = (sockaddr*)dst;
-                result.addrLen = sizeof(struct sockaddr_in6);
-            }
+            memcpy(dst, node->ai_addr, sizeof(struct sockaddr_in));
+            addr = (sockaddr*)dst;
+            addrLen = sizeof(struct sockaddr_in);
         } else {
-            result.error = ARES_ENODATA;
-            result.addr = nullptr;
-            result.addrLen = 0;
+            auto dst = (struct sockaddr_in6*)pool->allocate(sizeof(struct sockaddr_in6));
+
+            memcpy(dst, node->ai_addr, sizeof(struct sockaddr_in6));
+            addr = (sockaddr*)dst;
+            addrLen = sizeof(struct sockaddr_in6);
         }
     }
+}
 
-    ready = true;
+void DnsRequest::complete(int status, struct ares_addrinfo* ai) {
+    result = pool->make<DnsResultImpl>(pool, status, ai);
 
     if (this != resolver->driverReq_) {
         event->signal();
@@ -114,7 +113,7 @@ DnsResolverImpl::~DnsResolverImpl() noexcept {
     ares_destroy(channel_);
 }
 
-DnsResult DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
+DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     DnsRequest req;
     Event ev(exec_);
 
@@ -137,7 +136,7 @@ DnsResult DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     ares_getaddrinfo(channel_, (const char*)zname.data(), nullptr, &hints, DnsRequest::callback, &req);
     driverReq_ = prevDriver;
 
-    if (req.ready) {
+    if (req.result) {
         lock_.unlock();
 
         return req.result;
@@ -149,7 +148,7 @@ DnsResult DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
             lock_.unlock();
         }));
 
-        if (req.ready) {
+        if (req.result) {
             return req.result;
         }
 
@@ -168,7 +167,7 @@ DnsResult DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
     driverReq_ = &req;
 
-    while (!req.ready) {
+    while (!req.result) {
         ares_socket_t fds[ARES_GETSOCK_MAXNUM];
         int bitmask = ares_getsock(channel_, fds, ARES_GETSOCK_MAXNUM);
 
