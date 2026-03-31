@@ -27,9 +27,8 @@ namespace {
     };
 
     struct DnsRequest: public IntrusiveNode {
-        DnsResolverImpl* resolver;
         ObjPool* pool;
-        Event* event;
+        Event* event = nullptr;
         DnsResult* result = nullptr;
 
         void complete(int status, struct ares_addrinfo* ai);
@@ -44,7 +43,6 @@ namespace {
         ares_channel channel_;
         Mutex lock_;
         bool driving_ = false;
-        DnsRequest* driverReq_ = nullptr;
         IntrusiveList waiters_;
 
         DnsResolverImpl(CoroExecutor* exec);
@@ -91,7 +89,7 @@ DnsResultImpl::DnsResultImpl(ObjPool* pool, int status, struct ares_addrinfo* ai
 void DnsRequest::complete(int status, struct ares_addrinfo* ai) {
     result = pool->make<DnsResultImpl>(pool, status, ai);
 
-    if (this != resolver->driverReq_) {
+    if (event) {
         event->signal();
     }
 }
@@ -115,11 +113,8 @@ DnsResolverImpl::~DnsResolverImpl() noexcept {
 
 DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     DnsRequest req;
-    Event ev(exec_);
 
-    req.resolver = this;
     req.pool = pool;
-    req.event = &ev;
 
     struct ares_addrinfo_hints hints;
 
@@ -129,12 +124,7 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     auto zname = pool->intern(name);
 
     lock_.lock();
-
-    auto prevDriver = driverReq_;
-
-    driverReq_ = &req;
     ares_getaddrinfo(channel_, (const char*)zname.data(), nullptr, &hints, DnsRequest::callback, &req);
-    driverReq_ = prevDriver;
 
     if (req.result) {
         lock_.unlock();
@@ -143,6 +133,9 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     }
 
     if (driving_) {
+        Event ev(exec_);
+
+        req.event = &ev;
         waiters_.pushBack(&req);
         ev.wait(makeRunable([this] {
             lock_.unlock();
@@ -155,7 +148,6 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
         // woken as new driver, driving_ already true
     } else {
         driving_ = true;
-        driverReq_ = &req;
         lock_.unlock();
     }
 
@@ -165,8 +157,6 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
 }
 
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
-    driverReq_ = &req;
-
     while (!req.result) {
         ares_socket_t fds[ARES_GETSOCK_MAXNUM];
         int bitmask = ares_getsock(channel_, fds, ARES_GETSOCK_MAXNUM);
@@ -223,12 +213,10 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
     lock_.lock();
 
     if (auto next = (DnsRequest*)waiters_.popFrontOrNull(); next) {
-        driverReq_ = next;
         lock_.unlock();
         next->event->signal();
     } else {
         driving_ = false;
-        driverReq_ = nullptr;
         lock_.unlock();
     }
 }
