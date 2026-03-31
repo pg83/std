@@ -312,6 +312,10 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
 }
 
 u32 CoroExecutorImpl::pollMulti(int* fds, size_t count, u32 flags, u64 deadlineUs) {
+    if (count == 0) {
+        return (sleep(deadlineUs), 0);
+    }
+
     auto pool = ObjPool::fromMemoryRaw();
     auto ptrs = (PollRequest**)alloca(sizeof(PollRequest*) * count);
     auto cont = currentCont();

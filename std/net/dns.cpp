@@ -159,9 +159,9 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
     while (!req.result) {
         ares_socket_t fds[ARES_GETSOCK_MAXNUM];
-        int bitmask = ares_getsock(channel_, fds, ARES_GETSOCK_MAXNUM);
 
         int nfds = 0;
+        int bitmask = ares_getsock(channel_, fds, ARES_GETSOCK_MAXNUM);
 
         for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i) {
             if (ARES_GETSOCK_READABLE(bitmask, i) || ARES_GETSOCK_WRITABLE(bitmask, i)) {
@@ -171,29 +171,19 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
             }
         }
 
-        if (nfds > 0) {
-            int intFds[ARES_GETSOCK_MAXNUM];
+        int intFds[ARES_GETSOCK_MAXNUM];
 
-            for (int i = 0; i < nfds; ++i) {
-                intFds[i] = (int)fds[i];
-            }
-
-            struct timeval tv;
-
-            ares_timeout(channel_, nullptr, &tv);
-
-            u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
-
-            exec_->pollMulti(intFds, (size_t)nfds, PollFlag::In | PollFlag::Out, deadlineUs);
-        } else {
-            struct timeval tv;
-
-            ares_timeout(channel_, nullptr, &tv);
-
-            u64 timeoutUs = (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
-
-            exec_->sleepTout(timeoutUs);
+        for (int i = 0; i < nfds; ++i) {
+            intFds[i] = (int)fds[i];
         }
+
+        struct timeval tv;
+
+        ares_timeout(channel_, nullptr, &tv);
+
+        u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
+
+        exec_->pollMulti(intFds, (size_t)nfds, PollFlag::In | PollFlag::Out, deadlineUs);
 
         ares_process_fd(channel_, ARES_SOCKET_BAD, ARES_SOCKET_BAD);
 
