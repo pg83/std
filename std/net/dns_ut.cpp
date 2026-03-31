@@ -17,10 +17,8 @@ STD_TEST_SUITE(DnsResolver) {
 
         auto resolver = DnsResolver::create(pool.mutPtr(), exec);
 
-        auto f = async(exec, [&] {
-            auto rpool = ObjPool::fromMemory();
-
-            return resolver->resolve(rpool.mutPtr(), u8"localhost");
+        auto f = async(exec, [&, rpool = pool->create(pool.mutPtr())] {
+            return resolver->resolve(rpool, u8"localhost");
         });
 
         auto result = f.wait();
@@ -55,10 +53,8 @@ STD_TEST_SUITE(DnsResolver) {
 
         auto resolver = DnsResolver::create(pool.mutPtr(), exec);
 
-        auto f = async(exec, [&] {
-            auto rpool = ObjPool::fromMemory();
-
-            return resolver->resolve(rpool.mutPtr(), u8"this.name.does.not.exist.invalid");
+        auto f = async(exec, [&, rpool = pool->create(pool.mutPtr())] {
+            return resolver->resolve(rpool, u8"this.name.does.not.exist.invalid");
         });
 
         auto result = f.wait();
