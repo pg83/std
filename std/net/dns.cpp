@@ -27,6 +27,12 @@ namespace {
         Event* event;
         DnsResult result;
         bool ready = false;
+
+        void complete(int status, struct ares_addrinfo* ai);
+
+        static void callback(void* arg, int status, int, struct ares_addrinfo* ai) {
+            ((DnsRequest*)arg)->complete(status, ai);
+        }
     };
 
     struct DnsResolverImpl: public DnsResolver {
@@ -44,47 +50,45 @@ namespace {
 
         void driverLoop(DnsRequest& req);
     };
+}
 
-    void aresCallback(void* arg, int status, int, struct ares_addrinfo* ai) {
-        auto req = (DnsRequest*)arg;
+void DnsRequest::complete(int status, struct ares_addrinfo* ai) {
+    if (status != ARES_SUCCESS) {
+        result.error = status;
+        result.addr = nullptr;
+        result.addrLen = 0;
+    } else {
+        auto node = ai->nodes;
 
-        if (status != ARES_SUCCESS) {
-            req->result.error = status;
-            req->result.addr = nullptr;
-            req->result.addrLen = 0;
-        } else {
-            auto node = ai->nodes;
+        if (node) {
+            result.error = 0;
 
-            if (node) {
-                req->result.error = 0;
+            if (node->ai_family == AF_INET) {
+                auto dst = (struct sockaddr_in*)pool->allocate(sizeof(struct sockaddr_in));
 
-                if (node->ai_family == AF_INET) {
-                    auto dst = (struct sockaddr_in*)req->pool->allocate(sizeof(struct sockaddr_in));
-
-                    memcpy(dst, node->ai_addr, sizeof(struct sockaddr_in));
-                    req->result.addr = (sockaddr*)dst;
-                    req->result.addrLen = sizeof(struct sockaddr_in);
-                } else {
-                    auto dst = (struct sockaddr_in6*)req->pool->allocate(sizeof(struct sockaddr_in6));
-
-                    memcpy(dst, node->ai_addr, sizeof(struct sockaddr_in6));
-                    req->result.addr = (sockaddr*)dst;
-                    req->result.addrLen = sizeof(struct sockaddr_in6);
-                }
+                memcpy(dst, node->ai_addr, sizeof(struct sockaddr_in));
+                result.addr = (sockaddr*)dst;
+                result.addrLen = sizeof(struct sockaddr_in);
             } else {
-                req->result.error = ARES_ENODATA;
-                req->result.addr = nullptr;
-                req->result.addrLen = 0;
+                auto dst = (struct sockaddr_in6*)pool->allocate(sizeof(struct sockaddr_in6));
+
+                memcpy(dst, node->ai_addr, sizeof(struct sockaddr_in6));
+                result.addr = (sockaddr*)dst;
+                result.addrLen = sizeof(struct sockaddr_in6);
             }
-
-            ares_freeaddrinfo(ai);
+        } else {
+            result.error = ARES_ENODATA;
+            result.addr = nullptr;
+            result.addrLen = 0;
         }
 
-        req->ready = true;
+        ares_freeaddrinfo(ai);
+    }
 
-        if (req != req->resolver->driverReq_) {
-            req->event->signal();
-        }
+    ready = true;
+
+    if (this != resolver->driverReq_) {
+        event->signal();
     }
 }
 
@@ -125,7 +129,7 @@ DnsResult DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     auto prevDriver = driverReq_;
 
     driverReq_ = &req;
-    ares_getaddrinfo(channel_, (const char*)zname.data(), nullptr, &hints, aresCallback, &req);
+    ares_getaddrinfo(channel_, (const char*)zname.data(), nullptr, &hints, DnsRequest::callback, &req);
     driverReq_ = prevDriver;
 
     if (req.ready) {
