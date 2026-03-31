@@ -81,8 +81,20 @@ DnsResultImpl::DnsResultImpl(ObjPool* pool, int status, struct ares_addrinfo* ai
         });
     }
 
-    if (status != ARES_SUCCESS || !ai || !ai->nodes) {
-        error = status ? status : ARES_ENODATA;
+    if (status == ARES_ENOTFOUND) {
+        error = 0;
+        record = nullptr;
+    } else if (status == ARES_ENODATA) {
+        error = 0;
+        record = nullptr;
+    } else if (status != ARES_SUCCESS) {
+        error = status;
+        record = nullptr;
+    } else if (!ai) {
+        error = 0;
+        record = nullptr;
+    } else if (!ai->nodes) {
+        error = 0;
         record = nullptr;
     } else {
         error = 0;

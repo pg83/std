@@ -23,6 +23,7 @@ STD_TEST_SUITE(DnsResolver) {
         auto result = f.wait();
 
         STD_INSIST(result->ok());
+        STD_INSIST(result->record);
     }
 
     STD_TEST(ResolveParallel) {
@@ -42,7 +43,9 @@ STD_TEST_SUITE(DnsResolver) {
         auto r2 = f2.wait();
 
         STD_INSIST(r1->ok());
+        STD_INSIST(r1->record);
         STD_INSIST(r2->ok());
+        STD_INSIST(r2->record);
     }
 
     STD_TEST(ResolveBadName) {
@@ -56,6 +59,7 @@ STD_TEST_SUITE(DnsResolver) {
 
         auto result = f.wait();
 
-        STD_INSIST(!result->ok());
+        STD_INSIST(result->ok());
+        STD_INSIST(!result->record);
     }
 }
