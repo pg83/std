@@ -10,10 +10,15 @@ namespace stl {
 
     struct CoroExecutor;
 
-    struct DnsResult {
-        int error;
+    struct DnsRecord {
+        DnsRecord* next;
         int family;
         sockaddr* addr;
+    };
+
+    struct DnsResult {
+        int error;
+        DnsRecord* record;
 
         bool ok() const noexcept {
             return error == 0;

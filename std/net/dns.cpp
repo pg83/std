@@ -27,6 +27,10 @@ namespace {
 
     struct DnsResolverImpl;
 
+    struct DnsRecordImpl: public DnsRecord {
+        DnsRecordImpl(ObjPool* pool, struct ares_addrinfo_node* node);
+    };
+
     struct DnsResultImpl: public DnsResult {
         DnsResultImpl(ObjPool* pool, int status, struct ares_addrinfo* ai);
     };
@@ -59,6 +63,17 @@ namespace {
     };
 }
 
+DnsRecordImpl::DnsRecordImpl(ObjPool* pool, struct ares_addrinfo_node* node) {
+    family = node->ai_family;
+    addr = node->ai_addr;
+
+    if (node->ai_next) {
+        next = pool->make<DnsRecordImpl>(pool, node->ai_next);
+    } else {
+        next = nullptr;
+    }
+}
+
 DnsResultImpl::DnsResultImpl(ObjPool* pool, int status, struct ares_addrinfo* ai) {
     if (ai) {
         reg(pool, [ai] {
@@ -68,14 +83,10 @@ DnsResultImpl::DnsResultImpl(ObjPool* pool, int status, struct ares_addrinfo* ai
 
     if (status != ARES_SUCCESS || !ai || !ai->nodes) {
         error = status ? status : ARES_ENODATA;
-        family = 0;
-        addr = nullptr;
+        record = nullptr;
     } else {
-        auto node = ai->nodes;
-
         error = 0;
-        family = node->ai_family;
-        addr = node->ai_addr;
+        record = pool->make<DnsRecordImpl>(pool, ai->nodes);
     }
 }
 
