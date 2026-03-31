@@ -34,16 +34,12 @@ STD_TEST_SUITE(DnsResolver) {
 
         auto resolver = DnsResolver::create(pool.mutPtr(), exec);
 
-        auto f1 = async(exec, [&] {
-            auto rpool = ObjPool::fromMemory();
-
-            return resolver->resolve(rpool.mutPtr(), u8"localhost");
+        auto f1 = async(exec, [&, rpool = pool->create(pool.mutPtr())] {
+            return resolver->resolve(rpool, u8"localhost");
         });
 
-        auto f2 = async(exec, [&] {
-            auto rpool = ObjPool::fromMemory();
-
-            return resolver->resolve(rpool.mutPtr(), u8"localhost");
+        auto f2 = async(exec, [&, rpool = pool->create(pool.mutPtr())] {
+            return resolver->resolve(rpool, u8"localhost");
         });
 
         auto r1 = f1.wait();
