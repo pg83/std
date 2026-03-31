@@ -629,6 +629,96 @@ STD_TEST_SUITE(CoroPoll) {
         STD_INSIST(f.wait() == 2);
     }
 
+    STD_TEST(PollMultiBasic) {
+        auto pool = ObjPool::fromMemory();
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        ScopedFD r1, w1, r2, w2;
+        createPipeFD(r1, w1);
+        createPipeFD(r2, w2);
+        u32 result = 0;
+
+        exec->spawn([&] {
+            int fds[] = {r1.get(), r2.get()};
+            result = exec->pollMulti(fds, 2, PollFlag::In, UINT64_MAX);
+        });
+
+        exec->spawn([&] {
+            char b = 1;
+            w1.write(&b, 1);
+        });
+
+        exec->join();
+        STD_INSIST(result & PollFlag::In);
+    }
+
+    STD_TEST(PollMultiSecondFd) {
+        auto pool = ObjPool::fromMemory();
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        ScopedFD r1, w1, r2, w2;
+        createPipeFD(r1, w1);
+        createPipeFD(r2, w2);
+        u32 result = 0;
+
+        exec->spawn([&] {
+            int fds[] = {r1.get(), r2.get()};
+            result = exec->pollMulti(fds, 2, PollFlag::In, UINT64_MAX);
+        });
+
+        exec->spawn([&] {
+            char b = 1;
+            w2.write(&b, 1);
+        });
+
+        exec->join();
+        STD_INSIST(result & PollFlag::In);
+    }
+
+    STD_TEST(PollMultiTimeout) {
+        auto pool = ObjPool::fromMemory();
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        ScopedFD r1, w1, r2, w2;
+        createPipeFD(r1, w1);
+        createPipeFD(r2, w2);
+
+        auto f = async(exec, [&] {
+            int fds[] = {r1.get(), r2.get()};
+            return exec->pollMulti(fds, 2, PollFlag::In, 1000);
+        });
+
+        STD_INSIST(f.wait() == 0);
+    }
+
+    STD_TEST(PollMultiManyFds) {
+        auto pool = ObjPool::fromMemory();
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        const int N = 8;
+        ScopedFD readEnds[N], writeEnds[N];
+
+        for (int i = 0; i < N; ++i) {
+            createPipeFD(readEnds[i], writeEnds[i]);
+        }
+
+        u32 result = 0;
+
+        exec->spawn([&] {
+            int fds[N];
+
+            for (int i = 0; i < N; ++i) {
+                fds[i] = readEnds[i].get();
+            }
+
+            result = exec->pollMulti(fds, N, PollFlag::In, UINT64_MAX);
+        });
+
+        exec->spawn([&] {
+            char b = 1;
+            writeEnds[N / 2].write(&b, 1);
+        });
+
+        exec->join();
+        STD_INSIST(result & PollFlag::In);
+    }
+
     STD_TEST(SpawnFromMain) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);

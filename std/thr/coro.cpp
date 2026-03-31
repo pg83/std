@@ -157,6 +157,7 @@ namespace {
         SemaphoreIface* createSemaphore(size_t initial) override;
 
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
+        u32 pollMulti(int* fds, size_t count, u32 flags, u64 deadlineUs) override;
         void offloadRun(ThreadPool* pool, Runable&& work) override;
         ssize_t pread(int fd, void* buf, size_t len, off_t offset) override;
         ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) override;
@@ -175,6 +176,26 @@ namespace {
         void complete(u32 res, IntrusiveList& ready) noexcept override {
             result = res;
             ready.pushBack(cont);
+        }
+    };
+
+    struct PollMultiRequest: public PollRequest {
+        ContImpl* cont;
+        ReactorIface* reactor;
+        PollMultiRequest* next;
+        u32 result = 0;
+
+        void parkWith(Runable&& afterSuspend) noexcept override {
+            cont->parkWith(&afterSuspend);
+        }
+
+        void complete(u32 res, IntrusiveList& ready) noexcept override {
+            result = res;
+            ready.pushBack(cont);
+
+            for (auto r = next; r != this; r = r->next) {
+                reactor->cancel(r);
+            }
         }
     };
 }
@@ -288,6 +309,46 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
     reactors_[splitMix64(fd) % reactors_.length()]->processRequest(&req);
 
     return req.result;
+}
+
+u32 CoroExecutorImpl::pollMulti(int* fds, size_t count, u32 flags, u64 deadlineUs) {
+    auto pool = ObjPool::fromMemoryRaw();
+    auto ptrs = (PollRequest**)alloca(sizeof(PollRequest*) * count);
+    auto cont = currentCont();
+    auto reactor = reactors_[splitMix64(fds[0]) % reactors_.length()];
+
+    PollMultiRequest* last = nullptr;
+
+    for (size_t i = 0; i < count; ++i) {
+        auto req = pool->make<PollMultiRequest>();
+
+        req->cont = cont;
+        req->reactor = reactor;
+        req->fd = fds[i];
+        req->flags = flags;
+        req->deadline = deadlineUs;
+
+        req->next = last;
+        last = req;
+
+        ptrs[i] = req;
+    }
+
+    // close the ring
+    ((PollMultiRequest*)ptrs[0])->next = last;
+
+    reactor->processRequests(ptrs, count);
+
+    u32 result = 0;
+
+    for (size_t i = 0; i < count; ++i) {
+        if (auto r = (PollMultiRequest*)ptrs[i]; r->result) {
+            result = r->result;
+            break;
+        }
+    }
+
+    return result;
 }
 
 void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {

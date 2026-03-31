@@ -24,7 +24,9 @@ namespace stl {
     };
 
     struct ReactorIface {
+        virtual void cancel(PollRequest* req) = 0;
         virtual void processRequest(PollRequest* req) = 0;
+        virtual void processRequests(PollRequest** reqs, size_t count) = 0;
 
         static ReactorIface* create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool);
     };

@@ -73,6 +73,8 @@ namespace {
         void drainWakeup() noexcept;
         void run() noexcept override;
         void processRequest(PollRequest* req) override;
+        void processRequests(PollRequest** reqs, size_t count) override;
+        void cancel(PollRequest* req) override;
         void processEvent(PollEvent* ev, IntrusiveList& ready) noexcept;
     };
 }
@@ -109,6 +111,25 @@ void ReactorState::processRequest(PollRequest* req) {
             wakeup();
         }
     }));
+}
+
+void ReactorState::processRequests(PollRequest** reqs, size_t count) {
+    queueMutex_.lock();
+
+    for (size_t i = 0; i < count; ++i) {
+        queue_.insert(reqs[i]);
+    }
+
+    reqs[0]->parkWith(makeRunable([this] {
+        queueMutex_.unlock();
+        wakeup();
+    }));
+}
+
+void ReactorState::cancel(PollRequest* req) {
+    req->remove();
+    timers.remove(req);
+    rearmOrDisarm(req->fd);
 }
 
 void ReactorState::wakeup() noexcept {
