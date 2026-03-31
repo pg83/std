@@ -6,8 +6,6 @@
 #include <std/dbg/insist.h>
 #include <std/mem/obj_pool.h>
 
-#include <arpa/inet.h>
-
 using namespace stl;
 
 STD_TEST_SUITE(DnsResolver) {
