@@ -68,26 +68,14 @@ DnsResultImpl::DnsResultImpl(ObjPool* pool, int status, struct ares_addrinfo* ai
 
     if (status != ARES_SUCCESS || !ai || !ai->nodes) {
         error = status ? status : ARES_ENODATA;
+        family = 0;
         addr = nullptr;
-        addrLen = 0;
     } else {
         auto node = ai->nodes;
 
         error = 0;
-
-        if (node->ai_family == AF_INET) {
-            auto dst = (struct sockaddr_in*)pool->allocate(sizeof(struct sockaddr_in));
-
-            memcpy(dst, node->ai_addr, sizeof(struct sockaddr_in));
-            addr = (sockaddr*)dst;
-            addrLen = sizeof(struct sockaddr_in);
-        } else {
-            auto dst = (struct sockaddr_in6*)pool->allocate(sizeof(struct sockaddr_in6));
-
-            memcpy(dst, node->ai_addr, sizeof(struct sockaddr_in6));
-            addr = (sockaddr*)dst;
-            addrLen = sizeof(struct sockaddr_in6);
-        }
+        family = node->ai_family;
+        addr = node->ai_addr;
     }
 }
 

@@ -12,8 +12,8 @@ namespace stl {
 
     struct DnsResult {
         int error;
+        int family;
         sockaddr* addr;
-        u32 addrLen;
 
         bool ok() const noexcept {
             return error == 0;
