@@ -20,6 +20,11 @@
 using namespace stl;
 
 namespace {
+    template <typename F>
+    static void reg(ObjPool* pool, F f) {
+        pool->make<ScopedGuard<F>>(f);
+    }
+
     struct DnsResolverImpl;
 
     struct DnsResultImpl: public DnsResult {
@@ -55,11 +60,11 @@ namespace {
 }
 
 DnsResultImpl::DnsResultImpl(ObjPool* pool, int status, struct ares_addrinfo* ai) {
-    STD_DEFER {
-        if (ai) {
+    if (ai) {
+        reg(pool, [ai] {
             ares_freeaddrinfo(ai);
-        }
-    };
+        });
+    }
 
     if (status != ARES_SUCCESS || !ai || !ai->nodes) {
         error = status ? status : ARES_ENODATA;
