@@ -682,7 +682,7 @@ STD_TEST_SUITE(CoroPoll) {
 
         auto f = async(exec, [&] {
             int fds[] = {r1.get(), r2.get()};
-            return exec->pollMulti(fds, 2, PollFlag::In, 1000);
+            return exec->pollMulti(fds, 2, PollFlag::In, 1);
         });
 
         STD_INSIST(f.wait() == 0);
