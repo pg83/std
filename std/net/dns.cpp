@@ -3,6 +3,8 @@
 #include <std/sys/crt.h>
 #include <std/lib/list.h>
 #include <std/lib/node.h>
+#include <std/lib/vector.h>
+#include <std/sym/i_map.h>
 #include <std/thr/coro.h>
 #include <std/thr/event.h>
 #include <std/thr/mutex.h>
@@ -53,13 +55,26 @@ namespace {
         Mutex lock_;
         bool driving_ = false;
         IntrusiveList waiters_;
+        IntMap<int> fdMap_;
+        Vector<int> fds_;
 
-        DnsResolverImpl(CoroExecutor* exec);
+        DnsResolverImpl(ObjPool* pool, CoroExecutor* exec);
         ~DnsResolverImpl() noexcept;
 
         DnsResult* resolve(ObjPool* pool, const StringView& name) override;
 
         void driverLoop(DnsRequest& req);
+        void rebuildFds();
+
+        static void sockStateCb(void* data, ares_socket_t fd, int readable, int writable) {
+            auto self = (DnsResolverImpl*)data;
+
+            if (readable || writable) {
+                self->fdMap_.insert((u64)fd, (int)fd);
+            } else {
+                self->fdMap_.erase((u64)fd);
+            }
+        }
     };
 }
 
@@ -110,17 +125,20 @@ void DnsRequest::complete(int status, struct ares_addrinfo* ai) {
     }
 }
 
-DnsResolverImpl::DnsResolverImpl(CoroExecutor* exec)
+DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec)
     : exec_(exec)
     , lock_(Mutex::spinLock(exec))
+    , fdMap_(pool)
 {
     ares_options opts;
 
     memset(&opts, 0, sizeof(opts));
     opts.timeout = 5000;
     opts.tries = 3;
+    opts.sock_state_cb = sockStateCb;
+    opts.sock_state_cb_data = this;
 
-    ares_init_options(&channel_, &opts, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES);
+    ares_init_options(&channel_, &opts, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES | ARES_OPT_SOCK_STATE_CB);
 }
 
 DnsResolverImpl::~DnsResolverImpl() noexcept {
@@ -172,26 +190,16 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     return req.result;
 }
 
+void DnsResolverImpl::rebuildFds() {
+    fds_.clear();
+    fdMap_.visit([this](int fd) {
+        fds_.pushBack(fd);
+    });
+}
+
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
     while (!req.result) {
-        ares_socket_t fds[ARES_GETSOCK_MAXNUM];
-
-        int nfds = 0;
-        int bitmask = ares_getsock(channel_, fds, ARES_GETSOCK_MAXNUM);
-
-        for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i) {
-            if (ARES_GETSOCK_READABLE(bitmask, i) || ARES_GETSOCK_WRITABLE(bitmask, i)) {
-                ++nfds;
-            } else {
-                break;
-            }
-        }
-
-        int intFds[ARES_GETSOCK_MAXNUM];
-
-        for (int i = 0; i < nfds; ++i) {
-            intFds[i] = (int)fds[i];
-        }
+        rebuildFds();
 
         struct timeval tv;
 
@@ -199,21 +207,13 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
 
         u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
 
-        exec_->pollMulti(intFds, (size_t)nfds, PollFlag::In | PollFlag::Out, deadlineUs);
+        exec_->pollMulti(fds_.mutData(), fds_.length(), PollFlag::In | PollFlag::Out, deadlineUs);
+
+        for (size_t i = 0; i < fds_.length(); ++i) {
+            ares_process_fd(channel_, fds_[i], fds_[i]);
+        }
 
         ares_process_fd(channel_, ARES_SOCKET_BAD, ARES_SOCKET_BAD);
-
-        // also process each fd
-        for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i) {
-            if (ARES_GETSOCK_READABLE(bitmask, i) || ARES_GETSOCK_WRITABLE(bitmask, i)) {
-                ares_socket_t rfd = ARES_GETSOCK_READABLE(bitmask, i) ? fds[i] : ARES_SOCKET_BAD;
-                ares_socket_t wfd = ARES_GETSOCK_WRITABLE(bitmask, i) ? fds[i] : ARES_SOCKET_BAD;
-
-                ares_process_fd(channel_, rfd, wfd);
-            } else {
-                break;
-            }
-        }
     }
 
     lock_.lock();
@@ -228,5 +228,5 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
 }
 
 DnsResolver* DnsResolver::create(ObjPool* pool, CoroExecutor* exec) {
-    return pool->make<DnsResolverImpl>(exec);
+    return pool->make<DnsResolverImpl>(pool, exec);
 }
