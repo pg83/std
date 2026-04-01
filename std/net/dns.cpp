@@ -60,7 +60,6 @@ namespace {
         bool driving_ = false;
         IntrusiveList pending_;
         IntrusiveList waiters_;
-        IntrusiveList ready_;
         IntMap<int> fdMap_;
         Vector<int> fds_;
 
@@ -72,7 +71,6 @@ namespace {
         void driverLoop(DnsRequest& req);
         void submitPending();
         void rebuildFds();
-        void wakeReady();
 
         static void sockStateCb(void* data, ares_socket_t fd, int readable, int writable) {
             auto self = (DnsResolverImpl*)data;
@@ -129,7 +127,8 @@ void DnsRequest::complete(int status, struct ares_addrinfo* ai) {
     result = pool->make<DnsResultImpl>(pool, status, ai);
 
     if (event) {
-        resolver->ready_.pushBack(this);
+        remove();
+        event->signal();
     }
 }
 
@@ -209,17 +208,10 @@ void DnsResolverImpl::rebuildFds() {
     });
 }
 
-void DnsResolverImpl::wakeReady() {
-    while (auto ready = (DnsRequest*)ready_.popFrontOrNull()) {
-        ready->event->signal();
-    }
-}
-
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
     if (!req.submitted) {
         ares_getaddrinfo(channel_, req.name, nullptr, &hints_, DnsRequest::callback, &req);
         req.submitted = true;
-        wakeReady();
     }
 
     while (!req.result) {
@@ -237,14 +229,10 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
 
         for (size_t i = 0; i < fds_.length(); ++i) {
             ares_process_fd(channel_, fds_[i], fds_[i]);
-            wakeReady();
         }
 
         ares_process_fd(channel_, ARES_SOCKET_BAD, ARES_SOCKET_BAD);
-        wakeReady();
     }
-
-    wakeReady();
 
     lock_.lock();
 
