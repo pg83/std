@@ -71,15 +71,10 @@ namespace {
         void driverLoop(DnsRequest& req);
         void submitPending();
         void rebuildFds();
+        void onSockState(ares_socket_t fd, int readable, int writable);
 
         static void sockStateCb(void* data, ares_socket_t fd, int readable, int writable) {
-            auto self = (DnsResolverImpl*)data;
-
-            if (readable || writable) {
-                self->fdMap_.insert((u64)fd, (int)fd);
-            } else {
-                self->fdMap_.erase((u64)fd);
-            }
+            ((DnsResolverImpl*)data)->onSockState(fd, readable, writable);
         }
     };
 }
@@ -129,6 +124,14 @@ void DnsRequest::complete(int status, struct ares_addrinfo* ai) {
     if (event) {
         remove();
         event->signal();
+    }
+}
+
+void DnsResolverImpl::onSockState(ares_socket_t fd, int readable, int writable) {
+    if (readable || writable) {
+        fdMap_.insert((u64)fd, (int)fd);
+    } else {
+        fdMap_.erase((u64)fd);
     }
 }
 
