@@ -55,6 +55,7 @@ namespace {
     struct DnsResolverImpl: public DnsResolver {
         CoroExecutor* exec_;
         ares_channel channel_;
+        struct ares_addrinfo_hints hints_;
         Mutex lock_;
         bool driving_ = false;
         IntrusiveList pending_;
@@ -146,6 +147,9 @@ DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec)
     opts.sock_state_cb_data = this;
 
     ares_init_options(&channel_, &opts, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES | ARES_OPT_SOCK_STATE_CB);
+
+    memset(&hints_, 0, sizeof(hints_));
+    hints_.ai_family = AF_UNSPEC;
 }
 
 DnsResolverImpl::~DnsResolverImpl() noexcept {
@@ -191,14 +195,9 @@ void DnsResolverImpl::submitPending() {
     batch.xchg(pending_);
     lock_.unlock();
 
-    struct ares_addrinfo_hints hints;
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-
     while (auto r = (DnsRequest*)batch.popFrontOrNull()) {
         waiters_.pushBack(r);
-        ares_getaddrinfo(channel_, r->name, nullptr, &hints, DnsRequest::callback, r);
+        ares_getaddrinfo(channel_, r->name, nullptr, &hints_, DnsRequest::callback, r);
         r->submitted = true;
     }
 }
@@ -218,12 +217,7 @@ void DnsResolverImpl::wakeReady() {
 
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
     if (!req.submitted) {
-        struct ares_addrinfo_hints hints;
-
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_family = AF_UNSPEC;
-
-        ares_getaddrinfo(channel_, req.name, nullptr, &hints, DnsRequest::callback, &req);
+        ares_getaddrinfo(channel_, req.name, nullptr, &hints_, DnsRequest::callback, &req);
         req.submitted = true;
         wakeReady();
     }
