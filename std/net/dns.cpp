@@ -38,9 +38,12 @@ namespace {
     };
 
     struct DnsRequest: public IntrusiveNode {
+        DnsResolverImpl* resolver;
         ObjPool* pool;
         Event* event = nullptr;
         DnsResult* result = nullptr;
+        bool submitted = false;
+        const char* name;
 
         void complete(int status, struct ares_addrinfo* ai);
 
@@ -54,7 +57,9 @@ namespace {
         ares_channel channel_;
         Mutex lock_;
         bool driving_ = false;
+        IntrusiveList pending_;
         IntrusiveList waiters_;
+        IntrusiveList ready_;
         IntMap<int> fdMap_;
         Vector<int> fds_;
 
@@ -64,7 +69,9 @@ namespace {
         DnsResult* resolve(ObjPool* pool, const StringView& name) override;
 
         void driverLoop(DnsRequest& req);
+        void submitPending();
         void rebuildFds();
+        void wakeReady();
 
         static void sockStateCb(void* data, ares_socket_t fd, int readable, int writable) {
             auto self = (DnsResolverImpl*)data;
@@ -121,7 +128,7 @@ void DnsRequest::complete(int status, struct ares_addrinfo* ai) {
     result = pool->make<DnsResultImpl>(pool, status, ai);
 
     if (event) {
-        event->signal();
+        resolver->ready_.pushBack(this);
     }
 }
 
@@ -148,30 +155,17 @@ DnsResolverImpl::~DnsResolverImpl() noexcept {
 DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     DnsRequest req;
 
+    req.resolver = this;
     req.pool = pool;
-
-    struct ares_addrinfo_hints hints;
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-
-    auto zname = pool->intern(name);
+    req.event = nullptr;
+    req.name = (const char*)pool->intern(name).data();
 
     lock_.lock();
-    ares_getaddrinfo(channel_, (const char*)zname.data(), nullptr, &hints, DnsRequest::callback, &req);
-
-    if (req.result) {
-        lock_.unlock();
-
-        return req.result;
-    }
 
     if (driving_) {
-        Event ev(exec_);
-
-        req.event = &ev;
-        waiters_.pushBack(&req);
-        ev.wait(makeRunable([this] {
+        req.event = pool->make<Event>(exec_);
+        pending_.pushBack(&req);
+        req.event->wait(makeRunable([this] {
             lock_.unlock();
         }));
 
@@ -179,7 +173,8 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
             return req.result;
         }
 
-        // woken as new driver, driving_ already true
+        // woken as new driver
+        req.event = nullptr;
     } else {
         driving_ = true;
         lock_.unlock();
@@ -190,6 +185,24 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     return req.result;
 }
 
+void DnsResolverImpl::submitPending() {
+    lock_.lock();
+    IntrusiveList batch;
+    batch.xchg(pending_);
+    lock_.unlock();
+
+    struct ares_addrinfo_hints hints;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+
+    while (auto r = (DnsRequest*)batch.popFrontOrNull()) {
+        waiters_.pushBack(r);
+        ares_getaddrinfo(channel_, r->name, nullptr, &hints, DnsRequest::callback, r);
+        r->submitted = true;
+    }
+}
+
 void DnsResolverImpl::rebuildFds() {
     fds_.clear();
     fdMap_.visit([this](int fd) {
@@ -197,8 +210,26 @@ void DnsResolverImpl::rebuildFds() {
     });
 }
 
+void DnsResolverImpl::wakeReady() {
+    while (auto ready = (DnsRequest*)ready_.popFrontOrNull()) {
+        ready->event->signal();
+    }
+}
+
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
+    if (!req.submitted) {
+        struct ares_addrinfo_hints hints;
+
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_UNSPEC;
+
+        ares_getaddrinfo(channel_, req.name, nullptr, &hints, DnsRequest::callback, &req);
+        req.submitted = true;
+        wakeReady();
+    }
+
     while (!req.result) {
+        submitPending();
         rebuildFds();
 
         struct timeval tv;
@@ -207,18 +238,26 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
 
         u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
 
-        exec_->pollMulti(fds_.mutData(), fds_.length(), PollFlag::In | PollFlag::Out, deadlineUs);
+        (void)deadlineUs;
+        // exec_->pollMulti(fds_.mutData(), fds_.length(), PollFlag::In | PollFlag::Out, deadlineUs);
 
         for (size_t i = 0; i < fds_.length(); ++i) {
             ares_process_fd(channel_, fds_[i], fds_[i]);
+            wakeReady();
         }
 
         ares_process_fd(channel_, ARES_SOCKET_BAD, ARES_SOCKET_BAD);
+        wakeReady();
     }
+
+    wakeReady();
 
     lock_.lock();
 
-    if (auto next = (DnsRequest*)waiters_.popFrontOrNull(); next) {
+    if (auto next = (DnsRequest*)waiters_.popFrontOrNull()) {
+        lock_.unlock();
+        next->event->signal();
+    } else if (auto next = (DnsRequest*)pending_.popFrontOrNull()) {
         lock_.unlock();
         next->event->signal();
     } else {

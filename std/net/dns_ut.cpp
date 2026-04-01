@@ -6,6 +6,9 @@
 #include <std/dbg/insist.h>
 #include <std/mem/obj_pool.h>
 
+#include <stdio.h>
+#include <string.h>
+
 using namespace stl;
 
 STD_TEST_SUITE(DnsResolver) {
@@ -44,6 +47,23 @@ STD_TEST_SUITE(DnsResolver) {
         STD_INSIST(r1->record);
         STD_INSIST(r2->ok());
         STD_INSIST(r2->record);
+    }
+
+    STD_TEST(ResolveStress) {
+        auto pool = ObjPool::fromMemory();
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto resolver = DnsResolver::create(pool.mutPtr(), exec);
+
+        for (int i = 0; i < 100; ++i) {
+            exec->spawn([&, i, rpool = pool->create(pool.mutPtr())] {
+                char buf[64];
+
+                snprintf(buf, sizeof(buf), "host%d.test.invalid", i);
+                resolver->resolve(rpool, StringView((const u8*)buf, strlen(buf)));
+            });
+        }
+
+        exec->join();
     }
 
     STD_TEST(ResolveBadName) {
