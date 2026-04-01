@@ -177,9 +177,9 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     if (driving_) {
         req.event = pool->make<Event>(exec_);
         pending_.pushBack(&req);
-        wakeup_.signal();
         req.event->wait(makeRunable([this] {
             lock_.unlock();
+            wakeup_.signal();
         }));
 
         if (req.result) {
