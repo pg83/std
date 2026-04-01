@@ -239,7 +239,7 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
         u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
 
         (void)deadlineUs;
-        // exec_->pollMulti(fds_.mutData(), fds_.length(), PollFlag::In | PollFlag::Out, deadlineUs);
+        exec_->pollMulti(fds_.mutData(), fds_.length(), PollFlag::In | PollFlag::Out, deadlineUs);
 
         for (size_t i = 0; i < fds_.length(); ++i) {
             ares_process_fd(channel_, fds_[i], fds_[i]);
