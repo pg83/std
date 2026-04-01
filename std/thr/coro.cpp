@@ -316,7 +316,8 @@ void CoroExecutorImpl::pollMulti(PollFD* fds, size_t count, u64 deadlineUs) {
         return sleep(deadlineUs);
     }
 
-    auto pool = ObjPool::fromMemoryRaw();
+    auto opool = ObjPool::fromMemory();
+    auto pool = opool.mutPtr();
     auto ptrs = (PollRequest**)alloca(sizeof(PollRequest*) * count);
     auto cont = currentCont();
     auto reactor = reactors_[splitMix64(fds[0].fd) % reactors_.length()];
