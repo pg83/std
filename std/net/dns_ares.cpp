@@ -26,11 +26,6 @@ using namespace stl;
 
 #if __has_include(<ares.h>)
 namespace {
-    template <typename F>
-    static void reg(ObjPool* pool, F f) {
-        pool->make<ScopedGuard<F>>(f);
-    }
-
     struct DnsResolverImpl;
 
     struct DnsRecordImpl: public DnsRecord {
@@ -96,7 +91,7 @@ DnsRecordImpl::DnsRecordImpl(ObjPool* pool, struct ares_addrinfo_node* node) {
 
 DnsResultImpl::DnsResultImpl(ObjPool* pool, int status, struct ares_addrinfo* ai) {
     if (ai) {
-        reg(pool, [ai] {
+        atExit(pool, [ai] {
             ares_freeaddrinfo(ai);
         });
     }

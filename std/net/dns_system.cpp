@@ -14,11 +14,6 @@
 using namespace stl;
 
 namespace {
-    template <typename F>
-    static void reg(ObjPool* pool, F f) {
-        pool->make<ScopedGuard<F>>(f);
-    }
-
     struct DnsSysRecordImpl: public DnsRecord {
         DnsSysRecordImpl(ObjPool* pool, struct addrinfo* node);
     };
@@ -51,7 +46,7 @@ DnsSysRecordImpl::DnsSysRecordImpl(ObjPool* pool, struct addrinfo* node) {
 
 DnsSysResultImpl::DnsSysResultImpl(ObjPool* pool, int gaierr, struct addrinfo* ai) {
     if (ai) {
-        reg(pool, [ai] {
+        atExit(pool, [ai] {
             freeaddrinfo(ai);
         });
     }

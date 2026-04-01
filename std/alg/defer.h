@@ -16,4 +16,9 @@ namespace stl {
 
         F f;
     };
+
+    template <typename P, typename F>
+    static void atExit(P* pool, F f) {
+        pool->template make<ScopedGuard<F>>(f);
+    }
 }
