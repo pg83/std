@@ -8,6 +8,7 @@
 #include <std/sym/i_map.h>
 #include <std/thr/event.h>
 #include <std/thr/mutex.h>
+#include <std/sys/event_fd.h>
 #include <std/alg/defer.h>
 #include <std/lib/vector.h>
 #include <std/thr/poller.h>
@@ -61,6 +62,7 @@ namespace {
         IntrusiveList waiters_;
         IntMap<int> fdMap_;
         Vector<int> fds_;
+        EventFD wakeup_;
 
         DnsResolverImpl(ObjPool* pool, CoroExecutor* exec);
         ~DnsResolverImpl() noexcept;
@@ -170,6 +172,7 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     if (driving_) {
         req.event = pool->make<Event>(exec_);
         pending_.pushBack(&req);
+        wakeup_.signal();
         req.event->wait(makeRunable([this] {
             lock_.unlock();
         }));
@@ -208,6 +211,7 @@ void DnsResolverImpl::rebuildFds() {
     fdMap_.visit([this](int fd) {
         fds_.pushBack(fd);
     });
+    fds_.pushBack(wakeup_.fd());
 }
 
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
@@ -226,9 +230,11 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
 
         u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
 
+        size_t aresFdCount = fds_.length() - 1;
         exec_->pollMulti(fds_.mutData(), fds_.length(), PollFlag::In | PollFlag::Out, deadlineUs);
+        wakeup_.drain();
 
-        for (size_t i = 0; i < fds_.length(); ++i) {
+        for (size_t i = 0; i < aresFdCount; ++i) {
             ares_process_fd(channel_, fds_[i], fds_[i]);
         }
 
