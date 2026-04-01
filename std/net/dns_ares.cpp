@@ -1,7 +1,9 @@
-#include "dns.h"
+#include "dns_ares.h"
+#include "dns_iface.h"
+
+using namespace stl;
 
 #if __has_include(<ares.h>)
-
 #include <std/sys/crt.h>
 #include <std/lib/list.h>
 #include <std/lib/node.h>
@@ -20,8 +22,6 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-
-using namespace stl;
 
 namespace {
     template <typename F>
@@ -253,20 +253,11 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
     }
 }
 
-DnsResolver* DnsResolver::create(ObjPool* pool, CoroExecutor* exec) {
+DnsResolver* stl::createAresResolver(ObjPool* pool, CoroExecutor* exec) {
     return pool->make<DnsResolverImpl>(pool, exec);
 }
-
 #else
-
-#include "dns_system.h"
-#include <std/thr/pool.h>
-#include <std/mem/obj_pool.h>
-
-using namespace stl;
-
-DnsResolver* DnsResolver::create(ObjPool* pool, CoroExecutor* exec) {
-    return createSystemDnsResolver(pool, exec, ThreadPool::simple(pool, 4));
+DnsResolver* stl::createAresResolver(ObjPool*, CoroExecutor*) {
+    return nullptr;
 }
-
 #endif

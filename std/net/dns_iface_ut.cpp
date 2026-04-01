@@ -1,4 +1,4 @@
-#include "dns.h"
+#include "dns_iface.h"
 
 #include <std/tst/ut.h>
 #include <std/thr/coro.h>

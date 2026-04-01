@@ -1,5 +1,5 @@
 #include "dns_system.h"
-#include "dns.h"
+#include "dns_iface.h"
 
 #include <std/sys/crt.h>
 #include <std/thr/coro.h>
@@ -7,9 +7,9 @@
 #include <std/alg/defer.h>
 #include <std/mem/obj_pool.h>
 
-#include <sys/socket.h>
 #include <netdb.h>
 #include <string.h>
+#include <sys/socket.h>
 
 using namespace stl;
 
