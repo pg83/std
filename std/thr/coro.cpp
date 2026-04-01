@@ -313,7 +313,7 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
 
 void CoroExecutorImpl::pollMulti(PollFD* fds, size_t count, u64 deadlineUs) {
     if (count == 0) {
-        return sleep(deadlineUs);
+        return this->sleep(deadlineUs);
     }
 
     auto opool = ObjPool::fromMemory();

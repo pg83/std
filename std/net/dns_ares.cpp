@@ -133,11 +133,12 @@ void DnsRequest::complete(int status, struct ares_addrinfo* ai) {
 }
 
 void DnsResolverImpl::onSockState(ares_socket_t fd, int readable, int writable) {
-    if (readable || writable) {
-        u32 flags = (readable ? PollFlag::In : 0) | (writable ? PollFlag::Out : 0);
-        fdMap_.insert((u64)fd, (int)fd, flags, 0u);
+    u32 flags = (readable ? PollFlag::In : 0) | (writable ? PollFlag::Out : 0);
+
+    if (flags) {
+        fdMap_.insert(fd, (int)fd, flags, 0u);
     } else {
-        fdMap_.erase((u64)fd);
+        fdMap_.erase(fd);
     }
 }
 
@@ -149,7 +150,7 @@ DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec)
     ares_options opts;
 
     memset(&opts, 0, sizeof(opts));
-    opts.timeout = 5000;
+    opts.timeout = 500;
     opts.tries = 3;
     opts.sock_state_cb = sockStateCb;
     opts.sock_state_cb_data = this;
@@ -210,9 +211,11 @@ void DnsResolverImpl::submitPending() {
 
 void DnsResolverImpl::rebuildFds() {
     fds_.clear();
+
     fdMap_.visit([this](PollFD pfd) {
         fds_.pushBack(pfd);
     });
+
     fds_.pushBack({wakeup_.fd(), PollFlag::In, 0});
 }
 
@@ -231,7 +234,6 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
         ares_timeout(channel_, nullptr, &tv);
 
         u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
-
         size_t aresFdCount = fds_.length() - 1;
         exec_->pollMulti(fds_.mutData(), fds_.length(), deadlineUs);
         wakeup_.drain();
