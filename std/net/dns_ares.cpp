@@ -72,9 +72,9 @@ namespace {
 
         DnsResult* resolve(ObjPool* pool, const StringView& name) override;
 
-        void driverLoop(DnsRequest& req);
-        void submitPending();
         void rebuildFds();
+        void submitPending();
+        void driverLoop(DnsRequest& req);
         void onSockState(ares_socket_t fd, int readable, int writable);
 
         static void sockStateCb(void* data, ares_socket_t fd, int readable, int writable) {

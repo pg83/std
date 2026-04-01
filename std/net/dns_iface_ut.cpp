@@ -49,9 +49,9 @@ STD_TEST_SUITE(DnsResolver) {
         STD_INSIST(r2->record);
     }
 
-    STD_TEST(ResolveStress) {
+    STD_TEST(_ResolveStress) {
         auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto exec = CoroExecutor::create(pool.mutPtr(), 8);
 
         DnsResolver* resolvers[4];
 
@@ -59,7 +59,7 @@ STD_TEST_SUITE(DnsResolver) {
             resolvers[j] = DnsResolver::create(pool.mutPtr(), exec);
         }
 
-        for (int i = 0; i < 100; ++i) {
+        for (int i = 0; i < 100000; ++i) {
             exec->spawn([&, i, rpool = pool->create(pool.mutPtr())] {
                 char buf[64];
 
