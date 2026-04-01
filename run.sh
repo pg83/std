@@ -14,6 +14,7 @@ EXTRA=
     lib/c++ \
     lib/kernel \
     lib/aws/lc \
+    lib/c/ares \
     ${EXTRA} \
     -- ./build.sh
 

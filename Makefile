@@ -10,9 +10,9 @@ TSTS = $(wildcard tst/*.cpp) $(subst _ut.u,_ut.cpp,$(filter %.u,$(TMPS)))
 TSTO = $(TSTS:%=%.o)
 TSTA = tst/test
 
-OPTF = -O2 -g -Werror
+OPTF = -O2 -g
 ifneq ($(filter x86_64%,$(shell $(CXX) -dumpmachine)),)
-OPTF += -mcx16
+OPTF += -mcx16 -Werror
 endif
 CXXF = -I. -W -Wall -std=c++26 $(OPTF) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $(EXTRA)
 

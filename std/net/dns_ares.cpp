@@ -1,28 +1,30 @@
 #include "dns_ares.h"
 #include "dns_iface.h"
 
-using namespace stl;
-
-#if __has_include(<ares.h>)
 #include <std/sys/crt.h>
 #include <std/lib/list.h>
 #include <std/lib/node.h>
-#include <std/lib/vector.h>
-#include <std/sym/i_map.h>
 #include <std/thr/coro.h>
+#include <std/sym/i_map.h>
 #include <std/thr/event.h>
 #include <std/thr/mutex.h>
 #include <std/alg/defer.h>
+#include <std/lib/vector.h>
 #include <std/thr/poller.h>
 #include <std/mem/obj_pool.h>
 
-#include <ares.h>
+#if __has_include(<ares.h>)
+    #include <ares.h>
+#endif
 
 #include <string.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+using namespace stl;
+
+#if __has_include(<ares.h>)
 namespace {
     template <typename F>
     static void reg(ObjPool* pool, F f) {
@@ -229,7 +231,6 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
 
         u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
 
-        (void)deadlineUs;
         exec_->pollMulti(fds_.mutData(), fds_.length(), PollFlag::In | PollFlag::Out, deadlineUs);
 
         for (size_t i = 0; i < fds_.length(); ++i) {
