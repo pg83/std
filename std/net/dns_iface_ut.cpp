@@ -4,6 +4,7 @@
 #include <std/thr/coro.h>
 #include <std/thr/async.h>
 #include <std/dbg/insist.h>
+#include <std/lib/vector.h>
 #include <std/mem/obj_pool.h>
 
 #include <stdio.h>
@@ -53,10 +54,10 @@ STD_TEST_SUITE(DnsResolver) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 8);
 
-        DnsResolver* resolvers[4];
+        Vector<DnsResolver*> resolvers;
 
         for (int j = 0; j < 4; ++j) {
-            resolvers[j] = DnsResolver::create(pool.mutPtr(), exec);
+            resolvers.pushBack(DnsResolver::create(pool.mutPtr(), exec));
         }
 
         for (int i = 0; i < 100000; ++i) {
@@ -64,7 +65,7 @@ STD_TEST_SUITE(DnsResolver) {
                 char buf[64];
 
                 snprintf(buf, sizeof(buf), "host%d.test.invalid", i);
-                resolvers[i % 4]->resolve(rpool, StringView((const u8*)buf, strlen(buf)));
+                resolvers[i % resolvers.length()]->resolve(rpool, StringView((const u8*)buf, strlen(buf)));
             });
         }
 
