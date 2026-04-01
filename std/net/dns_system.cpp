@@ -30,6 +30,7 @@ namespace {
     struct DnsSysResolverImpl: public DnsResolver {
         CoroExecutor* exec_;
         ThreadPool* tp_;
+        struct addrinfo hints_;
 
         DnsSysResolverImpl(CoroExecutor* exec, ThreadPool* tp);
 
@@ -74,6 +75,9 @@ DnsSysResolverImpl::DnsSysResolverImpl(CoroExecutor* exec, ThreadPool* tp)
     : exec_(exec)
     , tp_(tp)
 {
+    memset(&hints_, 0, sizeof(hints_));
+    hints_.ai_family = AF_UNSPEC;
+    hints_.ai_socktype = SOCK_STREAM;
 }
 
 DnsResult* DnsSysResolverImpl::resolve(ObjPool* pool, const StringView& name) {
@@ -82,12 +86,7 @@ DnsResult* DnsSysResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     int gaierr = 0;
 
     exec_->offload(tp_, [&] {
-        struct addrinfo hints;
-
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_family = AF_UNSPEC;
-        hints.ai_socktype = SOCK_STREAM;
-        gaierr = getaddrinfo(host, nullptr, &hints, &ai);
+        gaierr = getaddrinfo(host, nullptr, &hints_, &ai);
     });
 
     return pool->make<DnsSysResultImpl>(pool, gaierr, ai);
