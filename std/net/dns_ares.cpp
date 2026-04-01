@@ -39,7 +39,6 @@ namespace {
     };
 
     struct DnsRequest: public IntrusiveNode {
-        DnsResolverImpl* resolver;
         ObjPool* pool;
         Event* event = nullptr;
         DnsResult* result = nullptr;
@@ -167,7 +166,6 @@ DnsResolverImpl::~DnsResolverImpl() noexcept {
 DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     DnsRequest req;
 
-    req.resolver = this;
     req.pool = pool;
     req.event = pool->make<Event>(exec_);
     req.name = (const char*)pool->intern(name).data();
