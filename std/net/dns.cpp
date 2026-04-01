@@ -53,7 +53,6 @@ namespace {
     };
 
     struct DnsResolverImpl: public DnsResolver {
-        ObjPool* pool_;
         CoroExecutor* exec_;
         ares_channel channel_;
         struct ares_addrinfo_hints hints_;
@@ -137,10 +136,9 @@ void DnsResolverImpl::onSockState(ares_socket_t fd, int readable, int writable) 
 }
 
 DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec)
-    : pool_(ObjPool::create(pool))
-    , exec_(exec)
+    : exec_(exec)
     , lock_(Mutex::spinLock(exec))
-    , fdMap_(pool_)
+    , fdMap_(ObjPool::create(pool))
 {
     ares_options opts;
 
