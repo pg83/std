@@ -169,14 +169,14 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
 
     req.resolver = this;
     req.pool = pool;
-    req.event = nullptr;
+    req.event = pool->make<Event>(exec_);
     req.name = (const char*)pool->intern(name).data();
 
     lock_.lock();
 
     if (driving_) {
-        req.event = pool->make<Event>(exec_);
         pending_.pushBack(&req);
+
         req.event->wait(makeRunable([this] {
             lock_.unlock();
             wakeup_.signal();
@@ -185,14 +185,12 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
         if (req.result) {
             return req.result;
         }
-
-        // woken as new driver
-        req.event = nullptr;
     } else {
         driving_ = true;
         lock_.unlock();
     }
 
+    req.event = nullptr;
     driverLoop(req);
 
     return req.result;
