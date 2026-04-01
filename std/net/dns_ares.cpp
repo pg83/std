@@ -166,10 +166,11 @@ DnsResolverImpl::~DnsResolverImpl() noexcept {
 }
 
 DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
+    Event ev(exec_);
     DnsRequest req;
 
     req.pool = pool;
-    req.event = pool->make<Event>(exec_);
+    req.event = &ev;
     req.name = (const char*)pool->intern(name).data();
 
     lock_.lock();
