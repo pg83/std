@@ -61,11 +61,12 @@ STD_TEST_SUITE(DnsResolver) {
         }
 
         for (int i = 0; i < 100000; ++i) {
-            exec->spawn([&, i, rpool = pool->create(pool.mutPtr())] {
+            exec->spawn([&, i] {
+                auto rpool = ObjPool::fromMemory();
                 char buf[64];
 
                 snprintf(buf, sizeof(buf), "host%d.test.invalid", i);
-                resolvers[i % resolvers.length()]->resolve(rpool, StringView((const u8*)buf, strlen(buf)));
+                resolvers[i % resolvers.length()]->resolve(rpool.mutPtr(), StringView((const u8*)buf, strlen(buf)));
             });
         }
 
