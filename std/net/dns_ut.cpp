@@ -52,14 +52,19 @@ STD_TEST_SUITE(DnsResolver) {
     STD_TEST(ResolveStress) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        auto resolver = DnsResolver::create(pool.mutPtr(), exec);
+
+        DnsResolver* resolvers[4];
+
+        for (int j = 0; j < 4; ++j) {
+            resolvers[j] = DnsResolver::create(pool.mutPtr(), exec);
+        }
 
         for (int i = 0; i < 100; ++i) {
             exec->spawn([&, i, rpool = pool->create(pool.mutPtr())] {
                 char buf[64];
 
                 snprintf(buf, sizeof(buf), "host%d.test.invalid", i);
-                resolver->resolve(rpool, StringView((const u8*)buf, strlen(buf)));
+                resolvers[i % 4]->resolve(rpool, StringView((const u8*)buf, strlen(buf)));
             });
         }
 
