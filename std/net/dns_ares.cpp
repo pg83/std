@@ -8,10 +8,11 @@
 #include <std/sym/i_map.h>
 #include <std/thr/event.h>
 #include <std/thr/mutex.h>
-#include <std/sys/event_fd.h>
+#include <std/thr/guard.h>
 #include <std/alg/defer.h>
 #include <std/lib/vector.h>
 #include <std/thr/poller.h>
+#include <std/sys/event_fd.h>
 #include <std/mem/obj_pool.h>
 
 #if __has_include(<ares.h>)
@@ -198,10 +199,11 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
 }
 
 void DnsResolverImpl::submitPending() {
-    lock_.lock();
     IntrusiveList batch;
-    batch.xchg(pending_);
-    lock_.unlock();
+
+    LockGuard(lock_).run([&] {
+        batch.xchg(pending_);
+    });
 
     while (auto r = (DnsRequest*)batch.popFrontOrNull()) {
         waiters_.pushBack(r);
