@@ -60,8 +60,8 @@ namespace {
         bool driving_ = false;
         IntrusiveList pending_;
         IntrusiveList waiters_;
-        IntMap<int> fdMap_;
-        Vector<int> fds_;
+        IntMap<PollFD> fdMap_;
+        Vector<PollFD> fds_;
         EventFD wakeup_;
 
         DnsResolverImpl(ObjPool* pool, CoroExecutor* exec);
@@ -134,7 +134,8 @@ void DnsRequest::complete(int status, struct ares_addrinfo* ai) {
 
 void DnsResolverImpl::onSockState(ares_socket_t fd, int readable, int writable) {
     if (readable || writable) {
-        fdMap_.insert((u64)fd, (int)fd);
+        u32 flags = (readable ? PollFlag::In : 0) | (writable ? PollFlag::Out : 0);
+        fdMap_.insert((u64)fd, (int)fd, flags, 0u);
     } else {
         fdMap_.erase((u64)fd);
     }
@@ -209,10 +210,10 @@ void DnsResolverImpl::submitPending() {
 
 void DnsResolverImpl::rebuildFds() {
     fds_.clear();
-    fdMap_.visit([this](int fd) {
-        fds_.pushBack(fd);
+    fdMap_.visit([this](PollFD pfd) {
+        fds_.pushBack(pfd);
     });
-    fds_.pushBack(wakeup_.fd());
+    fds_.pushBack({wakeup_.fd(), PollFlag::In, 0});
 }
 
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
@@ -232,11 +233,13 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
         u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
 
         size_t aresFdCount = fds_.length() - 1;
-        exec_->pollMulti(fds_.mutData(), fds_.length(), PollFlag::In | PollFlag::Out, deadlineUs);
+        exec_->pollMulti(fds_.mutData(), fds_.length(), deadlineUs);
         wakeup_.drain();
 
         for (size_t i = 0; i < aresFdCount; ++i) {
-            ares_process_fd(channel_, fds_[i], fds_[i]);
+            ares_socket_t rfd = (fds_[i].out & PollFlag::In) ? fds_[i].fd : ARES_SOCKET_BAD;
+            ares_socket_t wfd = (fds_[i].out & PollFlag::Out) ? fds_[i].fd : ARES_SOCKET_BAD;
+            ares_process_fd(channel_, rfd, wfd);
         }
 
         ares_process_fd(channel_, ARES_SOCKET_BAD, ARES_SOCKET_BAD);

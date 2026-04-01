@@ -638,8 +638,9 @@ STD_TEST_SUITE(CoroPoll) {
         u32 result = 0;
 
         exec->spawn([&] {
-            int fds[] = {r1.get(), r2.get()};
-            result = exec->pollMulti(fds, 2, PollFlag::In, UINT64_MAX);
+            PollFD fds[] = {{r1.get(), PollFlag::In, 0}, {r2.get(), PollFlag::In, 0}};
+            exec->pollMulti(fds, 2, UINT64_MAX);
+            result = fds[0].out | fds[1].out;
         });
 
         exec->spawn([&] {
@@ -660,8 +661,9 @@ STD_TEST_SUITE(CoroPoll) {
         u32 result = 0;
 
         exec->spawn([&] {
-            int fds[] = {r1.get(), r2.get()};
-            result = exec->pollMulti(fds, 2, PollFlag::In, UINT64_MAX);
+            PollFD fds[] = {{r1.get(), PollFlag::In, 0}, {r2.get(), PollFlag::In, 0}};
+            exec->pollMulti(fds, 2, UINT64_MAX);
+            result = fds[0].out | fds[1].out;
         });
 
         exec->spawn([&] {
@@ -681,8 +683,9 @@ STD_TEST_SUITE(CoroPoll) {
         createPipeFD(r2, w2);
 
         auto f = async(exec, [&] {
-            int fds[] = {r1.get(), r2.get()};
-            return exec->pollMulti(fds, 2, PollFlag::In, 1);
+            PollFD fds[] = {{r1.get(), PollFlag::In, 0}, {r2.get(), PollFlag::In, 0}};
+            exec->pollMulti(fds, 2, 1);
+            return fds[0].out | fds[1].out;
         });
 
         STD_INSIST(f.wait() == 0);
@@ -701,13 +704,17 @@ STD_TEST_SUITE(CoroPoll) {
         u32 result = 0;
 
         exec->spawn([&] {
-            int fds[N];
+            PollFD fds[N];
 
             for (int i = 0; i < N; ++i) {
-                fds[i] = readEnds[i].get();
+                fds[i] = {readEnds[i].get(), PollFlag::In, 0};
             }
 
-            result = exec->pollMulti(fds, N, PollFlag::In, UINT64_MAX);
+            exec->pollMulti(fds, N, UINT64_MAX);
+
+            for (int i = 0; i < N; ++i) {
+                result |= fds[i].out;
+            }
         });
 
         exec->spawn([&] {

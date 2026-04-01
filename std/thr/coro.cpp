@@ -157,7 +157,7 @@ namespace {
         SemaphoreIface* createSemaphore(size_t initial) override;
 
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
-        u32 pollMulti(int* fds, size_t count, u32 flags, u64 deadlineUs) override;
+        void pollMulti(PollFD* fds, size_t count, u64 deadlineUs) override;
         void offloadRun(ThreadPool* pool, Runable&& work) override;
         ssize_t pread(int fd, void* buf, size_t len, off_t offset) override;
         ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) override;
@@ -311,15 +311,15 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
     return req.result;
 }
 
-u32 CoroExecutorImpl::pollMulti(int* fds, size_t count, u32 flags, u64 deadlineUs) {
+void CoroExecutorImpl::pollMulti(PollFD* fds, size_t count, u64 deadlineUs) {
     if (count == 0) {
-        return (sleep(deadlineUs), 0);
+        return sleep(deadlineUs);
     }
 
     auto pool = ObjPool::fromMemoryRaw();
     auto ptrs = (PollRequest**)alloca(sizeof(PollRequest*) * count);
     auto cont = currentCont();
-    auto reactor = reactors_[splitMix64(fds[0]) % reactors_.length()];
+    auto reactor = reactors_[splitMix64(fds[0].fd) % reactors_.length()];
 
     PollMultiRequest* last = nullptr;
 
@@ -328,8 +328,8 @@ u32 CoroExecutorImpl::pollMulti(int* fds, size_t count, u32 flags, u64 deadlineU
 
         req->cont = cont;
         req->reactor = reactor;
-        req->fd = fds[i];
-        req->flags = flags;
+        req->fd = fds[i].fd;
+        req->flags = fds[i].in;
         req->deadline = deadlineUs;
 
         req->next = last;
@@ -343,16 +343,9 @@ u32 CoroExecutorImpl::pollMulti(int* fds, size_t count, u32 flags, u64 deadlineU
 
     reactor->processRequests(ptrs, count);
 
-    u32 result = 0;
-
     for (size_t i = 0; i < count; ++i) {
-        if (auto r = (PollMultiRequest*)ptrs[i]; r->result) {
-            result = r->result;
-            break;
-        }
+        fds[i].out = ((PollMultiRequest*)ptrs[i])->result;
     }
-
-    return result;
 }
 
 void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {
