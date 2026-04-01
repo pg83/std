@@ -20,6 +20,7 @@ namespace {
 
     struct DnsSysResultImpl: public DnsResult {
         DnsSysResultImpl(ObjPool* pool, int gaierr, struct addrinfo* ai);
+        StringView errorDescr() const noexcept override;
     };
 
     struct DnsSysResolverImpl: public DnsResolver {
@@ -42,6 +43,10 @@ DnsSysRecordImpl::DnsSysRecordImpl(ObjPool* pool, struct addrinfo* node) {
     } else {
         next = nullptr;
     }
+}
+
+StringView DnsSysResultImpl::errorDescr() const noexcept {
+    return error ? gai_strerror(error) : StringView{};
 }
 
 DnsSysResultImpl::DnsSysResultImpl(ObjPool* pool, int gaierr, struct addrinfo* ai) {

@@ -72,6 +72,21 @@ STD_TEST_SUITE(DnsResolver) {
         exec->join();
     }
 
+    STD_TEST(ResolveInvalidName) {
+        auto pool = ObjPool::fromMemory();
+        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto resolver = DnsResolver::create(pool.mutPtr(), exec);
+
+        auto f = async(exec, [&, rpool = pool->create(pool.mutPtr())] {
+            return resolver->resolve(rpool, u8"bad name");
+        });
+
+        auto result = f.wait();
+
+        STD_INSIST(!result->ok());
+        STD_INSIST(!result->errorDescr().empty());
+    }
+
     STD_TEST(ResolveBadName) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);

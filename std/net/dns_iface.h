@@ -23,6 +23,8 @@ namespace stl {
         bool ok() const noexcept {
             return error == 0;
         }
+
+        virtual StringView errorDescr() const noexcept = 0;
     };
 
     struct DnsResolver {

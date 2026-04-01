@@ -35,6 +35,7 @@ namespace {
 
     struct DnsResultImpl: public DnsResult {
         DnsResultImpl(ObjPool* pool, int status, struct ares_addrinfo* ai);
+        StringView errorDescr() const noexcept override;
     };
 
     struct DnsRequest: public IntrusiveNode {
@@ -89,6 +90,10 @@ DnsRecordImpl::DnsRecordImpl(ObjPool* pool, struct ares_addrinfo_node* node) {
     } else {
         next = nullptr;
     }
+}
+
+StringView DnsResultImpl::errorDescr() const noexcept {
+    return error ? ares_strerror(error) : StringView{};
 }
 
 DnsResultImpl::DnsResultImpl(ObjPool* pool, int status, struct ares_addrinfo* ai) {
