@@ -260,6 +260,7 @@ u32 ReactorState::poll(int fd, u32 flags, u64 deadlineUs) {
     queueMutex_.lock();
     queue_.insert(&req);
 
+    // clang-format off
     exec_->parkWith(makeRunable([this, needsWakeup = (queue_.min() == &req)] {
         queueMutex_.unlock();
 
@@ -267,6 +268,7 @@ u32 ReactorState::poll(int fd, u32 flags, u64 deadlineUs) {
             wakeup();
         }
     }), &req.task);
+    // clang-format on
 
     return req.result;
 }
@@ -307,6 +309,7 @@ size_t ReactorState::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 
         queue_.insert(reqs[i]);
     }
 
+    // clang-format off
     exec_->parkWith(makeRunable([this, reqs, count, &task] {
         for (size_t i = 0; i < count; ++i) {
             reqs[i]->task = task;
@@ -315,6 +318,7 @@ size_t ReactorState::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 
         queueMutex_.unlock();
         wakeup();
     }), &task);
+    // clang-format on
 
     size_t nout = 0;
 

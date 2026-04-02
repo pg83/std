@@ -148,20 +148,21 @@ namespace {
         }
 
         EventIface* createEvent() override;
-        CondVarIface* createCondVar() override;
         ThreadIface* createThread() override;
+        CondVarIface* createCondVar() override;
         SemaphoreIface* createSemaphore(size_t initial) override;
 
-        u32 poll(int fd, u32 flags, u64 deadlineUs) override;
-        void parkWith(Runable&&, Task**) noexcept override;
-        size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) override;
-        void offloadRun(ThreadPool* pool, Runable&& work) override;
-        ssize_t pread(int fd, void* buf, size_t len, off_t offset) override;
-        ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) override;
         int fsync(int fd) override;
         int fdatasync(int fd) override;
-    };
+        ssize_t pread(int fd, void* buf, size_t len, off_t offset) override;
+        ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) override;
 
+        void parkWith(Runable&&, Task**) noexcept override;
+        void offloadRun(ThreadPool* pool, Runable&& work) override;
+
+        u32 poll(int fd, u32 flags, u64 deadlineUs) override;
+        size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) override;
+    };
 }
 
 CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads, size_t reactors)
