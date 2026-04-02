@@ -79,8 +79,8 @@ namespace {
         void cancelInternal(InternalReq* req);
         void processEvent(PollFD* ev, IntrusiveList& ready) noexcept;
 
-        u32 poll(PollFD pfd, u64 deadlineUs) override;
-        size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) override;
+        u32 pollOne(PollFD pfd, u64 deadlineUs);
+        size_t poll(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) override;
     };
 }
 
@@ -252,7 +252,7 @@ void ReactorState::run() noexcept {
     }
 }
 
-u32 ReactorState::poll(PollFD pfd, u64 deadlineUs) {
+u32 ReactorState::pollOne(PollFD pfd, u64 deadlineUs) {
     ReqCommon common;
 
     common.deadline = deadlineUs;
@@ -279,9 +279,20 @@ u32 ReactorState::poll(PollFD pfd, u64 deadlineUs) {
     return req.result;
 }
 
-size_t ReactorState::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
+size_t ReactorState::poll(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
     if (count == 0) {
-        poll({-1, 0}, deadlineUs);
+        pollOne({-1, 0}, deadlineUs);
+
+        return 0;
+    }
+
+    if (count == 1) {
+        auto res = pollOne(in[0], deadlineUs);
+
+        if (res) {
+            out[0] = {in[0].fd, res};
+            return 1;
+        }
 
         return 0;
     }

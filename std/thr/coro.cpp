@@ -160,7 +160,6 @@ namespace {
         void parkWith(Runable&&, Task**) noexcept override;
         void offloadRun(ThreadPool* pool, Runable&& work) override;
 
-        u32 poll(int fd, u32 flags, u64 deadlineUs) override;
         size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) override;
     };
 }
@@ -263,10 +262,6 @@ SpawnParams::SpawnParams() noexcept
 {
 }
 
-u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
-    return reactors_[splitMix64(fd) % reactors_.length()]->poll({fd, flags}, deadlineUs);
-}
-
 void CoroExecutorImpl::parkWith(Runable&& afterSuspend, Task** out) noexcept {
     auto cont = currentCont();
     *out = cont;
@@ -278,7 +273,7 @@ size_t CoroExecutorImpl::pollMulti(const PollFD* in, PollFD* out, size_t count, 
         return (this->sleep(deadlineUs), 0);
     }
 
-    return reactors_[splitMix64(in[0].fd) % reactors_.length()]->pollMulti(in, out, count, deadlineUs);
+    return reactors_[splitMix64(in[0].fd) % reactors_.length()]->poll(in, out, count, deadlineUs);
 }
 
 void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {
@@ -563,6 +558,17 @@ void CoroExecutor::sleep() {
 
 void CoroExecutor::sleepTout(u64 timeoutUs) {
     sleep(monotonicNowUs() + timeoutUs);
+}
+
+u32 CoroExecutor::poll(int fd, u32 flags, u64 deadlineUs) {
+    PollFD in{fd, flags};
+    PollFD out{};
+
+    if (pollMulti(&in, &out, 1, deadlineUs)) {
+        return out.flags;
+    }
+
+    return 0;
 }
 
 u32 CoroExecutor::poll(int fd, u32 flags) {
