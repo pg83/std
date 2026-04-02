@@ -30,9 +30,11 @@ namespace stl {
 
         template <typename V>
         void wait(V v, u64 deadlineUs) {
+            // clang-format off
             waitBase(makeVisitor([v](void* ptr) {
-                         v((PollFD*)ptr);
-                     }), deadlineUs);
+                v((PollFD*)ptr);
+            }), deadlineUs);
+            // clang-format on
         }
 
         static PollerIface* create(ObjPool* pool);
