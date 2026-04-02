@@ -313,8 +313,7 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
 
 size_t CoroExecutorImpl::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
     if (count == 0) {
-        this->sleep(deadlineUs);
-        return 0;
+        return (this->sleep(deadlineUs), 0);
     }
 
     auto opool = ObjPool::fromMemory();
@@ -348,10 +347,11 @@ size_t CoroExecutorImpl::pollMulti(const PollFD* in, PollFD* out, size_t count, 
     size_t nout = 0;
 
     for (size_t i = 0; i < count; ++i) {
-        u32 res = ((PollMultiRequest*)ptrs[i])->result;
-
-        if (res) {
-            out[nout++] = {in[i].fd, res};
+        if (auto res = ((PollMultiRequest*)ptrs[i])->result; res) {
+            out[nout++] = {
+                in[i].fd,
+                res,
+            };
         }
     }
 
