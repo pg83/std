@@ -447,7 +447,7 @@ CondVarIface* CoroExecutorImpl::createCondVar() {
         IntrusiveList waiters_;
 
         CoroCondVarImpl(CoroExecutorImpl* exec) noexcept
-            : queueMutex_(exec)
+            : queueMutex_(Mutex::spinLock(exec))
         {
         }
 
