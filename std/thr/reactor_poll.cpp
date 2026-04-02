@@ -44,7 +44,6 @@ namespace {
         ReqCommon* common = nullptr;
 
         virtual void complete(u32 res, IntrusiveList& ready) noexcept;
-        virtual ~InternalReq() = default;
     };
 
     struct InternalMultiReq: public InternalReq {

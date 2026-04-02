@@ -49,8 +49,8 @@ namespace stl {
         virtual u32 random() noexcept = 0;
         virtual Cont* me() const noexcept = 0;
         virtual Cont* spawnRun(SpawnParams params) = 0;
-        virtual u32 poll(int fd, u32 flags, u64 deadlineUs) = 0;
         virtual void parkWith(Runable&&, Task**) noexcept = 0;
+        virtual u32 poll(int fd, u32 flags, u64 deadlineUs) = 0;
         virtual void offloadRun(ThreadPool* pool, Runable&& work) = 0;
         virtual size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) = 0;
 
