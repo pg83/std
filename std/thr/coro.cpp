@@ -5,6 +5,7 @@
 #include "guard.h"
 #include "thread.h"
 #include "poller.h"
+#include "poll_fd.h"
 #include "context.h"
 #include "cond_var.h"
 #include "semaphore.h"

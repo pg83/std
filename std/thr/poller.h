@@ -1,12 +1,12 @@
 #pragma once
 
-#include "poll_fd.h"
-
 #include <std/sys/types.h>
 #include <std/lib/visitor.h>
 
 namespace stl {
     class ObjPool;
+
+    struct PollFD;
 
     struct PollerIface {
         // add or re-arm fd with ONESHOT semantics

@@ -6,6 +6,7 @@
 #include "guard.h"
 #include "thread.h"
 #include "poller.h"
+#include "poll_fd.h"
 
 #include <std/mem/new.h>
 #include <std/sys/crt.h>
