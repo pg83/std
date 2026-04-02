@@ -78,7 +78,7 @@ namespace {
         void drainWakeup() noexcept;
         void run() noexcept override;
         void cancelInternal(InternalReq* req);
-        void processEvent(PollEvent* ev, IntrusiveList& ready) noexcept;
+        void processEvent(PollFD* ev, IntrusiveList& ready) noexcept;
 
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
         size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) override;
@@ -133,7 +133,7 @@ ReactorState::ReactorState(CoroExecutor* exec, ThreadPool* p, ObjPool* opool)
     , fdMap_(ObjPool::create(opool))
     , queueMutex_(Mutex::spinLock(exec))
 {
-    poller->arm(wakeEv_.fd(), PollFlag::In, nullptr);
+    poller->arm({wakeEv_.fd(), PollFlag::In});
     thread_ = opool->make<Thread>(*this);
 }
 
@@ -144,7 +144,7 @@ void ReactorState::rearmOrDisarm(int fd) {
         poller->disarm(fd);
         fdMap_.erase(fd);
     } else {
-        poller->arm(fd, entry->flags(), (void*)(uintptr_t)(fd + 1));
+        poller->arm({fd, entry->flags()});
     }
 }
 
@@ -189,15 +189,13 @@ void ReactorState::drainQueue() {
             auto& entry = fdMap_[req->fd];
 
             entry.pushBack(req);
-            poller->arm(req->fd, entry.flags(), (void*)(uintptr_t)(req->fd + 1));
+            poller->arm({(int)req->fd, entry.flags()});
         }
     });
 }
 
-void ReactorState::processEvent(PollEvent* ev, IntrusiveList& ready) noexcept {
-    int fd = (uintptr_t)ev->data - 1;
-
-    if (auto entry = fdMap_.find(fd); entry) {
+void ReactorState::processEvent(PollFD* ev, IntrusiveList& ready) noexcept {
+    if (auto entry = fdMap_.find(ev->fd); entry) {
         for (auto n = entry->mutFront(), e = entry->mutEnd(); n != e;) {
             if (auto req = (InternalReq*)exchange(n, n->next); req->flags & ev->flags) {
                 req->remove();
@@ -206,7 +204,7 @@ void ReactorState::processEvent(PollEvent* ev, IntrusiveList& ready) noexcept {
             }
         }
 
-        rearmOrDisarm(fd);
+        rearmOrDisarm(ev->fd);
     }
 }
 
@@ -216,12 +214,12 @@ void ReactorState::run() noexcept {
 
         IntrusiveList ready;
 
-        poller->wait([this, &ready](PollEvent* ev) {
-            if (ev->data) {
-                processEvent(ev, ready);
-            } else {
+        poller->wait([this, &ready](PollFD* ev) {
+            if (ev->fd == wakeEv_.fd()) {
                 drainWakeup();
-                poller->arm(wakeEv_.fd(), PollFlag::In, nullptr);
+                poller->arm({wakeEv_.fd(), PollFlag::In});
+            } else {
+                processEvent(ev, ready);
             }
         }, min(timers.earliest(), sleepers.earliest()));
 

@@ -38,10 +38,7 @@ namespace stl {
         }
     };
 
-    struct PollFD {
-        int fd;
-        u32 flags;
-    };
+    struct PollFD;
 
     struct CoroExecutor {
         virtual void join() noexcept = 0;

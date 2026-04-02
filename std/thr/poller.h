@@ -13,14 +13,14 @@ namespace stl {
         constexpr u32 Hup = 8;
     }
 
-    struct PollEvent {
-        void* data;
+    struct PollFD {
+        int fd;
         u32 flags;
     };
 
     struct PollerIface {
         // add or re-arm fd with ONESHOT semantics
-        virtual void arm(int fd, u32 flags, void* data) = 0;
+        virtual void arm(PollFD pfd) = 0;
         // remove fd from poller
         virtual void disarm(int fd) = 0;
         // wait for events, always finite timeout
@@ -31,7 +31,7 @@ namespace stl {
         template <typename V>
         void wait(V v, u64 deadlineUs) {
             waitBase(makeVisitor([v](void* ptr) {
-                         v((PollEvent*)ptr);
+                         v((PollFD*)ptr);
                      }), deadlineUs);
         }
 

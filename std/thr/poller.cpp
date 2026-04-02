@@ -90,15 +90,15 @@ namespace {
             ::close(epfd_);
         }
 
-        void arm(int fd, u32 flags, void* data) override {
+        void arm(PollFD pfd) override {
             epoll_event ev{};
 
-            ev.data.ptr = data;
-            ev.events = toEpollFlags(flags) | EPOLLONESHOT;
+            ev.data.fd = pfd.fd;
+            ev.events = toEpollFlags(pfd.flags) | EPOLLONESHOT;
 
-            if (epoll_ctl(epfd_, EPOLL_CTL_MOD, fd, &ev) < 0) {
+            if (epoll_ctl(epfd_, EPOLL_CTL_MOD, pfd.fd, &ev) < 0) {
                 STD_INSIST(errno == ENOENT);
-                STD_INSIST(epoll_ctl(epfd_, EPOLL_CTL_ADD, fd, &ev) == 0);
+                STD_INSIST(epoll_ctl(epfd_, EPOLL_CTL_ADD, pfd.fd, &ev) == 0);
             }
         }
 
@@ -116,7 +116,7 @@ namespace {
             }
 
             for (auto& e : range(raw, raw + n)) {
-                PollEvent ev{e.data.ptr, fromEpollFlags(e.events)};
+                PollFD ev{e.data.fd, fromEpollFlags(e.events)};
 
                 v.visit(&ev);
             }
@@ -139,17 +139,17 @@ namespace {
             ::close(kqfd_);
         }
 
-        void arm(int fd, u32 flags, void* data) override {
+        void arm(PollFD pfd) override {
             struct kevent changes[2];
 
             int n = 0;
 
-            if (flags & PollFlag::In) {
-                EV_SET(&changes[n++], fd, EVFILT_READ, EV_ADD | EV_ONESHOT, 0, 0, data);
+            if (pfd.flags & PollFlag::In) {
+                EV_SET(&changes[n++], pfd.fd, EVFILT_READ, EV_ADD | EV_ONESHOT, 0, 0, 0);
             }
 
-            if (flags & PollFlag::Out) {
-                EV_SET(&changes[n++], fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT, 0, 0, data);
+            if (pfd.flags & PollFlag::Out) {
+                EV_SET(&changes[n++], pfd.fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT, 0, 0, 0);
             }
 
             if (n > 0) {
@@ -199,7 +199,7 @@ namespace {
                     fl |= PollFlag::Err;
                 }
 
-                PollEvent ev{e.udata, fl};
+                PollFD ev{(int)e.ident, fl};
 
                 v.visit(&ev);
             }
@@ -246,13 +246,7 @@ namespace {
     }
 
     struct PollPoller: public PollerIface {
-        struct Entry {
-            int fd;
-            u32 flags;
-            void* data;
-        };
-
-        IntMap<Entry> armed_;
+        IntMap<PollFD> armed_;
         Vector<struct pollfd> fds_; // rebuilt each wait()
 
         PollPoller(ObjPool* pool)
@@ -260,8 +254,8 @@ namespace {
         {
         }
 
-        void arm(int fd, u32 flags, void* data) override {
-            armed_[fd] = {fd, flags, data};
+        void arm(PollFD pfd) override {
+            armed_[pfd.fd] = pfd;
         }
 
         void disarm(int fd) override {
@@ -271,7 +265,7 @@ namespace {
         void waitImpl(VisitorFace& v, u32 timeoutUs) override {
             fds_.clear();
 
-            armed_.visit([&](const Entry& e) {
+            armed_.visit([&](const PollFD& e) {
                 fds_.pushBack({
                     .fd = e.fd,
                     .events = toPollEvents(e.flags),
@@ -290,17 +284,13 @@ namespace {
                     continue;
                 }
 
-                Entry* ep = armed_.find(pfd.fd);
+                auto ep = armed_.find(pfd.fd);
 
-                if (!ep) {
-                    continue;
-                }
+                STD_INSIST(ep);
 
-                Entry e = *ep;
+                PollFD ev{ep->fd, fromPollEvents(pfd.revents)};
 
                 armed_.erase(pfd.fd); // ONESHOT before visit, which may re-arm
-
-                PollEvent ev{e.data, fromPollEvents(pfd.revents)};
 
                 v.visit(&ev);
             }
