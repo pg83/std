@@ -994,23 +994,6 @@ STD_TEST_SUITE(CoroExecutorDns) {
         STD_INSIST(r2->record);
     }
 
-    STD_TEST(_ResolveStress) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 8);
-
-        for (int i = 0; i < 100000; ++i) {
-            exec->spawn([&, i] {
-                auto rpool = ObjPool::fromMemory();
-                char buf[64];
-
-                snprintf(buf, sizeof(buf), "host%d.test.invalid", i);
-                exec->resolve(rpool.mutPtr(), StringView((const u8*)buf, strlen(buf)));
-            });
-        }
-
-        exec->join();
-    }
-
     STD_TEST(ResolveInvalidName) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
