@@ -6,13 +6,16 @@ namespace stl {
     struct EventIface;
     struct CoroExecutor;
 
-    class Event {
-        EventIface* impl_;
+    class alignas(64) Event {
+        char buf_[64];
+
+        EventIface* impl() noexcept {
+            return reinterpret_cast<EventIface*>(buf_);
+        }
 
     public:
         Event();
         Event(CoroExecutor* exec);
-        Event(EventIface* iface) noexcept;
 
         ~Event() noexcept;
 

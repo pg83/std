@@ -6,6 +6,7 @@
 #include "event_iface.h"
 
 #include <std/sys/atomic.h>
+#include <std/mem/new.h>
 
 #ifdef __linux__
     #include <unistd.h>
@@ -18,7 +19,9 @@ using namespace stl;
 
 namespace {
 #ifdef __linux__
-    struct FutexEventImpl: public EventIface {
+    struct FutexEventImpl: public EventIface, public Newable {
+        static void operator delete(void*) noexcept {
+        }
         u32 state_;
 
         FutexEventImpl() noexcept
@@ -44,7 +47,9 @@ namespace {
 
     using DefaultEventImpl = FutexEventImpl;
 #else
-    struct PosixEventImpl: public EventIface {
+    struct PosixEventImpl: public EventIface, public Newable {
+        static void operator delete(void*) noexcept {
+        }
         Mutex mu_;
         CondVar cv_;
         bool signaled_;
@@ -76,29 +81,26 @@ namespace {
 #endif
 }
 
-Event::Event()
-    : impl_(new DefaultEventImpl())
-{
+Event::Event() {
+    new (buf_) DefaultEventImpl();
 }
 
-Event::Event(CoroExecutor* exec)
-    : impl_(exec ? exec->createEvent() : new DefaultEventImpl())
-{
-}
-
-Event::Event(EventIface* iface) noexcept
-    : impl_(iface)
-{
+Event::Event(CoroExecutor* exec) {
+    if (exec) {
+        exec->createEvent(buf_);
+    } else {
+        new (buf_) DefaultEventImpl();
+    }
 }
 
 Event::~Event() noexcept {
-    delete impl_;
+    delete impl();
 }
 
 void Event::wait(Runable* cb) noexcept {
-    impl_->wait(*cb);
+    impl()->wait(*cb);
 }
 
 void Event::signal() noexcept {
-    impl_->signal();
+    impl()->signal();
 }

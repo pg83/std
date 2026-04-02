@@ -16,6 +16,7 @@
 
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
+#include <std/mem/new.h>
 #include <std/rng/pcg.h>
 #include <std/lib/list.h>
 #include <std/alg/defer.h>
@@ -149,7 +150,7 @@ namespace {
             return pool_->random().nextU32();
         }
 
-        EventIface* createEvent() override;
+        void createEvent(void* buf) override;
         ThreadIface* createThread() override;
         CondVarIface* createCondVar() override;
         SemaphoreIface* createSemaphore(size_t initial) override;
@@ -357,8 +358,10 @@ u64 Cont::id() const noexcept {
     return (u64)(size_t)this;
 }
 
-EventIface* CoroExecutorImpl::createEvent() {
-    struct CoroEventImpl: public EventIface {
+void CoroExecutorImpl::createEvent(void* buf) {
+    struct CoroEventImpl: public EventIface, public Newable {
+        static void operator delete(void*) noexcept {
+        }
         CoroExecutorImpl* exec_;
         ContImpl* waiter_;
 
@@ -377,7 +380,7 @@ EventIface* CoroExecutorImpl::createEvent() {
         }
     };
 
-    return new CoroEventImpl(this);
+    new (buf) CoroEventImpl(this);
 }
 
 CondVarIface* CoroExecutorImpl::createCondVar() {

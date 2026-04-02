@@ -58,7 +58,7 @@ namespace stl {
         virtual ssize_t pread(int fd, void* buf, size_t len, off_t offset) = 0;
         virtual ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) = 0;
 
-        virtual EventIface* createEvent() = 0;
+        virtual void createEvent(void* buf) = 0;
         virtual ThreadIface* createThread() = 0;
         virtual CondVarIface* createCondVar() = 0;
         virtual SemaphoreIface* createSemaphore(size_t initial) = 0;
