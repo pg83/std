@@ -38,8 +38,7 @@ namespace {
     };
 
     struct InternalReq: public TreapNode, public IntrusiveNode {
-        u32 fd = 0;
-        u32 flags = 0;
+        PollFD pfd = {};
         u32 result = 0;
         ReqCommon* common = nullptr;
 
@@ -80,7 +79,7 @@ namespace {
         void cancelInternal(InternalReq* req);
         void processEvent(PollFD* ev, IntrusiveList& ready) noexcept;
 
-        u32 poll(int fd, u32 flags, u64 deadlineUs) override;
+        u32 poll(PollFD pfd, u64 deadlineUs) override;
         size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) override;
     };
 }
@@ -120,7 +119,7 @@ u32 FdEntry::flags() const noexcept {
     u32 f = 0;
 
     for (auto n = front(), e = end(); n != e; n = n->next) {
-        f |= static_cast<const InternalReq*>(n)->flags;
+        f |= static_cast<const InternalReq*>(n)->pfd.flags;
     }
 
     return f;
@@ -151,7 +150,7 @@ void ReactorState::rearmOrDisarm(int fd) {
 void ReactorState::cancelInternal(InternalReq* req) {
     req->remove();
     timers.remove(req);
-    rearmOrDisarm(req->fd);
+    rearmOrDisarm(req->pfd.fd);
 }
 
 void ReactorState::wakeup() noexcept {
@@ -181,15 +180,17 @@ void ReactorState::drainQueue() {
         req->left = nullptr;
         req->right = nullptr;
 
-        if (req->fd == (u32)-1) {
+        int fd = req->pfd.fd;
+
+        if (fd == -1) {
             sleepers.insert(req);
         } else {
             timers.insert(req);
 
-            auto& entry = fdMap_[req->fd];
+            auto& entry = fdMap_[fd];
 
             entry.pushBack(req);
-            poller->arm({(int)req->fd, entry.flags()});
+            poller->arm({fd, entry.flags()});
         }
     });
 }
@@ -197,7 +198,7 @@ void ReactorState::drainQueue() {
 void ReactorState::processEvent(PollFD* ev, IntrusiveList& ready) noexcept {
     if (auto entry = fdMap_.find(ev->fd); entry) {
         for (auto n = entry->mutFront(), e = entry->mutEnd(); n != e;) {
-            if (auto req = (InternalReq*)exchange(n, n->next); req->flags & ev->flags) {
+            if (auto req = (InternalReq*)exchange(n, n->next); req->pfd.flags & ev->flags) {
                 req->remove();
                 timers.remove(req);
                 req->complete(ev->flags, ready);
@@ -232,7 +233,7 @@ void ReactorState::run() noexcept {
 
             timers.remove(req);
             req->remove();
-            rearmOrDisarm(req->fd);
+            rearmOrDisarm(req->pfd.fd);
             req->complete(0, ready);
         }
 
@@ -251,7 +252,7 @@ void ReactorState::run() noexcept {
     }
 }
 
-u32 ReactorState::poll(int fd, u32 flags, u64 deadlineUs) {
+u32 ReactorState::poll(PollFD pfd, u64 deadlineUs) {
     ReqCommon common;
 
     common.deadline = deadlineUs;
@@ -259,8 +260,7 @@ u32 ReactorState::poll(int fd, u32 flags, u64 deadlineUs) {
 
     InternalReq req;
 
-    req.fd = (u32)fd;
-    req.flags = flags;
+    req.pfd = pfd;
     req.common = &common;
 
     queueMutex_.lock();
@@ -281,7 +281,7 @@ u32 ReactorState::poll(int fd, u32 flags, u64 deadlineUs) {
 
 size_t ReactorState::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
     if (count == 0) {
-        poll(-1, 0, deadlineUs);
+        poll({-1, 0}, deadlineUs);
 
         return 0;
     }
@@ -300,8 +300,7 @@ size_t ReactorState::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 
     for (size_t i = 0; i < count; ++i) {
         auto req = p->make<InternalMultiReq>();
 
-        req->fd = (u32)in[i].fd;
-        req->flags = in[i].flags;
+        req->pfd = in[i];
         req->common = &common;
         req->next = last;
 

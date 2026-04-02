@@ -264,7 +264,7 @@ SpawnParams::SpawnParams() noexcept
 }
 
 u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
-    return reactors_[splitMix64(fd) % reactors_.length()]->poll(fd, flags, deadlineUs);
+    return reactors_[splitMix64(fd) % reactors_.length()]->poll({fd, flags}, deadlineUs);
 }
 
 void CoroExecutorImpl::parkWith(Runable&& afterSuspend, Task** out) noexcept {
