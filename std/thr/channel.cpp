@@ -6,7 +6,7 @@
 #include <std/sys/crt.h>
 #include <std/lib/list.h>
 #include <std/dbg/insist.h>
-#include <std/lib/ring_buf.h>
+#include <std/alg/bits.h>
 
 using namespace stl;
 
@@ -160,17 +160,37 @@ struct Channel::Impl {
 };
 
 namespace {
-    struct BufferedImpl: public Channel::Impl {
-        RingBuffer buf_;
+    struct Pow2RingBuf {
+        void** buf_;
+        size_t mask_;
+        size_t head_;
+        size_t size_;
 
-        BufferedImpl(size_t capacity) noexcept
-            : buf_((void**)(this + 1), capacity)
+        Pow2RingBuf(void** buf, size_t capa) noexcept;
+
+        bool empty() const noexcept {
+            return size_ == 0;
+        }
+
+        bool full() const noexcept {
+            return size_ == mask_ + 1;
+        }
+
+        void push(void* v) noexcept;
+        void* pop() noexcept;
+    };
+
+    struct BufferedImpl: public Channel::Impl {
+        Pow2RingBuf buf_;
+
+        BufferedImpl(size_t capa) noexcept
+            : buf_((void**)(this + 1), capa)
         {
         }
 
-        BufferedImpl(CoroExecutor* exec, size_t capacity) noexcept
+        BufferedImpl(CoroExecutor* exec, size_t capa) noexcept
             : Impl(exec)
-            , buf_((void**)(this + 1), capacity)
+            , buf_((void**)(this + 1), capa)
         {
         }
 
@@ -209,6 +229,26 @@ namespace {
     };
 }
 
+Pow2RingBuf::Pow2RingBuf(void** buf, size_t capa) noexcept
+    : buf_(buf)
+    , mask_(capa - 1)
+    , head_(0)
+    , size_(0)
+{
+}
+
+void Pow2RingBuf::push(void* v) noexcept {
+    buf_[(head_ + size_) & mask_] = v;
+    ++size_;
+}
+
+void* Pow2RingBuf::pop() noexcept {
+    void* v = buf_[head_];
+    head_ = (head_ + 1) & mask_;
+    --size_;
+    return v;
+}
+
 Channel::Channel()
     : impl_(new Impl())
 {
@@ -217,7 +257,7 @@ Channel::Channel()
 Channel::Channel(size_t cap)
     : impl_(cap == 0
                 ? new Impl()
-                : new (allocateMemory(sizeof(BufferedImpl) + cap * sizeof(void*))) BufferedImpl(cap))
+                : new (allocateMemory(sizeof(BufferedImpl) + clp2(cap) * sizeof(void*))) BufferedImpl(clp2(cap)))
 {
 }
 
@@ -229,7 +269,7 @@ Channel::Channel(CoroExecutor* exec)
 Channel::Channel(CoroExecutor* exec, size_t cap)
     : impl_(cap == 0
                 ? new Impl(exec)
-                : new (allocateMemory(sizeof(BufferedImpl) + cap * sizeof(void*))) BufferedImpl(exec, cap))
+                : new (allocateMemory(sizeof(BufferedImpl) + clp2(cap) * sizeof(void*))) BufferedImpl(exec, clp2(cap)))
 {
 }
 
