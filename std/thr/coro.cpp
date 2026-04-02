@@ -147,16 +147,13 @@ namespace {
             return pool_->random().nextU32();
         }
 
-        void parkWith(Runable* afterSuspend) noexcept {
-            currentCont()->parkWith(afterSuspend);
-        }
-
         EventIface* createEvent() override;
         CondVarIface* createCondVar() override;
         ThreadIface* createThread() override;
         SemaphoreIface* createSemaphore(size_t initial) override;
 
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
+        void parkWith(Runable&&, Task**) noexcept override;
         size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) override;
         void offloadRun(ThreadPool* pool, Runable&& work) override;
         ssize_t pread(int fd, void* buf, size_t len, off_t offset) override;
@@ -165,39 +162,6 @@ namespace {
         int fdatasync(int fd) override;
     };
 
-    struct PollRequestImpl: public PollRequest {
-        ContImpl* cont;
-        u32 result = 0;
-
-        void parkWith(Runable&& afterSuspend) noexcept override {
-            cont->parkWith(&afterSuspend);
-        }
-
-        void complete(u32 res, IntrusiveList& ready) noexcept override {
-            result = res;
-            ready.pushBack(cont);
-        }
-    };
-
-    struct PollMultiRequest: public PollRequest {
-        ContImpl* cont;
-        ReactorIface* reactor;
-        PollMultiRequest* next;
-        u32 result = 0;
-
-        void parkWith(Runable&& afterSuspend) noexcept override {
-            cont->parkWith(&afterSuspend);
-        }
-
-        void complete(u32 res, IntrusiveList& ready) noexcept override {
-            result = res;
-            ready.pushBack(cont);
-
-            for (auto r = next; r != this; r = r->next) {
-                reactor->cancel(r);
-            }
-        }
-    };
 }
 
 CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads, size_t reactors)
@@ -299,16 +263,13 @@ SpawnParams::SpawnParams() noexcept
 }
 
 u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
-    PollRequestImpl req;
+    return reactors_[splitMix64(fd) % reactors_.length()]->poll(fd, flags, deadlineUs);
+}
 
-    req.cont = currentCont();
-    req.fd = fd;
-    req.flags = flags;
-    req.deadline = deadlineUs;
-
-    reactors_[splitMix64(fd) % reactors_.length()]->processRequest(&req);
-
-    return req.result;
+void CoroExecutorImpl::parkWith(Runable&& afterSuspend, Task** out) noexcept {
+    auto cont = currentCont();
+    *out = cont;
+    cont->parkWith(&afterSuspend);
 }
 
 size_t CoroExecutorImpl::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
@@ -316,46 +277,7 @@ size_t CoroExecutorImpl::pollMulti(const PollFD* in, PollFD* out, size_t count, 
         return (this->sleep(deadlineUs), 0);
     }
 
-    auto opool = ObjPool::fromMemory();
-    auto pool = opool.mutPtr();
-    auto ptrs = (PollRequest**)pool->allocate(sizeof(PollRequest*) * count);
-    auto cont = currentCont();
-    auto reactor = reactors_[splitMix64(in[0].fd) % reactors_.length()];
-
-    PollMultiRequest* last = nullptr;
-
-    for (size_t i = 0; i < count; ++i) {
-        auto req = pool->make<PollMultiRequest>();
-
-        req->cont = cont;
-        req->reactor = reactor;
-        req->fd = in[i].fd;
-        req->flags = in[i].flags;
-        req->deadline = deadlineUs;
-
-        req->next = last;
-        last = req;
-
-        ptrs[i] = req;
-    }
-
-    // close the ring
-    ((PollMultiRequest*)ptrs[0])->next = last;
-
-    reactor->processRequests(ptrs, count);
-
-    size_t nout = 0;
-
-    for (size_t i = 0; i < count; ++i) {
-        if (auto res = ((PollMultiRequest*)ptrs[i])->result; res) {
-            out[nout++] = {
-                in[i].fd,
-                res,
-            };
-        }
-    }
-
-    return nout;
+    return reactors_[splitMix64(in[0].fd) % reactors_.length()]->pollMulti(in, out, count, deadlineUs);
 }
 
 void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {

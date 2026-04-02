@@ -7,10 +7,13 @@
 #include "poller.h"
 
 #include <std/mem/new.h>
+#include <std/thr/task.h>
 #include <std/sys/event_fd.h>
 #include <std/sys/crt.h>
 #include <std/lib/list.h>
+#include <std/lib/node.h>
 #include <std/map/treap.h>
+#include <std/map/treap_node.h>
 #include <std/sym/i_map.h>
 #include <std/alg/minmax.h>
 #include <std/sys/atomic.h>
@@ -21,37 +24,36 @@ using namespace stl;
 
 namespace {
     struct DeadlineTreap: public Treap {
-        bool cmp(void* a, void* b) const noexcept override {
-            auto ra = (PollRequest*)a;
-            auto rb = (PollRequest*)b;
+        bool cmp(void* a, void* b) const noexcept override;
+        u64 earliest() const noexcept;
+    };
 
-            if (ra->deadline != rb->deadline) {
-                return ra->deadline < rb->deadline;
-            }
+    struct InternalReq: public TreapNode, public IntrusiveNode {
+        u32 fd = 0;
+        u32 flags = 0;
+        u64 deadline = 0;
+        Task* task = nullptr;
+        u32 result = 0;
 
-            return ra < rb;
-        }
+        virtual void complete(u32 res, IntrusiveList& ready) noexcept;
+        virtual ~InternalReq() = default;
+    };
 
-        u64 earliest() const noexcept {
-            auto n = (PollRequest*)min();
+    struct ReactorState;
 
-            return n ? n->deadline : UINT64_MAX;
-        }
+    struct InternalMultiReq: public InternalReq {
+        ReactorState* reactor = nullptr;
+        InternalMultiReq* next = nullptr;
+
+        void complete(u32 res, IntrusiveList& ready) noexcept override;
     };
 
     struct FdEntry: public IntrusiveList {
-        u32 flags() const noexcept {
-            u32 f = 0;
-
-            for (auto n = front(), e = end(); n != e; n = n->next) {
-                f |= static_cast<const PollRequest*>(n)->flags;
-            }
-
-            return f;
-        }
+        u32 flags() const noexcept;
     };
 
     struct ReactorState: public ReactorIface, public Runable {
+        CoroExecutor* exec_;
         ThreadPool* pool;
         PollerIface* poller;
         DeadlineTreap timers;
@@ -64,7 +66,6 @@ namespace {
         Thread* thread_ = nullptr;
 
         ReactorState(CoroExecutor* exec, ThreadPool* p, ObjPool* opool);
-
         ~ReactorState() noexcept;
 
         void drainQueue();
@@ -72,15 +73,58 @@ namespace {
         void rearmOrDisarm(int fd);
         void drainWakeup() noexcept;
         void run() noexcept override;
-        void processRequest(PollRequest* req) override;
-        void processRequests(PollRequest** reqs, size_t count) override;
-        void cancel(PollRequest* req) override;
+        void cancelInternal(InternalReq* req);
         void processEvent(PollEvent* ev, IntrusiveList& ready) noexcept;
+
+        u32 poll(int fd, u32 flags, u64 deadlineUs) override;
+        size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) override;
     };
 }
 
+bool DeadlineTreap::cmp(void* a, void* b) const noexcept {
+    auto ra = (InternalReq*)a;
+    auto rb = (InternalReq*)b;
+
+    if (ra->deadline != rb->deadline) {
+        return ra->deadline < rb->deadline;
+    }
+
+    return ra < rb;
+}
+
+u64 DeadlineTreap::earliest() const noexcept {
+    auto n = (InternalReq*)min();
+
+    return n ? n->deadline : UINT64_MAX;
+}
+
+void InternalReq::complete(u32 res, IntrusiveList& ready) noexcept {
+    result = res;
+    ready.pushBack(task);
+}
+
+void InternalMultiReq::complete(u32 res, IntrusiveList& ready) noexcept {
+    result = res;
+    ready.pushBack(task);
+
+    for (auto r = next; r != this; r = r->next) {
+        reactor->cancelInternal(r);
+    }
+}
+
+u32 FdEntry::flags() const noexcept {
+    u32 f = 0;
+
+    for (auto n = front(), e = end(); n != e; n = n->next) {
+        f |= static_cast<const InternalReq*>(n)->flags;
+    }
+
+    return f;
+}
+
 ReactorState::ReactorState(CoroExecutor* exec, ThreadPool* p, ObjPool* opool)
-    : pool(p)
+    : exec_(exec)
+    , pool(p)
     , poller(PollerIface::create(opool))
     , fdMap_(ObjPool::create(opool))
     , queueMutex_(Mutex::spinLock(exec))
@@ -100,33 +144,7 @@ void ReactorState::rearmOrDisarm(int fd) {
     }
 }
 
-void ReactorState::processRequest(PollRequest* req) {
-    queueMutex_.lock();
-    queue_.insert(req);
-
-    req->parkWith(makeRunable([this, needsWakeup = (queue_.min() == req)] {
-        queueMutex_.unlock();
-
-        if (needsWakeup) {
-            wakeup();
-        }
-    }));
-}
-
-void ReactorState::processRequests(PollRequest** reqs, size_t count) {
-    queueMutex_.lock();
-
-    for (size_t i = 0; i < count; ++i) {
-        queue_.insert(reqs[i]);
-    }
-
-    reqs[0]->parkWith(makeRunable([this] {
-        queueMutex_.unlock();
-        wakeup();
-    }));
-}
-
-void ReactorState::cancel(PollRequest* req) {
+void ReactorState::cancelInternal(InternalReq* req) {
     req->remove();
     timers.remove(req);
     rearmOrDisarm(req->fd);
@@ -154,7 +172,7 @@ void ReactorState::drainQueue() {
     });
 
     local.visit([&](TreapNode* node) {
-        auto req = (PollRequest*)node;
+        auto req = (InternalReq*)node;
 
         req->left = nullptr;
         req->right = nullptr;
@@ -177,7 +195,7 @@ void ReactorState::processEvent(PollEvent* ev, IntrusiveList& ready) noexcept {
 
     if (auto entry = fdMap_.find(fd); entry) {
         for (auto n = entry->mutFront(), e = entry->mutEnd(); n != e;) {
-            if (auto req = (PollRequest*)exchange(n, n->next); req->flags & ev->flags) {
+            if (auto req = (InternalReq*)exchange(n, n->next); req->flags & ev->flags) {
                 req->remove();
                 timers.remove(req);
                 req->complete(ev->flags, ready);
@@ -205,7 +223,7 @@ void ReactorState::run() noexcept {
 
         auto now = monotonicNowUs();
 
-        while (auto req = (PollRequest*)timers.min()) {
+        while (auto req = (InternalReq*)timers.min()) {
             if (req->deadline > now) {
                 break;
             }
@@ -216,7 +234,7 @@ void ReactorState::run() noexcept {
             req->complete(0, ready);
         }
 
-        while (auto req = (PollRequest*)sleepers.min()) {
+        while (auto req = (InternalReq*)sleepers.min()) {
             if (req->deadline > now) {
                 break;
             }
@@ -229,6 +247,87 @@ void ReactorState::run() noexcept {
             pool->submitTasks(ready);
         }
     }
+}
+
+u32 ReactorState::poll(int fd, u32 flags, u64 deadlineUs) {
+    InternalReq req;
+
+    req.fd = (u32)fd;
+    req.flags = flags;
+    req.deadline = deadlineUs;
+
+    Task* task;
+
+    queueMutex_.lock();
+    queue_.insert(&req);
+
+    bool needsWakeup = (queue_.min() == &req);
+
+    exec_->parkWith(makeRunable([this, &req, &task, needsWakeup] {
+        req.task = task;
+        queueMutex_.unlock();
+
+        if (needsWakeup) {
+            wakeup();
+        }
+    }), &task);
+
+    return req.result;
+}
+
+size_t ReactorState::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
+    if (count == 0) {
+        poll(-1, 0, deadlineUs);
+
+        return 0;
+    }
+
+    auto opool = ObjPool::fromMemory();
+    auto p = opool.mutPtr();
+    auto reqs = (InternalMultiReq**)p->allocate(sizeof(InternalMultiReq*) * count);
+
+    InternalMultiReq* last = nullptr;
+
+    for (size_t i = 0; i < count; ++i) {
+        auto req = p->make<InternalMultiReq>();
+
+        req->reactor = this;
+        req->fd = (u32)in[i].fd;
+        req->flags = in[i].flags;
+        req->deadline = deadlineUs;
+        req->next = last;
+        last = req;
+        reqs[i] = req;
+    }
+
+    reqs[0]->next = last;
+
+    Task* task;
+
+    queueMutex_.lock();
+
+    for (size_t i = 0; i < count; ++i) {
+        queue_.insert(reqs[i]);
+    }
+
+    exec_->parkWith(makeRunable([this, reqs, count, &task] {
+        for (size_t i = 0; i < count; ++i) {
+            reqs[i]->task = task;
+        }
+
+        queueMutex_.unlock();
+        wakeup();
+    }), &task);
+
+    size_t nout = 0;
+
+    for (size_t i = 0; i < count; ++i) {
+        if (reqs[i]->result) {
+            out[nout++] = {in[i].fd, reqs[i]->result};
+        }
+    }
+
+    return nout;
 }
 
 ReactorIface* ReactorIface::create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool) {
