@@ -16,6 +16,9 @@ namespace stl {
     struct CoroExecutor;
     struct SemaphoreIface;
 
+    class StringView;
+    struct DnsResult;
+
     struct Cont {
         u64 id() const noexcept;
     };
@@ -48,6 +51,8 @@ namespace stl {
         virtual void parkWith(Runable&&, Task**) noexcept = 0;
         virtual void offloadRun(ThreadPool* pool, Runable&& work) = 0;
         virtual size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) = 0;
+
+        virtual DnsResult* resolve(ObjPool* pool, const StringView& name) = 0;
 
         virtual int fsync(int fd) = 0;
         virtual int fdatasync(int fd) = 0;

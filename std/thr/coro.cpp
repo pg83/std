@@ -14,6 +14,7 @@
 #include "cond_var_iface.h"
 #include "semaphore_iface.h"
 
+#include <std/net/dns_iface.h>
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
 #include <std/rng/pcg.h>
@@ -116,6 +117,7 @@ namespace {
         JoinPipe* join_;
         const u64 tlsKey_;
         Vector<ReactorIface*> reactors_;
+        Vector<DnsResolver*> dnsResolvers_;
         ThreadPool* fsPool_;
         ThreadPool* pool_;
 
@@ -152,6 +154,8 @@ namespace {
         CondVarIface* createCondVar() override;
         SemaphoreIface* createSemaphore(size_t initial) override;
 
+        DnsResult* resolve(ObjPool* pool, const StringView& name) override;
+
         int fsync(int fd) override;
         int fdatasync(int fd) override;
         ssize_t pread(int fd, void* buf, size_t len, off_t offset) override;
@@ -174,6 +178,10 @@ CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads, size_t reactor
     }
 
     fsPool_ = ThreadPool::simple(pool, reactors);
+
+    for (size_t i = 0; i < reactors; ++i) {
+        dnsResolvers_.pushBack(DnsResolver::create(pool, this, fsPool_));
+    }
 }
 
 Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
@@ -266,6 +274,10 @@ void CoroExecutorImpl::parkWith(Runable&& afterSuspend, Task** out) noexcept {
     auto cont = currentCont();
     *out = cont;
     cont->parkWith(&afterSuspend);
+}
+
+DnsResult* CoroExecutorImpl::resolve(ObjPool* pool, const StringView& name) {
+    return dnsResolvers_[name.hash64() % dnsResolvers_.length()]->resolve(pool, name);
 }
 
 size_t CoroExecutorImpl::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
