@@ -285,7 +285,9 @@ namespace {
                     continue;
                 }
 
-                STD_INSIST(armed_.erase(pfd.fd));
+                if (!armed_.erase(pfd.fd)) {
+                    continue;
+                }
 
                 PollFD ev{pfd.fd, fromPollEvents(pfd.revents)};
 
