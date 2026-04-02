@@ -256,10 +256,12 @@ void ReactorState::run() noexcept {
 
 u32 ReactorState::poll(int fd, u32 flags, u64 deadlineUs) {
     ReqCommon common;
-    InternalReq req;
 
     common.deadline = deadlineUs;
     common.reactor = this;
+
+    InternalReq req;
+
     req.fd = (u32)fd;
     req.flags = flags;
     req.common = &common;
@@ -287,10 +289,11 @@ size_t ReactorState::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 
         return 0;
     }
 
-    ReqCommon common;
     auto opool = ObjPool::fromMemory();
     auto p = opool.mutPtr();
     auto reqs = (InternalMultiReq**)p->allocate(sizeof(InternalMultiReq*) * count);
+
+    ReqCommon common;
 
     common.deadline = deadlineUs;
     common.reactor = this;
