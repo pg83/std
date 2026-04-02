@@ -16,6 +16,7 @@
 #include <std/sym/i_map.h>
 #include <std/alg/minmax.h>
 #include <std/sys/atomic.h>
+#include <std/dbg/assert.h>
 #include <std/alg/exchange.h>
 #include <std/mem/obj_pool.h>
 #include <std/sys/event_fd.h>
@@ -280,6 +281,8 @@ u32 ReactorState::pollOne(PollFD pfd, u64 deadlineUs) {
 }
 
 size_t ReactorState::poll(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
+    STD_ASSERT(count > 0);
+
     if (count == 1) {
         auto res = pollOne(in[0], deadlineUs);
 

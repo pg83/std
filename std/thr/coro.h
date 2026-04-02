@@ -8,6 +8,7 @@ namespace stl {
     class ObjPool;
 
     struct Task;
+    struct PollFD;
     struct ThreadPool;
     struct EventIface;
     struct ThreadIface;
@@ -38,8 +39,6 @@ namespace stl {
         }
     };
 
-    struct PollFD;
-
     struct CoroExecutor {
         virtual void join() noexcept = 0;
         virtual void yield() noexcept = 0;
@@ -64,8 +63,9 @@ namespace stl {
         void sleep(u64 deadlineUs);
         void sleepTout(u64 timeoutUs);
 
-        u32 poll(int fd, u32 flags, u64 deadlineUs);
         u32 poll(int fd, u32 flags);
+        u32 poll(int fd, u32 flags, u64 deadlineUs);
+
         u64 currentCoroId() const noexcept;
 
         template <typename F>
