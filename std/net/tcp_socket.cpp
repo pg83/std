@@ -3,7 +3,6 @@
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
 #include <std/thr/coro.h>
-#include <std/thr/poller.h>
 #include <std/thr/poll_fd.h>
 #include <std/mem/obj_pool.h>
 

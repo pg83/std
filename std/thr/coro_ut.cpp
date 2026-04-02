@@ -3,7 +3,6 @@
 #include "guard.h"
 #include "mutex.h"
 #include "async.h"
-#include "poller.h"
 #include "poll_fd.h"
 #include "channel.h"
 #include "cond_var.h"

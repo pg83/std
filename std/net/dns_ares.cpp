@@ -11,7 +11,6 @@
 #include <std/thr/guard.h>
 #include <std/alg/defer.h>
 #include <std/lib/vector.h>
-#include <std/thr/poller.h>
 #include <std/thr/poll_fd.h>
 #include <std/sys/event_fd.h>
 #include <std/mem/obj_pool.h>

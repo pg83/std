@@ -21,7 +21,6 @@
 #include <std/lib/buffer.h>
 #include <std/lib/vector.h>
 #include <std/sys/atomic.h>
-#include <std/thr/poller.h>
 #include <std/ios/out_buf.h>
 #include <std/sys/num_cpu.h>
 #include <std/str/builder.h>
