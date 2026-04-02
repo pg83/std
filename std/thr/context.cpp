@@ -213,33 +213,24 @@ ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexc
     // *--top fills high-to-low; ldp pops low-to-high
     // last pushed = lowest address = first popped
     // d8, d9 (popped last, filled first)
-    *--top = 0; // d9
-    *--top = 0; // d8
-    // d10, d11
-    *--top = 0; // d11
-    *--top = 0; // d10
-    // d12, d13
-    *--top = 0; // d13
-    *--top = 0; // d12
-    // d14, d15
-    *--top = 0; // d15
-    *--top = 0; // d14
-    // x19, x20
-    *--top = 0;         // x20
-    *--top = (u64)this; // x19 — ContextImpl*
-    // x21, x22
-    *--top = 0; // x22
-    *--top = 0; // x21
-    // x23, x24
-    *--top = 0; // x24
-    *--top = 0; // x23
-    // x25, x26
-    *--top = 0; // x26
-    *--top = 0; // x25
-    // x27, x28
-    *--top = 0; // x28
-    *--top = 0; // x27
-    // x29, x30 (popped first, filled last)
+    *--top = 0;               // d9
+    *--top = 0;               // d8
+    *--top = 0;               // d11
+    *--top = 0;               // d10
+    *--top = 0;               // d13
+    *--top = 0;               // d12
+    *--top = 0;               // d15
+    *--top = 0;               // d14
+    *--top = 0;               // x20
+    *--top = (u64)this;       // x19 — ContextImpl*
+    *--top = 0;               // x22
+    *--top = 0;               // x21
+    *--top = 0;               // x24
+    *--top = 0;               // x23
+    *--top = 0;               // x26
+    *--top = 0;               // x25
+    *--top = 0;               // x28
+    *--top = 0;               // x27
     *--top = (u64)trampoline; // x30 (lr)
     *--top = 0;               // x29 (fp)
 
