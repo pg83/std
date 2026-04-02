@@ -256,21 +256,16 @@ u32 ReactorState::poll(int fd, u32 flags, u64 deadlineUs) {
     req.flags = flags;
     req.deadline = deadlineUs;
 
-    Task* task;
-
     queueMutex_.lock();
     queue_.insert(&req);
 
-    bool needsWakeup = (queue_.min() == &req);
-
-    exec_->parkWith(makeRunable([this, &req, &task, needsWakeup] {
-        req.task = task;
+    exec_->parkWith(makeRunable([this, needsWakeup = (queue_.min() == &req)] {
         queueMutex_.unlock();
 
         if (needsWakeup) {
             wakeup();
         }
-    }), &task);
+    }), &req.task);
 
     return req.result;
 }
@@ -296,6 +291,7 @@ size_t ReactorState::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 
         req->flags = in[i].flags;
         req->deadline = deadlineUs;
         req->next = last;
+
         last = req;
         reqs[i] = req;
     }
