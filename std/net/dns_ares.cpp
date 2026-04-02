@@ -94,7 +94,7 @@ DnsRecordImpl::DnsRecordImpl(ObjPool* pool, struct ares_addrinfo_node* node) {
 }
 
 StringView DnsResultImpl::errorDescr() const noexcept {
-    return error ? ares_strerror(error) : StringView{};
+    return ares_strerror(error);
 }
 
 DnsResultImpl::DnsResultImpl(ObjPool* pool, int status, struct ares_addrinfo* ai) {
@@ -153,8 +153,8 @@ DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec)
     , fdMap_(ObjPool::create(pool))
 {
     ares_options opts;
-
     memset(&opts, 0, sizeof(opts));
+
     opts.timeout = 500;
     opts.tries = 3;
     opts.sock_state_cb = sockStateCb;
@@ -241,19 +241,18 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
         ares_timeout(channel_, nullptr, &tv);
 
         u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
-        outFds_.clear();
         outFds_.grow(fds_.length());
         size_t nout = exec_->pollMulti(fds_.data(), outFds_.mutData(), fds_.length(), deadlineUs);
 
         for (size_t i = 0; i < nout; ++i) {
             if (outFds_[i].fd == wakeup_.fd()) {
                 wakeup_.drain();
-                continue;
-            }
+            } else {
+                ares_socket_t rfd = (outFds_[i].flags & PollFlag::In) ? outFds_[i].fd : ARES_SOCKET_BAD;
+                ares_socket_t wfd = (outFds_[i].flags & PollFlag::Out) ? outFds_[i].fd : ARES_SOCKET_BAD;
 
-            ares_socket_t rfd = (outFds_[i].flags & PollFlag::In) ? outFds_[i].fd : ARES_SOCKET_BAD;
-            ares_socket_t wfd = (outFds_[i].flags & PollFlag::Out) ? outFds_[i].fd : ARES_SOCKET_BAD;
-            ares_process_fd(channel_, rfd, wfd);
+                ares_process_fd(channel_, rfd, wfd);
+            }
         }
 
         ares_process_fd(channel_, ARES_SOCKET_BAD, ARES_SOCKET_BAD);
