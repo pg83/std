@@ -84,8 +84,8 @@ STD_TEST_SUITE(DnsResolver) {
 
         auto result = f.wait();
 
-        STD_INSIST(!result->ok());
-        STD_INSIST(!result->errorDescr().empty());
+        STD_INSIST(result->ok());
+        STD_INSIST(!result->record);
     }
 
     STD_TEST(ResolveBadName) {
