@@ -1,12 +1,11 @@
 #pragma once
 
-#include "poller.h"
-
 #include <std/sys/types.h>
 
 namespace stl {
     class ObjPool;
 
+    struct PollFD;
     struct ThreadPool;
     struct CoroExecutor;
 
