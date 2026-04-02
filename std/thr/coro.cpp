@@ -14,7 +14,6 @@
 #include "cond_var_iface.h"
 #include "semaphore_iface.h"
 
-#include <std/net/dns_iface.h>
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
 #include <std/rng/pcg.h>
@@ -30,6 +29,7 @@
 #include <std/alg/exchange.h>
 #include <std/alg/destruct.h>
 #include <std/mem/obj_pool.h>
+#include <std/net/dns_iface.h>
 #include <std/rng/split_mix_64.h>
 
 #include <errno.h>

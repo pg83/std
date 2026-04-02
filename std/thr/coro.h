@@ -6,18 +6,17 @@
 
 namespace stl {
     class ObjPool;
+    class StringView;
 
     struct Task;
     struct PollFD;
+    struct DnsResult;
     struct ThreadPool;
     struct EventIface;
     struct ThreadIface;
     struct CondVarIface;
     struct CoroExecutor;
     struct SemaphoreIface;
-
-    class StringView;
-    struct DnsResult;
 
     struct Cont {
         u64 id() const noexcept;
