@@ -638,9 +638,12 @@ STD_TEST_SUITE(CoroPoll) {
         u32 result = 0;
 
         exec->spawn([&] {
-            PollFD fds[] = {{r1.get(), PollFlag::In, 0}, {r2.get(), PollFlag::In, 0}};
-            exec->pollMulti(fds, 2, UINT64_MAX);
-            result = fds[0].out | fds[1].out;
+            PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
+            PollFD out[2];
+            size_t n = exec->pollMulti(in, out, 2, UINT64_MAX);
+            for (size_t i = 0; i < n; ++i) {
+                result |= out[i].flags;
+            }
         });
 
         exec->spawn([&] {
@@ -661,9 +664,12 @@ STD_TEST_SUITE(CoroPoll) {
         u32 result = 0;
 
         exec->spawn([&] {
-            PollFD fds[] = {{r1.get(), PollFlag::In, 0}, {r2.get(), PollFlag::In, 0}};
-            exec->pollMulti(fds, 2, UINT64_MAX);
-            result = fds[0].out | fds[1].out;
+            PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
+            PollFD out[2];
+            size_t n = exec->pollMulti(in, out, 2, UINT64_MAX);
+            for (size_t i = 0; i < n; ++i) {
+                result |= out[i].flags;
+            }
         });
 
         exec->spawn([&] {
@@ -683,9 +689,9 @@ STD_TEST_SUITE(CoroPoll) {
         createPipeFD(r2, w2);
 
         auto f = async(exec, [&] {
-            PollFD fds[] = {{r1.get(), PollFlag::In, 0}, {r2.get(), PollFlag::In, 0}};
-            exec->pollMulti(fds, 2, 1);
-            return fds[0].out | fds[1].out;
+            PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
+            PollFD out[2];
+            return exec->pollMulti(in, out, 2, 1);
         });
 
         STD_INSIST(f.wait() == 0);
@@ -704,16 +710,17 @@ STD_TEST_SUITE(CoroPoll) {
         u32 result = 0;
 
         exec->spawn([&] {
-            PollFD fds[N];
+            PollFD in[N];
 
             for (int i = 0; i < N; ++i) {
-                fds[i] = {readEnds[i].get(), PollFlag::In, 0};
+                in[i] = {readEnds[i].get(), PollFlag::In};
             }
 
-            exec->pollMulti(fds, N, UINT64_MAX);
+            PollFD out[N];
+            size_t n = exec->pollMulti(in, out, N, UINT64_MAX);
 
-            for (int i = 0; i < N; ++i) {
-                result |= fds[i].out;
+            for (size_t i = 0; i < n; ++i) {
+                result |= out[i].flags;
             }
         });
 

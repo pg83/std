@@ -63,6 +63,7 @@ namespace {
         IntrusiveList waiters_;
         IntMap<PollFD> fdMap_;
         Vector<PollFD> fds_;
+        Vector<PollFD> outFds_;
         EventFD wakeup_;
 
         DnsResolverImpl(ObjPool* pool, CoroExecutor* exec);
@@ -140,7 +141,7 @@ void DnsResolverImpl::onSockState(ares_socket_t fd, int readable, int writable) 
     u32 flags = (readable ? PollFlag::In : 0) | (writable ? PollFlag::Out : 0);
 
     if (flags) {
-        fdMap_.insert(fd, (int)fd, flags, 0u);
+        fdMap_.insert(fd, (int)fd, flags);
     } else {
         fdMap_.erase(fd);
     }
@@ -222,7 +223,7 @@ void DnsResolverImpl::rebuildFds() {
         fds_.pushBack(pfd);
     });
 
-    fds_.pushBack({wakeup_.fd(), PollFlag::In, 0});
+    fds_.pushBack({wakeup_.fd(), PollFlag::In});
 }
 
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
@@ -240,13 +241,18 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
         ares_timeout(channel_, nullptr, &tv);
 
         u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
-        size_t aresFdCount = fds_.length() - 1;
-        exec_->pollMulti(fds_.mutData(), fds_.length(), deadlineUs);
-        wakeup_.drain();
+        outFds_.clear();
+        outFds_.grow(fds_.length());
+        size_t nout = exec_->pollMulti(fds_.data(), outFds_.mutData(), fds_.length(), deadlineUs);
 
-        for (size_t i = 0; i < aresFdCount; ++i) {
-            ares_socket_t rfd = (fds_[i].out & PollFlag::In) ? fds_[i].fd : ARES_SOCKET_BAD;
-            ares_socket_t wfd = (fds_[i].out & PollFlag::Out) ? fds_[i].fd : ARES_SOCKET_BAD;
+        for (size_t i = 0; i < nout; ++i) {
+            if (outFds_[i].fd == wakeup_.fd()) {
+                wakeup_.drain();
+                continue;
+            }
+
+            ares_socket_t rfd = (outFds_[i].flags & PollFlag::In) ? outFds_[i].fd : ARES_SOCKET_BAD;
+            ares_socket_t wfd = (outFds_[i].flags & PollFlag::Out) ? outFds_[i].fd : ARES_SOCKET_BAD;
             ares_process_fd(channel_, rfd, wfd);
         }
 

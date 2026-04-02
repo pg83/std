@@ -157,7 +157,7 @@ namespace {
         SemaphoreIface* createSemaphore(size_t initial) override;
 
         u32 poll(int fd, u32 flags, u64 deadlineUs) override;
-        void pollMulti(PollFD* fds, size_t count, u64 deadlineUs) override;
+        size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) override;
         void offloadRun(ThreadPool* pool, Runable&& work) override;
         ssize_t pread(int fd, void* buf, size_t len, off_t offset) override;
         ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) override;
@@ -311,16 +311,17 @@ u32 CoroExecutorImpl::poll(int fd, u32 flags, u64 deadlineUs) {
     return req.result;
 }
 
-void CoroExecutorImpl::pollMulti(PollFD* fds, size_t count, u64 deadlineUs) {
+size_t CoroExecutorImpl::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
     if (count == 0) {
-        return this->sleep(deadlineUs);
+        this->sleep(deadlineUs);
+        return 0;
     }
 
     auto opool = ObjPool::fromMemory();
     auto pool = opool.mutPtr();
     auto ptrs = (PollRequest**)pool->allocate(sizeof(PollRequest*) * count);
     auto cont = currentCont();
-    auto reactor = reactors_[splitMix64(fds[0].fd) % reactors_.length()];
+    auto reactor = reactors_[splitMix64(in[0].fd) % reactors_.length()];
 
     PollMultiRequest* last = nullptr;
 
@@ -329,8 +330,8 @@ void CoroExecutorImpl::pollMulti(PollFD* fds, size_t count, u64 deadlineUs) {
 
         req->cont = cont;
         req->reactor = reactor;
-        req->fd = fds[i].fd;
-        req->flags = fds[i].in;
+        req->fd = in[i].fd;
+        req->flags = in[i].flags;
         req->deadline = deadlineUs;
 
         req->next = last;
@@ -344,9 +345,17 @@ void CoroExecutorImpl::pollMulti(PollFD* fds, size_t count, u64 deadlineUs) {
 
     reactor->processRequests(ptrs, count);
 
+    size_t nout = 0;
+
     for (size_t i = 0; i < count; ++i) {
-        fds[i].out = ((PollMultiRequest*)ptrs[i])->result;
+        u32 res = ((PollMultiRequest*)ptrs[i])->result;
+
+        if (res) {
+            out[nout++] = {in[i].fd, res};
+        }
     }
+
+    return nout;
 }
 
 void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {

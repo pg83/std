@@ -39,8 +39,7 @@ namespace stl {
 
     struct PollFD {
         int fd;
-        u32 in;
-        u32 out;
+        u32 flags;
     };
 
     struct CoroExecutor {
@@ -51,7 +50,7 @@ namespace stl {
         virtual Cont* spawnRun(SpawnParams params) = 0;
         virtual u32 poll(int fd, u32 flags, u64 deadlineUs) = 0;
         virtual void offloadRun(ThreadPool* pool, Runable&& work) = 0;
-        virtual void pollMulti(PollFD* fds, size_t count, u64 deadlineUs) = 0;
+        virtual size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) = 0;
 
         virtual int fsync(int fd) = 0;
         virtual int fdatasync(int fd) = 0;
