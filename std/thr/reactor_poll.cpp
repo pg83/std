@@ -285,9 +285,7 @@ size_t ReactorState::poll(const PollFD* in, PollFD* out, size_t count, u64 deadl
     STD_ASSERT(count > 0);
 
     if (count == 1) {
-        auto res = pollOne(in[0], deadlineUs);
-
-        if (res) {
+        if (auto res = pollOne(in[0], deadlineUs); res) {
             out[0] = {in[0].fd, res};
 
             return 1;
