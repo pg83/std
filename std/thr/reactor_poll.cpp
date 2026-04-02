@@ -280,17 +280,12 @@ u32 ReactorState::pollOne(PollFD pfd, u64 deadlineUs) {
 }
 
 size_t ReactorState::poll(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
-    if (count == 0) {
-        pollOne({-1, 0}, deadlineUs);
-
-        return 0;
-    }
-
     if (count == 1) {
         auto res = pollOne(in[0], deadlineUs);
 
         if (res) {
             out[0] = {in[0].fd, res};
+
             return 1;
         }
 
