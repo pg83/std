@@ -29,21 +29,25 @@ namespace {
         u64 earliest() const noexcept;
     };
 
+    struct ReactorState;
+
+    struct ReqCommon {
+        u64 deadline = 0;
+        Task* task = nullptr;
+        ReactorState* reactor = nullptr;
+    };
+
     struct InternalReq: public TreapNode, public IntrusiveNode {
         u32 fd = 0;
         u32 flags = 0;
-        u64 deadline = 0;
-        Task* task = nullptr;
         u32 result = 0;
+        ReqCommon* common = nullptr;
 
         virtual void complete(u32 res, IntrusiveList& ready) noexcept;
         virtual ~InternalReq() = default;
     };
 
-    struct ReactorState;
-
     struct InternalMultiReq: public InternalReq {
-        ReactorState* reactor = nullptr;
         InternalMultiReq* next = nullptr;
 
         void complete(u32 res, IntrusiveList& ready) noexcept override;
@@ -86,8 +90,8 @@ bool DeadlineTreap::cmp(void* a, void* b) const noexcept {
     auto ra = (InternalReq*)a;
     auto rb = (InternalReq*)b;
 
-    if (ra->deadline != rb->deadline) {
-        return ra->deadline < rb->deadline;
+    if (ra->common->deadline != rb->common->deadline) {
+        return ra->common->deadline < rb->common->deadline;
     }
 
     return ra < rb;
@@ -96,20 +100,20 @@ bool DeadlineTreap::cmp(void* a, void* b) const noexcept {
 u64 DeadlineTreap::earliest() const noexcept {
     auto n = (InternalReq*)min();
 
-    return n ? n->deadline : UINT64_MAX;
+    return n ? n->common->deadline : UINT64_MAX;
 }
 
 void InternalReq::complete(u32 res, IntrusiveList& ready) noexcept {
     result = res;
-    ready.pushBack(task);
+    ready.pushBack(common->task);
 }
 
 void InternalMultiReq::complete(u32 res, IntrusiveList& ready) noexcept {
     result = res;
-    ready.pushBack(task);
+    ready.pushBack(common->task);
 
     for (auto r = next; r != this; r = r->next) {
-        reactor->cancelInternal(r);
+        common->reactor->cancelInternal(r);
     }
 }
 
@@ -225,7 +229,7 @@ void ReactorState::run() noexcept {
         auto now = monotonicNowUs();
 
         while (auto req = (InternalReq*)timers.min()) {
-            if (req->deadline > now) {
+            if (req->common->deadline > now) {
                 break;
             }
 
@@ -236,7 +240,7 @@ void ReactorState::run() noexcept {
         }
 
         while (auto req = (InternalReq*)sleepers.min()) {
-            if (req->deadline > now) {
+            if (req->common->deadline > now) {
                 break;
             }
 
@@ -251,11 +255,14 @@ void ReactorState::run() noexcept {
 }
 
 u32 ReactorState::poll(int fd, u32 flags, u64 deadlineUs) {
+    ReqCommon common;
     InternalReq req;
 
+    common.deadline = deadlineUs;
+    common.reactor = this;
     req.fd = (u32)fd;
     req.flags = flags;
-    req.deadline = deadlineUs;
+    req.common = &common;
 
     queueMutex_.lock();
     queue_.insert(&req);
@@ -267,7 +274,7 @@ u32 ReactorState::poll(int fd, u32 flags, u64 deadlineUs) {
         if (needsWakeup) {
             wakeup();
         }
-    }), &req.task);
+    }), &common.task);
     // clang-format on
 
     return req.result;
@@ -280,19 +287,22 @@ size_t ReactorState::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 
         return 0;
     }
 
+    ReqCommon common;
     auto opool = ObjPool::fromMemory();
     auto p = opool.mutPtr();
     auto reqs = (InternalMultiReq**)p->allocate(sizeof(InternalMultiReq*) * count);
+
+    common.deadline = deadlineUs;
+    common.reactor = this;
 
     InternalMultiReq* last = nullptr;
 
     for (size_t i = 0; i < count; ++i) {
         auto req = p->make<InternalMultiReq>();
 
-        req->reactor = this;
         req->fd = (u32)in[i].fd;
         req->flags = in[i].flags;
-        req->deadline = deadlineUs;
+        req->common = &common;
         req->next = last;
 
         last = req;
@@ -301,8 +311,6 @@ size_t ReactorState::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 
 
     reqs[0]->next = last;
 
-    Task* task;
-
     queueMutex_.lock();
 
     for (size_t i = 0; i < count; ++i) {
@@ -310,14 +318,10 @@ size_t ReactorState::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 
     }
 
     // clang-format off
-    exec_->parkWith(makeRunable([this, reqs, count, &task] {
-        for (size_t i = 0; i < count; ++i) {
-            reqs[i]->task = task;
-        }
-
+    exec_->parkWith(makeRunable([this] {
         queueMutex_.unlock();
         wakeup();
-    }), &task);
+    }), &common.task);
     // clang-format on
 
     size_t nout = 0;
