@@ -1,11 +1,13 @@
 #pragma once
 
-#include "coro.h"
+#include <std/sys/types.h>
 
 namespace stl {
     class ObjPool;
 
+    struct PollFD;
     struct ThreadPool;
+    struct CoroExecutor;
 
     struct ReactorIface {
         virtual u32 poll(int fd, u32 flags, u64 deadlineUs) = 0;
