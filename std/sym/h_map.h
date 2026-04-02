@@ -79,10 +79,14 @@ namespace stl {
             return *insert(key);
         }
 
-        void erase(K key) noexcept {
+        bool erase(K key) noexcept {
             if (auto prev = (Node*)st.erase(H::hash(key)); prev) {
                 ol.release(prev);
+
+                return true;
             }
+
+            return false;
         }
 
         size_t size() const noexcept {

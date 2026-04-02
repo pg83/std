@@ -285,13 +285,9 @@ namespace {
                     continue;
                 }
 
-                auto ep = armed_.find(pfd.fd);
+                STD_INSIST(armed_.erase(pfd.fd));
 
-                STD_INSIST(ep);
-
-                PollFD ev{ep->fd, fromPollEvents(pfd.revents)};
-
-                armed_.erase(pfd.fd); // ONESHOT before visit, which may re-arm
+                PollFD ev{pfd.fd, fromPollEvents(pfd.revents)};
 
                 v.visit(&ev);
             }
