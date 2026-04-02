@@ -248,8 +248,8 @@ namespace {
         IntMap<Worker*> workers_;
         Vector<Worker*> index_;
         WaitQueue* wq;
-        i32 taskCount_ = 0;
-        i32 searching_ = 0;
+        alignas(64) i32 taskCount_ = 0;
+        alignas(64) i32 searching_ = 0;
 
         WorkStealingThreadPool(ObjPool* pool, size_t numThreads);
         ~WorkStealingThreadPool() noexcept;
