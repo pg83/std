@@ -46,7 +46,7 @@ DnsSysRecordImpl::DnsSysRecordImpl(ObjPool* pool, struct addrinfo* node) {
 }
 
 StringView DnsSysResultImpl::errorDescr() const noexcept {
-    return error ? gai_strerror(error) : StringView{};
+    return gai_strerror(error);
 }
 
 DnsSysResultImpl::DnsSysResultImpl(ObjPool* pool, int gaierr, struct addrinfo* ai) {
