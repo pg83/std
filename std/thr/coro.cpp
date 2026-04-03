@@ -231,6 +231,7 @@ ContImpl::~ContImpl() {
 }
 
 void ContImpl::reSchedule() noexcept {
+    STD_ASSERT(!workerCtx_);
     exec_->pool_->submitTask(this);
 }
 
@@ -360,8 +361,6 @@ u64 Cont::id() const noexcept {
 
 void CoroExecutorImpl::createEvent(void* buf) {
     struct CoroEventImpl: public EventIface, public Newable {
-        static void operator delete(void*) noexcept {
-        }
         CoroExecutorImpl* exec_;
         ContImpl* waiter_;
 
@@ -377,6 +376,9 @@ void CoroExecutorImpl::createEvent(void* buf) {
 
         void signal() noexcept override {
             waiter_->reSchedule();
+        }
+
+        static void operator delete(void*) noexcept {
         }
     };
 
