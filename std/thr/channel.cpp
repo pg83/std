@@ -74,6 +74,41 @@ bool Channel::Impl::sendOne(void* v) noexcept {
     return bufferOne(v);
 }
 
+void Channel::Impl::enqueue(void* v) noexcept {
+    mu_.lock();
+
+    STD_INSIST(!closed_);
+
+    if (sendOne(v)) {
+        mu_.unlock();
+        return;
+    }
+
+    enqueueSlow(v);
+}
+
+bool Channel::Impl::tryEnqueue(void* v) noexcept {
+    LockGuard guard(mu_);
+
+    STD_INSIST(!closed_);
+
+    return sendOne(v);
+}
+
+__attribute__((noinline)) void Channel::Impl::enqueueSlow(void* v) noexcept {
+    Event ev(exec_);
+    Waiter w;
+
+    w.ev = &ev;
+    w.value = v;
+    w.valueSet = true;
+
+    senders_.pushBack(&w);
+    ev.wait(makeRunable([this] {
+        mu_.unlock();
+    }));
+}
+
 bool Channel::Impl::recvOne(void** out) noexcept {
     if (unbufferOne(out)) {
         return true;
@@ -87,19 +122,6 @@ bool Channel::Impl::recvOne(void** out) noexcept {
     }
 
     return false;
-}
-
-void Channel::Impl::enqueue(void* v) noexcept {
-    mu_.lock();
-
-    STD_INSIST(!closed_);
-
-    if (sendOne(v)) {
-        mu_.unlock();
-        return;
-    }
-
-    enqueueSlow(v);
 }
 
 bool Channel::Impl::dequeue(void** out) noexcept {
@@ -116,14 +138,6 @@ bool Channel::Impl::dequeue(void** out) noexcept {
     }
 
     return dequeueSlow(out);
-}
-
-bool Channel::Impl::tryEnqueue(void* v) noexcept {
-    LockGuard guard(mu_);
-
-    STD_INSIST(!closed_);
-
-    return sendOne(v);
 }
 
 bool Channel::Impl::tryDequeue(void** out) noexcept {
@@ -143,20 +157,6 @@ void Channel::Impl::close() noexcept {
     while (auto w = (Waiter*)receivers_.popFrontOrNull()) {
         w->ev->signal();
     }
-}
-
-__attribute__((noinline)) void Channel::Impl::enqueueSlow(void* v) noexcept {
-    Event ev(exec_);
-    Waiter w;
-
-    w.ev = &ev;
-    w.value = v;
-    w.valueSet = true;
-
-    senders_.pushBack(&w);
-    ev.wait(makeRunable([this] {
-        mu_.unlock();
-    }));
 }
 
 __attribute__((noinline)) bool Channel::Impl::dequeueSlow(void** out) noexcept {
