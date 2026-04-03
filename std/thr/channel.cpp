@@ -62,54 +62,6 @@ struct Channel::Impl {
     }
 };
 
-namespace {
-    struct Pow2RingBuf {
-        void** buf_;
-        size_t mask_;
-        size_t head_;
-        size_t size_;
-
-        Pow2RingBuf(void** buf, size_t capa) noexcept;
-
-        bool empty() const noexcept {
-            return size_ == 0;
-        }
-
-        bool full() const noexcept {
-            return size_ == mask_ + 1;
-        }
-
-        void push(void* v) noexcept;
-        void* pop() noexcept;
-    };
-
-    struct BufferedImpl: public Channel::Impl {
-        Pow2RingBuf buf_;
-
-        BufferedImpl(size_t capa) noexcept
-            : buf_((void**)(this + 1), capa)
-        {
-        }
-
-        BufferedImpl(CoroExecutor* exec, size_t capa) noexcept
-            : Impl(exec)
-            , buf_((void**)(this + 1), capa)
-        {
-        }
-
-        void* operator new(size_t, void* p) noexcept {
-            return p;
-        }
-
-        void operator delete(void* p) noexcept {
-            freeMemory(p);
-        }
-
-        bool bufferOne(void* v) noexcept override;
-        bool unbufferOne(void** out) noexcept override;
-    };
-}
-
 bool Channel::Impl::sendOne(void* v) noexcept {
     if (auto w = (Waiter*)receivers_.popFrontOrNull(); w) {
         w->value = v;
@@ -193,6 +145,90 @@ void Channel::Impl::close() noexcept {
     }
 }
 
+__attribute__((noinline)) void Channel::Impl::enqueueSlow(void* v) noexcept {
+    Event ev(exec_);
+    Waiter w;
+
+    w.ev = &ev;
+    w.value = v;
+    w.valueSet = true;
+
+    senders_.pushBack(&w);
+    ev.wait(makeRunable([this] {
+        mu_.unlock();
+    }));
+}
+
+__attribute__((noinline)) bool Channel::Impl::dequeueSlow(void** out) noexcept {
+    Event ev(exec_);
+    Waiter w;
+
+    w.ev = &ev;
+    w.value = nullptr;
+    w.valueSet = false;
+
+    receivers_.pushBack(&w);
+    ev.wait(makeRunable([this] {
+        mu_.unlock();
+    }));
+
+    if (w.valueSet) {
+        *out = w.value;
+
+        return true;
+    }
+
+    return false;
+}
+
+namespace {
+    struct Pow2RingBuf {
+        void** buf_;
+        size_t mask_;
+        size_t head_;
+        size_t size_;
+
+        Pow2RingBuf(void** buf, size_t capa) noexcept;
+
+        bool empty() const noexcept {
+            return size_ == 0;
+        }
+
+        bool full() const noexcept {
+            return size_ == mask_ + 1;
+        }
+
+        void push(void* v) noexcept;
+        void* pop() noexcept;
+    };
+
+    struct BufferedImpl: public Channel::Impl {
+        Pow2RingBuf buf_;
+
+        BufferedImpl(size_t capa) noexcept
+            : buf_((void**)(this + 1), capa)
+        {
+        }
+
+        BufferedImpl(CoroExecutor* exec, size_t capa) noexcept
+            : Impl(exec)
+            , buf_((void**)(this + 1), capa)
+        {
+        }
+
+        void* operator new(size_t, void* p) noexcept {
+            return p;
+        }
+
+        void operator delete(void* p) noexcept {
+            freeMemory(p);
+        }
+
+        bool bufferOne(void* v) noexcept override;
+        bool unbufferOne(void** out) noexcept override;
+    };
+}
+
 bool BufferedImpl::bufferOne(void* v) noexcept {
     if (!buf_.full()) {
         buf_.push(v);
@@ -236,42 +272,6 @@ void* Pow2RingBuf::pop() noexcept {
     head_ = (head_ + 1) & mask_;
     --size_;
     return v;
-}
-
-__attribute__((noinline)) void Channel::Impl::enqueueSlow(void* v) noexcept {
-    Event ev(exec_);
-    Waiter w;
-
-    w.ev = &ev;
-    w.value = v;
-    w.valueSet = true;
-
-    senders_.pushBack(&w);
-    ev.wait(makeRunable([this] {
-        mu_.unlock();
-    }));
-}
-
-__attribute__((noinline)) bool Channel::Impl::dequeueSlow(void** out) noexcept {
-    Event ev(exec_);
-    Waiter w;
-
-    w.ev = &ev;
-    w.value = nullptr;
-    w.valueSet = false;
-
-    receivers_.pushBack(&w);
-    ev.wait(makeRunable([this] {
-        mu_.unlock();
-    }));
-
-    if (w.valueSet) {
-        *out = w.value;
-
-        return true;
-    }
-
-    return false;
 }
 
 Channel::Channel()
