@@ -71,61 +71,36 @@ struct Channel::Impl {
         return false;
     }
 
+    __attribute__((noinline)) void enqueueSlow(void* v) noexcept;
+    __attribute__((noinline)) bool dequeueSlow(void** out) noexcept;
+
     void enqueue(void* v) noexcept {
-        LockGuard guard(mu_);
+        mu_.lock();
 
         STD_INSIST(!closed_);
 
         if (sendOne(v)) {
+            mu_.unlock();
             return;
         }
 
-        Event ev(exec_);
-        Waiter w;
-
-        w.ev = &ev;
-        w.value = v;
-        w.valueSet = true;
-
-        senders_.pushBack(&w);
-        ev.wait(makeRunable([&] {
-            guard.drop();
-            mu_.unlock();
-        }));
+        enqueueSlow(v);
     }
 
     bool dequeue(void** out) noexcept {
-        LockGuard guard(mu_);
+        mu_.lock();
 
         if (recvOne(out)) {
+            mu_.unlock();
             return true;
         }
 
         if (closed_) {
+            mu_.unlock();
             return false;
         }
 
-        Event ev(exec_);
-        Waiter w;
-
-        w.ev = &ev;
-        w.value = nullptr;
-        w.valueSet = false;
-
-        receivers_.pushBack(&w);
-
-        ev.wait(makeRunable([&] {
-            guard.drop();
-            mu_.unlock();
-        }));
-
-        if (w.valueSet) {
-            *out = w.value;
-
-            return true;
-        }
-
-        return false;
+        return dequeueSlow(out);
     }
 
     bool tryEnqueue(void* v) noexcept {
@@ -247,6 +222,42 @@ void* Pow2RingBuf::pop() noexcept {
     head_ = (head_ + 1) & mask_;
     --size_;
     return v;
+}
+
+__attribute__((noinline)) void Channel::Impl::enqueueSlow(void* v) noexcept {
+    Event ev(exec_);
+    Waiter w;
+
+    w.ev = &ev;
+    w.value = v;
+    w.valueSet = true;
+
+    senders_.pushBack(&w);
+    ev.wait(makeRunable([this] {
+        mu_.unlock();
+    }));
+}
+
+__attribute__((noinline)) bool Channel::Impl::dequeueSlow(void** out) noexcept {
+    Event ev(exec_);
+    Waiter w;
+
+    w.ev = &ev;
+    w.value = nullptr;
+    w.valueSet = false;
+
+    receivers_.pushBack(&w);
+    ev.wait(makeRunable([this] {
+        mu_.unlock();
+    }));
+
+    if (w.valueSet) {
+        *out = w.value;
+
+        return true;
+    }
+
+    return false;
 }
 
 Channel::Channel()
