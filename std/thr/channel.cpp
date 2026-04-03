@@ -36,32 +36,8 @@ struct Channel::Impl {
     {
     }
 
-    bool sendOne(void* v) noexcept {
-        if (auto w = (Waiter*)receivers_.popFrontOrNull(); w) {
-            w->value = v;
-            w->valueSet = true;
-            w->ev->signal();
-
-            return true;
-        }
-
-        return bufferOne(v);
-    }
-
-    bool recvOne(void** out) noexcept {
-        if (unbufferOne(out)) {
-            return true;
-        }
-
-        if (auto w = (Waiter*)senders_.popFrontOrNull(); w) {
-            *out = w->value;
-            w->ev->signal();
-
-            return true;
-        }
-
-        return false;
-    }
+    bool sendOne(void* v) noexcept;
+    bool recvOne(void** out) noexcept;
 
     virtual bool bufferOne(void*) noexcept {
         return false;
@@ -74,61 +50,13 @@ struct Channel::Impl {
     __attribute__((noinline)) void enqueueSlow(void* v) noexcept;
     __attribute__((noinline)) bool dequeueSlow(void** out) noexcept;
 
-    void enqueue(void* v) noexcept {
-        mu_.lock();
+    void enqueue(void* v) noexcept;
+    bool dequeue(void** out) noexcept;
 
-        STD_INSIST(!closed_);
+    bool tryEnqueue(void* v) noexcept;
+    bool tryDequeue(void** out) noexcept;
 
-        if (sendOne(v)) {
-            mu_.unlock();
-            return;
-        }
-
-        enqueueSlow(v);
-    }
-
-    bool dequeue(void** out) noexcept {
-        mu_.lock();
-
-        if (recvOne(out)) {
-            mu_.unlock();
-            return true;
-        }
-
-        if (closed_) {
-            mu_.unlock();
-            return false;
-        }
-
-        return dequeueSlow(out);
-    }
-
-    bool tryEnqueue(void* v) noexcept {
-        LockGuard guard(mu_);
-
-        STD_INSIST(!closed_);
-
-        return sendOne(v);
-    }
-
-    bool tryDequeue(void** out) noexcept {
-        LockGuard guard(mu_);
-
-        return recvOne(out);
-    }
-
-    void close() noexcept {
-        LockGuard guard(mu_);
-
-        STD_INSIST(!closed_);
-        STD_INSIST(senders_.empty());
-
-        closed_ = true;
-
-        while (auto w = (Waiter*)receivers_.popFrontOrNull()) {
-            w->ev->signal();
-        }
-    }
+    void close() noexcept;
 
     virtual ~Impl() noexcept {
     }
@@ -177,31 +105,117 @@ namespace {
             freeMemory(p);
         }
 
-        bool bufferOne(void* v) noexcept override {
-            if (!buf_.full()) {
-                buf_.push(v);
-
-                return true;
-            }
-
-            return false;
-        }
-
-        bool unbufferOne(void** out) noexcept override {
-            if (!buf_.empty()) {
-                *out = buf_.pop();
-
-                if (auto w = (Waiter*)senders_.popFrontOrNull(); w) {
-                    buf_.push(w->value);
-                    w->ev->signal();
-                }
-
-                return true;
-            }
-
-            return false;
-        }
+        bool bufferOne(void* v) noexcept override;
+        bool unbufferOne(void** out) noexcept override;
     };
+}
+
+bool Channel::Impl::sendOne(void* v) noexcept {
+    if (auto w = (Waiter*)receivers_.popFrontOrNull(); w) {
+        w->value = v;
+        w->valueSet = true;
+        w->ev->signal();
+
+        return true;
+    }
+
+    return bufferOne(v);
+}
+
+bool Channel::Impl::recvOne(void** out) noexcept {
+    if (unbufferOne(out)) {
+        return true;
+    }
+
+    if (auto w = (Waiter*)senders_.popFrontOrNull(); w) {
+        *out = w->value;
+        w->ev->signal();
+
+        return true;
+    }
+
+    return false;
+}
+
+void Channel::Impl::enqueue(void* v) noexcept {
+    mu_.lock();
+
+    STD_INSIST(!closed_);
+
+    if (sendOne(v)) {
+        mu_.unlock();
+        return;
+    }
+
+    enqueueSlow(v);
+}
+
+bool Channel::Impl::dequeue(void** out) noexcept {
+    mu_.lock();
+
+    if (recvOne(out)) {
+        mu_.unlock();
+        return true;
+    }
+
+    if (closed_) {
+        mu_.unlock();
+        return false;
+    }
+
+    return dequeueSlow(out);
+}
+
+bool Channel::Impl::tryEnqueue(void* v) noexcept {
+    LockGuard guard(mu_);
+
+    STD_INSIST(!closed_);
+
+    return sendOne(v);
+}
+
+bool Channel::Impl::tryDequeue(void** out) noexcept {
+    LockGuard guard(mu_);
+
+    return recvOne(out);
+}
+
+void Channel::Impl::close() noexcept {
+    LockGuard guard(mu_);
+
+    STD_INSIST(!closed_);
+    STD_INSIST(senders_.empty());
+
+    closed_ = true;
+
+    while (auto w = (Waiter*)receivers_.popFrontOrNull()) {
+        w->ev->signal();
+    }
+}
+
+bool BufferedImpl::bufferOne(void* v) noexcept {
+    if (!buf_.full()) {
+        buf_.push(v);
+
+        return true;
+    }
+
+    return false;
+}
+
+bool BufferedImpl::unbufferOne(void** out) noexcept {
+    if (!buf_.empty()) {
+        *out = buf_.pop();
+
+        if (auto w = (Waiter*)senders_.popFrontOrNull(); w) {
+            buf_.push(w->value);
+            w->ev->signal();
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
 Pow2RingBuf::Pow2RingBuf(void** buf, size_t capa) noexcept
