@@ -31,7 +31,7 @@ struct Channel::Impl {
 
     Impl(CoroExecutor* exec) noexcept
         : exec_(exec)
-        , mu_(exec)
+        , mu_(Mutex::spinLock(exec))
         , closed_(false)
     {
     }
