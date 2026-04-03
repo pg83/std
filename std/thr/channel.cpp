@@ -146,19 +146,6 @@ bool Channel::Impl::tryDequeue(void** out) noexcept {
     return recvOne(out);
 }
 
-void Channel::Impl::close() noexcept {
-    LockGuard guard(mu_);
-
-    STD_INSIST(!closed_);
-    STD_INSIST(senders_.empty());
-
-    closed_ = true;
-
-    while (auto w = (Waiter*)receivers_.popFrontOrNull()) {
-        w->ev->signal();
-    }
-}
-
 __attribute__((noinline)) bool Channel::Impl::dequeueSlow(void** out) noexcept {
     Event ev(exec_);
     Waiter w;
@@ -179,6 +166,19 @@ __attribute__((noinline)) bool Channel::Impl::dequeueSlow(void** out) noexcept {
     }
 
     return false;
+}
+
+void Channel::Impl::close() noexcept {
+    LockGuard guard(mu_);
+
+    STD_INSIST(!closed_);
+    STD_INSIST(senders_.empty());
+
+    closed_ = true;
+
+    while (auto w = (Waiter*)receivers_.popFrontOrNull()) {
+        w->ev->signal();
+    }
 }
 
 namespace {
