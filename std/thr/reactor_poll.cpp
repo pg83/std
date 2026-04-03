@@ -81,7 +81,8 @@ namespace {
         void cancelInternal(InternalReq* req);
         void processEvent(PollFD* ev, IntrusiveList& ready) noexcept;
 
-        u32 pollOne(PollFD pfd, u64 deadlineUs);
+        __attribute__((noinline)) size_t pollOne(const PollFD* in, PollFD* out, u64 deadlineUs);
+        __attribute__((noinline)) size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs);
         size_t poll(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) override;
     };
 }
@@ -254,7 +255,7 @@ void ReactorState::run() noexcept {
     }
 }
 
-u32 ReactorState::pollOne(PollFD pfd, u64 deadlineUs) {
+size_t ReactorState::pollOne(const PollFD* in, PollFD* out, u64 deadlineUs) {
     ReqCommon common;
 
     common.deadline = deadlineUs;
@@ -262,7 +263,7 @@ u32 ReactorState::pollOne(PollFD pfd, u64 deadlineUs) {
 
     InternalReq req;
 
-    req.pfd = pfd;
+    req.pfd = in[0];
     req.common = &common;
 
     queueMutex_.lock();
@@ -278,22 +279,16 @@ u32 ReactorState::pollOne(PollFD pfd, u64 deadlineUs) {
     }), &common.task);
     // clang-format on
 
-    return req.result;
-}
+    if (req.result) {
+        out[0] = {in[0].fd, req.result};
 
-size_t ReactorState::poll(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
-    STD_ASSERT(count > 0);
-
-    if (count == 1) {
-        if (auto res = pollOne(in[0], deadlineUs); res) {
-            out[0] = {in[0].fd, res};
-
-            return 1;
-        }
-
-        return 0;
+        return 1;
     }
 
+    return 0;
+}
+
+size_t ReactorState::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
     auto opool = ObjPool::fromMemory();
     auto p = opool.mutPtr();
     auto reqs = (InternalMultiReq**)p->allocate(sizeof(InternalMultiReq*) * count);
@@ -340,6 +335,16 @@ size_t ReactorState::poll(const PollFD* in, PollFD* out, size_t count, u64 deadl
     }
 
     return nout;
+}
+
+size_t ReactorState::poll(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
+    STD_ASSERT(count > 0);
+
+    if (count == 1) {
+        return pollOne(in, out, deadlineUs);
+    } else {
+        return pollMulti(in, out, count, deadlineUs);
+    }
 }
 
 ReactorIface* ReactorIface::create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool) {
