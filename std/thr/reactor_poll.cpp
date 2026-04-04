@@ -5,6 +5,7 @@
 #include "mutex.h"
 #include "guard.h"
 #include "thread.h"
+#include "parker.h"
 #include "poller.h"
 #include "poll_fd.h"
 
@@ -20,7 +21,6 @@
 #include <std/dbg/assert.h>
 #include <std/alg/exchange.h>
 #include <std/mem/obj_pool.h>
-#include <std/sys/event_fd.h>
 #include <std/map/treap_node.h>
 
 using namespace stl;
@@ -66,7 +66,7 @@ namespace {
         IntMap<FdEntry> fdMap_;
         Mutex queueMutex_;
         DeadlineTreap queue_;
-        EventFD wakeEv_;
+        Parker parker_;
         bool stopped_ = false;
         Thread* thread_ = nullptr;
 
@@ -74,9 +74,7 @@ namespace {
         ~ReactorState() noexcept;
 
         void drainQueue();
-        void wakeup() noexcept;
         void rearmOrDisarm(int fd);
-        void drainWakeup() noexcept;
         void run() noexcept override;
         void cancelInternal(InternalReq* req);
         void processEvent(PollFD* ev, IntrusiveList& ready) noexcept;
@@ -135,7 +133,7 @@ ReactorState::ReactorState(CoroExecutor* exec, ThreadPool* p, ObjPool* opool)
     , fdMap_(ObjPool::create(opool))
     , queueMutex_(Mutex::spinLock(exec))
 {
-    poller->arm({wakeEv_.fd(), PollFlag::In});
+    poller->arm({parker_.fd(), PollFlag::In});
     thread_ = opool->make<Thread>(*this);
 }
 
@@ -156,18 +154,10 @@ void ReactorState::cancelInternal(InternalReq* req) {
     rearmOrDisarm(req->pfd.fd);
 }
 
-void ReactorState::wakeup() noexcept {
-    wakeEv_.signal();
-}
-
 ReactorState::~ReactorState() noexcept {
     stdAtomicStore(&stopped_, true, MemoryOrder::Release);
-    wakeup();
+    parker_.signal();
     thread_->join();
-}
-
-void ReactorState::drainWakeup() noexcept {
-    wakeEv_.drain();
 }
 
 void ReactorState::drainQueue() {
@@ -214,18 +204,20 @@ void ReactorState::processEvent(PollFD* ev, IntrusiveList& ready) noexcept {
 
 void ReactorState::run() noexcept {
     while (!stdAtomicFetch(&stopped_, MemoryOrder::Acquire)) {
-        drainQueue();
-
         IntrusiveList ready;
 
-        poller->wait([this, &ready](PollFD* ev) {
-            if (ev->fd == wakeEv_.fd()) {
-                drainWakeup();
-                poller->arm({wakeEv_.fd(), PollFlag::In});
-            } else {
-                processEvent(ev, ready);
-            }
-        }, min(timers.earliest(), sleepers.earliest()));
+        parker_.park([&] {
+            drainQueue();
+
+            poller->wait([this, &ready](PollFD* ev) {
+                if (ev->fd == parker_.fd()) {
+                    parker_.drain();
+                    poller->arm({parker_.fd(), PollFlag::In});
+                } else {
+                    processEvent(ev, ready);
+                }
+            }, min(timers.earliest(), sleepers.earliest()));
+        });
 
         auto now = monotonicNowUs();
 
@@ -274,7 +266,7 @@ size_t ReactorState::pollOne(const PollFD* in, PollFD* out, u64 deadlineUs) {
         queueMutex_.unlock();
 
         if (needsWakeup) {
-            wakeup();
+            parker_.unpark();
         }
     }), &common.task);
     // clang-format on
@@ -322,7 +314,7 @@ size_t ReactorState::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 
     // clang-format off
     exec_->parkWith(makeRunable([this] {
         queueMutex_.unlock();
-        wakeup();
+        parker_.unpark();
     }), &common.task);
     // clang-format on
 

@@ -12,7 +12,7 @@
 #include <std/alg/defer.h>
 #include <std/lib/vector.h>
 #include <std/thr/poll_fd.h>
-#include <std/sys/event_fd.h>
+#include <std/thr/parker.h>
 #include <std/mem/obj_pool.h>
 
 #if __has_include(<ares.h>)
@@ -64,7 +64,7 @@ namespace {
         IntMap<PollFD> fdMap_;
         Vector<PollFD> fds_;
         Vector<PollFD> outFds_;
-        EventFD wakeup_;
+        Parker parker_;
 
         DnsResolverImpl(ObjPool* pool, CoroExecutor* exec);
         ~DnsResolverImpl() noexcept;
@@ -185,7 +185,7 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
 
         req.event->wait(makeRunable([this] {
             lock_.unlock();
-            wakeup_.signal();
+            parker_.unpark();
         }));
 
         if (req.result) {
@@ -223,7 +223,7 @@ void DnsResolverImpl::rebuildFds() {
         fds_.pushBack(pfd);
     });
 
-    fds_.pushBack({wakeup_.fd(), PollFlag::In});
+    fds_.pushBack({parker_.fd(), PollFlag::In});
 }
 
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
@@ -233,20 +233,24 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
     }
 
     while (!req.result) {
-        submitPending();
-        rebuildFds();
+        size_t nout = 0;
 
-        struct timeval tv;
+        parker_.park([&] {
+            submitPending();
+            rebuildFds();
 
-        ares_timeout(channel_, nullptr, &tv);
+            struct timeval tv;
 
-        u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
-        outFds_.grow(fds_.length());
-        size_t nout = exec_->pollMulti(fds_.data(), outFds_.mutData(), fds_.length(), deadlineUs);
+            ares_timeout(channel_, nullptr, &tv);
+
+            u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
+            outFds_.grow(fds_.length());
+            nout = exec_->pollMulti(fds_.data(), outFds_.mutData(), fds_.length(), deadlineUs);
+        });
 
         for (size_t i = 0; i < nout; ++i) {
-            if (outFds_[i].fd == wakeup_.fd()) {
-                wakeup_.drain();
+            if (outFds_[i].fd == parker_.fd()) {
+                parker_.drain();
             } else {
                 ares_socket_t rfd = (outFds_[i].flags & PollFlag::In) ? outFds_[i].fd : ARES_SOCKET_BAD;
                 ares_socket_t wfd = (outFds_[i].flags & PollFlag::Out) ? outFds_[i].fd : ARES_SOCKET_BAD;
