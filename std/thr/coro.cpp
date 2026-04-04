@@ -554,7 +554,7 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
 }
 
 CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads) {
-    return create(pool, threads, max(threads / 2, (size_t)1));
+    return create(pool, threads, threads);
 }
 
 CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads, size_t reactors) {
