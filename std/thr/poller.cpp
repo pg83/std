@@ -297,15 +297,71 @@ namespace {
     };
 }
 
+namespace {
+    template <typename NativePoller>
+    struct HybridPoller: public PollerIface {
+        static constexpr size_t threshold = 100;
+
+        ObjPool* pool_;
+        PollPoller poll_;
+        NativePoller native_;
+        bool migrated_ = false;
+
+        HybridPoller(ObjPool* pool)
+            : pool_(pool)
+            , poll_(pool)
+        {
+        }
+
+        void migrate() {
+            migrated_ = true;
+
+            poll_.armed_.visit([this](const PollFD& pfd) {
+                native_.arm(pfd);
+            });
+        }
+
+        void arm(PollFD pfd) override {
+            if (migrated_) {
+                native_.arm(pfd);
+
+                return;
+            }
+
+            poll_.arm(pfd);
+
+            if (poll_.armed_.size() > threshold) {
+                migrate();
+            }
+        }
+
+        void disarm(int fd) override {
+            if (migrated_) {
+                native_.disarm(fd);
+            } else {
+                poll_.disarm(fd);
+            }
+        }
+
+        void waitImpl(VisitorFace& v, u32 timeoutUs) override {
+            if (migrated_) {
+                native_.waitImpl(v, timeoutUs);
+            } else {
+                poll_.waitImpl(v, timeoutUs);
+            }
+        }
+    };
+}
+
 PollerIface* PollerIface::create(ObjPool* pool) {
     if (getenv("USE_POLL_POLLER")) {
         return pool->make<PollPoller>(pool);
     }
 
 #if defined(__linux__)
-    return pool->make<EpollPoller>();
+    return pool->make<HybridPoller<EpollPoller>>(pool);
 #elif defined(__APPLE__) || defined(__FreeBSD__)
-    return pool->make<KqueuePoller>();
+    return pool->make<HybridPoller<KqueuePoller>>(pool);
 #endif
 
     return pool->make<PollPoller>(pool);
