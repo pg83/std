@@ -1806,4 +1806,131 @@ STD_TEST_SUITE(IntrusiveList) {
         STD_INSIST(dst.mutFront() == &a);
         STD_INSIST(dst.mutBack() == &d);
     }
+
+    STD_TEST(CutHalfEmpty) {
+        IntrusiveList src;
+        IntrusiveList dst;
+
+        src.cutHalf(dst);
+
+        STD_INSIST(src.empty());
+        STD_INSIST(dst.empty());
+    }
+
+    STD_TEST(CutHalfTwoElements) {
+        IntrusiveList src;
+        IntrusiveList dst;
+        TestData a(1);
+        TestData b(2);
+
+        src.pushBack(&a);
+        src.pushBack(&b);
+        src.cutHalf(dst);
+
+        STD_INSIST(src.length() == 1);
+        STD_INSIST(dst.length() == 1);
+        STD_INSIST(src.mutFront() == &a);
+        STD_INSIST(dst.mutFront() == &b);
+    }
+
+    STD_TEST(CutHalfThreeElements) {
+        IntrusiveList src;
+        IntrusiveList dst;
+        TestData a(1);
+        TestData b(2);
+        TestData c(3);
+
+        src.pushBack(&a);
+        src.pushBack(&b);
+        src.pushBack(&c);
+        src.cutHalf(dst);
+
+        STD_INSIST(src.length() == 2);
+        STD_INSIST(dst.length() == 1);
+        STD_INSIST(src.mutFront() == &a);
+        STD_INSIST(src.mutBack() == &b);
+        STD_INSIST(dst.mutFront() == &c);
+    }
+
+    STD_TEST(CutHalfFourElements) {
+        IntrusiveList src;
+        IntrusiveList dst;
+        TestData a(1);
+        TestData b(2);
+        TestData c(3);
+        TestData d(4);
+
+        src.pushBack(&a);
+        src.pushBack(&b);
+        src.pushBack(&c);
+        src.pushBack(&d);
+        src.cutHalf(dst);
+
+        STD_INSIST(src.length() == 2);
+        STD_INSIST(dst.length() == 2);
+        STD_INSIST(src.mutFront() == &a);
+        STD_INSIST(src.mutBack() == &b);
+        STD_INSIST(dst.mutFront() == &c);
+        STD_INSIST(dst.mutBack() == &d);
+    }
+
+    STD_TEST(CutHalfFiveElements) {
+        IntrusiveList src;
+        IntrusiveList dst;
+        TestData a(1);
+        TestData b(2);
+        TestData c(3);
+        TestData d(4);
+        TestData e(5);
+
+        src.pushBack(&a);
+        src.pushBack(&b);
+        src.pushBack(&c);
+        src.pushBack(&d);
+        src.pushBack(&e);
+        src.cutHalf(dst);
+
+        STD_INSIST(src.length() == 3);
+        STD_INSIST(dst.length() == 2);
+        STD_INSIST(src.mutFront() == &a);
+        STD_INSIST(src.mutBack() == &c);
+        STD_INSIST(dst.mutFront() == &d);
+        STD_INSIST(dst.mutBack() == &e);
+    }
+
+    STD_TEST(CutHalfSingleElement) {
+        IntrusiveList src;
+        IntrusiveList dst;
+        TestData a(1);
+
+        src.pushBack(&a);
+        src.cutHalf(dst);
+
+        STD_INSIST(src.length() == 1);
+        STD_INSIST(dst.empty());
+        STD_INSIST(src.mutFront() == &a);
+    }
+
+    STD_TEST(CutHalfBackwardTraversal) {
+        IntrusiveList src;
+        IntrusiveList dst;
+        TestData a(1);
+        TestData b(2);
+        TestData c(3);
+        TestData d(4);
+
+        src.pushBack(&a);
+        src.pushBack(&b);
+        src.pushBack(&c);
+        src.pushBack(&d);
+        src.cutHalf(dst);
+
+        // Verify backward traversal of src: b, a
+        STD_INSIST(src.mutBack() == &b);
+        STD_INSIST(src.mutBack()->prev == &a);
+
+        // Verify backward traversal of dst: d, c
+        STD_INSIST(dst.mutBack() == &d);
+        STD_INSIST(dst.mutBack()->prev == &c);
+    }
 }

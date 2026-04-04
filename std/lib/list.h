@@ -101,6 +101,7 @@ namespace stl {
             }, (void*)&f);
         }
 
+        void cutHalf(IntrusiveList& other) noexcept;
         void splitHalf(IntrusiveList& l, IntrusiveList& r) noexcept;
     };
 }

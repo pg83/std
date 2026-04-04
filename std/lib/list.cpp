@@ -108,6 +108,27 @@ namespace {
     }
 }
 
+void IntrusiveList::cutHalf(IntrusiveList& other) noexcept {
+    if (almostEmpty()) {
+        return;
+    }
+
+    auto slow = head.next;
+    auto fast = head.next;
+
+    while (fast->next != &head && fast->next->next != &head) {
+        slow = slow->next;
+        fast = fast->next->next;
+    }
+
+    auto mid = slow->next;
+    auto back = head.prev;
+
+    link(slow, &head);
+    link(&other.head, mid);
+    link(back, &other.head);
+}
+
 void IntrusiveList::splitHalf(IntrusiveList& l, IntrusiveList& r) noexcept {
     IntrusiveList tmp;
     xchgWithEmptyList(tmp);
