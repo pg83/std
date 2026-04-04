@@ -325,16 +325,14 @@ namespace {
         }
 
         void arm(PollFD pfd) override {
-            if (!poll_) {
+            if (poll_) {
+                poll_->arm(pfd);
+
+                if (poll_->armed_.size() > threshold) {
+                    migrate();
+                }
+            } else {
                 current_->arm(pfd);
-
-                return;
-            }
-
-            poll_->arm(pfd);
-
-            if (poll_->armed_.size() > threshold) {
-                migrate();
             }
         }
 
