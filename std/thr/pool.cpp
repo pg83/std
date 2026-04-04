@@ -460,8 +460,10 @@ void WorkStealingThreadPool::Worker::loop() {
 }
 
 void WorkStealingThreadPool::Worker::steal(IntrusiveList* stolen) noexcept {
-    LockGuard lock(mutex_);
-    splitHalf(stolen);
+    if (mutex_.tryLock()) {
+        splitHalf(stolen);
+        mutex_.unlock();
+    }
 }
 
 void WorkStealingThreadPool::Worker::splitHalf(IntrusiveList* stolen) noexcept {
