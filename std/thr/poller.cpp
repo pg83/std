@@ -295,9 +295,7 @@ namespace {
             }
         }
     };
-}
 
-namespace {
     template <typename NativePoller>
     struct HybridPoller: public PollerIface {
         static constexpr size_t threshold = 100;
