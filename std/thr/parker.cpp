@@ -24,7 +24,7 @@ void Parker::unpark() noexcept {
     bool expected = true;
 
     if (stdAtomicCAS(&sleeping_, &expected, false, MemoryOrder::Acquire, MemoryOrder::Relaxed)) {
-        ev_.signal();
+        signal();
     }
 }
 
