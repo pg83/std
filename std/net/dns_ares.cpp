@@ -155,7 +155,7 @@ DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec)
     ares_options opts;
     memset(&opts, 0, sizeof(opts));
 
-    opts.timeout = 500;
+    opts.timeout = 100;
     opts.tries = 3;
     opts.sock_state_cb = sockStateCb;
     opts.sock_state_cb_data = this;

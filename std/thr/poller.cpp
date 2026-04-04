@@ -303,18 +303,18 @@ namespace {
         ObjPool* pool_;
         PollPoller* poll_;
         PollerIface* current_;
+        PollerIface* native;
 
         HybridPoller(ObjPool* pool)
             : pool_(pool)
             , poll_(pool->make<PollPoller>(pool))
             , current_(poll_)
+            , native(pool_->make<NativePoller>())
         {
         }
 
         void migrate() {
-            auto native = pool_->make<NativePoller>();
-
-            poll_->armed_.visit([native](const PollFD& pfd) {
+            poll_->armed_.visit([&](const PollFD& pfd) {
                 native->arm(pfd);
             });
 
