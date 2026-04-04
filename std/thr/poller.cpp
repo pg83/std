@@ -303,52 +303,47 @@ namespace {
         static constexpr size_t threshold = 100;
 
         ObjPool* pool_;
-        PollPoller poll_;
-        NativePoller native_;
-        bool migrated_ = false;
+        PollPoller* poll_;
+        PollerIface* current_;
 
         HybridPoller(ObjPool* pool)
             : pool_(pool)
-            , poll_(pool)
+            , poll_(pool->make<PollPoller>(pool))
+            , current_(poll_)
         {
         }
 
         void migrate() {
-            migrated_ = true;
+            auto native = pool_->make<NativePoller>();
 
-            poll_.armed_.visit([this](const PollFD& pfd) {
-                native_.arm(pfd);
+            poll_->armed_.visit([native](const PollFD& pfd) {
+                native->arm(pfd);
             });
+
+            current_ = native;
+            poll_ = nullptr;
         }
 
         void arm(PollFD pfd) override {
-            if (migrated_) {
-                native_.arm(pfd);
+            if (!poll_) {
+                current_->arm(pfd);
 
                 return;
             }
 
-            poll_.arm(pfd);
+            poll_->arm(pfd);
 
-            if (poll_.armed_.size() > threshold) {
+            if (poll_->armed_.size() > threshold) {
                 migrate();
             }
         }
 
         void disarm(int fd) override {
-            if (migrated_) {
-                native_.disarm(fd);
-            } else {
-                poll_.disarm(fd);
-            }
+            current_->disarm(fd);
         }
 
         void waitImpl(VisitorFace& v, u32 timeoutUs) override {
-            if (migrated_) {
-                native_.waitImpl(v, timeoutUs);
-            } else {
-                poll_.waitImpl(v, timeoutUs);
-            }
+            current_->waitImpl(v, timeoutUs);
         }
     };
 }
