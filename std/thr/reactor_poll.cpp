@@ -51,16 +51,11 @@ namespace {
 
     struct PollGroupImpl;
 
-    struct GroupReqCommon: public ReqCommon {
-        PollGroupImpl* group = nullptr;
-    };
-
     struct InternalMultiReq: public InternalReq {
         void complete(u32 res, IntrusiveList& ready) noexcept override;
     };
 
-    struct PollGroupImpl: public PollGroup {
-        GroupReqCommon common_;
+    struct PollGroupImpl: public PollGroup, public ReqCommon {
         InternalMultiReq** reqs_;
         u32* results_;
         PollFD* pfds_;
@@ -129,7 +124,7 @@ void InternalMultiReq::complete(u32 res, IntrusiveList& ready) noexcept {
     *result = res;
     ready.pushBack(common->task);
 
-    auto g = ((GroupReqCommon*)common)->group;
+    auto g = (PollGroupImpl*)common;
 
     for (auto r : range(g->reqs_, g->reqs_ + g->count_)) {
         if (r != this) {
@@ -275,14 +270,12 @@ PollGroupImpl::PollGroupImpl(ObjPool* pool, const PollFD* fds, size_t count)
     , pfds_((PollFD*)pool->allocate(sizeof(PollFD) * count))
     , count_(count)
 {
-    common_.group = this;
-
     for (size_t i = 0; i < count; ++i) {
         auto req = pool->make<InternalMultiReq>();
 
         req->pfd = fds[i];
         req->result = &results_[i];
-        req->common = &common_;
+        req->common = this;
 
         reqs_[i] = req;
         pfds_[i] = fds[i];
@@ -295,9 +288,9 @@ int PollGroupImpl::fd() const noexcept {
 }
 
 void PollGroupImpl::reset(ReactorState* reactor, u64 deadlineUs) noexcept {
-    common_.reactor = reactor;
-    common_.deadline = deadlineUs;
-    common_.task = nullptr;
+    this->reactor = reactor;
+    this->deadline = deadlineUs;
+    this->task = nullptr;
     memZero(results_, results_ + count_);
 }
 
@@ -320,7 +313,7 @@ void ReactorState::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
     exec_->parkWith(makeRunable([this] {
         queueMutex_.unlock();
         parker_.unpark();
-    }), &impl->common_.task);
+    }), &impl->task);
     // clang-format on
 
     for (size_t i = 0; i < impl->count_; ++i) {
