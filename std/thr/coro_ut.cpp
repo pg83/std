@@ -644,7 +644,7 @@ STD_TEST_SUITE(CoroPoll) {
             auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
             PollFD out[2];
-            auto g = exec->pollGroup(opool.mutPtr(), in, 2);
+            auto g = PollGroup::create(opool.mutPtr(), in, 2);
             size_t n = exec->poll(g, out, UINT64_MAX);
 
             for (size_t i = 0; i < n; ++i) {
@@ -673,7 +673,7 @@ STD_TEST_SUITE(CoroPoll) {
             auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
             PollFD out[2];
-            auto g = exec->pollGroup(opool.mutPtr(), in, 2);
+            auto g = PollGroup::create(opool.mutPtr(), in, 2);
             size_t n = exec->poll(g, out, UINT64_MAX);
 
             for (size_t i = 0; i < n; ++i) {
@@ -701,7 +701,7 @@ STD_TEST_SUITE(CoroPoll) {
             auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
             PollFD out[2];
-            auto g = exec->pollGroup(opool.mutPtr(), in, 2);
+            auto g = PollGroup::create(opool.mutPtr(), in, 2);
 
             return exec->poll(g, out, 1);
         });
@@ -730,7 +730,7 @@ STD_TEST_SUITE(CoroPoll) {
             }
 
             PollFD out[N];
-            auto g = exec->pollGroup(opool.mutPtr(), in, N);
+            auto g = PollGroup::create(opool.mutPtr(), in, N);
             size_t n = exec->poll(g, out, UINT64_MAX);
 
             for (size_t i = 0; i < n; ++i) {

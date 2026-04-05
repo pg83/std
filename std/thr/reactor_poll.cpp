@@ -92,7 +92,6 @@ namespace {
         void cancelInternal(InternalReq* req);
         void processEvent(PollFD* ev, IntrusiveList& ready) noexcept;
 
-        PollGroup* pollGroup(ObjPool* pool, const PollFD* fds, size_t count) override;
         size_t poll(PollGroup* g, PollFD* out, u64 deadlineUs) override;
         u32 poll(PollFD pfd, u64 deadlineUs) override;
     };
@@ -295,7 +294,7 @@ void PollGroupImpl::reset(ReactorState* reactor, u64 deadlineUs) noexcept {
     __builtin_memset(results_, 0, count_ * sizeof(u32));
 }
 
-PollGroup* ReactorState::pollGroup(ObjPool* pool, const PollFD* fds, size_t count) {
+PollGroup* PollGroup::create(ObjPool* pool, const PollFD* fds, size_t count) {
     return pool->make<PollGroupImpl>(pool, fds, count);
 }
 

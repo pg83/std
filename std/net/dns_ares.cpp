@@ -229,7 +229,7 @@ void DnsResolverImpl::rebuildFds() {
 
     auto opool = ObjPool::fromMemory();
 
-    pollGroup_ = exec_->pollGroup(opool.mutPtr(), fds_.data(), fds_.length());
+    pollGroup_ = PollGroup::create(opool.mutPtr(), fds_.data(), fds_.length());
 }
 
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
