@@ -119,7 +119,7 @@ namespace {
         const u64 tlsKey_;
         Vector<ReactorIface*> reactors_;
         Vector<DnsResolver*> dnsResolvers_;
-        ThreadPool* fsPool_;
+        ThreadPool* offload_;
         ThreadPool* pool_;
 
         CoroExecutorImpl(ObjPool* pool, size_t threads, size_t reactors);
@@ -178,10 +178,10 @@ CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads, size_t reactor
         reactors_.pushBack(ReactorIface::create(this, pool_, pool));
     }
 
-    fsPool_ = ThreadPool::simple(pool, reactors);
+    offload_ = ThreadPool::simple(pool, reactors);
 
     for (size_t i = 0; i < reactors; ++i) {
-        dnsResolvers_.pushBack(DnsResolver::create(pool, this, fsPool_));
+        dnsResolvers_.pushBack(DnsResolver::create(pool, this, offload_));
     }
 }
 
@@ -305,7 +305,7 @@ ssize_t CoroExecutorImpl::pread(int fd, void* buf, size_t len, off_t offset) {
     ssize_t result = 0;
 
     // clang-format off
-    offload(fsPool_, [&] {
+    offload(offload_, [&] {
         ssize_t n = ::pread(fd, buf, len, offset);
         result = n < 0 ? -errno : n;
     });
@@ -318,7 +318,7 @@ ssize_t CoroExecutorImpl::pwrite(int fd, const void* buf, size_t len, off_t offs
     ssize_t result = 0;
 
     // clang-format off
-    offload(fsPool_, [&] {
+    offload(offload_, [&] {
         ssize_t n = ::pwrite(fd, buf, len, offset);
         result = n < 0 ? -errno : n;
     });
@@ -331,7 +331,7 @@ int CoroExecutorImpl::fsync(int fd) {
     int result = 0;
 
     // clang-format off
-    offload(fsPool_, [&] {
+    offload(offload_, [&] {
         result = ::fsync(fd) < 0 ? -errno : 0;
     });
     // clang-format on
@@ -343,7 +343,7 @@ int CoroExecutorImpl::fdatasync(int fd) {
     int result = 0;
 
     // clang-format off
-    offload(fsPool_, [&] {
+    offload(offload_, [&] {
 #if defined(__APPLE__)
         result = ::fcntl(fd, F_FULLFSYNC) < 0 ? -errno : 0;
 #else
