@@ -469,15 +469,11 @@ void WorkStealingThreadPool::Worker::steal(IntrusiveList* stolen) noexcept {
 void WorkStealingThreadPool::Worker::splitHalf(IntrusiveList* stolen) noexcept {
     if (tasks_.empty()) {
         return;
-    }
-
-    if (tasks_.almostEmpty()) {
+    } else if (tasks_.almostEmpty()) {
         tasks_.xchgWithEmptyList(*stolen);
-
-        return;
+    } else {
+        tasks_.cutHalf(*stolen);
     }
-
-    tasks_.cutHalf(*stolen);
 }
 
 ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads) {
