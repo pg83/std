@@ -9,8 +9,6 @@ namespace stl {
     struct ThreadPool;
     struct CoroExecutor;
 
-    struct ReactorIface;
-
     struct PollGroup {
         virtual int fd() const noexcept = 0;
 
