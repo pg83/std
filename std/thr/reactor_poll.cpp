@@ -60,7 +60,6 @@ namespace {
     struct PollGroupImpl: public PollGroup, public ReqCommon {
         InternalMultiReq** reqs_;
         u32* results_;
-        PollFD* pfds_;
         size_t count_;
 
         PollGroupImpl(ObjPool* pool, const PollFD* fds, size_t count);
@@ -273,7 +272,6 @@ void ReactorState::run() noexcept {
 PollGroupImpl::PollGroupImpl(ObjPool* pool, const PollFD* fds, size_t count)
     : reqs_((InternalMultiReq**)pool->allocate(sizeof(InternalMultiReq*) * count))
     , results_((u32*)pool->allocate(sizeof(u32) * count))
-    , pfds_((PollFD*)pool->allocate(sizeof(PollFD) * count))
     , count_(count)
 {
     for (size_t i = 0; i < count; ++i) {
@@ -284,14 +282,13 @@ PollGroupImpl::PollGroupImpl(ObjPool* pool, const PollFD* fds, size_t count)
         req->common = this;
 
         reqs_[i] = req;
-        pfds_[i] = fds[i];
     }
 
     resetResult();
 }
 
 int PollGroupImpl::fd() const noexcept {
-    return pfds_[0].fd;
+    return reqs_[0]->pfd.fd;
 }
 
 void PollGroupImpl::resetResult() noexcept {
@@ -323,7 +320,7 @@ void ReactorState::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
 
     for (size_t i = 0; i < impl->count_; ++i) {
         if (auto res = impl->results_[i]; res) {
-            PollFD pfd = {impl->pfds_[i].fd, res};
+            PollFD pfd = {impl->reqs_[i]->pfd.fd, res};
             visitor.visit(&pfd);
         }
     }
