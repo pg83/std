@@ -11,6 +11,7 @@
 
 #include <std/mem/new.h>
 #include <std/sys/crt.h>
+#include <std/sys/crt.h>
 #include <std/lib/list.h>
 #include <std/lib/node.h>
 #include <std/thr/task.h>
@@ -259,7 +260,6 @@ void ReactorState::run() noexcept {
     }
 }
 
-
 PollGroupImpl::PollGroupImpl(ObjPool* pool, const PollFD* fds, size_t count)
     : reqs_((InternalMultiReq**)pool->allocate(sizeof(InternalMultiReq*) * count))
     , results_((u32*)pool->allocate(sizeof(u32) * count))
@@ -291,7 +291,7 @@ void PollGroupImpl::reset(ReactorState* reactor, u64 deadlineUs) noexcept {
     common_.deadline = deadlineUs;
     common_.task = nullptr;
 
-    __builtin_memset(results_, 0, count_ * sizeof(u32));
+    memZero(results_, results_ + count_);
 }
 
 PollGroup* PollGroup::create(ObjPool* pool, const PollFD* fds, size_t count) {
