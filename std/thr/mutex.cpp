@@ -13,9 +13,9 @@
 using namespace stl;
 
 namespace {
-    struct SpinSemImpl: public SemaphoreIface {
+    struct alignas(64) SpinSemImpl: public SemaphoreIface {
         CoroExecutor* exec_;
-        alignas(64) char flag_ = 0;
+        char flag_ = 0;
 
         SpinSemImpl(CoroExecutor* exec) noexcept
             : exec_(exec)
