@@ -317,8 +317,8 @@ void ReactorState::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
     // clang-format on
 
     for (size_t i = 0; i < impl->count_; ++i) {
-        if (impl->results_[i]) {
-            PollFD pfd = {impl->pfds_[i].fd, impl->results_[i]};
+        if (auto res = impl->results_[i]; res) {
+            PollFD pfd = {impl->pfds_[i].fd, res};
             visitor.visit(&pfd);
         }
     }
