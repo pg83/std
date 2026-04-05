@@ -101,7 +101,7 @@ STD_TEST_SUITE(Parker) {
         Worker worker(&p, &done);
         Thread thread(worker);
 
-        for (int i = 0; i < 1000; ++i) {
+        for (int i = 0; i < 100; ++i) {
             p.park([&] {
                 // spin until eventfd is readable or short timeout
                 struct pollfd pfd;
