@@ -65,6 +65,7 @@ namespace {
         IntMap<PollFD> fdMap_;
         Vector<PollFD> fds_;
         Vector<PollFD> outFds_;
+        ObjPool::Ref pollPool_;
         PollGroup* pollGroup_ = nullptr;
         Parker parker_;
 
@@ -153,6 +154,7 @@ DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec)
     : exec_(exec)
     , lock_(Mutex::spinLock(exec))
     , fdMap_(ObjPool::create(pool))
+    , pollPool_(ObjPool::fromMemory())
 {
     ares_options opts;
     memset(&opts, 0, sizeof(opts));
@@ -227,9 +229,8 @@ void DnsResolverImpl::rebuildFds() {
 
     fds_.pushBack({parker_.fd(), PollFlag::In});
 
-    auto opool = ObjPool::fromMemory();
-
-    pollGroup_ = PollGroup::create(opool.mutPtr(), fds_.data(), fds_.length());
+    pollPool_ = ObjPool::fromMemory();
+    pollGroup_ = PollGroup::create(pollPool_.mutPtr(), fds_.data(), fds_.length());
 }
 
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
