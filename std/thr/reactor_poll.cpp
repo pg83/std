@@ -39,6 +39,8 @@ namespace {
         u64 deadline = 0;
         Task* task = nullptr;
         ReactorState* reactor = nullptr;
+
+        void reset(ReactorState* r, u64 dl) noexcept;
     };
 
     struct InternalReq: public TreapNode, public IntrusiveNode {
@@ -64,7 +66,7 @@ namespace {
         PollGroupImpl(ObjPool* pool, const PollFD* fds, size_t count);
 
         int fd() const noexcept override;
-        void reset(ReactorState* reactor, u64 deadlineUs) noexcept;
+        void resetResult() noexcept;
     };
 
     struct FdEntry: public IntrusiveList {
@@ -113,6 +115,12 @@ u64 DeadlineTreap::earliest() const noexcept {
     auto n = (InternalReq*)min();
 
     return n ? n->common->deadline : UINT64_MAX;
+}
+
+void ReqCommon::reset(ReactorState* r, u64 dl) noexcept {
+    reactor = r;
+    deadline = dl;
+    task = nullptr;
 }
 
 void InternalReq::complete(u32 res, IntrusiveList& ready) noexcept {
@@ -279,18 +287,16 @@ PollGroupImpl::PollGroupImpl(ObjPool* pool, const PollFD* fds, size_t count)
 
         reqs_[i] = req;
         pfds_[i] = fds[i];
-        results_[i] = 0;
     }
+
+    resetResult();
 }
 
 int PollGroupImpl::fd() const noexcept {
     return pfds_[0].fd;
 }
 
-void PollGroupImpl::reset(ReactorState* reactor, u64 deadlineUs) noexcept {
-    this->reactor = reactor;
-    this->deadline = deadlineUs;
-    this->task = nullptr;
+void PollGroupImpl::resetResult() noexcept {
     memZero(results_, results_ + count_);
 }
 
@@ -302,6 +308,7 @@ void ReactorState::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
     auto impl = (PollGroupImpl*)g;
 
     impl->reset(this, deadlineUs);
+    impl->resetResult();
 
     queueMutex_.lock();
 
@@ -327,8 +334,7 @@ void ReactorState::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
 u32 ReactorState::poll(PollFD pfd, u64 deadlineUs) {
     ReqCommon common;
 
-    common.deadline = deadlineUs;
-    common.reactor = this;
+    common.reset(this, deadlineUs);
 
     u32 resultVal = 0;
     InternalReq req;
