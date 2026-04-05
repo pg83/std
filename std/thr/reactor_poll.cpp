@@ -198,9 +198,7 @@ void ReactorState::drainQueue() {
         req->left = nullptr;
         req->right = nullptr;
 
-        int fd = req->pfd.fd;
-
-        if (fd == -1) {
+        if (int fd = req->pfd.fd; fd == -1) {
             sleepers.insert(req);
         } else {
             timers.insert(req);
