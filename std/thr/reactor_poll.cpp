@@ -17,6 +17,7 @@
 #include <std/thr/task.h>
 #include <std/map/treap.h>
 #include <std/sym/i_map.h>
+#include <std/alg/range.h>
 #include <std/alg/minmax.h>
 #include <std/sys/atomic.h>
 #include <std/dbg/assert.h>
@@ -48,14 +49,18 @@ namespace {
         virtual void complete(u32 res, IntrusiveList& ready) noexcept;
     };
 
-    struct InternalMultiReq: public InternalReq {
-        InternalMultiReq* next = nullptr;
+    struct PollGroupImpl;
 
+    struct GroupReqCommon: public ReqCommon {
+        PollGroupImpl* group = nullptr;
+    };
+
+    struct InternalMultiReq: public InternalReq {
         void complete(u32 res, IntrusiveList& ready) noexcept override;
     };
 
     struct PollGroupImpl: public PollGroup {
-        ReqCommon common_;
+        GroupReqCommon common_;
         InternalMultiReq** reqs_;
         u32* results_;
         PollFD* pfds_;
@@ -124,8 +129,12 @@ void InternalMultiReq::complete(u32 res, IntrusiveList& ready) noexcept {
     *result = res;
     ready.pushBack(common->task);
 
-    for (auto r = next; r != this; r = r->next) {
-        common->reactor->cancelInternal(r);
+    auto g = ((GroupReqCommon*)common)->group;
+
+    for (auto r : range(g->reqs_, g->reqs_ + g->count_)) {
+        if (r != this) {
+            common->reactor->cancelInternal(r);
+        }
     }
 }
 
@@ -266,20 +275,19 @@ PollGroupImpl::PollGroupImpl(ObjPool* pool, const PollFD* fds, size_t count)
     , pfds_((PollFD*)pool->allocate(sizeof(PollFD) * count))
     , count_(count)
 {
+    common_.group = this;
+
     for (size_t i = 0; i < count; ++i) {
         auto req = pool->make<InternalMultiReq>();
 
         req->pfd = fds[i];
         req->result = &results_[i];
         req->common = &common_;
-        req->next = (i > 0) ? reqs_[i - 1] : nullptr;
 
         reqs_[i] = req;
         pfds_[i] = fds[i];
         results_[i] = 0;
     }
-
-    reqs_[0]->next = reqs_[count - 1];
 }
 
 int PollGroupImpl::fd() const noexcept {
