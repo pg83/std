@@ -11,7 +11,6 @@
 
 #include <std/mem/new.h>
 #include <std/sys/crt.h>
-#include <std/sys/crt.h>
 #include <std/lib/list.h>
 #include <std/lib/node.h>
 #include <std/thr/task.h>
@@ -290,7 +289,6 @@ void PollGroupImpl::reset(ReactorState* reactor, u64 deadlineUs) noexcept {
     common_.reactor = reactor;
     common_.deadline = deadlineUs;
     common_.task = nullptr;
-
     memZero(results_, results_ + count_);
 }
 

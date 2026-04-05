@@ -584,7 +584,7 @@ u32 CoroExecutor::poll(int fd, u32 flags, u64 deadlineUs) {
 
 u32 CoroExecutor::poll(int fd, u32 flags) {
     for (;;) {
-        if (auto res = poll({fd, flags}, UINT64_MAX); res) {
+        if (auto res = poll(fd, flags, UINT64_MAX); res) {
             return res;
         }
     }
