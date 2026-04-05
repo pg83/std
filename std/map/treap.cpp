@@ -71,7 +71,11 @@ TreapNode* Treap::erase(void* key) noexcept {
         } else if (cmp(ckey, key)) {
             ptr = &current->right;
         } else {
-            return (*ptr = merge(current->left, current->right), current);
+            *ptr = merge(current->left, current->right);
+            current->left = nullptr;
+            current->right = nullptr;
+
+            return current;
         }
     }
 

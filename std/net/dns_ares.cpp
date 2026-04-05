@@ -13,6 +13,7 @@
 #include <std/lib/vector.h>
 #include <std/thr/poll_fd.h>
 #include <std/thr/parker.h>
+#include <std/thr/reactor_poll.h>
 #include <std/mem/obj_pool.h>
 
 #if __has_include(<ares.h>)
@@ -64,6 +65,7 @@ namespace {
         IntMap<PollFD> fdMap_;
         Vector<PollFD> fds_;
         Vector<PollFD> outFds_;
+        PollGroup* pollGroup_ = nullptr;
         Parker parker_;
 
         DnsResolverImpl(ObjPool* pool, CoroExecutor* exec);
@@ -224,6 +226,10 @@ void DnsResolverImpl::rebuildFds() {
     });
 
     fds_.pushBack({parker_.fd(), PollFlag::In});
+
+    auto opool = ObjPool::fromMemory();
+
+    pollGroup_ = exec_->pollGroup(opool.mutPtr(), fds_.data(), fds_.length());
 }
 
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
@@ -245,7 +251,7 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
 
             u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
             outFds_.grow(fds_.length());
-            nout = exec_->pollMulti(fds_.data(), outFds_.mutData(), fds_.length(), deadlineUs);
+            nout = exec_->poll(pollGroup_, outFds_.mutData(), deadlineUs);
         });
 
         for (size_t i = 0; i < nout; ++i) {

@@ -165,7 +165,9 @@ namespace {
         void parkWith(Runable&&, Task**) noexcept override;
         void offloadRun(ThreadPool* pool, Runable&& work) override;
 
-        size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) override;
+        u32 poll(PollFD pfd, u64 deadlineUs) override;
+        PollGroup* pollGroup(ObjPool* pool, const PollFD* fds, size_t count) override;
+        size_t poll(PollGroup* g, PollFD* out, u64 deadlineUs) override;
     };
 }
 
@@ -282,12 +284,16 @@ DnsResult* CoroExecutorImpl::resolve(ObjPool* pool, const StringView& name) {
     return dnsResolvers_[name.hash64() % dnsResolvers_.length()]->resolve(pool, name);
 }
 
-size_t CoroExecutorImpl::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
-    if (count == 0) {
-        return (this->sleep(deadlineUs), 0);
-    }
+u32 CoroExecutorImpl::poll(PollFD pfd, u64 deadlineUs) {
+    return reactors_[splitMix64(pfd.fd) % reactors_.length()]->poll(pfd, deadlineUs);
+}
 
-    return reactors_[splitMix64(in[0].fd) % reactors_.length()]->poll(in, out, count, deadlineUs);
+PollGroup* CoroExecutorImpl::pollGroup(ObjPool* pool, const PollFD* fds, size_t count) {
+    return reactors_[splitMix64(fds[0].fd) % reactors_.length()]->pollGroup(pool, fds, count);
+}
+
+size_t CoroExecutorImpl::poll(PollGroup* g, PollFD* out, u64 deadlineUs) {
+    return reactors_[splitMix64(g->fd()) % reactors_.length()]->poll(g, out, deadlineUs);
 }
 
 void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {
@@ -578,19 +584,12 @@ void CoroExecutor::sleepTout(u64 timeoutUs) {
 }
 
 u32 CoroExecutor::poll(int fd, u32 flags, u64 deadlineUs) {
-    PollFD in{fd, flags};
-    PollFD out{};
-
-    if (pollMulti(&in, &out, 1, deadlineUs)) {
-        return out.flags;
-    }
-
-    return 0;
+    return poll({fd, flags}, deadlineUs);
 }
 
 u32 CoroExecutor::poll(int fd, u32 flags) {
     for (;;) {
-        if (auto res = poll(fd, flags, UINT64_MAX); res) {
+        if (auto res = poll({fd, flags}, UINT64_MAX); res) {
             return res;
         }
     }

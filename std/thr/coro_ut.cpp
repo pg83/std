@@ -4,6 +4,7 @@
 #include "mutex.h"
 #include "async.h"
 #include "poll_fd.h"
+#include "reactor_poll.h"
 #include "channel.h"
 #include "cond_var.h"
 #include "semaphore.h"
@@ -640,9 +641,12 @@ STD_TEST_SUITE(CoroPoll) {
         u32 result = 0;
 
         exec->spawn([&] {
+            auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
             PollFD out[2];
-            size_t n = exec->pollMulti(in, out, 2, UINT64_MAX);
+            auto g = exec->pollGroup(opool.mutPtr(), in, 2);
+            size_t n = exec->poll(g, out, UINT64_MAX);
+
             for (size_t i = 0; i < n; ++i) {
                 result |= out[i].flags;
             }
@@ -666,9 +670,12 @@ STD_TEST_SUITE(CoroPoll) {
         u32 result = 0;
 
         exec->spawn([&] {
+            auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
             PollFD out[2];
-            size_t n = exec->pollMulti(in, out, 2, UINT64_MAX);
+            auto g = exec->pollGroup(opool.mutPtr(), in, 2);
+            size_t n = exec->poll(g, out, UINT64_MAX);
+
             for (size_t i = 0; i < n; ++i) {
                 result |= out[i].flags;
             }
@@ -691,9 +698,12 @@ STD_TEST_SUITE(CoroPoll) {
         createPipeFD(r2, w2);
 
         auto f = async(exec, [&] {
+            auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
             PollFD out[2];
-            return exec->pollMulti(in, out, 2, 1);
+            auto g = exec->pollGroup(opool.mutPtr(), in, 2);
+
+            return exec->poll(g, out, 1);
         });
 
         STD_INSIST(f.wait() == 0);
@@ -712,6 +722,7 @@ STD_TEST_SUITE(CoroPoll) {
         u32 result = 0;
 
         exec->spawn([&] {
+            auto opool = ObjPool::fromMemory();
             PollFD in[N];
 
             for (int i = 0; i < N; ++i) {
@@ -719,7 +730,8 @@ STD_TEST_SUITE(CoroPoll) {
             }
 
             PollFD out[N];
-            size_t n = exec->pollMulti(in, out, N, UINT64_MAX);
+            auto g = exec->pollGroup(opool.mutPtr(), in, N);
+            size_t n = exec->poll(g, out, UINT64_MAX);
 
             for (size_t i = 0; i < n; ++i) {
                 result |= out[i].flags;

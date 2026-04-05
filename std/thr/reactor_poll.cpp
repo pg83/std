@@ -41,7 +41,7 @@ namespace {
 
     struct InternalReq: public TreapNode, public IntrusiveNode {
         PollFD pfd = {};
-        u32 result = 0;
+        u32* result = nullptr;
         ReqCommon* common = nullptr;
 
         virtual void complete(u32 res, IntrusiveList& ready) noexcept;
@@ -51,6 +51,19 @@ namespace {
         InternalMultiReq* next = nullptr;
 
         void complete(u32 res, IntrusiveList& ready) noexcept override;
+    };
+
+    struct PollGroupImpl: public PollGroup {
+        ReqCommon common_;
+        InternalMultiReq** reqs_;
+        u32* results_;
+        PollFD* pfds_;
+        size_t count_;
+
+        PollGroupImpl(ObjPool* pool, const PollFD* fds, size_t count);
+
+        int fd() const noexcept override;
+        void reset(ReactorState* reactor, u64 deadlineUs) noexcept;
     };
 
     struct FdEntry: public IntrusiveList {
@@ -79,9 +92,9 @@ namespace {
         void cancelInternal(InternalReq* req);
         void processEvent(PollFD* ev, IntrusiveList& ready) noexcept;
 
-        __attribute__((noinline)) size_t pollOne(const PollFD* in, PollFD* out, u64 deadlineUs);
-        __attribute__((noinline)) size_t pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs);
-        size_t poll(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) override;
+        PollGroup* pollGroup(ObjPool* pool, const PollFD* fds, size_t count) override;
+        size_t poll(PollGroup* g, PollFD* out, u64 deadlineUs) override;
+        u32 poll(PollFD pfd, u64 deadlineUs) override;
     };
 }
 
@@ -103,12 +116,12 @@ u64 DeadlineTreap::earliest() const noexcept {
 }
 
 void InternalReq::complete(u32 res, IntrusiveList& ready) noexcept {
-    result = res;
+    *result = res;
     ready.pushBack(common->task);
 }
 
 void InternalMultiReq::complete(u32 res, IntrusiveList& ready) noexcept {
-    result = res;
+    *result = res;
     ready.pushBack(common->task);
 
     for (auto r = next; r != this; r = r->next) {
@@ -247,15 +260,85 @@ void ReactorState::run() noexcept {
     }
 }
 
-size_t ReactorState::pollOne(const PollFD* in, PollFD* out, u64 deadlineUs) {
+
+PollGroupImpl::PollGroupImpl(ObjPool* pool, const PollFD* fds, size_t count)
+    : reqs_((InternalMultiReq**)pool->allocate(sizeof(InternalMultiReq*) * count))
+    , results_((u32*)pool->allocate(sizeof(u32) * count))
+    , pfds_((PollFD*)pool->allocate(sizeof(PollFD) * count))
+    , count_(count)
+{
+    for (size_t i = 0; i < count; ++i) {
+        auto req = pool->make<InternalMultiReq>();
+
+        req->pfd = fds[i];
+        req->result = &results_[i];
+        req->common = &common_;
+        req->next = (i > 0) ? reqs_[i - 1] : nullptr;
+
+        reqs_[i] = req;
+        pfds_[i] = fds[i];
+        results_[i] = 0;
+    }
+
+    reqs_[0]->next = reqs_[count - 1];
+}
+
+int PollGroupImpl::fd() const noexcept {
+    return pfds_[0].fd;
+}
+
+void PollGroupImpl::reset(ReactorState* reactor, u64 deadlineUs) noexcept {
+    common_.reactor = reactor;
+    common_.deadline = deadlineUs;
+    common_.task = nullptr;
+
+    __builtin_memset(results_, 0, count_ * sizeof(u32));
+}
+
+PollGroup* ReactorState::pollGroup(ObjPool* pool, const PollFD* fds, size_t count) {
+    return pool->make<PollGroupImpl>(pool, fds, count);
+}
+
+size_t ReactorState::poll(PollGroup* g, PollFD* out, u64 deadlineUs) {
+    auto impl = (PollGroupImpl*)g;
+
+    impl->reset(this, deadlineUs);
+
+    queueMutex_.lock();
+
+    for (size_t i = 0; i < impl->count_; ++i) {
+        queue_.insert(impl->reqs_[i]);
+    }
+
+    // clang-format off
+    exec_->parkWith(makeRunable([this] {
+        queueMutex_.unlock();
+        parker_.unpark();
+    }), &impl->common_.task);
+    // clang-format on
+
+    size_t nout = 0;
+
+    for (size_t i = 0; i < impl->count_; ++i) {
+        if (impl->results_[i]) {
+            out[nout++] = {impl->pfds_[i].fd, impl->results_[i]};
+        }
+    }
+
+    return nout;
+}
+
+u32 ReactorState::poll(PollFD pfd, u64 deadlineUs) {
     ReqCommon common;
 
     common.deadline = deadlineUs;
     common.reactor = this;
 
+    u32 resultVal = 0;
     InternalReq req;
 
-    req.pfd = in[0];
+    req.pfd = pfd;
+    req.result = &resultVal;
     req.common = &common;
 
     queueMutex_.lock();
@@ -271,72 +354,7 @@ size_t ReactorState::pollOne(const PollFD* in, PollFD* out, u64 deadlineUs) {
     }), &common.task);
     // clang-format on
 
-    if (req.result) {
-        out[0] = {in[0].fd, req.result};
-
-        return 1;
-    }
-
-    return 0;
-}
-
-size_t ReactorState::pollMulti(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
-    auto opool = ObjPool::fromMemory();
-    auto p = opool.mutPtr();
-    auto reqs = (InternalMultiReq**)p->allocate(sizeof(InternalMultiReq*) * count);
-
-    ReqCommon common;
-
-    common.deadline = deadlineUs;
-    common.reactor = this;
-
-    InternalMultiReq* last = nullptr;
-
-    for (size_t i = 0; i < count; ++i) {
-        auto req = p->make<InternalMultiReq>();
-
-        req->pfd = in[i];
-        req->common = &common;
-        req->next = last;
-
-        last = req;
-        reqs[i] = req;
-    }
-
-    reqs[0]->next = last;
-
-    queueMutex_.lock();
-
-    for (size_t i = 0; i < count; ++i) {
-        queue_.insert(reqs[i]);
-    }
-
-    // clang-format off
-    exec_->parkWith(makeRunable([this] {
-        queueMutex_.unlock();
-        parker_.unpark();
-    }), &common.task);
-    // clang-format on
-
-    size_t nout = 0;
-
-    for (size_t i = 0; i < count; ++i) {
-        if (reqs[i]->result) {
-            out[nout++] = {in[i].fd, reqs[i]->result};
-        }
-    }
-
-    return nout;
-}
-
-size_t ReactorState::poll(const PollFD* in, PollFD* out, size_t count, u64 deadlineUs) {
-    STD_ASSERT(count > 0);
-
-    if (count == 1) {
-        return pollOne(in, out, deadlineUs);
-    } else {
-        return pollMulti(in, out, count, deadlineUs);
-    }
+    return resultVal;
 }
 
 ReactorIface* ReactorIface::create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool) {
