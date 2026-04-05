@@ -13,6 +13,7 @@
 #include <std/lib/vector.h>
 #include <std/thr/poll_fd.h>
 #include <std/thr/parker.h>
+#include <std/lib/visitor.h>
 #include <std/thr/reactor_poll.h>
 #include <std/mem/obj_pool.h>
 
@@ -64,7 +65,6 @@ namespace {
         IntrusiveList waiters_;
         IntMap<PollFD> fdMap_;
         Vector<PollFD> fds_;
-        Vector<PollFD> outFds_;
         ObjPool::Ref pollPool_;
         PollGroup* pollGroup_ = nullptr;
         Parker parker_;
@@ -240,8 +240,6 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
     }
 
     while (!req.result) {
-        size_t nout = 0;
-
         parker_.park([&] {
             submitPending();
             rebuildFds();
@@ -251,20 +249,22 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
             ares_timeout(channel_, nullptr, &tv);
 
             u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
-            outFds_.grow(fds_.length());
-            nout = exec_->poll(pollGroup_, outFds_.mutData(), deadlineUs);
+
+            // clang-format off
+            exec_->poll(pollGroup_, makeVisitor([this](void* ptr) {
+                auto ev = (PollFD*)ptr;
+
+                if (ev->fd == parker_.fd()) {
+                    parker_.drain();
+                } else {
+                    ares_socket_t rfd = (ev->flags & PollFlag::In) ? ev->fd : ARES_SOCKET_BAD;
+                    ares_socket_t wfd = (ev->flags & PollFlag::Out) ? ev->fd : ARES_SOCKET_BAD;
+
+                    ares_process_fd(channel_, rfd, wfd);
+                }
+            }), deadlineUs);
+            // clang-format on
         });
-
-        for (size_t i = 0; i < nout; ++i) {
-            if (outFds_[i].fd == parker_.fd()) {
-                parker_.drain();
-            } else {
-                ares_socket_t rfd = (outFds_[i].flags & PollFlag::In) ? outFds_[i].fd : ARES_SOCKET_BAD;
-                ares_socket_t wfd = (outFds_[i].flags & PollFlag::Out) ? outFds_[i].fd : ARES_SOCKET_BAD;
-
-                ares_process_fd(channel_, rfd, wfd);
-            }
-        }
 
         ares_process_fd(channel_, ARES_SOCKET_BAD, ARES_SOCKET_BAD);
     }

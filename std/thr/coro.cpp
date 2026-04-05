@@ -166,7 +166,7 @@ namespace {
         void offloadRun(ThreadPool* pool, Runable&& work) override;
 
         u32 poll(PollFD pfd, u64 deadlineUs) override;
-        size_t poll(PollGroup* g, PollFD* out, u64 deadlineUs) override;
+        void poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs) override;
     };
 }
 
@@ -287,8 +287,8 @@ u32 CoroExecutorImpl::poll(PollFD pfd, u64 deadlineUs) {
     return reactors_[splitMix64(pfd.fd) % reactors_.length()]->poll(pfd, deadlineUs);
 }
 
-size_t CoroExecutorImpl::poll(PollGroup* g, PollFD* out, u64 deadlineUs) {
-    return reactors_[splitMix64(g->fd()) % reactors_.length()]->poll(g, out, deadlineUs);
+void CoroExecutorImpl::poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs) {
+    reactors_[splitMix64(g->fd()) % reactors_.length()]->poll(g, visitor, deadlineUs);
 }
 
 void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {

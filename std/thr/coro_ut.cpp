@@ -4,10 +4,10 @@
 #include "mutex.h"
 #include "async.h"
 #include "poll_fd.h"
-#include "reactor_poll.h"
 #include "channel.h"
 #include "cond_var.h"
 #include "semaphore.h"
+#include "reactor_poll.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/fd.h>
@@ -15,6 +15,7 @@
 #include <std/sys/mem_fd.h>
 #include <std/lib/vector.h>
 #include <std/sys/atomic.h>
+#include <std/lib/visitor.h>
 #include <std/mem/obj_pool.h>
 #include <std/net/dns_iface.h>
 
@@ -643,13 +644,13 @@ STD_TEST_SUITE(CoroPoll) {
         exec->spawn([&] {
             auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
-            PollFD out[2];
             auto g = PollGroup::create(opool.mutPtr(), in, 2);
-            size_t n = exec->poll(g, out, UINT64_MAX);
 
-            for (size_t i = 0; i < n; ++i) {
-                result |= out[i].flags;
-            }
+            // clang-format off
+            exec->poll(g, makeVisitor([&](void* ptr) {
+                result |= ((PollFD*)ptr)->flags;
+            }), UINT64_MAX);
+            // clang-format on
         });
 
         exec->spawn([&] {
@@ -672,13 +673,13 @@ STD_TEST_SUITE(CoroPoll) {
         exec->spawn([&] {
             auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
-            PollFD out[2];
             auto g = PollGroup::create(opool.mutPtr(), in, 2);
-            size_t n = exec->poll(g, out, UINT64_MAX);
 
-            for (size_t i = 0; i < n; ++i) {
-                result |= out[i].flags;
-            }
+            // clang-format off
+            exec->poll(g, makeVisitor([&](void* ptr) {
+                result |= ((PollFD*)ptr)->flags;
+            }), UINT64_MAX);
+            // clang-format on
         });
 
         exec->spawn([&] {
@@ -700,10 +701,16 @@ STD_TEST_SUITE(CoroPoll) {
         auto f = async(exec, [&] {
             auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
-            PollFD out[2];
             auto g = PollGroup::create(opool.mutPtr(), in, 2);
+            size_t n = 0;
 
-            return exec->poll(g, out, 1);
+            // clang-format off
+            exec->poll(g, makeVisitor([&](void*) {
+                ++n;
+            }), 1);
+            // clang-format on
+
+            return n;
         });
 
         STD_INSIST(f.wait() == 0);
@@ -729,13 +736,13 @@ STD_TEST_SUITE(CoroPoll) {
                 in[i] = {readEnds[i].get(), PollFlag::In};
             }
 
-            PollFD out[N];
             auto g = PollGroup::create(opool.mutPtr(), in, N);
-            size_t n = exec->poll(g, out, UINT64_MAX);
 
-            for (size_t i = 0; i < n; ++i) {
-                result |= out[i].flags;
-            }
+            // clang-format off
+            exec->poll(g, makeVisitor([&](void* ptr) {
+                result |= ((PollFD*)ptr)->flags;
+            }), UINT64_MAX);
+            // clang-format on
         });
 
         exec->spawn([&] {

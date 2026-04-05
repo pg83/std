@@ -10,6 +10,7 @@
 #include "poll_fd.h"
 
 #include <std/mem/new.h>
+#include <std/lib/visitor.h>
 #include <std/sys/crt.h>
 #include <std/lib/list.h>
 #include <std/lib/node.h>
@@ -92,7 +93,7 @@ namespace {
         void cancelInternal(InternalReq* req);
         void processEvent(PollFD* ev, IntrusiveList& ready) noexcept;
 
-        size_t poll(PollGroup* g, PollFD* out, u64 deadlineUs) override;
+        void poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) override;
         u32 poll(PollFD pfd, u64 deadlineUs) override;
     };
 }
@@ -296,7 +297,7 @@ PollGroup* PollGroup::create(ObjPool* pool, const PollFD* fds, size_t count) {
     return pool->make<PollGroupImpl>(pool, fds, count);
 }
 
-size_t ReactorState::poll(PollGroup* g, PollFD* out, u64 deadlineUs) {
+void ReactorState::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
     auto impl = (PollGroupImpl*)g;
 
     impl->reset(this, deadlineUs);
@@ -314,15 +315,12 @@ size_t ReactorState::poll(PollGroup* g, PollFD* out, u64 deadlineUs) {
     }), &impl->common_.task);
     // clang-format on
 
-    size_t nout = 0;
-
     for (size_t i = 0; i < impl->count_; ++i) {
         if (impl->results_[i]) {
-            out[nout++] = {impl->pfds_[i].fd, impl->results_[i]};
+            PollFD pfd = {impl->pfds_[i].fd, impl->results_[i]};
+            visitor.visit(&pfd);
         }
     }
-
-    return nout;
 }
 
 u32 ReactorState::poll(PollFD pfd, u64 deadlineUs) {
