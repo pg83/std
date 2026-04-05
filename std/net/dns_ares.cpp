@@ -248,8 +248,6 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
 
             ares_timeout(channel_, nullptr, &tv);
 
-            u64 deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
-
             // clang-format off
             exec_->poll(pollGroup_, makeVisitor([this](void* ptr) {
                 auto ev = (PollFD*)ptr;
@@ -262,7 +260,7 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
 
                     ares_process_fd(channel_, rfd, wfd);
                 }
-            }), deadlineUs);
+            }), monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec);
             // clang-format on
         });
 
