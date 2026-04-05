@@ -10,7 +10,6 @@
 #include "poll_fd.h"
 
 #include <std/mem/new.h>
-#include <std/lib/visitor.h>
 #include <std/sys/crt.h>
 #include <std/lib/list.h>
 #include <std/lib/node.h>
@@ -21,6 +20,7 @@
 #include <std/alg/minmax.h>
 #include <std/sys/atomic.h>
 #include <std/dbg/assert.h>
+#include <std/lib/visitor.h>
 #include <std/alg/exchange.h>
 #include <std/mem/obj_pool.h>
 #include <std/map/treap_node.h>
