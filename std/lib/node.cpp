@@ -10,7 +10,7 @@ void IntrusiveNode::xchg(IntrusiveNode& r) {
 }
 
 void IntrusiveNode::unlink() noexcept {
-    if (prev == this) {
+    if (singular()) {
         return;
     }
 
@@ -25,7 +25,7 @@ void IntrusiveNode::reset() noexcept {
 }
 
 bool IntrusiveNode::singular() const noexcept {
-    return prev == this && next == this;
+    return prev == this;
 }
 
 bool IntrusiveNode::almostEmpty() const noexcept {
