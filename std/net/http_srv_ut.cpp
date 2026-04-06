@@ -9,7 +9,6 @@
 #include <std/sys/crt.h>
 #include <std/tst/args.h>
 #include <std/thr/coro.h>
-#include <std/thr/coro_config.h>
 #include <std/alg/defer.h>
 #include <std/dbg/insist.h>
 #include <std/alg/minmax.h>
@@ -20,6 +19,7 @@
 #include <std/thr/wait_group.h>
 #include <std/ios/stream_tcp.h>
 #include <std/ios/in_fd_coro.h>
+#include <std/thr/coro_config.h>
 
 #include <fcntl.h>
 #include <string.h>

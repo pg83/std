@@ -1,8 +1,8 @@
 #include "event.h"
 #include "coro.h"
-#include "coro_config.h"
 #include "mutex.h"
 #include "thread.h"
+#include "coro_config.h"
 
 #include <std/tst/ut.h>
 #include <std/alg/range.h>

@@ -1,5 +1,4 @@
 #include "coro.h"
-#include "coro_config.h"
 #include "pool.h"
 #include "guard.h"
 #include "mutex.h"
@@ -8,6 +7,7 @@
 #include "channel.h"
 #include "cond_var.h"
 #include "semaphore.h"
+#include "coro_config.h"
 #include "reactor_poll.h"
 
 #include <std/tst/ut.h>

@@ -1,11 +1,11 @@
-#include "semaphore.h"
 #include "coro.h"
-#include "coro_config.h"
 #include "thread.h"
+#include "semaphore.h"
+#include "coro_config.h"
 
 #include <std/tst/ut.h>
-#include <std/mem/obj_pool.h>
 #include <std/sys/atomic.h>
+#include <std/mem/obj_pool.h>
 
 using namespace stl;
 

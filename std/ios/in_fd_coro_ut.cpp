@@ -3,10 +3,10 @@
 #include <std/tst/ut.h>
 #include <std/sys/fd.h>
 #include <std/thr/coro.h>
-#include <std/thr/coro_config.h>
 #include <std/dbg/insist.h>
 #include <std/sys/mem_fd.h>
 #include <std/mem/obj_pool.h>
+#include <std/thr/coro_config.h>
 
 #include <string.h>
 

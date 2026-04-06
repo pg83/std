@@ -1,5 +1,4 @@
 #include "coro.h"
-#include "coro_config.h"
 #include "task.h"
 #include "pool.h"
 #include "mutex.h"
@@ -10,6 +9,7 @@
 #include "cond_var.h"
 #include "semaphore.h"
 #include "event_iface.h"
+#include "coro_config.h"
 #include "thread_iface.h"
 #include "reactor_poll.h"
 #include "cond_var_iface.h"

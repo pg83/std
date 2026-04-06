@@ -1,5 +1,4 @@
 #include "coro.h"
-#include "coro_config.h"
 #include "pool.h"
 #include "mutex.h"
 #include "guard.h"
@@ -7,6 +6,7 @@
 #include "runable.h"
 #include "cond_var.h"
 #include "wait_group.h"
+#include "coro_config.h"
 
 #include <std/tst/ut.h>
 #include <std/mem/obj_pool.h>
