@@ -54,19 +54,13 @@ STD_TEST_SUITE(DnsResolver) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 8);
 
-        Vector<DnsResolver*> resolvers;
-
-        for (int j = 0; j < 4; ++j) {
-            resolvers.pushBack(DnsResolver::create(pool.mutPtr(), exec));
-        }
-
         for (int i = 0; i < 100000; ++i) {
             exec->spawn([&, i] {
                 auto rpool = ObjPool::fromMemory();
                 char buf[64];
 
                 snprintf(buf, sizeof(buf), "host%d.test.invalid", i);
-                resolvers[i % resolvers.length()]->resolve(rpool.mutPtr(), StringView((const u8*)buf, strlen(buf)));
+                exec->resolve(rpool.mutPtr(), StringView((const u8*)buf, strlen(buf)));
             });
         }
 
