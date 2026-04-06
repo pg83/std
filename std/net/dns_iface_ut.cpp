@@ -1,6 +1,7 @@
 #include "dns_iface.h"
 
 #include <std/tst/ut.h>
+#include <std/tst/args.h>
 #include <std/thr/coro.h>
 #include <std/thr/async.h>
 #include <std/dbg/insist.h>
@@ -9,6 +10,7 @@
 #include <std/thr/coro_config.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 using namespace stl;
@@ -53,7 +55,17 @@ STD_TEST_SUITE(DnsResolver) {
 
     STD_TEST(_ResolveStress) {
         auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 8);
+        auto cfg = CoroConfig(8);
+
+        if (_ctx.args().find(u8"tcp")) {
+            cfg.setDnsTcp(true).setDnsResolvers(32);
+        }
+
+        if (auto sv = _ctx.args().find(u8"dns-server"); sv) {
+            cfg.setDnsServer(*sv);
+        }
+
+        auto exec = CoroExecutor::create(pool.mutPtr(), cfg);
 
         for (int i = 0; i < 100000; ++i) {
             exec->spawn([&, i] {

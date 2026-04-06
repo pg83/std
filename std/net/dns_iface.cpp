@@ -15,6 +15,8 @@ DnsConfig::DnsConfig() noexcept
     , timeout(100)
     , tries(3)
     , udpMaxQueries(0)
+    , tcp(false)
+    , server()
 {
 }
 

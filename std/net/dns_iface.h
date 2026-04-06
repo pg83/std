@@ -16,6 +16,8 @@ namespace stl {
         size_t timeout;
         size_t tries;
         size_t udpMaxQueries;
+        bool tcp;
+        StringView server;
 
         DnsConfig() noexcept;
     };

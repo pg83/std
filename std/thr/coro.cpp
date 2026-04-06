@@ -190,6 +190,8 @@ CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, const CoroConfig& cfg)
     dnsCfg.timeout = cfg.dnsTimeout;
     dnsCfg.tries = cfg.dnsTries;
     dnsCfg.udpMaxQueries = cfg.dnsUdpMaxQueries;
+    dnsCfg.tcp = cfg.dnsTcp;
+    dnsCfg.server = cfg.dnsServer;
 
     for (size_t i = 0; i < cfg.dnsResolvers; ++i) {
         dnsResolvers_.pushBack(DnsResolver::create(pool, this, offload_, dnsCfg));

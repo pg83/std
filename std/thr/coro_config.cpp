@@ -14,6 +14,8 @@ CoroConfig::CoroConfig(size_t threads) noexcept
     , dnsTimeout(100)
     , dnsTries(3)
     , dnsUdpMaxQueries(0)
+    , dnsTcp(false)
+    , dnsServer()
 {
 }
 
@@ -61,6 +63,18 @@ CoroConfig& CoroConfig::setDnsTries(size_t v) noexcept {
 
 CoroConfig& CoroConfig::setDnsUdpMaxQueries(size_t v) noexcept {
     dnsUdpMaxQueries = v;
+
+    return *this;
+}
+
+CoroConfig& CoroConfig::setDnsTcp(bool v) noexcept {
+    dnsTcp = v;
+
+    return *this;
+}
+
+CoroConfig& CoroConfig::setDnsServer(StringView v) noexcept {
+    dnsServer = v;
 
     return *this;
 }

@@ -165,7 +165,18 @@ DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec, const DnsCon
     opts.sock_state_cb = sockStateCb;
     opts.sock_state_cb_data = this;
 
-    ares_init_options(&channel_, &opts, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES | ARES_OPT_UDP_MAX_QUERIES | ARES_OPT_SOCK_STATE_CB);
+    int optmask = ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES | ARES_OPT_UDP_MAX_QUERIES | ARES_OPT_SOCK_STATE_CB;
+
+    if (cfg.tcp) {
+        opts.flags = ARES_FLAG_USEVC | ARES_FLAG_STAYOPEN;
+        optmask |= ARES_OPT_FLAGS;
+    }
+
+    ares_init_options(&channel_, &opts, optmask);
+
+    if (cfg.server.length()) {
+        ares_set_servers_ports_csv(channel_, (const char*)pool->intern(cfg.server).data());
+    }
 
     memset(&hints_, 0, sizeof(hints_));
     hints_.ai_family = cfg.family;
