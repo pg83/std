@@ -8,5 +8,5 @@ namespace stl {
     struct DnsResolver;
     struct CoroExecutor;
 
-    DnsResolver* createSystemDnsResolver(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp, DnsConfig cfg);
+    DnsResolver* createSystemDnsResolver(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp, const DnsConfig& cfg);
 }

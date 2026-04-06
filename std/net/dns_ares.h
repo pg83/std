@@ -7,5 +7,5 @@ namespace stl {
     struct DnsResolver;
     struct CoroExecutor;
 
-    DnsResolver* createAresResolver(ObjPool* pool, CoroExecutor* exec, DnsConfig cfg);
+    DnsResolver* createAresResolver(ObjPool* pool, CoroExecutor* exec, const DnsConfig& cfg);
 }

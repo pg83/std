@@ -26,7 +26,7 @@ DnsResolver* DnsResolver::create(ObjPool* pool, CoroExecutor* exec, ThreadPool* 
     return create(pool, exec, tp, DnsConfig());
 }
 
-DnsResolver* DnsResolver::create(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp, DnsConfig cfg) {
+DnsResolver* DnsResolver::create(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp, const DnsConfig& cfg) {
     if (!getenv("USE_SYSTEM_RESOLVER")) {
         if (auto res = createAresResolver(pool, exec, cfg); res) {
             return res;

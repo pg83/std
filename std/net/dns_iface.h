@@ -42,6 +42,6 @@ namespace stl {
 
         static DnsResolver* create(ObjPool* pool, CoroExecutor* exec);
         static DnsResolver* create(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp);
-        static DnsResolver* create(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp, DnsConfig cfg);
+        static DnsResolver* create(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp, const DnsConfig& cfg);
     };
 }

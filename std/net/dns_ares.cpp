@@ -69,7 +69,7 @@ namespace {
         PollGroup* pollGroup_ = nullptr;
         Parker parker_;
 
-        DnsResolverImpl(ObjPool* pool, CoroExecutor* exec, DnsConfig cfg);
+        DnsResolverImpl(ObjPool* pool, CoroExecutor* exec, const DnsConfig& cfg);
         ~DnsResolverImpl() noexcept;
 
         DnsResult* resolve(ObjPool* pool, const StringView& name) override;
@@ -150,7 +150,7 @@ void DnsResolverImpl::onSockState(ares_socket_t fd, int readable, int writable) 
     }
 }
 
-DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec, DnsConfig cfg)
+DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec, const DnsConfig& cfg)
     : exec_(exec)
     , lock_(Mutex::spinLock(exec))
     , fdMap_(ObjPool::create(pool))
@@ -282,11 +282,11 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
     }
 }
 
-DnsResolver* stl::createAresResolver(ObjPool* pool, CoroExecutor* exec, DnsConfig cfg) {
+DnsResolver* stl::createAresResolver(ObjPool* pool, CoroExecutor* exec, const DnsConfig& cfg) {
     return pool->make<DnsResolverImpl>(pool, exec, cfg);
 }
 #else
-DnsResolver* stl::createAresResolver(ObjPool*, CoroExecutor*, DnsConfig) {
+DnsResolver* stl::createAresResolver(ObjPool*, CoroExecutor*, const DnsConfig&) {
     return nullptr;
 }
 #endif
