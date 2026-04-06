@@ -9,6 +9,7 @@
 #include <std/sys/crt.h>
 #include <std/ios/sys.h>
 #include <std/thr/coro.h>
+#include <std/thr/coro_config.h>
 #include <std/alg/defer.h>
 #include <std/ios/input.h>
 #include <std/sym/s_map.h>

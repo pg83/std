@@ -1,5 +1,6 @@
 #include "event.h"
 #include "coro.h"
+#include "coro_config.h"
 #include "mutex.h"
 #include "thread.h"
 

@@ -1,4 +1,5 @@
 #include "coro.h"
+#include "coro_config.h"
 #include "pool.h"
 #include "thread.h"
 #include "channel.h"

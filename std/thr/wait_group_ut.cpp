@@ -1,5 +1,6 @@
 #include "wait_group.h"
 #include "coro.h"
+#include "coro_config.h"
 #include "pool.h"
 #include "thread.h"
 

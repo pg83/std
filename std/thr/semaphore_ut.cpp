@@ -1,5 +1,6 @@
 #include "semaphore.h"
 #include "coro.h"
+#include "coro_config.h"
 #include "thread.h"
 
 #include <std/tst/ut.h>

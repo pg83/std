@@ -3,6 +3,7 @@
 #include <std/sys/fd.h>
 #include <std/tst/ut.h>
 #include <std/thr/coro.h>
+#include <std/thr/coro_config.h>
 #include <std/thr/async.h>
 #include <std/alg/defer.h>
 #include <std/dbg/insist.h>

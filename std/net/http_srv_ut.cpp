@@ -9,6 +9,7 @@
 #include <std/sys/crt.h>
 #include <std/tst/args.h>
 #include <std/thr/coro.h>
+#include <std/thr/coro_config.h>
 #include <std/alg/defer.h>
 #include <std/dbg/insist.h>
 #include <std/alg/minmax.h>

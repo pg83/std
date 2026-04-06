@@ -1,4 +1,5 @@
 #include "coro.h"
+#include "coro_config.h"
 #include "task.h"
 #include "pool.h"
 #include "mutex.h"
@@ -123,7 +124,7 @@ namespace {
         ThreadPool* offload_;
         ThreadPool* pool_;
 
-        CoroExecutorImpl(ObjPool* pool, CoroConfig cfg);
+        CoroExecutorImpl(ObjPool* pool, const CoroConfig& cfg);
         ~CoroExecutorImpl() noexcept;
 
         void join() noexcept override;
@@ -171,7 +172,7 @@ namespace {
     };
 }
 
-CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, CoroConfig cfg)
+CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, const CoroConfig& cfg)
     : join_(pool->make<JoinPipe>())
     , tlsKey_(ThreadPool::registerTlsKey())
     , pool_(ThreadPool::workStealing(pool, cfg.threads))
@@ -273,67 +274,6 @@ void ContImpl::run() noexcept {
     }
 
     delete this;
-}
-
-CoroConfig::CoroConfig(size_t threads) noexcept
-    : threads(threads)
-    , reactors(threads)
-    , offloadThreads(threads)
-    , dnsResolvers(threads)
-    , maxDnsQueries(100)
-    , dnsFamily(DnsConfig().family)
-    , dnsTimeout(100)
-    , dnsTries(3)
-    , dnsUdpMaxQueries(0)
-{
-}
-
-CoroConfig& CoroConfig::setReactors(size_t v) noexcept {
-    reactors = v;
-
-    return *this;
-}
-
-CoroConfig& CoroConfig::setOffloadThreads(size_t v) noexcept {
-    offloadThreads = v;
-
-    return *this;
-}
-
-CoroConfig& CoroConfig::setDnsResolvers(size_t v) noexcept {
-    dnsResolvers = v;
-
-    return *this;
-}
-
-CoroConfig& CoroConfig::setMaxDnsQueries(size_t v) noexcept {
-    maxDnsQueries = v;
-
-    return *this;
-}
-
-CoroConfig& CoroConfig::setDnsFamily(int v) noexcept {
-    dnsFamily = v;
-
-    return *this;
-}
-
-CoroConfig& CoroConfig::setDnsTimeout(int v) noexcept {
-    dnsTimeout = v;
-
-    return *this;
-}
-
-CoroConfig& CoroConfig::setDnsTries(int v) noexcept {
-    dnsTries = v;
-
-    return *this;
-}
-
-CoroConfig& CoroConfig::setDnsUdpMaxQueries(int v) noexcept {
-    dnsUdpMaxQueries = v;
-
-    return *this;
 }
 
 SpawnParams::SpawnParams() noexcept
@@ -628,16 +568,8 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
     return new CoroSemaphoreImpl(this, initial);
 }
 
-CoroExecutor* CoroExecutor::create(ObjPool* pool, CoroConfig cfg) {
+CoroExecutor* CoroExecutor::create(ObjPool* pool, const CoroConfig& cfg) {
     return pool->make<CoroExecutorImpl>(pool, cfg);
-}
-
-CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads) {
-    return create(pool, CoroConfig(threads));
-}
-
-CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads, size_t reactors) {
-    return create(pool, CoroConfig(threads).setReactors(reactors));
 }
 
 u64 CoroExecutor::currentCoroId() const noexcept {
