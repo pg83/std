@@ -28,7 +28,7 @@ namespace {
         ThreadPool* tp_;
         struct addrinfo hints_;
 
-        DnsSysResolverImpl(CoroExecutor* exec, ThreadPool* tp);
+        DnsSysResolverImpl(CoroExecutor* exec, ThreadPool* tp, DnsConfig cfg);
 
         DnsResult* resolve(ObjPool* pool, const StringView& name) override;
     };
@@ -71,12 +71,12 @@ DnsSysResultImpl::DnsSysResultImpl(ObjPool* pool, int gaierr, struct addrinfo* a
     }
 }
 
-DnsSysResolverImpl::DnsSysResolverImpl(CoroExecutor* exec, ThreadPool* tp)
+DnsSysResolverImpl::DnsSysResolverImpl(CoroExecutor* exec, ThreadPool* tp, DnsConfig cfg)
     : exec_(exec)
     , tp_(tp)
 {
     memset(&hints_, 0, sizeof(hints_));
-    hints_.ai_family = AF_UNSPEC;
+    hints_.ai_family = cfg.family;
     hints_.ai_socktype = SOCK_STREAM;
 }
 
@@ -92,6 +92,6 @@ DnsResult* DnsSysResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     return pool->make<DnsSysResultImpl>(pool, gaierr, ai);
 }
 
-stl::DnsResolver* stl::createSystemDnsResolver(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp) {
-    return pool->make<DnsSysResolverImpl>(exec, tp);
+stl::DnsResolver* stl::createSystemDnsResolver(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp, DnsConfig cfg) {
+    return pool->make<DnsSysResolverImpl>(exec, tp, cfg);
 }

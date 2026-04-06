@@ -123,7 +123,7 @@ namespace {
         ThreadPool* offload_;
         ThreadPool* pool_;
 
-        CoroExecutorImpl(ObjPool* pool, size_t threads, size_t reactors);
+        CoroExecutorImpl(ObjPool* pool, CoroConfig cfg);
         ~CoroExecutorImpl() noexcept;
 
         void join() noexcept override;
@@ -171,20 +171,27 @@ namespace {
     };
 }
 
-CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads, size_t reactors)
+CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, CoroConfig cfg)
     : join_(pool->make<JoinPipe>())
     , tlsKey_(ThreadPool::registerTlsKey())
-    , pool_(ThreadPool::workStealing(pool, threads))
+    , pool_(ThreadPool::workStealing(pool, cfg.threads))
 {
-    for (size_t i = 0; i < reactors; ++i) {
+    for (size_t i = 0; i < cfg.reactors; ++i) {
         reactors_.pushBack(ReactorIface::create(this, pool_, pool));
     }
 
-    offload_ = ThreadPool::simple(pool, reactors);
-    dnsSem_ = pool->make<Semaphore>(100, this);
+    offload_ = ThreadPool::simple(pool, cfg.offloadThreads);
+    dnsSem_ = pool->make<Semaphore>(cfg.maxDnsQueries, this);
 
-    for (size_t i = 0; i < reactors; ++i) {
-        dnsResolvers_.pushBack(DnsResolver::create(pool, this, offload_));
+    DnsConfig dnsCfg;
+
+    dnsCfg.family = cfg.dnsFamily;
+    dnsCfg.timeout = cfg.dnsTimeout;
+    dnsCfg.tries = cfg.dnsTries;
+    dnsCfg.udpMaxQueries = cfg.dnsUdpMaxQueries;
+
+    for (size_t i = 0; i < cfg.dnsResolvers; ++i) {
+        dnsResolvers_.pushBack(DnsResolver::create(pool, this, offload_, dnsCfg));
     }
 }
 
@@ -266,6 +273,67 @@ void ContImpl::run() noexcept {
     }
 
     delete this;
+}
+
+CoroConfig::CoroConfig(size_t threads) noexcept
+    : threads(threads)
+    , reactors(threads)
+    , offloadThreads(threads)
+    , dnsResolvers(threads)
+    , maxDnsQueries(100)
+    , dnsFamily(DnsConfig().family)
+    , dnsTimeout(100)
+    , dnsTries(3)
+    , dnsUdpMaxQueries(0)
+{
+}
+
+CoroConfig& CoroConfig::setReactors(size_t v) noexcept {
+    reactors = v;
+
+    return *this;
+}
+
+CoroConfig& CoroConfig::setOffloadThreads(size_t v) noexcept {
+    offloadThreads = v;
+
+    return *this;
+}
+
+CoroConfig& CoroConfig::setDnsResolvers(size_t v) noexcept {
+    dnsResolvers = v;
+
+    return *this;
+}
+
+CoroConfig& CoroConfig::setMaxDnsQueries(size_t v) noexcept {
+    maxDnsQueries = v;
+
+    return *this;
+}
+
+CoroConfig& CoroConfig::setDnsFamily(int v) noexcept {
+    dnsFamily = v;
+
+    return *this;
+}
+
+CoroConfig& CoroConfig::setDnsTimeout(int v) noexcept {
+    dnsTimeout = v;
+
+    return *this;
+}
+
+CoroConfig& CoroConfig::setDnsTries(int v) noexcept {
+    dnsTries = v;
+
+    return *this;
+}
+
+CoroConfig& CoroConfig::setDnsUdpMaxQueries(int v) noexcept {
+    dnsUdpMaxQueries = v;
+
+    return *this;
 }
 
 SpawnParams::SpawnParams() noexcept
@@ -560,12 +628,16 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
     return new CoroSemaphoreImpl(this, initial);
 }
 
+CoroExecutor* CoroExecutor::create(ObjPool* pool, CoroConfig cfg) {
+    return pool->make<CoroExecutorImpl>(pool, cfg);
+}
+
 CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads) {
-    return create(pool, threads, threads);
+    return create(pool, CoroConfig(threads));
 }
 
 CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads, size_t reactors) {
-    return pool->make<CoroExecutorImpl>(pool, threads, reactors);
+    return create(pool, CoroConfig(threads).setReactors(reactors));
 }
 
 u64 CoroExecutor::currentCoroId() const noexcept {

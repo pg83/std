@@ -69,7 +69,7 @@ namespace {
         PollGroup* pollGroup_ = nullptr;
         Parker parker_;
 
-        DnsResolverImpl(ObjPool* pool, CoroExecutor* exec);
+        DnsResolverImpl(ObjPool* pool, CoroExecutor* exec, DnsConfig cfg);
         ~DnsResolverImpl() noexcept;
 
         DnsResult* resolve(ObjPool* pool, const StringView& name) override;
@@ -150,7 +150,7 @@ void DnsResolverImpl::onSockState(ares_socket_t fd, int readable, int writable) 
     }
 }
 
-DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec)
+DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec, DnsConfig cfg)
     : exec_(exec)
     , lock_(Mutex::spinLock(exec))
     , fdMap_(ObjPool::create(pool))
@@ -159,16 +159,16 @@ DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec)
     ares_options opts;
     memset(&opts, 0, sizeof(opts));
 
-    opts.timeout = 100;
-    opts.tries = 3;
-    opts.udp_max_queries = 0;
+    opts.timeout = cfg.timeout;
+    opts.tries = cfg.tries;
+    opts.udp_max_queries = cfg.udpMaxQueries;
     opts.sock_state_cb = sockStateCb;
     opts.sock_state_cb_data = this;
 
     ares_init_options(&channel_, &opts, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES | ARES_OPT_UDP_MAX_QUERIES | ARES_OPT_SOCK_STATE_CB);
 
     memset(&hints_, 0, sizeof(hints_));
-    hints_.ai_family = AF_UNSPEC;
+    hints_.ai_family = cfg.family;
 }
 
 DnsResolverImpl::~DnsResolverImpl() noexcept {
@@ -282,11 +282,11 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
     }
 }
 
-DnsResolver* stl::createAresResolver(ObjPool* pool, CoroExecutor* exec) {
-    return pool->make<DnsResolverImpl>(pool, exec);
+DnsResolver* stl::createAresResolver(ObjPool* pool, CoroExecutor* exec, DnsConfig cfg) {
+    return pool->make<DnsResolverImpl>(pool, exec, cfg);
 }
 #else
-DnsResolver* stl::createAresResolver(ObjPool*, CoroExecutor*) {
+DnsResolver* stl::createAresResolver(ObjPool*, CoroExecutor*, DnsConfig) {
     return nullptr;
 }
 #endif

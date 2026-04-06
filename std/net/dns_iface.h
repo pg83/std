@@ -11,6 +11,15 @@ namespace stl {
     struct ThreadPool;
     struct CoroExecutor;
 
+    struct DnsConfig {
+        int family;
+        int timeout;
+        int tries;
+        int udpMaxQueries;
+
+        DnsConfig() noexcept;
+    };
+
     struct DnsRecord {
         DnsRecord* next;
         int family;
@@ -33,5 +42,6 @@ namespace stl {
 
         static DnsResolver* create(ObjPool* pool, CoroExecutor* exec);
         static DnsResolver* create(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp);
+        static DnsResolver* create(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp, DnsConfig cfg);
     };
 }

@@ -24,6 +24,29 @@ namespace stl {
         u64 id() const noexcept;
     };
 
+    struct CoroConfig {
+        size_t threads;
+        size_t reactors;
+        size_t offloadThreads;
+        size_t dnsResolvers;
+        size_t maxDnsQueries;
+        int dnsFamily;
+        int dnsTimeout;
+        int dnsTries;
+        int dnsUdpMaxQueries;
+
+        CoroConfig(size_t threads) noexcept;
+
+        CoroConfig& setReactors(size_t v) noexcept;
+        CoroConfig& setOffloadThreads(size_t v) noexcept;
+        CoroConfig& setDnsResolvers(size_t v) noexcept;
+        CoroConfig& setMaxDnsQueries(size_t v) noexcept;
+        CoroConfig& setDnsFamily(int v) noexcept;
+        CoroConfig& setDnsTimeout(int v) noexcept;
+        CoroConfig& setDnsTries(int v) noexcept;
+        CoroConfig& setDnsUdpMaxQueries(int v) noexcept;
+    };
+
     struct SpawnParams {
         size_t stackSize;
         void* stackPtr;
@@ -86,6 +109,7 @@ namespace stl {
             offloadRun(pool, makeRunable(f));
         }
 
+        static CoroExecutor* create(ObjPool* pool, CoroConfig cfg);
         static CoroExecutor* create(ObjPool* pool, size_t threads);
         static CoroExecutor* create(ObjPool* pool, size_t threads, size_t reactors);
     };
