@@ -66,6 +66,7 @@ namespace {
 
         int fd() const noexcept override;
         void resetResult() noexcept;
+        void visitResults(VisitorFace& visitor) noexcept;
     };
 
     struct FdEntry: public IntrusiveList {
@@ -295,6 +296,15 @@ void PollGroupImpl::resetResult() noexcept {
     memZero(results_, results_ + count_);
 }
 
+void PollGroupImpl::visitResults(VisitorFace& visitor) noexcept {
+    for (size_t i = 0; i < count_; ++i) {
+        if (auto res = results_[i]; res) {
+            PollFD pfd = {reqs_[i]->pfd.fd, res};
+            visitor.visit(&pfd);
+        }
+    }
+}
+
 PollGroup* PollGroup::create(ObjPool* pool, const PollFD* fds, size_t count) {
     return pool->make<PollGroupImpl>(pool, fds, count);
 }
@@ -318,12 +328,7 @@ void ReactorState::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
     }), &impl->task);
     // clang-format on
 
-    for (size_t i = 0; i < impl->count_; ++i) {
-        if (auto res = impl->results_[i]; res) {
-            PollFD pfd = {impl->reqs_[i]->pfd.fd, res};
-            visitor.visit(&pfd);
-        }
-    }
+    impl->visitResults(visitor);
 }
 
 u32 ReactorState::poll(PollFD pfd, u64 deadlineUs) {
