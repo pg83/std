@@ -19,6 +19,12 @@ CoroConfig::CoroConfig(size_t threads) noexcept
 {
 }
 
+CoroConfig& CoroConfig::setThreads(size_t v) noexcept {
+    threads = v;
+
+    return *this;
+}
+
 CoroConfig& CoroConfig::setReactors(size_t v) noexcept {
     reactors = v;
 

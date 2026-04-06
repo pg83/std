@@ -55,13 +55,50 @@ STD_TEST_SUITE(DnsResolver) {
 
     STD_TEST(_ResolveStress) {
         auto pool = ObjPool::fromMemory();
+        auto& a = _ctx.args();
         auto cfg = CoroConfig(8);
 
-        if (_ctx.args().find(u8"tcp")) {
-            cfg.setDnsTcp(true).setDnsResolvers(32);
+        if (auto sv = a.find(u8"coro-threads"); sv) {
+            cfg.setThreads(sv->stou());
         }
 
-        if (auto sv = _ctx.args().find(u8"dns-server"); sv) {
+        if (auto sv = a.find(u8"coro-reactors"); sv) {
+            cfg.setReactors(sv->stou());
+        }
+
+        if (auto sv = a.find(u8"coro-offload-threads"); sv) {
+            cfg.setOffloadThreads(sv->stou());
+        }
+
+        if (auto sv = a.find(u8"dns-resolvers"); sv) {
+            cfg.setDnsResolvers(sv->stou());
+        }
+
+        if (auto sv = a.find(u8"dns-max-queries"); sv) {
+            cfg.setMaxDnsQueries(sv->stou());
+        }
+
+        if (auto sv = a.find(u8"dns-family"); sv) {
+            cfg.setDnsFamily(sv->stou());
+        }
+
+        if (auto sv = a.find(u8"dns-timeout"); sv) {
+            cfg.setDnsTimeout(sv->stou());
+        }
+
+        if (auto sv = a.find(u8"dns-tries"); sv) {
+            cfg.setDnsTries(sv->stou());
+        }
+
+        if (auto sv = a.find(u8"dns-udp-max-queries"); sv) {
+            cfg.setDnsUdpMaxQueries(sv->stou());
+        }
+
+        if (a.find(u8"dns-tcp")) {
+            cfg.setDnsTcp(true);
+        }
+
+        if (auto sv = a.find(u8"dns-server"); sv) {
             cfg.setDnsServer(*sv);
         }
 

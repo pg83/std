@@ -19,6 +19,7 @@ namespace stl {
 
         CoroConfig(size_t threads) noexcept;
 
+        CoroConfig& setThreads(size_t v) noexcept;
         CoroConfig& setReactors(size_t v) noexcept;
         CoroConfig& setOffloadThreads(size_t v) noexcept;
         CoroConfig& setDnsResolvers(size_t v) noexcept;
