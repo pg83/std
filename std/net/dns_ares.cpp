@@ -161,10 +161,11 @@ DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec)
 
     opts.timeout = 100;
     opts.tries = 3;
+    opts.udp_max_queries = 0;
     opts.sock_state_cb = sockStateCb;
     opts.sock_state_cb_data = this;
 
-    ares_init_options(&channel_, &opts, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES | ARES_OPT_SOCK_STATE_CB);
+    ares_init_options(&channel_, &opts, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES | ARES_OPT_UDP_MAX_QUERIES | ARES_OPT_SOCK_STATE_CB);
 
     memset(&hints_, 0, sizeof(hints_));
     hints_.ai_family = AF_UNSPEC;

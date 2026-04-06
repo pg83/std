@@ -119,6 +119,7 @@ namespace {
         const u64 tlsKey_;
         Vector<ReactorIface*> reactors_;
         Vector<DnsResolver*> dnsResolvers_;
+        Semaphore* dnsSem_ = nullptr;
         ThreadPool* offload_;
         ThreadPool* pool_;
 
@@ -180,6 +181,7 @@ CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads, size_t reactor
     }
 
     offload_ = ThreadPool::simple(pool, reactors);
+    dnsSem_ = pool->make<Semaphore>(100, this);
 
     for (size_t i = 0; i < reactors; ++i) {
         dnsResolvers_.pushBack(DnsResolver::create(pool, this, offload_));
@@ -280,7 +282,11 @@ void CoroExecutorImpl::parkWith(Runable&& afterSuspend, Task** out) noexcept {
 }
 
 DnsResult* CoroExecutorImpl::resolve(ObjPool* pool, const StringView& name) {
-    return dnsResolvers_[name.hash64() % dnsResolvers_.length()]->resolve(pool, name);
+    dnsSem_->wait();
+    auto result = dnsResolvers_[name.hash64() % dnsResolvers_.length()]->resolve(pool, name);
+    dnsSem_->post();
+
+    return result;
 }
 
 u32 CoroExecutorImpl::poll(PollFD pfd, u64 deadlineUs) {
