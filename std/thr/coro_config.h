@@ -9,10 +9,10 @@ namespace stl {
         size_t offloadThreads;
         size_t dnsResolvers;
         size_t maxDnsQueries;
-        int dnsFamily;
-        int dnsTimeout;
-        int dnsTries;
-        int dnsUdpMaxQueries;
+        size_t dnsFamily;
+        size_t dnsTimeout;
+        size_t dnsTries;
+        size_t dnsUdpMaxQueries;
 
         CoroConfig(size_t threads) noexcept;
 
@@ -20,9 +20,9 @@ namespace stl {
         CoroConfig& setOffloadThreads(size_t v) noexcept;
         CoroConfig& setDnsResolvers(size_t v) noexcept;
         CoroConfig& setMaxDnsQueries(size_t v) noexcept;
-        CoroConfig& setDnsFamily(int v) noexcept;
-        CoroConfig& setDnsTimeout(int v) noexcept;
-        CoroConfig& setDnsTries(int v) noexcept;
-        CoroConfig& setDnsUdpMaxQueries(int v) noexcept;
+        CoroConfig& setDnsFamily(size_t v) noexcept;
+        CoroConfig& setDnsTimeout(size_t v) noexcept;
+        CoroConfig& setDnsTries(size_t v) noexcept;
+        CoroConfig& setDnsUdpMaxQueries(size_t v) noexcept;
     };
 }

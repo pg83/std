@@ -12,10 +12,10 @@ namespace stl {
     struct CoroExecutor;
 
     struct DnsConfig {
-        int family;
-        int timeout;
-        int tries;
-        int udpMaxQueries;
+        size_t family;
+        size_t timeout;
+        size_t tries;
+        size_t udpMaxQueries;
 
         DnsConfig() noexcept;
     };

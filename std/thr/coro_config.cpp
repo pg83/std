@@ -41,25 +41,25 @@ CoroConfig& CoroConfig::setMaxDnsQueries(size_t v) noexcept {
     return *this;
 }
 
-CoroConfig& CoroConfig::setDnsFamily(int v) noexcept {
+CoroConfig& CoroConfig::setDnsFamily(size_t v) noexcept {
     dnsFamily = v;
 
     return *this;
 }
 
-CoroConfig& CoroConfig::setDnsTimeout(int v) noexcept {
+CoroConfig& CoroConfig::setDnsTimeout(size_t v) noexcept {
     dnsTimeout = v;
 
     return *this;
 }
 
-CoroConfig& CoroConfig::setDnsTries(int v) noexcept {
+CoroConfig& CoroConfig::setDnsTries(size_t v) noexcept {
     dnsTries = v;
 
     return *this;
 }
 
-CoroConfig& CoroConfig::setDnsUdpMaxQueries(int v) noexcept {
+CoroConfig& CoroConfig::setDnsUdpMaxQueries(size_t v) noexcept {
     dnsUdpMaxQueries = v;
 
     return *this;
