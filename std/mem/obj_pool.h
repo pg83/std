@@ -35,10 +35,10 @@ namespace stl {
         virtual ~ObjPool() noexcept;
 
         virtual void* allocate(size_t len) = 0;
-        virtual void* allocateOverAligned(size_t len, size_t align) = 0;
         virtual MemoryPool* memoryPool() noexcept = 0;
 
         StringView intern(StringView s);
+        void* allocateOverAligned(size_t len, size_t align);
 
         // king of ownership
         template <typename T, typename... A>
