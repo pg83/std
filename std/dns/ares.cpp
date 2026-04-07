@@ -1,8 +1,8 @@
 #include "ares.h"
+#include "iface.h"
 #include "config.h"
 #include "record.h"
 #include "result.h"
-#include "iface.h"
 
 #include <std/sys/crt.h>
 #include <std/lib/list.h>
@@ -17,8 +17,8 @@
 #include <std/thr/poll_fd.h>
 #include <std/thr/parker.h>
 #include <std/lib/visitor.h>
-#include <std/thr/reactor_poll.h>
 #include <std/mem/obj_pool.h>
+#include <std/thr/reactor_poll.h>
 
 #if __has_include(<ares.h>)
     #include <ares.h>
