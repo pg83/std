@@ -1,5 +1,6 @@
 #include "dns_system.h"
 #include "dns_config.h"
+#include "dns_result.h"
 #include "dns_iface.h"
 
 #include <std/sys/crt.h>

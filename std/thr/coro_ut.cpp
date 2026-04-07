@@ -1,4 +1,6 @@
 #include "coro.h"
+
+#include <std/net/dns_result.h>
 #include "pool.h"
 #include "guard.h"
 #include "mutex.h"
