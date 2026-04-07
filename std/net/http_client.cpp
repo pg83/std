@@ -7,7 +7,7 @@
 #include <std/ios/in_zc.h>
 #include <std/sym/s_map.h>
 #include <std/lib/buffer.h>
-#include <std/ios/in_zero.h>
+#include <std/ios/in.h>
 #include <std/mem/obj_pool.h>
 
 using namespace stl;
@@ -69,7 +69,7 @@ HttpClientImpl::HttpClientImpl(ObjPool* pool, ZeroCopyInput* in)
     } else if (auto cl = headers.find(StringView("content-length")); cl) {
         bodyIn = createLimitedInput(pool, in, cl->stou());
     } else {
-        bodyIn = pool->make<ZeroInput>();
+        bodyIn = createZeroInput(pool);
     }
 }
 

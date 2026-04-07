@@ -24,7 +24,6 @@
 #include <std/sys/atomic.h>
 #include <std/sys/num_cpu.h>
 #include <std/str/builder.h>
-#include <std/ios/in_zero.h>
 #include <std/mem/obj_pool.h>
 #include <std/ios/stream_tcp.h>
 #include <std/thr/wait_group.h>
@@ -175,7 +174,7 @@ HttpServerRequestImpl::HttpServerRequestImpl(ObjPool* pool, HttpConnection* conn
     } else if (auto cl = headers.find(StringView("content-length")); cl) {
         reqIn = createLimitedInput(pool, conn->in, cl->stou());
     } else {
-        reqIn = pool->make<ZeroInput>();
+        reqIn = createZeroInput(pool);
     }
 }
 
