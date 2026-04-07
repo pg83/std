@@ -12,7 +12,8 @@ namespace stl {
 
     Input* createFDInput(ObjPool* pool, FD& fd);
     Input* createCoroFDInput(ObjPool* pool, FD& fd, CoroExecutor* exec);
-    ZeroCopyInput* createMemoryInput(ObjPool* pool, const void* data, size_t len);
+
     ZeroCopyInput* createInBuf(ObjPool* pool, Input& in);
     ZeroCopyInput* createInBuf(ObjPool* pool, Input& in, size_t chunkSize);
+    ZeroCopyInput* createMemoryInput(ObjPool* pool, const void* data, size_t len);
 }

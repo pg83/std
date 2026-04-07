@@ -11,12 +11,13 @@ namespace stl {
 
     struct CoroExecutor;
 
+    Output* createFDPipe(ObjPool* pool, FD& fd);
     Output* createFDOutput(ObjPool* pool, FD& fd);
     Output* createFDRegular(ObjPool* pool, FD& fd);
     Output* createFDCharacter(ObjPool* pool, FD& fd);
-    Output* createFDPipe(ObjPool* pool, FD& fd);
     Output* createCoroFDOutput(ObjPool* pool, FD& fd, CoroExecutor* exec);
-    ZeroCopyOutput* createMemoryOutput(ObjPool* pool, void* ptr);
+
     ZeroCopyOutput* createOutBuf(ObjPool* pool, Output& out);
+    ZeroCopyOutput* createMemoryOutput(ObjPool* pool, void* ptr);
     ZeroCopyOutput* createOutBuf(ObjPool* pool, Output& out, size_t chunkSize);
 }
