@@ -17,6 +17,6 @@ EXTRA=
     lib/c/ares \
     lib/xxhash \
     ${EXTRA} \
-    -- ./build.sh
+    -- ./dev/build.sh
 
 time timeout 10s ./tst/test --top=20

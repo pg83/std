@@ -13,7 +13,7 @@ Build: `make -j`. Run: `./tst/test`. Install: `make install DESTDIR=/prefix`.
 
 The `install` target copies all `.h` files from `std/` into `$(DESTDIR)/include/std/...` preserving directory structure, and `libstd.a` into `$(DESTDIR)/lib/`.
 
-The helper script `run.sh` sets up the build environment via `ix` (package manager), invokes `build.sh`, and runs the tests.
+The helper script `./dev/run.sh` sets up the build environment via `ix` (package manager), invokes `./dev/build.sh`, and runs the tests.
 
 ## Optional dependencies
 

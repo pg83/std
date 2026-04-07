@@ -32,7 +32,6 @@ STD_TEST_SUITE(ListDir) {
         bool foundTstDir = false;
         bool foundStdDir = false;
         bool foundMakefile = false;
-        bool foundRunSh = false;
 
         listDir(StringView(u8"."), [&](const TPathInfo& pi) {
             if (pi.item == StringView(u8"tst") && pi.isDir) {
@@ -44,12 +43,8 @@ STD_TEST_SUITE(ListDir) {
             if (pi.item == StringView(u8"Makefile") && !pi.isDir) {
                 foundMakefile = true;
             }
-            if (pi.item == StringView(u8"run.sh") && !pi.isDir) {
-                foundRunSh = true;
-            }
         });
 
-        STD_INSIST(foundRunSh);
         STD_INSIST(foundTstDir);
         STD_INSIST(foundStdDir);
         STD_INSIST(foundMakefile);

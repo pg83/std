@@ -17,6 +17,7 @@
 #include <std/dbg/insist.h>
 #include <std/dbg/verify.h>
 #include <std/ios/in.h>
+#include <std/ios/in_zc.h>
 #include <std/ios/out.h>
 #include <std/ios/output.h>
 #include <std/lib/buffer.h>
