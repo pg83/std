@@ -17,6 +17,7 @@ namespace stl {
         };
 
         static_assert(sizeof(TT) == sizeof(T));
+        static_assert(alignof(TT) <= alignof(max_align_t));
 
         FreeList* fl;
 
