@@ -16,17 +16,18 @@ namespace stl {
     class ObjPool: public ARC {
         virtual void submit(Disposable* d) noexcept = 0;
 
+        template <typename T>
+        void* allocFor() {
+            if constexpr (alignof(T) > alignof(max_align_t)) {
+                return allocateOverAligned(sizeof(T), alignof(T));
+            } else {
+                return allocate(sizeof(T));
+            }
+        }
+
         template <typename T, typename... A>
         T* makeImpl(A&&... a) {
-            void* mem;
-
-            if constexpr (alignof(T) > alignof(max_align_t)) {
-                mem = allocateOverAligned(sizeof(T), alignof(T));
-            } else {
-                mem = allocate(sizeof(T));
-            }
-
-            return new (mem) T(forward<A>(a)...);
+            return new (allocFor<T>()) T(forward<A>(a)...);
         }
 
     public:
