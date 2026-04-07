@@ -43,7 +43,7 @@ Up to three TLS backends can be available simultaneously. Selection at runtime v
 
 | Header | Library | Notes |
 |--------|---------|-------|
-| `<ares.h>` | c-ares | Without it DNS resolution is unavailable |
+| `<ares.h>` | c-ares | Async DNS via event loop; without it falls back to `getaddrinfo` offloaded to a thread pool |
 
 ### Stack traces
 
