@@ -156,6 +156,29 @@ Within the pool, there is no per-object lifetime management. Objects live exactl
 
 For the cases where individual object recycling matters (connection pools, free lists), `ObjList<T>` provides typed allocation with O(1) reuse from a free list, backed by the same arena mechanics.
 
+## Strings
+
+There is no owning string class. Strings follow a three-phase lifecycle: **build, intern, use.**
+
+**Build** — `Buffer` and `StringBuilder` accumulate bytes. `StringBuilder` doubles as a `ZeroCopyOutput`, so any code that writes to an `Output` can produce a string:
+
+```cpp
+StringBuilder sb;
+sb << "GET " << path << " HTTP/1.1\r\n";
+```
+
+**Intern** — once the string is ready, `ObjPool::intern` copies it into the pool's arena and returns a `StringView`:
+
+```cpp
+StringView header = pool->intern(sb);
+```
+
+The pool now owns the bytes. The `StringBuilder` (or `Buffer`) can be reused or destroyed — the interned data lives as long as the pool.
+
+**Use** — all further string operations work on `StringView`, a non-owning `(ptr, len)` pair. Comparison, hashing, splitting, prefix/suffix checks, parsing — everything takes and returns `StringView`. No allocations, no copies, no lifetime concerns beyond the pool scope.
+
+This means the hot path — request parsing, header lookup, URL matching — never allocates. Strings are compared by pointer arithmetic on arena-contiguous memory. The only heap activity is during the build phase, and even that disappears when building directly into a pool-backed output.
+
 ## Summary
 
 | Concern | Conventional | ObjPool |
