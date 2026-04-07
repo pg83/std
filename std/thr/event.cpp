@@ -5,8 +5,8 @@
 #include "cond_var.h"
 #include "event_iface.h"
 
-#include <std/sys/atomic.h>
 #include <std/mem/new.h>
+#include <std/sys/atomic.h>
 
 #ifdef __linux__
     #include <unistd.h>
