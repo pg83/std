@@ -14,10 +14,10 @@ namespace stl {
     struct DnsResult;
     struct ThreadPool;
     struct EventIface;
+    struct CoroConfig;
     struct VisitorFace;
     struct ThreadIface;
     struct CondVarIface;
-    struct CoroConfig;
     struct CoroExecutor;
     struct SemaphoreIface;
 
