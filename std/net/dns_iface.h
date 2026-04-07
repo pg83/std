@@ -8,19 +8,9 @@ struct sockaddr;
 namespace stl {
     class ObjPool;
 
+    struct DnsConfig;
     struct ThreadPool;
     struct CoroExecutor;
-
-    struct DnsConfig {
-        size_t family;
-        size_t timeout;
-        size_t tries;
-        size_t udpMaxQueries;
-        bool tcp;
-        StringView server;
-
-        DnsConfig() noexcept;
-    };
 
     struct DnsRecord {
         DnsRecord* next;

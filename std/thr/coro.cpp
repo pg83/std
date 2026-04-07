@@ -31,6 +31,7 @@
 #include <std/alg/exchange.h>
 #include <std/alg/destruct.h>
 #include <std/mem/obj_pool.h>
+#include <std/net/dns_config.h>
 #include <std/net/dns_iface.h>
 #include <std/rng/split_mix_64.h>
 
