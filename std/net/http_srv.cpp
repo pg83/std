@@ -16,12 +16,12 @@
 #include <std/sys/atomic.h>
 #include <std/dbg/insist.h>
 #include <std/dbg/verify.h>
-#include <std/ios/in_buf.h>
+#include <std/ios/in.h>
+#include <std/ios/out.h>
 #include <std/ios/output.h>
 #include <std/lib/buffer.h>
 #include <std/lib/vector.h>
 #include <std/sys/atomic.h>
-#include <std/ios/out_buf.h>
 #include <std/sys/num_cpu.h>
 #include <std/str/builder.h>
 #include <std/ios/in_zero.h>
@@ -347,7 +347,7 @@ HttpConnection::HttpConnection(HttpServeOpts* opts, ObjPool* pool, FD* client)
     auto stream = pool->make<TcpStream>(sock);
 
     Input* in = stream;
-    out = pool->make<OutBuf>(*stream);
+    out = createOutBuf(pool, *stream);
 
     if (auto ssl = opts->handler->ssl()) {
         u8 b;
@@ -360,7 +360,7 @@ HttpConnection::HttpConnection(HttpServeOpts* opts, ObjPool* pool, FD* client)
         }
     }
 
-    this->in = pool->make<InBuf>(*in);
+    this->in = createInBuf(pool, *in);
 }
 
 void HttpConnection::run() {
