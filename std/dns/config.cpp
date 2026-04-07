@@ -1,4 +1,4 @@
-#include "dns_config.h"
+#include "config.h"
 
 #include <sys/socket.h>
 

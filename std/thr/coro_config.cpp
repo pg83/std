@@ -1,6 +1,6 @@
 #include "coro_config.h"
 
-#include <std/net/dns_config.h>
+#include <std/dns/config.h>
 
 using namespace stl;
 

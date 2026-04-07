@@ -1,5 +1,5 @@
-#include "dns_iface.h"
-#include "dns_result.h"
+#include "iface.h"
+#include "result.h"
 
 #include <std/tst/ut.h>
 #include <std/tst/args.h>

@@ -1,8 +1,8 @@
-#include "dns_ares.h"
-#include "dns_config.h"
-#include "dns_record.h"
-#include "dns_result.h"
-#include "dns_iface.h"
+#include "ares.h"
+#include "config.h"
+#include "record.h"
+#include "result.h"
+#include "iface.h"
 
 #include <std/sys/crt.h>
 #include <std/lib/list.h>

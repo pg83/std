@@ -1,6 +1,6 @@
 #include "coro.h"
 
-#include <std/net/dns_result.h>
+#include <std/dns/result.h>
 #include "pool.h"
 #include "guard.h"
 #include "mutex.h"
@@ -20,7 +20,7 @@
 #include <std/sys/atomic.h>
 #include <std/lib/visitor.h>
 #include <std/mem/obj_pool.h>
-#include <std/net/dns_iface.h>
+#include <std/dns/iface.h>
 
 #include <errno.h>
 #include <stdio.h>
