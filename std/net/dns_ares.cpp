@@ -1,5 +1,6 @@
 #include "dns_ares.h"
 #include "dns_config.h"
+#include "dns_record.h"
 #include "dns_result.h"
 #include "dns_iface.h"
 

@@ -3,14 +3,8 @@
 #include <std/str/view.h>
 #include <std/sys/types.h>
 
-struct sockaddr;
-
 namespace stl {
-    struct DnsRecord {
-        DnsRecord* next;
-        int family;
-        sockaddr* addr;
-    };
+    struct DnsRecord;
 
     struct DnsResult {
         int error;
