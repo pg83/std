@@ -11,19 +11,29 @@
     #include <stdlib.h>
 #endif
 
+using namespace stl;
+
 namespace {
 #if !defined(__linux__)
     int memFDFallback(const char* name) {
         (void)name;
 
-        char path[] = "/tmp/memfd.XXXXXX";
-        int fd = mkstemp(path);
+        const char* dir = getenv("TMPDIR");
 
-        if (fd < 0) {
-            stl::Errno().raise(stl::StringBuilder() << stl::StringView(u8"mkstemp() failed"));
+        if (!dir) {
+            dir = "/tmp";
         }
 
-        unlink(path);
+        StringBuilder sb;
+        sb << StringView(dir) << StringView(u8"/memfd.XXXXXX");
+
+        int fd = mkstemp(sb.cStr());
+
+        if (fd < 0) {
+            Errno().raise(StringBuilder() << StringView(u8"mkstemp() failed"));
+        }
+
+        unlink(sb.cStr());
 
         return fd;
     }
