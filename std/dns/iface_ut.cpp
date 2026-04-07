@@ -1,4 +1,5 @@
 #include "iface.h"
+#include "config.h"
 #include "result.h"
 
 #include <std/tst/ut.h>
@@ -20,7 +21,7 @@ STD_TEST_SUITE(DnsResolver) {
     STD_TEST(ResolveLocalhost) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        auto resolver = DnsResolver::create(pool.mutPtr(), exec);
+        auto resolver = DnsResolver::create(pool.mutPtr(), exec, nullptr, DnsConfig());
 
         auto f = async(exec, [&, rpool = pool->create(pool.mutPtr())] {
             return resolver->resolve(rpool, u8"localhost");
@@ -35,7 +36,7 @@ STD_TEST_SUITE(DnsResolver) {
     STD_TEST(ResolveParallel) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        auto resolver = DnsResolver::create(pool.mutPtr(), exec);
+        auto resolver = DnsResolver::create(pool.mutPtr(), exec, nullptr, DnsConfig());
 
         auto f1 = async(exec, [&, rpool = pool->create(pool.mutPtr())] {
             return resolver->resolve(rpool, u8"localhost");
@@ -121,7 +122,7 @@ STD_TEST_SUITE(DnsResolver) {
     STD_TEST(ResolveInvalidName) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        auto resolver = DnsResolver::create(pool.mutPtr(), exec);
+        auto resolver = DnsResolver::create(pool.mutPtr(), exec, nullptr, DnsConfig());
 
         auto f = async(exec, [&, rpool = pool->create(pool.mutPtr())] {
             return resolver->resolve(rpool, u8"bad name");
@@ -136,7 +137,7 @@ STD_TEST_SUITE(DnsResolver) {
     STD_TEST(ResolveBadName) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        auto resolver = DnsResolver::create(pool.mutPtr(), exec);
+        auto resolver = DnsResolver::create(pool.mutPtr(), exec, nullptr, DnsConfig());
 
         auto f = async(exec, [&, rpool = pool->create(pool.mutPtr())] {
             return resolver->resolve(rpool, u8"this.name.does.not.exist.invalid");

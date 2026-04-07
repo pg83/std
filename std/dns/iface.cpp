@@ -1,7 +1,6 @@
 #include "iface.h"
 #include "ares.h"
 #include "system.h"
-#include "config.h"
 
 #include <std/thr/pool.h>
 #include <std/mem/obj_pool.h>
@@ -9,14 +8,6 @@
 #include <stdlib.h>
 
 using namespace stl;
-
-DnsResolver* DnsResolver::create(ObjPool* pool, CoroExecutor* exec) {
-    return create(pool, exec, nullptr);
-}
-
-DnsResolver* DnsResolver::create(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp) {
-    return create(pool, exec, tp, DnsConfig());
-}
 
 DnsResolver* DnsResolver::create(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp, const DnsConfig& cfg) {
     if (!getenv("USE_SYSTEM_RESOLVER")) {

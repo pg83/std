@@ -14,8 +14,6 @@ namespace stl {
     struct DnsResolver {
         virtual DnsResult* resolve(ObjPool* pool, const StringView& name) = 0;
 
-        static DnsResolver* create(ObjPool* pool, CoroExecutor* exec);
-        static DnsResolver* create(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp);
         static DnsResolver* create(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp, const DnsConfig& cfg);
     };
 }
