@@ -30,5 +30,9 @@ $(TSTA): $(TSTO) $(LIBA) Makefile
 %.cpp.o: %.cpp $(HDRS) Makefile
 	$(CXX) $(CXXF) -o $@ -c $<
 
+install: $(LIBA)
+	find std -name '*.h' -exec install -Dm644 {} $(DESTDIR)/include/{} \;
+	install -Dm644 $(LIBA) $(DESTDIR)/lib/libstd.a
+
 clear:
 	rm -rf $(LIBA) $(TSTA) $(TSTO) $(LIBO)
