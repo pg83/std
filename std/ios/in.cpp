@@ -2,6 +2,7 @@
 #include "in_fd.h"
 #include "in_buf.h"
 #include "in_mem.h"
+#include "in_zero.h"
 #include "in_fd_coro.h"
 
 #include <std/mem/obj_pool.h>
@@ -26,4 +27,8 @@ ZeroCopyInput* stl::createInBuf(ObjPool* pool, Input& in) {
 
 ZeroCopyInput* stl::createInBuf(ObjPool* pool, Input& in, size_t chunkSize) {
     return pool->make<InBuf>(in, chunkSize);
+}
+
+ZeroCopyInput* stl::createZeroInput(ObjPool* pool) {
+    return pool->make<ZeroInput>();
 }

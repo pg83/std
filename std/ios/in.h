@@ -16,4 +16,5 @@ namespace stl {
     ZeroCopyInput* createInBuf(ObjPool* pool, Input& in);
     ZeroCopyInput* createInBuf(ObjPool* pool, Input& in, size_t chunkSize);
     ZeroCopyInput* createMemoryInput(ObjPool* pool, const void* data, size_t len);
+    ZeroCopyInput* createZeroInput(ObjPool* pool);
 }

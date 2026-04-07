@@ -2,6 +2,7 @@
 #include "out_fd.h"
 #include "out_buf.h"
 #include "out_mem.h"
+#include "out_null.h"
 #include "out_fd_coro.h"
 
 #include <std/mem/obj_pool.h>
@@ -38,4 +39,8 @@ ZeroCopyOutput* stl::createOutBuf(ObjPool* pool, Output& out) {
 
 ZeroCopyOutput* stl::createOutBuf(ObjPool* pool, Output& out, size_t chunkSize) {
     return pool->make<OutBuf>(out, chunkSize);
+}
+
+Output* stl::createNullOutput(ObjPool* pool) {
+    return pool->make<NullOutput>();
 }

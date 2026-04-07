@@ -20,4 +20,6 @@ namespace stl {
     ZeroCopyOutput* createOutBuf(ObjPool* pool, Output& out);
     ZeroCopyOutput* createMemoryOutput(ObjPool* pool, void* ptr);
     ZeroCopyOutput* createOutBuf(ObjPool* pool, Output& out, size_t chunkSize);
+
+    Output* createNullOutput(ObjPool* pool);
 }
