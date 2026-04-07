@@ -477,6 +477,77 @@ STD_TEST_SUITE(ObjPool) {
         }
     }
 
+    STD_TEST(overAlignedWithDestructor) {
+        int counter = 0;
+
+        {
+            ObjPool::Ref pool = ObjPool::fromMemory();
+
+            struct alignas(64) AlignedDtor {
+                int* c;
+
+                AlignedDtor(int* c_)
+                    : c(c_)
+                {
+                    ++(*c);
+                }
+
+                ~AlignedDtor() {
+                    --(*c);
+                }
+            };
+
+            AlignedDtor* obj = pool->make<AlignedDtor>(&counter);
+
+            STD_INSIST(reinterpret_cast<uintptr_t>(obj) % 64 == 0);
+            STD_INSIST(counter == 1);
+        }
+
+        STD_INSIST(counter == 0);
+    }
+
+    STD_TEST(overAlignedMixedWithRegular) {
+        ObjPool::Ref pool = ObjPool::fromMemory();
+
+        struct alignas(64) Over {
+            int v;
+        };
+
+        for (int i = 0; i < 20; ++i) {
+            if (i % 2 == 0) {
+                Over* o = pool->make<Over>();
+                STD_INSIST(reinterpret_cast<uintptr_t>(o) % 64 == 0);
+            } else {
+                int* p = pool->make<int>(i);
+                STD_INSIST(*p == i);
+            }
+        }
+    }
+
+    STD_TEST(overAlignedLargeObject) {
+        ObjPool::Ref pool = ObjPool::fromMemory();
+
+        struct alignas(256) Huge {
+            char data[512];
+            int id;
+        };
+
+        for (int i = 0; i < 5; ++i) {
+            Huge* obj = pool->make<Huge>();
+            obj->id = i;
+            STD_INSIST(reinterpret_cast<uintptr_t>(obj) % 256 == 0);
+            STD_INSIST(obj->id == i);
+        }
+    }
+
+    STD_TEST(overAlignedRawAllocate) {
+        ObjPool::Ref pool = ObjPool::fromMemory();
+
+        void* ptr = pool->allocateOverAligned(32, 64);
+
+        STD_INSIST(reinterpret_cast<uintptr_t>(ptr) % 64 == 0);
+    }
+
     STD_TEST(object_alignment) {
         ObjPool::Ref pool = ObjPool::fromMemory();
 
