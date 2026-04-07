@@ -30,6 +30,12 @@ namespace {
             return mp.allocate(len);
         }
 
+        void* allocateOverAligned(size_t len, size_t align) override {
+            auto raw = (uintptr_t)mp.allocate(len + align);
+
+            return (void*)((raw + align - 1) & ~(align - 1));
+        }
+
         void submit(Disposable* d) noexcept override {
             ds.submit(d);
         }

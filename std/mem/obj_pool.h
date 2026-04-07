@@ -18,7 +18,15 @@ namespace stl {
 
         template <typename T, typename... A>
         T* makeImpl(A&&... a) {
-            return new (allocate(sizeof(T))) T(forward<A>(a)...);
+            void* mem;
+
+            if constexpr (alignof(T) > alignof(max_align_t)) {
+                mem = allocateOverAligned(sizeof(T), alignof(T));
+            } else {
+                mem = allocate(sizeof(T));
+            }
+
+            return new (mem) T(forward<A>(a)...);
         }
 
     public:
@@ -27,6 +35,7 @@ namespace stl {
         virtual ~ObjPool() noexcept;
 
         virtual void* allocate(size_t len) = 0;
+        virtual void* allocateOverAligned(size_t len, size_t align) = 0;
         virtual MemoryPool* memoryPool() noexcept = 0;
 
         StringView intern(StringView s);

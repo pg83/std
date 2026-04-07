@@ -452,6 +452,31 @@ STD_TEST_SUITE(ObjPool) {
         STD_INSIST(*p == 3.14);
     }
 
+    STD_TEST(overAlignedAllocation) {
+        ObjPool::Ref pool = ObjPool::fromMemory();
+
+        struct alignas(64) OverAligned {
+            char data[64];
+        };
+
+        OverAligned* obj = pool->make<OverAligned>();
+
+        STD_INSIST(reinterpret_cast<uintptr_t>(obj) % 64 == 0);
+    }
+
+    STD_TEST(overAlignedMultiple) {
+        ObjPool::Ref pool = ObjPool::fromMemory();
+
+        struct alignas(128) BigAlign {
+            int value;
+        };
+
+        for (int i = 0; i < 10; ++i) {
+            BigAlign* obj = pool->make<BigAlign>();
+            STD_INSIST(reinterpret_cast<uintptr_t>(obj) % 128 == 0);
+        }
+    }
+
     STD_TEST(object_alignment) {
         ObjPool::Ref pool = ObjPool::fromMemory();
 
