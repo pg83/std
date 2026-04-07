@@ -15,7 +15,7 @@ EXTRA=
     lib/kernel \
     lib/aws/lc \
     lib/c/ares \
-    lib/rapidhash \
+    lib/xxhash \
     ${EXTRA} \
     -- ./build.sh
 
