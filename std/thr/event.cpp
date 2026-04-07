@@ -19,9 +19,7 @@ using namespace stl;
 
 namespace {
 #ifdef __linux__
-    struct FutexEventImpl: public EventIface, public Newable {
-        static void operator delete(void*) noexcept {
-        }
+    struct alignas(64) FutexEventImpl: public EventIface, public Newable {
         u32 state_;
 
         FutexEventImpl() noexcept
@@ -43,13 +41,14 @@ namespace {
             stdAtomicStore(&state_, (u32)1, MemoryOrder::Release);
             syscall(SYS_futex, &state_, FUTEX_WAKE, 1, nullptr, nullptr, 0);
         }
+
+        static void operator delete(void*) noexcept {
+        }
     };
 
     using DefaultEventImpl = FutexEventImpl;
 #else
     struct PosixEventImpl: public EventIface, public Newable {
-        static void operator delete(void*) noexcept {
-        }
         Mutex mu_;
         CondVar cv_;
         bool signaled_;
@@ -74,6 +73,9 @@ namespace {
             LockGuard guard(mu_);
             signaled_ = true;
             cv_.signal();
+        }
+
+        static void operator delete(void*) noexcept {
         }
     };
 
