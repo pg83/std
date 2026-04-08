@@ -15,12 +15,13 @@ namespace stl {
     };
 
     struct HttpClientRequest {
-        virtual void setMethod(StringView method) = 0;
-        virtual void setPath(StringView path) = 0;
-        virtual void addHeader(StringView name, StringView value) = 0;
-        virtual void endHeaders() = 0;
         virtual Output* out() = 0;
         virtual HttpClientResponse* response() = 0;
+
+        virtual void endHeaders() = 0;
+        virtual void setPath(StringView path) = 0;
+        virtual void setMethod(StringView method) = 0;
+        virtual void addHeader(StringView name, StringView value) = 0;
 
         static HttpClientRequest* create(ObjPool* pool, ZeroCopyInput* in, Output* out);
     };
