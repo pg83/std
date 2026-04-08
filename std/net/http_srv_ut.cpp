@@ -186,15 +186,16 @@ STD_TEST_SUITE(HttpServer) {
             };
 
             TcpStream stream(cli);
-            const char* req =
-                "GET /index.html HTTP/1.0\r\n"
-                "Host: localhost\r\n"
-                "\r\n";
-            stream.write(req, ::strlen(req));
-
             InBuf in(stream);
             auto pool = ObjPool::fromMemory();
-            auto resp = HttpClient::create(pool.mutPtr(), &in);
+
+            auto req = HttpClientRequest::create(pool.mutPtr(), &in, &stream);
+
+            req->setPath(StringView("/index.html"));
+            req->addHeader(StringView("Host"), StringView("localhost"));
+            req->endHeaders();
+
+            auto resp = req->response();
 
             respStatus = resp->status();
             resp->body()->readAll(respBody);
@@ -250,33 +251,33 @@ STD_TEST_SUITE(HttpServer) {
             InBuf in(stream);
             auto pool = ObjPool::fromMemory();
 
-            const char* req1 =
-                "POST /a HTTP/1.1\r\n"
-                "Transfer-Encoding: chunked\r\n"
-                "\r\n"
-                "5\r\n"
-                "hello\r\n"
-                "0\r\n"
-                "\r\n";
-            stream.write(req1, ::strlen(req1));
+            {
+                auto req1 = HttpClientRequest::create(pool.mutPtr(), &in, &stream);
 
-            auto resp1 = HttpClient::create(pool.mutPtr(), &in);
-            STD_INSIST(resp1->status() == 200);
-            resp1->body()->readAll(body1);
+                req1->setMethod(StringView("POST"));
+                req1->setPath(StringView("/a"));
+                req1->endHeaders();
+                req1->out()->write("hello", 5);
 
-            const char* req2 =
-                "POST /b HTTP/1.1\r\n"
-                "Transfer-Encoding: chunked\r\n"
-                "\r\n"
-                "5\r\n"
-                "world\r\n"
-                "0\r\n"
-                "\r\n";
-            stream.write(req2, ::strlen(req2));
+                auto resp1 = req1->response();
 
-            auto resp2 = HttpClient::create(pool.mutPtr(), &in);
-            STD_INSIST(resp2->status() == 200);
-            resp2->body()->readAll(body2);
+                STD_INSIST(resp1->status() == 200);
+                resp1->body()->readAll(body1);
+            }
+
+            {
+                auto req2 = HttpClientRequest::create(pool.mutPtr(), &in, &stream);
+
+                req2->setMethod(StringView("POST"));
+                req2->setPath(StringView("/b"));
+                req2->endHeaders();
+                req2->out()->write("world", 5);
+
+                auto resp2 = req2->response();
+
+                STD_INSIST(resp2->status() == 200);
+                resp2->body()->readAll(body2);
+            }
 
             ctl->stop();
         });
@@ -329,25 +330,31 @@ STD_TEST_SUITE(HttpServer) {
             InBuf in(stream);
             auto pool = ObjPool::fromMemory();
 
-            const char* req1 =
-                "GET /a HTTP/1.1\r\n"
-                "Content-Length: 0\r\n"
-                "\r\n";
-            stream.write(req1, ::strlen(req1));
+            {
+                auto req1 = HttpClientRequest::create(pool.mutPtr(), &in, &stream);
 
-            auto resp1 = HttpClient::create(pool.mutPtr(), &in);
-            STD_INSIST(resp1->status() == 200);
-            resp1->body()->readAll(body1);
+                req1->setPath(StringView("/a"));
+                req1->addHeader(StringView("Content-Length"), StringView("0"));
+                req1->endHeaders();
 
-            const char* req2 =
-                "GET /b HTTP/1.1\r\n"
-                "Content-Length: 0\r\n"
-                "\r\n";
-            stream.write(req2, ::strlen(req2));
+                auto resp1 = req1->response();
 
-            auto resp2 = HttpClient::create(pool.mutPtr(), &in);
-            STD_INSIST(resp2->status() == 200);
-            resp2->body()->readAll(body2);
+                STD_INSIST(resp1->status() == 200);
+                resp1->body()->readAll(body1);
+            }
+
+            {
+                auto req2 = HttpClientRequest::create(pool.mutPtr(), &in, &stream);
+
+                req2->setPath(StringView("/b"));
+                req2->addHeader(StringView("Content-Length"), StringView("0"));
+                req2->endHeaders();
+
+                auto resp2 = req2->response();
+
+                STD_INSIST(resp2->status() == 200);
+                resp2->body()->readAll(body2);
+            }
 
             ctl->stop();
         });

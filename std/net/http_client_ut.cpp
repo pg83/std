@@ -1,12 +1,24 @@
 #include "http_client.h"
 
 #include <std/tst/ut.h>
+#include <std/ios/out.h>
 #include <std/dbg/insist.h>
 #include <std/lib/buffer.h>
 #include <std/ios/in_mem.h>
 #include <std/mem/obj_pool.h>
 
 using namespace stl;
+
+namespace {
+    HttpClientResponse* parseResponse(ObjPool* pool, MemoryInput* in) {
+        auto out = createNullOutput(pool);
+        auto req = HttpClientRequest::create(pool, in, out);
+
+        req->endHeaders();
+
+        return req->response();
+    }
+}
 
 STD_TEST_SUITE(HttpClient) {
     STD_TEST(StatusAndReason) {
@@ -16,7 +28,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = parseResponse(pool.mutPtr(), &in);
 
         STD_INSIST(cli->status() == 200);
         STD_INSIST(cli->reason() == StringView("OK"));
@@ -29,7 +41,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = parseResponse(pool.mutPtr(), &in);
 
         STD_INSIST(cli->status() == 404);
         STD_INSIST(cli->reason() == StringView("Not Found"));
@@ -44,7 +56,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = parseResponse(pool.mutPtr(), &in);
 
         auto ct = cli->header(StringView("content-type"));
 
@@ -68,7 +80,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = parseResponse(pool.mutPtr(), &in);
 
         Buffer body;
 
@@ -91,7 +103,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = parseResponse(pool.mutPtr(), &in);
 
         Buffer body;
 
@@ -107,7 +119,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = parseResponse(pool.mutPtr(), &in);
 
         Buffer body;
 
@@ -125,7 +137,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = parseResponse(pool.mutPtr(), &in);
 
         Buffer body;
 
@@ -144,7 +156,7 @@ STD_TEST_SUITE(HttpClient) {
 
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
-        auto cli = HttpClient::create(pool.mutPtr(), &in);
+        auto cli = parseResponse(pool.mutPtr(), &in);
 
         STD_INSIST(cli->status() == 200);
         STD_INSIST(*cli->header(StringView("content-length")) == StringView("0"));
@@ -166,7 +178,7 @@ STD_TEST_SUITE(HttpClient) {
         MemoryInput in(data, StringView(data).length());
         auto pool = ObjPool::fromMemory();
 
-        auto r1 = HttpClient::create(pool.mutPtr(), &in);
+        auto r1 = parseResponse(pool.mutPtr(), &in);
 
         STD_INSIST(r1->status() == 200);
 
@@ -176,7 +188,7 @@ STD_TEST_SUITE(HttpClient) {
 
         STD_INSIST(StringView(b1) == StringView("ok"));
 
-        auto r2 = HttpClient::create(pool.mutPtr(), &in);
+        auto r2 = parseResponse(pool.mutPtr(), &in);
 
         STD_INSIST(r2->status() == 404);
 
