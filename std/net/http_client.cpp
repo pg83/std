@@ -188,6 +188,7 @@ Output* HttpClientRequestImpl::out() {
 
 HttpClientResponse* HttpClientRequestImpl::response() {
     rawOut->finish();
+    rawOut->flush();
     return pool->make<HttpClientResponseImpl>(pool, in);
 }
 
