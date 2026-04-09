@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/uio.h>
 #include <sys/socket.h>
 
 #ifndef MSG_NOSIGNAL
@@ -43,6 +44,8 @@ namespace {
         ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) override;
         int fsync(int fd) override;
         int fdatasync(int fd) override;
+
+        ssize_t writev(int fd, iovec* iov, size_t iovcnt, u64 deadlineUs) override;
 
         u32 poll(PollFD pfd, u64 deadlineUs) override;
         void poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) override;
@@ -189,6 +192,24 @@ int PollIoReactor::fdatasync(int fd) {
     // clang-format on
 
     return result;
+}
+
+ssize_t PollIoReactor::writev(int fd, iovec* iov, size_t iovcnt, u64 deadlineUs) {
+    for (;;) {
+        ssize_t n = ::writev(fd, iov, iovcnt);
+
+        if (n >= 0) {
+            return n;
+        }
+
+        if (errno != EAGAIN) {
+            return -errno;
+        }
+
+        if (!reactor_->poll({fd, PollFlag::Out}, deadlineUs)) {
+            return -EAGAIN;
+        }
+    }
 }
 
 u32 PollIoReactor::poll(PollFD pfd, u64 deadlineUs) {

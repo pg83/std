@@ -202,16 +202,15 @@ int TcpSocket::writeInf(size_t* nWritten, const void* buf, size_t len) {
 }
 
 int TcpSocket::writev(size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs) {
-    for (;;) {
-        if (ssize_t n = ::writev(fd, iov, iovcnt); n > 0) {
-            *nWritten = (size_t)n;
-            return 0;
-        } else if (errno != EAGAIN) {
-            return -errno;
-        }
+    ssize_t n = io->writev(fd, iov, iovcnt, deadlineUs);
 
-        io->poll({fd, PollFlag::Out}, deadlineUs);
+    if (n < 0) {
+        return (int)n;
     }
+
+    *nWritten = (size_t)n;
+
+    return 0;
 }
 
 int TcpSocket::writevInf(size_t* nWritten, iovec* iov, size_t iovcnt) {
@@ -219,7 +218,9 @@ int TcpSocket::writevInf(size_t* nWritten, iovec* iov, size_t iovcnt) {
 }
 
 bool TcpSocket::peek(u8& out) {
-    io->poll({fd, PollFlag::In}, UINT64_MAX);
+    if (!io->poll({fd, PollFlag::In}, UINT64_MAX)) {
+        return false;
+    }
 
     return ::recv(fd, &out, 1, MSG_PEEK) == 1;
 }
