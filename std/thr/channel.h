@@ -18,6 +18,7 @@ namespace stl {
 
         void enqueue(void* v) noexcept;
         bool dequeue(void** out) noexcept;
+        size_t dequeue(void** to, size_t len) noexcept;
 
         bool tryEnqueue(void* v) noexcept;
         bool tryDequeue(void** out) noexcept;

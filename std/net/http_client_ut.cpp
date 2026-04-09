@@ -7,17 +7,16 @@
 #include <std/sys/crt.h>
 #include <std/tst/args.h>
 #include <std/thr/coro.h>
-#include <std/sys/atomic.h>
 #include <std/alg/defer.h>
 #include <std/dbg/insist.h>
-#include <std/lib/list.h>
 #include <std/lib/buffer.h>
-#include <std/lib/vector.h>
 #include <std/ios/in_buf.h>
 #include <std/map/map.h>
 #include <std/ios/in_mem.h>
 #include <std/str/builder.h>
 #include <std/mem/obj_pool.h>
+#include <std/thr/channel.h>
+#include <std/thr/wait_group.h>
 #include <std/ios/stream_tcp.h>
 #include <std/thr/coro_config.h>
 
@@ -308,31 +307,53 @@ STD_TEST_SUITE(HttpClient) {
         sysE << StringView(u8"duration: ") << (u64)durationSec << StringView(u8"s") << endL;
         sysE << StringView(u8"payload: ") << (u64)payloadLen << endL;
 
-        struct ReqRecord: public IntrusiveNode {
+        struct ReqRecord {
             u32 status;
             u64 elapsedUs;
         };
 
-        struct CoroData {
-            ObjPool* coroPool;
-            IntrusiveList records;
-        };
-
         auto exec = CoroExecutor::create(pool.mutPtr(), CoroConfig(numThreads));
+
+        Channel ch(exec, numCoros * 128);
+        WaitGroup wg(exec);
 
         u64 startUs = monotonicNowUs();
         u64 deadlineUs = startUs + (u64)durationSec * 1000000;
 
-        Vector<CoroData*> coroResults;
+        // aggregator coroutine
+        u64 totalReqs = 0;
+        Map<u64, u64> statuses(pool.mutPtr());
 
+        exec->spawn([&] {
+            void* batch[256];
+
+            for (;;) {
+                size_t n = ch.dequeue(batch, 256);
+
+                if (n == 0) {
+                    break;
+                }
+
+                for (size_t j = 0; j < n; ++j) {
+                    auto rec = (ReqRecord*)batch[j];
+
+                    ++statuses[(u64)rec->status];
+                    ++totalReqs;
+                }
+            }
+        });
+
+        // worker coroutines
         for (u32 i = 0; i < numCoros; ++i) {
-            auto cd = pool.mutPtr()->make<CoroData>();
+            auto coroPool = ObjPool::create(pool.mutPtr());
 
-            cd->coroPool = ObjPool::create(pool.mutPtr());
+            wg.inc();
 
-            coroResults.pushBack(cd);
+            exec->spawn([&, coroPool] {
+                STD_DEFER {
+                    wg.done();
+                };
 
-            exec->spawn([&, cd] {
                 TcpSocket sock(exec);
 
                 STD_INSIST(sock.socket(AF_INET, SOCK_STREAM, 0) == 0);
@@ -375,37 +396,26 @@ STD_TEST_SUITE(HttpClient) {
 
                     u64 t1 = monotonicNowUs();
 
-                    auto rec = cd->coroPool->make<ReqRecord>();
+                    auto rec = coroPool->make<ReqRecord>();
 
                     rec->status = st;
                     rec->elapsedUs = t1 - t0;
 
-                    cd->records.pushBack(rec);
+                    ch.enqueue(rec);
                 }
             });
         }
+
+        // wait for all workers, close channel, join executor
+        exec->spawn([&] {
+            wg.wait();
+            ch.close();
+        });
 
         exec->join();
 
         u64 elapsedUs = monotonicNowUs() - startUs;
         double elapsedSec = (double)elapsedUs / 1000000.0;
-
-        // aggregate
-        u64 totalReqs = 0;
-        Map<u64, u64> statuses(pool.mutPtr());
-
-        for (u32 i = 0; i < numCoros; ++i) {
-            auto cd = coroResults[i];
-
-            while (!cd->records.empty()) {
-                auto node = cd->records.popFront();
-                auto rec = (ReqRecord*)node;
-
-                ++statuses[(u64)rec->status];
-                ++totalReqs;
-            }
-        }
-
         double rps = (double)totalReqs / elapsedSec;
 
         sysE << StringView(u8"requests: ") << totalReqs

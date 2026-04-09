@@ -52,6 +52,7 @@ struct Channel::Impl {
 
     void enqueue(void* v) noexcept;
     bool dequeue(void** out) noexcept;
+    size_t dequeue(void** to, size_t len) noexcept;
 
     bool tryEnqueue(void* v) noexcept;
     bool tryDequeue(void** out) noexcept;
@@ -166,6 +167,30 @@ __attribute__((noinline)) bool Channel::Impl::dequeueSlow(void** out) noexcept {
     }
 
     return false;
+}
+
+size_t Channel::Impl::dequeue(void** to, size_t len) noexcept {
+    if (len == 0) {
+        return 0;
+    }
+
+    // block for the first element
+    if (!dequeue(to)) {
+        return 0;
+    }
+
+    size_t n = 1;
+
+    // drain the rest under one lock
+    mu_.lock();
+
+    while (n < len && recvOne(to + n)) {
+        ++n;
+    }
+
+    mu_.unlock();
+
+    return n;
 }
 
 void Channel::Impl::close() noexcept {
@@ -316,6 +341,10 @@ bool Channel::tryEnqueue(void* v) noexcept {
 
 bool Channel::tryDequeue(void** out) noexcept {
     return impl_->tryDequeue(out);
+}
+
+size_t Channel::dequeue(void** to, size_t len) noexcept {
+    return impl_->dequeue(to, len);
 }
 
 void Channel::close() noexcept {
