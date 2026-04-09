@@ -1,6 +1,4 @@
-#include <std/net/http_client.h>
-#include <std/net/tcp_socket.h>
-
+#include <std/map/map.h>
 #include <std/ios/out.h>
 #include <std/ios/sys.h>
 #include <std/sys/crt.h>
@@ -8,15 +6,16 @@
 #include <std/thr/coro.h>
 #include <std/alg/defer.h>
 #include <std/dbg/insist.h>
-#include <std/map/map.h>
 #include <std/lib/buffer.h>
 #include <std/ios/in_buf.h>
 #include <std/str/builder.h>
-#include <std/mem/obj_pool.h>
 #include <std/thr/channel.h>
+#include <std/mem/obj_pool.h>
 #include <std/thr/wait_group.h>
 #include <std/ios/stream_tcp.h>
+#include <std/net/tcp_socket.h>
 #include <std/thr/coro_config.h>
+#include <std/net/http_client.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
