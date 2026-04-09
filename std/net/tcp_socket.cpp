@@ -4,8 +4,8 @@
 #include <std/sys/crt.h>
 #include <std/thr/coro.h>
 #include <std/thr/poll_fd.h>
-#include <std/thr/io_reactor.h>
 #include <std/mem/obj_pool.h>
+#include <std/thr/io_reactor.h>
 
 #include <fcntl.h>
 #include <errno.h>
