@@ -11,5 +11,7 @@ namespace stl {
             : HashMap(pool)
         {
         }
+
+        TestArgs(ObjPool* pool, int argc, char** argv);
     };
 }

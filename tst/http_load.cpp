@@ -1,0 +1,243 @@
+#include <std/net/http_client.h>
+#include <std/net/tcp_socket.h>
+
+#include <std/ios/out.h>
+#include <std/ios/sys.h>
+#include <std/sys/crt.h>
+#include <std/tst/args.h>
+#include <std/thr/coro.h>
+#include <std/alg/defer.h>
+#include <std/dbg/insist.h>
+#include <std/map/map.h>
+#include <std/lib/buffer.h>
+#include <std/ios/in_buf.h>
+#include <std/str/builder.h>
+#include <std/mem/obj_pool.h>
+#include <std/thr/channel.h>
+#include <std/thr/wait_group.h>
+#include <std/ios/stream_tcp.h>
+#include <std/thr/coro_config.h>
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+using namespace stl;
+
+namespace {
+    struct ReqRecord {
+        u32 status;
+        u32 elapsedUs;
+    };
+
+    struct ReqBatch {
+        static constexpr u32 CAP = 255;
+
+        ReqRecord records[CAP];
+        u64 len;
+
+        ReqBatch()
+            : len(0)
+        {
+        }
+    };
+}
+
+int main(int argc, char** argv) {
+    auto pool = ObjPool::fromMemory();
+    TestArgs a(pool.mutPtr(), argc, argv);
+
+    auto urlArg = a.find(StringView("url"));
+
+    if (!urlArg) {
+        sysE << StringView(u8"usage: http_load --url=http://host:port/path [--coros=100] [--threads=4] [--duration=10] [--payload=0]") << endL;
+        return 1;
+    }
+
+    StringView url = *urlArg;
+
+    if (url.startsWith(StringView("http://"))) {
+        url = StringView(url.data() + 7, url.length() - 7);
+    }
+
+    StringView hostPort, path;
+
+    if (!url.split('/', hostPort, path)) {
+        hostPort = url;
+        path = StringView("/");
+    }
+
+    StringView host, portStr;
+    u16 port = 80;
+
+    if (hostPort.split(':', host, portStr)) {
+        port = (u16)portStr.stou();
+    } else {
+        host = hostPort;
+    }
+
+    u32 numCoros = 100;
+    u32 numThreads = 4;
+    u32 durationSec = 10;
+    u32 payloadLen = 0;
+
+    if (auto v = a.find(StringView("coros"))) {
+        numCoros = (u32)v->stou();
+    }
+
+    if (auto v = a.find(StringView("threads"))) {
+        numThreads = (u32)v->stou();
+    }
+
+    if (auto v = a.find(StringView("duration"))) {
+        durationSec = (u32)v->stou();
+    }
+
+    if (auto v = a.find(StringView("payload"))) {
+        payloadLen = (u32)v->stou();
+    }
+
+    sockaddr_in addr{};
+
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = htonl(0x7f000001);
+
+    Buffer payloadBuf;
+
+    for (u32 i = 0; i < payloadLen; ++i) {
+        u8 x = 'X';
+        payloadBuf.append(&x, 1);
+    }
+
+    StringView payloadVal(payloadBuf);
+
+    StringBuilder pathBuf;
+
+    pathBuf << StringView(u8"/") << path;
+
+    StringView fullPath = pool.mutPtr()->intern(StringView(pathBuf));
+
+    sysE << StringView(u8"host: ") << host << endL;
+    sysE << StringView(u8"port: ") << (u64)port << endL;
+    sysE << StringView(u8"path: ") << fullPath << endL;
+    sysE << StringView(u8"threads: ") << (u64)numThreads << endL;
+    sysE << StringView(u8"coros: ") << (u64)numCoros << endL;
+    sysE << StringView(u8"duration: ") << (u64)durationSec << StringView(u8"s") << endL;
+    sysE << StringView(u8"payload: ") << (u64)payloadLen << endL;
+
+    auto exec = CoroExecutor::create(pool.mutPtr(), CoroConfig(numThreads));
+
+    Channel ch(exec, numCoros * 4);
+    WaitGroup wg(exec);
+
+    u64 startUs = monotonicNowUs();
+    u64 deadlineUs = startUs + (u64)durationSec * 1000000;
+
+    u64 totalReqs = 0;
+    Map<u64, u64> statuses(pool.mutPtr());
+
+    exec->spawn([&] {
+        void* v = nullptr;
+
+        while (ch.dequeue(&v)) {
+            auto batch = (ReqBatch*)v;
+
+            for (u32 j = 0; j < batch->len; ++j) {
+                ++statuses[(u64)batch->records[j].status];
+                ++totalReqs;
+            }
+
+            delete batch;
+        }
+    });
+
+    for (u32 i = 0; i < numCoros; ++i) {
+        wg.inc();
+
+        exec->spawn([&] {
+            STD_DEFER {
+                wg.done();
+            };
+
+            TcpSocket sock(exec);
+
+            STD_INSIST(sock.socket(AF_INET, SOCK_STREAM, 0) == 0);
+
+            STD_DEFER {
+                sock.close();
+            };
+
+            STD_INSIST(sock.connectInf((const sockaddr*)&addr, sizeof(addr)) == 0);
+
+            TcpStream stream(sock);
+            InBuf in(stream);
+
+            Buffer body;
+            auto batch = new ReqBatch();
+
+            while (monotonicNowUs() < deadlineUs) {
+                auto rpool = ObjPool::fromMemory();
+                auto req = HttpClientRequest::create(rpool.mutPtr(), &in, &stream);
+
+                req->setPath(fullPath);
+                req->addHeader(StringView("Host"), host);
+                req->addHeader(StringView("Connection"), StringView("keep-alive"));
+
+                if (payloadLen > 0) {
+                    req->addHeader(StringView("X-Payload"), payloadVal);
+                }
+
+                u64 t0 = monotonicNowUs();
+
+                req->endHeaders();
+
+                auto resp = req->response();
+                u32 st = resp->status();
+
+                if (st == 0) {
+                    break;
+                }
+
+                resp->body()->readAll(body);
+
+                u64 t1 = monotonicNowUs();
+
+                batch->records[batch->len].status = st;
+                batch->records[batch->len].elapsedUs = t1 - t0;
+                ++batch->len;
+
+                if (batch->len == ReqBatch::CAP) {
+                    ch.enqueue(batch);
+                    batch = new ReqBatch();
+                }
+            }
+
+            if (batch->len > 0) {
+                ch.enqueue(batch);
+            } else {
+                delete batch;
+            }
+        });
+    }
+
+    exec->spawn([&] {
+        wg.wait();
+        ch.close();
+    });
+
+    exec->join();
+
+    u64 elapsedUs = monotonicNowUs() - startUs;
+    double elapsedSec = (double)elapsedUs / 1000000.0;
+    double rps = (double)totalReqs / elapsedSec;
+
+    sysE << StringView(u8"requests: ") << totalReqs
+         << StringView(u8", elapsed: ") << elapsedSec
+         << StringView(u8"s, rps: ") << rps
+         << endL;
+
+    statuses.visit([](u64 code, u64& count) {
+        sysE << StringView(u8"  ") << code << StringView(u8": ") << count << endL;
+    });
+}

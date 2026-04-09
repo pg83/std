@@ -45,45 +45,4 @@ STD_TEST_SUITE(UT) {
         }
     }
 
-    STD_TEST(_ObjPoolPerf) {
-        volatile size_t res = 0;
-
-        for (size_t i = 0; i < 100000000; ++i) {
-            auto p = ObjPool::fromMemoryRaw();
-            res += (size_t)p;
-            delete p;
-        }
-    }
-
-    STD_TEST(_MallocPerf) {
-        volatile size_t res = 0;
-
-        for (size_t i = 0; i < 100000000; ++i) {
-            auto p = malloc(256);
-            res += (size_t)p;
-            free(p);
-        }
-    }
-
-    STD_TEST(_MapPerf) {
-        auto pool = ObjPool::fromMemory();
-        Map<int, int> m(pool.mutPtr());
-        // std::map<int, int> m;
-
-        for (size_t i = 0; i < 20000000; ++i) {
-            m[i] = i;
-        }
-    }
-
-    STD_TEST(_HashPerf) {
-        auto pool = ObjPool::fromMemory();
-        IntMap<int> m(pool.mutPtr());
-        // std::unordered_map<u64, int> m;
-
-        for (size_t i = 0; i < 200000000; ++i) {
-            m[i] = i;
-        }
-
-        // sleep(1000);
-    }
 }

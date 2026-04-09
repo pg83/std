@@ -389,10 +389,6 @@ STD_TEST_SUITE(Channel) {
         dutchRudder(10, 100);
     }
 
-    STD_TEST(_Pipeline) {
-        dutchRudder(2000, 200000);
-    }
-
     STD_TEST(Stress) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 8);
