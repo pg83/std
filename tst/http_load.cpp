@@ -155,6 +155,7 @@ int main(int argc, char** argv) {
 
     u64 totalReqs = 0;
     Map<u64, u64> statuses(pool.mutPtr());
+    u64 hist[64] = {};
 
     exec->spawn([&] {
         void* v = nullptr;
@@ -165,6 +166,15 @@ int main(int argc, char** argv) {
             for (u32 j = 0; j < batch->len; ++j) {
                 ++statuses[(u64)batch->records[j].status];
                 ++totalReqs;
+
+                u32 dt = batch->records[j].elapsedUs;
+                u32 bucket = 0;
+
+                if (dt > 0) {
+                    bucket = 31 - __builtin_clz(dt);
+                }
+
+                ++hist[bucket];
             }
 
             delete batch;
@@ -261,4 +271,24 @@ int main(int argc, char** argv) {
     statuses.visit([](u64 code, u64& count) {
         sysE << StringView(u8"  ") << code << StringView(u8": ") << count << endL;
     });
+
+    sysE << StringView(u8"latency histogram (us):") << endL;
+
+    u32 lastNonZero = 0;
+
+    for (u32 i = 0; i < 64; ++i) {
+        if (hist[i] > 0) {
+            lastNonZero = i;
+        }
+    }
+
+    for (u32 i = 0; i <= lastNonZero; ++i) {
+        u64 lo = (i == 0) ? 0 : ((u64)1 << i);
+        u64 hi = ((u64)1 << (i + 1)) - 1;
+
+        sysE << StringView(u8"  [")
+             << lo << StringView(u8" .. ") << hi
+             << StringView(u8"] ") << hist[i]
+             << endL;
+    }
 }
