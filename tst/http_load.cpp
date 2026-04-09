@@ -5,6 +5,7 @@
 #include <std/tst/args.h>
 #include <std/thr/coro.h>
 #include <std/thr/async.h>
+#include <std/dbg/color.h>
 #include <std/alg/defer.h>
 #include <std/dbg/insist.h>
 #include <std/lib/buffer.h>
@@ -19,6 +20,7 @@
 #include <std/net/tcp_socket.h>
 #include <std/thr/coro_config.h>
 #include <std/net/http_client.h>
+#include <std/net/http_reason.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -110,8 +112,6 @@ int main(int argc, char** argv) {
 
     auto rec = dns->record;
 
-    sysE << StringView(u8"resolved: ") << rec << endL;
-
     if (rec->family == AF_INET) {
         ((sockaddr_in*)rec->addr)->sin_port = htons(port);
     } else {
@@ -139,13 +139,20 @@ int main(int argc, char** argv) {
         fullPath = pool.mutPtr()->intern(StringView(pathBuf));
     }
 
-    sysE << StringView(u8"host: ") << host << endL;
-    sysE << StringView(u8"port: ") << (u64)port << endL;
-    sysE << StringView(u8"path: ") << fullPath << endL;
-    sysE << StringView(u8"threads: ") << (u64)numThreads << endL;
-    sysE << StringView(u8"coros: ") << (u64)numCoros << endL;
-    sysE << StringView(u8"duration: ") << (u64)durationSec << StringView(u8"s") << endL;
-    sysE << StringView(u8"payload: ") << (u64)payloadLen << endL;
+    auto G = Color::bright(AnsiColor::Green);
+    auto C = Color::bright(AnsiColor::Cyan);
+    auto W = Color::bright(AnsiColor::White);
+    auto R = Color::reset();
+
+    sysE << endL;
+    sysE << W << StringView(u8"host:     ") << G << host << R << endL;
+    sysE << W << StringView(u8"resolved: ") << G << rec << R << endL;
+    sysE << W << StringView(u8"port:     ") << G << (u64)port << R << endL;
+    sysE << W << StringView(u8"path:     ") << G << fullPath << R << endL;
+    sysE << W << StringView(u8"threads:  ") << G << (u64)numThreads << R << endL;
+    sysE << W << StringView(u8"coros:    ") << G << (u64)numCoros << R << endL;
+    sysE << W << StringView(u8"duration: ") << G << (u64)durationSec << StringView(u8"s") << R << endL;
+    sysE << W << StringView(u8"payload:  ") << G << (u64)payloadLen << R << endL;
 
     Channel ch(exec, numCoros * 4);
     WaitGroup wg(exec);
@@ -263,16 +270,29 @@ int main(int argc, char** argv) {
     double elapsedSec = (double)elapsedUs / 1000000.0;
     double rps = (double)totalReqs / elapsedSec;
 
-    sysE << StringView(u8"requests: ") << totalReqs
-         << StringView(u8", elapsed: ") << elapsedSec
-         << StringView(u8"s, rps: ") << rps
-         << endL;
+    sysE << endL;
+    sysE << W << StringView(u8"requests: ") << G << totalReqs << endL;
+    sysE << W << StringView(u8"elapsed:  ") << G << elapsedSec << StringView(u8"s") << endL;
+    sysE << W << StringView(u8"rps:      ") << G << rps << endL;
+    sysE << R << endL;
 
-    statuses.visit([](u64 code, u64& count) {
-        sysE << StringView(u8"  ") << code << StringView(u8": ") << count << endL;
+    sysE << W << StringView(u8"status codes:") << R << endL;
+
+    statuses.visit([&](u64 code, u64& count) {
+        auto sc = (code >= 200 && code < 300)
+            ? Color::bright(AnsiColor::Green)
+            : (code >= 400)
+                ? Color::bright(AnsiColor::Red)
+                : Color::bright(AnsiColor::Yellow);
+
+        sysE << StringView(u8"  ") << sc << code
+             << StringView(u8" ") << reasonPhrase((u32)code)
+             << R << StringView(u8": ") << W << count
+             << R << endL;
     });
 
-    sysE << StringView(u8"latency histogram (us):") << endL;
+    sysE << endL;
+    sysE << W << StringView(u8"latency histogram (us):") << R << endL;
 
     u32 lastNonZero = 0;
 
@@ -286,9 +306,13 @@ int main(int argc, char** argv) {
         u64 lo = (i == 0) ? 0 : ((u64)1 << i);
         u64 hi = ((u64)1 << (i + 1)) - 1;
 
-        sysE << StringView(u8"  [")
+        auto bc = (hist[i] > 0)
+            ? Color::bright(AnsiColor::Cyan)
+            : Color::dark(AnsiColor::White);
+
+        sysE << C << StringView(u8"  [")
              << lo << StringView(u8" .. ") << hi
-             << StringView(u8"] ") << hist[i]
-             << endL;
+             << StringView(u8"] ") << bc << hist[i]
+             << R << endL;
     }
 }
