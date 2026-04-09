@@ -10,8 +10,11 @@
 #include <std/sys/atomic.h>
 #include <std/alg/defer.h>
 #include <std/dbg/insist.h>
+#include <std/lib/list.h>
 #include <std/lib/buffer.h>
+#include <std/lib/vector.h>
 #include <std/ios/in_buf.h>
+#include <std/map/map.h>
 #include <std/ios/in_mem.h>
 #include <std/str/builder.h>
 #include <std/mem/obj_pool.h>
@@ -305,15 +308,31 @@ STD_TEST_SUITE(HttpClient) {
         sysE << StringView(u8"duration: ") << (u64)durationSec << StringView(u8"s") << endL;
         sysE << StringView(u8"payload: ") << (u64)payloadLen << endL;
 
-        u64 totalReqs = 0;
-        u64 deadlineUs = monotonicNowUs() + (u64)durationSec * 1000000;
+        struct ReqRecord: public IntrusiveNode {
+            u32 status;
+            u64 elapsedUs;
+        };
+
+        struct CoroData {
+            ObjPool* coroPool;
+            IntrusiveList records;
+        };
 
         auto exec = CoroExecutor::create(pool.mutPtr(), CoroConfig(numThreads));
 
-        for (u32 i = 0; i < numCoros; ++i) {
-            exec->spawn([&] {
-                u64 localCount = 0;
+        u64 startUs = monotonicNowUs();
+        u64 deadlineUs = startUs + (u64)durationSec * 1000000;
 
+        Vector<CoroData*> coroResults;
+
+        for (u32 i = 0; i < numCoros; ++i) {
+            auto cd = pool.mutPtr()->make<CoroData>();
+
+            cd->coroPool = ObjPool::create(pool.mutPtr());
+
+            coroResults.pushBack(cd);
+
+            exec->spawn([&, cd] {
                 TcpSocket sock(exec);
 
                 STD_INSIST(sock.socket(AF_INET, SOCK_STREAM, 0) == 0);
@@ -341,33 +360,61 @@ STD_TEST_SUITE(HttpClient) {
                         req->addHeader(StringView("X-Payload"), payloadVal);
                     }
 
+                    u64 t0 = monotonicNowUs();
+
                     req->endHeaders();
 
                     auto resp = req->response();
+                    u32 st = resp->status();
 
-                    if (resp->status() == 0) {
+                    if (st == 0) {
                         break;
                     }
 
                     resp->body()->readAll(body);
-                    ++localCount;
-                }
 
-                stdAtomicAddAndFetch(&totalReqs, localCount, stl::MemoryOrder::Relaxed);
+                    u64 t1 = monotonicNowUs();
+
+                    auto rec = cd->coroPool->make<ReqRecord>();
+
+                    rec->status = st;
+                    rec->elapsedUs = t1 - t0;
+
+                    cd->records.pushBack(rec);
+                }
             });
         }
-
-        u64 startUs = monotonicNowUs();
 
         exec->join();
 
         u64 elapsedUs = monotonicNowUs() - startUs;
         double elapsedSec = (double)elapsedUs / 1000000.0;
+
+        // aggregate
+        u64 totalReqs = 0;
+        Map<u64, u64> statuses(pool.mutPtr());
+
+        for (u32 i = 0; i < numCoros; ++i) {
+            auto cd = coroResults[i];
+
+            while (!cd->records.empty()) {
+                auto node = cd->records.popFront();
+                auto rec = (ReqRecord*)node;
+
+                ++statuses[(u64)rec->status];
+                ++totalReqs;
+            }
+        }
+
         double rps = (double)totalReqs / elapsedSec;
 
         sysE << StringView(u8"requests: ") << totalReqs
              << StringView(u8", elapsed: ") << elapsedSec
              << StringView(u8"s, rps: ") << rps
              << endL;
+
+        statuses.visit([](u64 code, u64& count) {
+            sysE << StringView(u8"  ") << code << StringView(u8": ") << count << endL;
+        });
     }
 }
