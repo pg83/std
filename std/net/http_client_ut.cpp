@@ -1,11 +1,25 @@
 #include "http_client.h"
+#include "tcp_socket.h"
 
 #include <std/tst/ut.h>
 #include <std/ios/out.h>
+#include <std/ios/sys.h>
+#include <std/sys/crt.h>
+#include <std/tst/args.h>
+#include <std/thr/coro.h>
+#include <std/sys/atomic.h>
 #include <std/dbg/insist.h>
 #include <std/lib/buffer.h>
+#include <std/ios/in_buf.h>
 #include <std/ios/in_mem.h>
+#include <std/str/builder.h>
 #include <std/mem/obj_pool.h>
+#include <std/ios/stream_tcp.h>
+#include <std/thr/coro_config.h>
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 using namespace stl;
 
@@ -197,5 +211,164 @@ STD_TEST_SUITE(HttpClient) {
         r2->body()->readAll(b2);
 
         STD_INSIST(StringView(b2) == StringView("err"));
+    }
+
+    STD_TEST(_LoadTest) {
+        auto& a = _ctx.args();
+
+        // url=http://host:port/path coros=100 threads=4 duration=10 payload=0
+        auto urlArg = a.find(StringView("url"));
+
+        if (!urlArg) {
+            return;
+        }
+
+        StringView url = *urlArg;
+
+        // strip http://
+        if (url.startsWith(StringView("http://"))) {
+            url = StringView(url.data() + 7, url.length() - 7);
+        }
+
+        // split host:port and path
+        StringView hostPort, path;
+
+        if (!url.split('/', hostPort, path)) {
+            hostPort = url;
+            path = StringView("/");
+        } else {
+            // path needs leading /
+            // build /path
+        }
+
+        StringView host, portStr;
+        u16 port = 80;
+
+        if (hostPort.split(':', host, portStr)) {
+            port = (u16)portStr.stou();
+        } else {
+            host = hostPort;
+        }
+
+        u32 numCoros = 100;
+        u32 numThreads = 4;
+        u32 durationSec = 10;
+        u32 payloadLen = 0;
+
+        if (auto v = a.find(StringView("coros"))) {
+            numCoros = (u32)v->stou();
+        }
+
+        if (auto v = a.find(StringView("threads"))) {
+            numThreads = (u32)v->stou();
+        }
+
+        if (auto v = a.find(StringView("duration"))) {
+            durationSec = (u32)v->stou();
+        }
+
+        if (auto v = a.find(StringView("payload"))) {
+            payloadLen = (u32)v->stou();
+        }
+
+        auto pool = ObjPool::fromMemory();
+
+        sockaddr_in addr{};
+
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        addr.sin_addr.s_addr = htonl(0x7f000001);
+
+        // build payload header value
+        Buffer payloadBuf;
+
+        for (u32 i = 0; i < payloadLen; ++i) {
+            u8 x = 'X';
+            payloadBuf.append(&x, 1);
+        }
+
+        StringView payloadVal(payloadBuf);
+
+        // build path with leading /
+        StringBuilder pathBuf;
+
+        pathBuf << StringView(u8"/") << path;
+
+        StringView fullPath = pool.mutPtr()->intern(StringView(pathBuf));
+
+        sysE << StringView(u8"host: ") << host << endL;
+        sysE << StringView(u8"port: ") << (u64)port << endL;
+        sysE << StringView(u8"path: ") << fullPath << endL;
+        sysE << StringView(u8"threads: ") << (u64)numThreads << endL;
+        sysE << StringView(u8"coros: ") << (u64)numCoros << endL;
+        sysE << StringView(u8"duration: ") << (u64)durationSec << StringView(u8"s") << endL;
+        sysE << StringView(u8"payload: ") << (u64)payloadLen << endL;
+
+        u64 totalReqs = 0;
+        u64 deadlineUs = monotonicNowUs() + (u64)durationSec * 1000000;
+
+        auto exec = CoroExecutor::create(pool.mutPtr(), CoroConfig(numThreads));
+
+        for (u32 i = 0; i < numCoros; ++i) {
+            exec->spawn([&] {
+                u64 localCount = 0;
+
+                TcpSocket sock(exec);
+
+                if (sock.socket(AF_INET, SOCK_STREAM, 0) != 0) {
+                    return;
+                }
+
+                if (sock.connectInf((const sockaddr*)&addr, sizeof(addr)) != 0) {
+                    sock.close();
+                    return;
+                }
+
+                TcpStream stream(sock);
+                InBuf in(stream);
+
+                Buffer body;
+
+                while (monotonicNowUs() < deadlineUs) {
+                    auto rpool = ObjPool::fromMemory();
+                    auto req = HttpClientRequest::create(rpool.mutPtr(), &in, &stream);
+
+                    req->setPath(fullPath);
+                    req->addHeader(StringView("Host"), host);
+                    req->addHeader(StringView("Connection"), StringView("keep-alive"));
+
+                    if (payloadLen > 0) {
+                        req->addHeader(StringView("X-Payload"), payloadVal);
+                    }
+
+                    req->endHeaders();
+
+                    auto resp = req->response();
+
+                    if (resp->status() == 0) {
+                        break;
+                    }
+
+                    resp->body()->readAll(body);
+                    ++localCount;
+                }
+
+                sock.close();
+                stdAtomicAddAndFetch(&totalReqs, localCount, stl::MemoryOrder::Relaxed);
+            });
+        }
+
+        u64 startUs = monotonicNowUs();
+
+        exec->join();
+
+        u64 elapsedUs = monotonicNowUs() - startUs;
+        double elapsedSec = (double)elapsedUs / 1000000.0;
+        double rps = (double)totalReqs / elapsedSec;
+
+        sysE << StringView(u8"requests: ") << totalReqs
+             << StringView(u8", elapsed: ") << elapsedSec
+             << StringView(u8"s, rps: ") << rps
+             << endL;
     }
 }
