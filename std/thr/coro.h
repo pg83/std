@@ -6,17 +6,12 @@
 
 namespace stl {
     class ObjPool;
-    class StringView;
 
     struct Task;
-    struct PollFD;
-    struct PollGroup;
     struct IoReactor;
-    struct DnsResult;
     struct ThreadPool;
     struct EventIface;
     struct CoroConfig;
-    struct VisitorFace;
     struct ThreadIface;
     struct CondVarIface;
     struct CoroExecutor;
@@ -53,8 +48,6 @@ namespace stl {
         virtual Cont* spawnRun(SpawnParams params) = 0;
         virtual void parkWith(Runable&&, Task**) noexcept = 0;
         virtual void offloadRun(ThreadPool* pool, Runable&& work) = 0;
-
-        virtual DnsResult* resolve(ObjPool* pool, const StringView& name) = 0;
 
         virtual IoReactor* io(int fd) noexcept = 0;
 

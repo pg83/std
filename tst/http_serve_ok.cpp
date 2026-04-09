@@ -2,6 +2,8 @@
 #include <std/tst/args.h>
 #include <std/thr/coro.h>
 #include <std/thr/async.h>
+#include <std/dns/iface.h>
+#include <std/dns/config.h>
 #include <std/dns/result.h>
 #include <std/dns/record.h>
 #include <std/mem/obj_pool.h>
@@ -66,8 +68,10 @@ int main(int argc, char** argv) {
         port = (u16)v->stou();
     }
 
+    auto resolver = DnsResolver::create(pool.mutPtr(), exec, nullptr, DnsConfig());
+
     auto dns = async(exec, [&] {
-                   return exec->resolve(pool.mutPtr(), StringView("localhost"));
+                   return resolver->resolve(pool.mutPtr(), StringView("localhost"));
                }).wait();
 
     if (!dns->ok() || !dns->record) {

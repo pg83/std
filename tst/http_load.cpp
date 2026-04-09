@@ -10,6 +10,8 @@
 #include <std/dbg/insist.h>
 #include <std/lib/buffer.h>
 #include <std/ios/in_buf.h>
+#include <std/dns/iface.h>
+#include <std/dns/config.h>
 #include <std/dns/result.h>
 #include <std/dns/record.h>
 #include <std/str/builder.h>
@@ -101,8 +103,10 @@ int main(int argc, char** argv) {
 
     auto exec = CoroExecutor::create(pool.mutPtr(), CoroConfig(numThreads));
 
+    auto resolver = DnsResolver::create(pool.mutPtr(), exec, nullptr, DnsConfig());
+
     auto dns = async(exec, [&] {
-                   return exec->resolve(pool.mutPtr(), host);
+                   return resolver->resolve(pool.mutPtr(), host);
                }).wait();
 
     if (!dns->ok() || !dns->record) {

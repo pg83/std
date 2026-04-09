@@ -32,8 +32,6 @@
 #include <std/alg/exchange.h>
 #include <std/alg/destruct.h>
 #include <std/mem/obj_pool.h>
-#include <std/dns/config.h>
-#include <std/dns/iface.h>
 #include <std/rng/split_mix_64.h>
 
 #include <errno.h>
@@ -121,8 +119,6 @@ namespace {
         JoinPipe* join_;
         const u64 tlsKey_;
         Vector<IoReactor*> ioReactors_;
-        Vector<DnsResolver*> dnsResolvers_;
-        Semaphore* dnsSem_ = nullptr;
         ThreadPool* offload_;
         ThreadPool* pool_;
 
@@ -159,8 +155,6 @@ namespace {
         CondVarIface* createCondVar() override;
         SemaphoreIface* createSemaphore(size_t initial) override;
 
-        DnsResult* resolve(ObjPool* pool, const StringView& name) override;
-
         IoReactor* io(int fd) noexcept override {
             return ioReactors_[splitMix64(fd) % ioReactors_.length()];
         }
@@ -179,20 +173,6 @@ CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, const CoroConfig& cfg)
 
     for (size_t i = 0; i < cfg.reactors; ++i) {
         ioReactors_.pushBack(IoReactor::createPoll(pool, this, pool_, offload_));
-    }
-    dnsSem_ = pool->make<Semaphore>(cfg.maxDnsQueries, this);
-
-    DnsConfig dnsCfg;
-
-    dnsCfg.family = cfg.dnsFamily;
-    dnsCfg.timeout = cfg.dnsTimeout;
-    dnsCfg.tries = cfg.dnsTries;
-    dnsCfg.udpMaxQueries = cfg.dnsUdpMaxQueries;
-    dnsCfg.tcp = cfg.dnsTcp;
-    dnsCfg.server = cfg.dnsServer;
-
-    for (size_t i = 0; i < cfg.dnsResolvers; ++i) {
-        dnsResolvers_.pushBack(DnsResolver::create(pool, this, offload_, dnsCfg));
     }
 }
 
@@ -287,14 +267,6 @@ void CoroExecutorImpl::parkWith(Runable&& afterSuspend, Task** out) noexcept {
     auto cont = currentCont();
     *out = cont;
     cont->parkWith(&afterSuspend);
-}
-
-DnsResult* CoroExecutorImpl::resolve(ObjPool* pool, const StringView& name) {
-    dnsSem_->wait();
-    auto result = dnsResolvers_[name.hash64() % dnsResolvers_.length()]->resolve(pool, name);
-    dnsSem_->post();
-
-    return result;
 }
 
 void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {

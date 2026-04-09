@@ -1,5 +1,7 @@
 #include <std/tst/args.h>
 #include <std/thr/coro.h>
+#include <std/dns/iface.h>
+#include <std/dns/config.h>
 #include <std/mem/obj_pool.h>
 #include <std/thr/coro_config.h>
 
@@ -25,39 +27,34 @@ int main(int argc, char** argv) {
         cfg.setOffloadThreads(sv->stou());
     }
 
-    if (auto sv = a.find(u8"dns-resolvers"); sv) {
-        cfg.setDnsResolvers(sv->stou());
-    }
-
-    if (auto sv = a.find(u8"dns-max-queries"); sv) {
-        cfg.setMaxDnsQueries(sv->stou());
-    }
+    DnsConfig dnsCfg;
 
     if (auto sv = a.find(u8"dns-family"); sv) {
-        cfg.setDnsFamily(sv->stou());
+        dnsCfg.family = sv->stou();
     }
 
     if (auto sv = a.find(u8"dns-timeout"); sv) {
-        cfg.setDnsTimeout(sv->stou());
+        dnsCfg.timeout = sv->stou();
     }
 
     if (auto sv = a.find(u8"dns-tries"); sv) {
-        cfg.setDnsTries(sv->stou());
+        dnsCfg.tries = sv->stou();
     }
 
     if (auto sv = a.find(u8"dns-udp-max-queries"); sv) {
-        cfg.setDnsUdpMaxQueries(sv->stou());
+        dnsCfg.udpMaxQueries = sv->stou();
     }
 
     if (a.find(u8"dns-tcp")) {
-        cfg.setDnsTcp(true);
+        dnsCfg.tcp = true;
     }
 
     if (auto sv = a.find(u8"dns-server"); sv) {
-        cfg.setDnsServer(*sv);
+        dnsCfg.server = *sv;
     }
 
     auto exec = CoroExecutor::create(pool.mutPtr(), cfg);
+    auto resolver = DnsResolver::create(pool.mutPtr(), exec, nullptr, dnsCfg);
 
     for (int i = 0; i < 100000; ++i) {
         exec->spawn([&, i] {
@@ -65,7 +62,7 @@ int main(int argc, char** argv) {
             char buf[64];
 
             snprintf(buf, sizeof(buf), "host%d.test.invalid", i);
-            exec->resolve(rpool.mutPtr(), StringView((const u8*)buf, strlen(buf)));
+            resolver->resolve(rpool.mutPtr(), StringView((const u8*)buf, strlen(buf)));
         });
     }
 
