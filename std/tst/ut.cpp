@@ -284,15 +284,7 @@ GetOpt::GetOpt(Ctx& ctx) noexcept {
         StringView arg(ctx.argv[i]);
 
         if (arg.startsWith(u8"--") && arg.length() > 2) {
-            StringView key(arg.data() + 2, arg.length() - 2);
-            StringView value(u8"1");
-
-            if (auto eq = key.memChr('='); eq) {
-                value = StringView(eq + 1, key.end());
-                key = StringView(key.begin(), eq);
-            }
-
-            opts[key] = value;
+            opts.parse(arg);
         } else if (arg.startsWith(u8"-") && arg.length() > 1) {
             excludes.pushBack(StringView(arg.data() + 1, arg.length() - 1));
         } else {

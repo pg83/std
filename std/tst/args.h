@@ -12,6 +12,8 @@ namespace stl {
         {
         }
 
+        void parse(StringView arg);
+
         TestArgs(ObjPool* pool, int argc, char** argv);
     };
 }
