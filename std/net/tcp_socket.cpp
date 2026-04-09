@@ -150,8 +150,7 @@ int TcpSocket::accept(ScopedFD& out, sockaddr* addr, u32* addrLen, u64 deadlineU
 
     setSockFlags(newFd);
 
-    ScopedFD tmp(newFd);
-    out.xchg(tmp);
+    ScopedFD(newFd).xchg(out);
 
     return 0;
 }

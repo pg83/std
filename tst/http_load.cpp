@@ -280,10 +280,10 @@ int main(int argc, char** argv) {
 
     statuses.visit([&](u64 code, u64& count) {
         auto sc = (code >= 200 && code < 300)
-            ? Color::bright(AnsiColor::Green)
-            : (code >= 400)
-                ? Color::bright(AnsiColor::Red)
-                : Color::bright(AnsiColor::Yellow);
+                      ? Color::bright(AnsiColor::Green)
+                  : (code >= 400)
+                      ? Color::bright(AnsiColor::Red)
+                      : Color::bright(AnsiColor::Yellow);
 
         sysE << StringView(u8"  ") << sc << code
              << StringView(u8" ") << reasonPhrase((u32)code)
@@ -307,8 +307,8 @@ int main(int argc, char** argv) {
         u64 hi = ((u64)1 << (i + 1)) - 1;
 
         auto bc = (hist[i] > 0)
-            ? Color::bright(AnsiColor::Cyan)
-            : Color::dark(AnsiColor::White);
+                      ? Color::bright(AnsiColor::Cyan)
+                      : Color::dark(AnsiColor::White);
 
         sysE << C << StringView(u8"  [")
              << lo << StringView(u8" .. ") << hi
