@@ -44,5 +44,4 @@ STD_TEST_SUITE(UT) {
             ob << i;
         }
     }
-
 }

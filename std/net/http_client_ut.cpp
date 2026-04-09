@@ -215,5 +215,4 @@ STD_TEST_SUITE(HttpClient) {
 
         STD_INSIST(StringView(b2) == StringView("err"));
     }
-
 }

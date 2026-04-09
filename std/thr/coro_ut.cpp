@@ -302,7 +302,6 @@ STD_TEST_SUITE(CoroExecutor) {
         exec->join();
         STD_INSIST(consumed == nCoros * nIters);
     }
-
 }
 
 STD_TEST_SUITE(CoroRandom) {

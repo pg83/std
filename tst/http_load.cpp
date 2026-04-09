@@ -100,8 +100,8 @@ int main(int argc, char** argv) {
     auto exec = CoroExecutor::create(pool.mutPtr(), CoroConfig(numThreads));
 
     auto dns = async(exec, [&] {
-        return exec->resolve(pool.mutPtr(), host);
-    }).wait();
+                   return exec->resolve(pool.mutPtr(), host);
+               }).wait();
 
     if (!dns->ok() || !dns->record) {
         sysE << StringView(u8"dns resolve failed: ") << dns << endL;

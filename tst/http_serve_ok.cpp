@@ -39,7 +39,7 @@ namespace {
 int main(int argc, char** argv) {
     auto pool = ObjPool::fromMemory();
     TestArgs a(pool.mutPtr(), argc, argv);
-    auto exec = CoroExecutor::create(pool.mutPtr(), 8);
+    auto exec = CoroExecutor::create(pool.mutPtr(), 32);
     auto sslCtx = SslCtx::create(pool.mutPtr(), StringView(testCert), StringView(testKey));
 
     struct Handler: HttpServe {
@@ -67,8 +67,8 @@ int main(int argc, char** argv) {
     }
 
     auto dns = async(exec, [&] {
-        return exec->resolve(pool.mutPtr(), StringView("localhost"));
-    }).wait();
+                   return exec->resolve(pool.mutPtr(), StringView("localhost"));
+               }).wait();
 
     if (!dns->ok() || !dns->record) {
         sysE << StringView(u8"dns resolve failed: ") << dns << endL;
@@ -98,8 +98,7 @@ int main(int argc, char** argv) {
                 .wg = &wg,
                 .addr = rec->addr,
                 .addrLen = addrLen,
-            }
-        );
+            });
     }
 
     exec->spawn([&] {

@@ -100,8 +100,7 @@ int main(int argc, char** argv) {
             .wg = &wg,
             .addr = (const sockaddr*)&addr,
             .addrLen = sizeof(addr),
-        }
-    );
+        });
 
     exec->spawn([&] {
         wg.wait();

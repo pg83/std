@@ -369,4 +369,3 @@ STD_TEST_SUITE(HttpServer) {
         STD_INSIST(StringView(body2) == StringView("ok"));
     }
 }
-
