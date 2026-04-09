@@ -8,6 +8,7 @@
 #include <std/lib/list.h>
 #include <std/lib/node.h>
 #include <std/thr/coro.h>
+#include <std/thr/io_reactor.h>
 #include <std/sym/i_map.h>
 #include <std/thr/event.h>
 #include <std/thr/mutex.h>
@@ -264,7 +265,7 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
             ares_timeout(channel_, nullptr, &tv);
 
             // clang-format off
-            exec_->poll(pollGroup_, makeVisitor([this](void* ptr) {
+            exec_->io(pollGroup_->fd())->poll(pollGroup_, makeVisitor([this](void* ptr) {
                 auto ev = (PollFD*)ptr;
 
                 if (ev->fd == parker_.fd()) {

@@ -3,6 +3,7 @@
 #include <std/sys/fd.h>
 #include <std/str/view.h>
 #include <std/thr/coro.h>
+#include <std/thr/io_reactor.h>
 #include <std/sys/throw.h>
 #include <std/str/builder.h>
 
@@ -21,7 +22,7 @@ CoroFDInput::~CoroFDInput() noexcept {
 size_t CoroFDInput::readImpl(void* data, size_t len) {
     size_t n = 0;
 
-    if (int r = exec->pread(fd->get(), &n, data, len, offset)) {
+    if (int r = exec->io(fd->get())->pread(fd->get(), &n, data, len, offset)) {
         Errno(r).raise(StringBuilder() << StringView(u8"pread() failed"));
     }
 

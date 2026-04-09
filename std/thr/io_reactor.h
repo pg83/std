@@ -29,6 +29,8 @@ namespace stl {
         virtual u32 poll(PollFD pfd, u64 deadlineUs) = 0;
         virtual void poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) = 0;
 
+        void poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs);
+
         static IoReactor* createPoll(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, ThreadPool* offload);
     };
 }

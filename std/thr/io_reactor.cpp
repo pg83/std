@@ -236,6 +236,10 @@ void PollIoReactor::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
     reactor_->poll(g, visitor, deadlineUs);
 }
 
+void IoReactor::poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs) {
+    poll(g, visitor, deadlineUs);
+}
+
 IoReactor* IoReactor::createPoll(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, ThreadPool* offload) {
     return pool->make<PollIoReactor>(pool, exec, mainPool, offload);
 }

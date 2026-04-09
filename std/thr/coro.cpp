@@ -165,16 +165,8 @@ namespace {
             return ioReactors_[splitMix64(fd) % ioReactors_.length()];
         }
 
-        int fsync(int fd) override;
-        int fdatasync(int fd) override;
-        int pread(int fd, size_t* nRead, void* buf, size_t len, off_t offset) override;
-        int pwrite(int fd, size_t* nWritten, const void* buf, size_t len, off_t offset) override;
-
         void parkWith(Runable&&, Task**) noexcept override;
         void offloadRun(ThreadPool* pool, Runable&& work) override;
-
-        u32 poll(PollFD pfd, u64 deadlineUs) override;
-        void poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs) override;
     };
 }
 
@@ -305,14 +297,6 @@ DnsResult* CoroExecutorImpl::resolve(ObjPool* pool, const StringView& name) {
     return result;
 }
 
-u32 CoroExecutorImpl::poll(PollFD pfd, u64 deadlineUs) {
-    return io(pfd.fd)->poll(pfd, deadlineUs);
-}
-
-void CoroExecutorImpl::poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs) {
-    io(g->fd())->poll(g, visitor, deadlineUs);
-}
-
 void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {
     auto cont = currentCont();
 
@@ -322,22 +306,6 @@ void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {
             cont->reSchedule();
         });
     });
-}
-
-int CoroExecutorImpl::pread(int fd, size_t* nRead, void* buf, size_t len, off_t offset) {
-    return io(fd)->pread(fd, nRead, buf, len, offset);
-}
-
-int CoroExecutorImpl::pwrite(int fd, size_t* nWritten, const void* buf, size_t len, off_t offset) {
-    return io(fd)->pwrite(fd, nWritten, buf, len, offset);
-}
-
-int CoroExecutorImpl::fsync(int fd) {
-    return io(fd)->fsync(fd);
-}
-
-int CoroExecutorImpl::fdatasync(int fd) {
-    return io(fd)->fdatasync(fd);
 }
 
 u64 Cont::id() const noexcept {
@@ -546,29 +514,6 @@ u64 CoroExecutor::currentCoroId() const noexcept {
     return me()->id();
 }
 
-void CoroExecutor::sleep(u64 deadlineUs) {
-    poll(-1, 0, deadlineUs);
-}
-
-void CoroExecutor::sleep() {
-    sleep(UINT64_MAX);
-}
-
-void CoroExecutor::sleepTout(u64 timeoutUs) {
-    sleep(monotonicNowUs() + timeoutUs);
-}
-
-u32 CoroExecutor::poll(int fd, u32 flags, u64 deadlineUs) {
-    return poll({fd, flags}, deadlineUs);
-}
-
-u32 CoroExecutor::poll(int fd, u32 flags) {
-    for (;;) {
-        if (auto res = poll(fd, flags, UINT64_MAX); res) {
-            return res;
-        }
-    }
-}
 
 SpawnParams& SpawnParams::setStackSize(size_t v) noexcept {
     stackSize = v;

@@ -3,6 +3,7 @@
 #include <std/sys/fd.h>
 #include <std/str/view.h>
 #include <std/thr/coro.h>
+#include <std/thr/io_reactor.h>
 #include <std/sys/throw.h>
 #include <std/str/builder.h>
 
@@ -21,7 +22,7 @@ CoroFDOutput::~CoroFDOutput() noexcept {
 size_t CoroFDOutput::writeImpl(const void* data, size_t len) {
     size_t n = 0;
 
-    if (int r = exec->pwrite(fd->get(), &n, data, len, offset)) {
+    if (int r = exec->io(fd->get())->pwrite(fd->get(), &n, data, len, offset)) {
         Errno(r).raise(StringBuilder() << StringView(u8"pwrite() failed"));
     }
 
@@ -35,13 +36,13 @@ size_t CoroFDOutput::hintImpl() const noexcept {
 }
 
 void CoroFDOutput::sync() {
-    if (int r = exec->fsync(fd->get())) {
+    if (int r = exec->io(fd->get())->fsync(fd->get())) {
         Errno(r).raise(StringBuilder() << StringView(u8"fsync() failed"));
     }
 }
 
 void CoroFDOutput::dataSync() {
-    if (int r = exec->fdatasync(fd->get())) {
+    if (int r = exec->io(fd->get())->fdatasync(fd->get())) {
         Errno(r).raise(StringBuilder() << StringView(u8"fdatasync() failed"));
     }
 }

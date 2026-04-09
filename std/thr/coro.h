@@ -54,29 +54,14 @@ namespace stl {
         virtual void parkWith(Runable&&, Task**) noexcept = 0;
         virtual void offloadRun(ThreadPool* pool, Runable&& work) = 0;
 
-        virtual u32 poll(PollFD pfd, u64 deadlineUs) = 0;
-        virtual void poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs) = 0;
-
         virtual DnsResult* resolve(ObjPool* pool, const StringView& name) = 0;
 
         virtual IoReactor* io(int fd) noexcept = 0;
-
-        virtual int fsync(int fd) = 0;
-        virtual int fdatasync(int fd) = 0;
-        virtual int pread(int fd, size_t* nRead, void* buf, size_t len, off_t offset) = 0;
-        virtual int pwrite(int fd, size_t* nWritten, const void* buf, size_t len, off_t offset) = 0;
 
         virtual void createEvent(void* buf) = 0;
         virtual ThreadIface* createThread() = 0;
         virtual CondVarIface* createCondVar() = 0;
         virtual SemaphoreIface* createSemaphore(size_t initial) = 0;
-
-        void sleep();
-        void sleep(u64 deadlineUs);
-        void sleepTout(u64 timeoutUs);
-
-        u32 poll(int fd, u32 flags);
-        u32 poll(int fd, u32 flags, u64 deadlineUs);
 
         u64 currentCoroId() const noexcept;
 
