@@ -3,6 +3,7 @@
 #include "poll_fd.h"
 #include "channel.h"
 #include "semaphore.h"
+#include "io_classic.h"
 #include "io_reactor.h"
 #include "coro_config.h"
 
@@ -26,20 +27,33 @@ namespace {
     }
 
     int makeTmpFd() {
-        return memFD("io_reactor_ut");
+        return memFD("io_classic_ut");
     }
+
+    struct Ctx {
+        ObjPool::Ref pool;
+        CoroExecutor* exec;
+        IoReactor* io;
+
+        Ctx()
+            : pool(ObjPool::fromMemory())
+            , exec(CoroExecutor::create(pool.mutPtr(), 4))
+            , io(createPollIoReactor(pool.mutPtr(), exec, 4))
+        {
+        }
+    };
 }
 
-STD_TEST_SUITE(IoReactorPoll) {
+STD_TEST_SUITE(IoClassicPoll) {
     STD_TEST(PipeReadWrite) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Ctx ctx;
+        auto exec = ctx.exec;
+        auto io = ctx.io;
         ScopedFD readEnd, writeEnd;
         createPipeFD(readEnd, writeEnd);
         int result = 0;
 
         exec->spawn([&] {
-            auto io = exec->io();
             u32 ready = io->poll({readEnd.get(), PollFlag::In}, UINT64_MAX);
             STD_INSIST(ready & PollFlag::In);
             char buf;
@@ -57,21 +71,23 @@ STD_TEST_SUITE(IoReactorPoll) {
     }
 
     STD_TEST(Timeout) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Ctx ctx;
+        auto exec = ctx.exec;
+        auto io = ctx.io;
         ScopedFD readEnd, writeEnd;
         createPipeFD(readEnd, writeEnd);
 
         auto f = async(exec, [&] {
-            return exec->io()->poll({readEnd.get(), PollFlag::In}, 1000);
+            return io->poll({readEnd.get(), PollFlag::In}, 1000);
         });
 
         STD_INSIST(f.wait() == 0);
     }
 
     STD_TEST(MultiPipe) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Ctx ctx;
+        auto exec = ctx.exec;
+        auto io = ctx.io;
         const int N = 8;
         ScopedFD readEnds[N], writeEnds[N];
         int order[N];
@@ -83,7 +99,6 @@ STD_TEST_SUITE(IoReactorPoll) {
 
         for (int i = 0; i < N; i++) {
             exec->spawn([&, i] {
-                auto io = exec->io();
                 u32 ready = io->poll({readEnds[i].get(), PollFlag::In}, UINT64_MAX);
                 STD_INSIST(ready & PollFlag::In);
                 char buf;
@@ -104,8 +119,9 @@ STD_TEST_SUITE(IoReactorPoll) {
     }
 
     STD_TEST(SameFdMultiPoll) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Ctx ctx;
+        auto exec = ctx.exec;
+        auto io = ctx.io;
         ScopedFD readEnd, writeEnd;
         createPipeFD(readEnd, writeEnd);
         const int N = 40;
@@ -113,7 +129,7 @@ STD_TEST_SUITE(IoReactorPoll) {
 
         for (int i = 0; i < N; i++) {
             exec->spawn([&] {
-                u32 ready = exec->io()->poll({readEnd.get(), PollFlag::In}, UINT64_MAX);
+                u32 ready = io->poll({readEnd.get(), PollFlag::In}, UINT64_MAX);
                 STD_INSIST(ready & PollFlag::In);
                 stdAtomicAddAndFetch(&woken, 1, MemoryOrder::Relaxed);
             });
@@ -129,8 +145,8 @@ STD_TEST_SUITE(IoReactorPoll) {
     }
 
     STD_TEST(_ExceptionAcrossYield) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 2);
+        Ctx ctx;
+        auto exec = ctx.exec;
         Channel ch(exec, 0);
         int caught = 0;
 
@@ -161,11 +177,12 @@ STD_TEST_SUITE(IoReactorPoll) {
     }
 
     STD_TEST(SleepZero) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Ctx ctx;
+        auto exec = ctx.exec;
+        auto io = ctx.io;
 
         auto f = async(exec, [&] {
-            exec->io()->poll({-1, 0}, monotonicNowUs());
+            io->poll({-1, 0}, monotonicNowUs());
             return true;
         });
 
@@ -173,13 +190,14 @@ STD_TEST_SUITE(IoReactorPoll) {
     }
 
     STD_TEST(SleepZeroMultiple) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Ctx ctx;
+        auto exec = ctx.exec;
+        auto io = ctx.io;
         int counter = 0;
 
         for (int i = 0; i < 100; ++i) {
             exec->spawn([&] {
-                exec->io()->poll({-1, 0}, monotonicNowUs());
+                io->poll({-1, 0}, monotonicNowUs());
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             });
         }
@@ -189,11 +207,12 @@ STD_TEST_SUITE(IoReactorPoll) {
     }
 
     STD_TEST(SleepZeroOrdering) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Ctx ctx;
+        auto exec = ctx.exec;
+        auto io = ctx.io;
 
         auto f = async(exec, [&] {
-            exec->io()->poll({-1, 0}, monotonicNowUs());
+            io->poll({-1, 0}, monotonicNowUs());
             return 2;
         });
 
@@ -201,8 +220,9 @@ STD_TEST_SUITE(IoReactorPoll) {
     }
 
     STD_TEST(PollMultiBasic) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Ctx ctx;
+        auto exec = ctx.exec;
+        auto io = ctx.io;
         ScopedFD r1, w1, r2, w2;
         createPipeFD(r1, w1);
         createPipeFD(r2, w2);
@@ -211,10 +231,10 @@ STD_TEST_SUITE(IoReactorPoll) {
         exec->spawn([&] {
             auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
-            auto g = exec->io()->createPollGroup(opool.mutPtr(), in, 2);
+            auto g = io->createPollGroup(opool.mutPtr(), in, 2);
 
             // clang-format off
-            exec->io()->poll(g, makeVisitor([&](void* ptr) {
+            io->poll(g, makeVisitor([&](void* ptr) {
                 result |= ((PollFD*)ptr)->flags;
             }), UINT64_MAX);
             // clang-format on
@@ -230,8 +250,9 @@ STD_TEST_SUITE(IoReactorPoll) {
     }
 
     STD_TEST(PollMultiSecondFd) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Ctx ctx;
+        auto exec = ctx.exec;
+        auto io = ctx.io;
         ScopedFD r1, w1, r2, w2;
         createPipeFD(r1, w1);
         createPipeFD(r2, w2);
@@ -240,10 +261,10 @@ STD_TEST_SUITE(IoReactorPoll) {
         exec->spawn([&] {
             auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
-            auto g = exec->io()->createPollGroup(opool.mutPtr(), in, 2);
+            auto g = io->createPollGroup(opool.mutPtr(), in, 2);
 
             // clang-format off
-            exec->io()->poll(g, makeVisitor([&](void* ptr) {
+            io->poll(g, makeVisitor([&](void* ptr) {
                 result |= ((PollFD*)ptr)->flags;
             }), UINT64_MAX);
             // clang-format on
@@ -259,8 +280,9 @@ STD_TEST_SUITE(IoReactorPoll) {
     }
 
     STD_TEST(PollMultiTimeout) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Ctx ctx;
+        auto exec = ctx.exec;
+        auto io = ctx.io;
         ScopedFD r1, w1, r2, w2;
         createPipeFD(r1, w1);
         createPipeFD(r2, w2);
@@ -268,11 +290,11 @@ STD_TEST_SUITE(IoReactorPoll) {
         auto f = async(exec, [&] {
             auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
-            auto g = exec->io()->createPollGroup(opool.mutPtr(), in, 2);
+            auto g = io->createPollGroup(opool.mutPtr(), in, 2);
             size_t n = 0;
 
             // clang-format off
-            exec->io()->poll(g, makeVisitor([&](void*) {
+            io->poll(g, makeVisitor([&](void*) {
                 ++n;
             }), 1);
             // clang-format on
@@ -284,8 +306,9 @@ STD_TEST_SUITE(IoReactorPoll) {
     }
 
     STD_TEST(PollMultiManyFds) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        Ctx ctx;
+        auto exec = ctx.exec;
+        auto io = ctx.io;
         const int N = 8;
         ScopedFD readEnds[N], writeEnds[N];
 
@@ -303,10 +326,10 @@ STD_TEST_SUITE(IoReactorPoll) {
                 in[i] = {readEnds[i].get(), PollFlag::In};
             }
 
-            auto g = exec->io()->createPollGroup(opool.mutPtr(), in, N);
+            auto g = io->createPollGroup(opool.mutPtr(), in, N);
 
             // clang-format off
-            exec->io()->poll(g, makeVisitor([&](void* ptr) {
+            io->poll(g, makeVisitor([&](void* ptr) {
                 result |= ((PollFD*)ptr)->flags;
             }), UINT64_MAX);
             // clang-format on
@@ -322,10 +345,11 @@ STD_TEST_SUITE(IoReactorPoll) {
     }
 }
 
-STD_TEST_SUITE(IoReactorFS) {
+STD_TEST_SUITE(IoClassicFS) {
     STD_TEST(PreadFile) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 2);
+        auto io = createPollIoReactor(pool.mutPtr(), exec, 2);
 
         exec->spawn([&] {
             int fd = makeTmpFd();
@@ -335,7 +359,7 @@ STD_TEST_SUITE(IoReactorFS) {
 
             char buf[32] = {};
             size_t n = 0;
-            STD_INSIST(exec->io()->pread(fd, &n, buf, sizeof(buf), 0) == 0);
+            STD_INSIST(io->pread(fd, &n, buf, sizeof(buf), 0) == 0);
 
             STD_INSIST(n == sizeof(data));
             STD_INSIST(memcmp(buf, data, sizeof(data)) == 0);
@@ -349,13 +373,14 @@ STD_TEST_SUITE(IoReactorFS) {
     STD_TEST(PwriteFile) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 2);
+        auto io = createPollIoReactor(pool.mutPtr(), exec, 2);
 
         exec->spawn([&] {
             int fd = makeTmpFd();
 
             const char data[] = "hello pwrite";
             size_t n = 0;
-            STD_INSIST(exec->io()->pwrite(fd, &n, data, sizeof(data), 0) == 0);
+            STD_INSIST(io->pwrite(fd, &n, data, sizeof(data), 0) == 0);
 
             STD_INSIST(n == sizeof(data));
 
@@ -372,18 +397,19 @@ STD_TEST_SUITE(IoReactorFS) {
     STD_TEST(PreadPwriteRoundtrip) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 2);
+        auto io = createPollIoReactor(pool.mutPtr(), exec, 2);
 
         exec->spawn([&] {
             int fd = makeTmpFd();
 
             const char msg[] = "roundtrip";
             size_t w = 0;
-            STD_INSIST(exec->io()->pwrite(fd, &w, msg, sizeof(msg), 0) == 0);
+            STD_INSIST(io->pwrite(fd, &w, msg, sizeof(msg), 0) == 0);
             STD_INSIST(w == sizeof(msg));
 
             char buf[32] = {};
             size_t r = 0;
-            STD_INSIST(exec->io()->pread(fd, &r, buf, sizeof(buf), 0) == 0);
+            STD_INSIST(io->pread(fd, &r, buf, sizeof(buf), 0) == 0);
             STD_INSIST(r == sizeof(msg));
             STD_INSIST(memcmp(buf, msg, sizeof(msg)) == 0);
 
@@ -396,6 +422,7 @@ STD_TEST_SUITE(IoReactorFS) {
     STD_TEST(PreadOffset) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 2);
+        auto io = createPollIoReactor(pool.mutPtr(), exec, 2);
 
         exec->spawn([&] {
             int fd = makeTmpFd();
@@ -405,7 +432,7 @@ STD_TEST_SUITE(IoReactorFS) {
 
             char buf[4] = {};
             size_t n = 0;
-            STD_INSIST(exec->io()->pread(fd, &n, buf, 4, 3) == 0);
+            STD_INSIST(io->pread(fd, &n, buf, 4, 3) == 0);
 
             STD_INSIST(n == 4);
             STD_INSIST(memcmp(buf, "3456", 4) == 0);
@@ -419,6 +446,7 @@ STD_TEST_SUITE(IoReactorFS) {
     STD_TEST(MultipleConcurrent) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
+        auto io = createPollIoReactor(pool.mutPtr(), exec, 4);
 
         exec->spawn([&] {
             int fd = makeTmpFd();
@@ -431,7 +459,7 @@ STD_TEST_SUITE(IoReactorFS) {
                 exec->spawn([&] {
                     char buf[16] = {};
                     size_t n = 0;
-                    STD_INSIST(exec->io()->pread(fd, &n, buf, sizeof(buf), 0) == 0);
+                    STD_INSIST(io->pread(fd, &n, buf, sizeof(buf), 0) == 0);
                     STD_INSIST(n == sizeof(data));
                     STD_INSIST(memcmp(buf, data, sizeof(data)) == 0);
                     sem.post();
