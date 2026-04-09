@@ -33,16 +33,18 @@ namespace {
     };
 
     struct ReqBatch {
-        static constexpr u32 CAP = 256;
+        static constexpr u32 CAP = 255;
 
         ReqRecord records[CAP];
-        u32 len;
+        u64 len;
 
         ReqBatch()
             : len(0)
         {
         }
     };
+
+    static_assert(sizeof(ReqBatch) == 2048);
 
     HttpClientResponse* parseResponse(ObjPool* pool, MemoryInput* in) {
         auto out = createNullOutput(pool);
