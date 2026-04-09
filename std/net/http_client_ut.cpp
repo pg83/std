@@ -8,6 +8,7 @@
 #include <std/tst/args.h>
 #include <std/thr/coro.h>
 #include <std/sys/atomic.h>
+#include <std/alg/defer.h>
 #include <std/dbg/insist.h>
 #include <std/lib/buffer.h>
 #include <std/ios/in_buf.h>
@@ -315,14 +316,13 @@ STD_TEST_SUITE(HttpClient) {
 
                 TcpSocket sock(exec);
 
-                if (sock.socket(AF_INET, SOCK_STREAM, 0) != 0) {
-                    return;
-                }
+                STD_INSIST(sock.socket(AF_INET, SOCK_STREAM, 0) == 0);
 
-                if (sock.connectInf((const sockaddr*)&addr, sizeof(addr)) != 0) {
+                STD_DEFER {
                     sock.close();
-                    return;
-                }
+                };
+
+                STD_INSIST(sock.connectInf((const sockaddr*)&addr, sizeof(addr)) == 0);
 
                 TcpStream stream(sock);
                 InBuf in(stream);
@@ -353,7 +353,6 @@ STD_TEST_SUITE(HttpClient) {
                     ++localCount;
                 }
 
-                sock.close();
                 stdAtomicAddAndFetch(&totalReqs, localCount, stl::MemoryOrder::Relaxed);
             });
         }
