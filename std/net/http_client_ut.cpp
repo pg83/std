@@ -27,6 +27,23 @@
 using namespace stl;
 
 namespace {
+    struct ReqRecord {
+        u32 status;
+        u64 elapsedUs;
+    };
+
+    struct ReqBatch {
+        static constexpr u32 CAP = 100;
+
+        ReqRecord records[CAP];
+        u32 len;
+
+        ReqBatch()
+            : len(0)
+        {
+        }
+    };
+
     HttpClientResponse* parseResponse(ObjPool* pool, MemoryInput* in) {
         auto out = createNullOutput(pool);
         auto req = HttpClientRequest::create(pool, in, out);
@@ -307,14 +324,9 @@ STD_TEST_SUITE(HttpClient) {
         sysE << StringView(u8"duration: ") << (u64)durationSec << StringView(u8"s") << endL;
         sysE << StringView(u8"payload: ") << (u64)payloadLen << endL;
 
-        struct ReqRecord {
-            u32 status;
-            u64 elapsedUs;
-        };
-
         auto exec = CoroExecutor::create(pool.mutPtr(), CoroConfig(numThreads));
 
-        Channel ch(exec, numCoros * 128);
+        Channel ch(exec, numCoros * 4);
         WaitGroup wg(exec);
 
         u64 startUs = monotonicNowUs();
@@ -325,31 +337,25 @@ STD_TEST_SUITE(HttpClient) {
         Map<u64, u64> statuses(pool.mutPtr());
 
         exec->spawn([&] {
-            void* batch[256];
+            void* v = nullptr;
 
-            for (;;) {
-                size_t n = ch.dequeue(batch, 256);
+            while (ch.dequeue(&v)) {
+                auto batch = (ReqBatch*)v;
 
-                if (n == 0) {
-                    break;
-                }
-
-                for (size_t j = 0; j < n; ++j) {
-                    auto rec = (ReqRecord*)batch[j];
-
-                    ++statuses[(u64)rec->status];
+                for (u32 j = 0; j < batch->len; ++j) {
+                    ++statuses[(u64)batch->records[j].status];
                     ++totalReqs;
                 }
+
+                delete batch;
             }
         });
 
         // worker coroutines
         for (u32 i = 0; i < numCoros; ++i) {
-            auto coroPool = ObjPool::create(pool.mutPtr());
-
             wg.inc();
 
-            exec->spawn([&, coroPool] {
+            exec->spawn([&] {
                 STD_DEFER {
                     wg.done();
                 };
@@ -368,6 +374,7 @@ STD_TEST_SUITE(HttpClient) {
                 InBuf in(stream);
 
                 Buffer body;
+                auto batch = new ReqBatch();
 
                 while (monotonicNowUs() < deadlineUs) {
                     auto rpool = ObjPool::fromMemory();
@@ -396,12 +403,21 @@ STD_TEST_SUITE(HttpClient) {
 
                     u64 t1 = monotonicNowUs();
 
-                    auto rec = coroPool->make<ReqRecord>();
+                    batch->records[batch->len].status = st;
+                    batch->records[batch->len].elapsedUs = t1 - t0;
+                    ++batch->len;
 
-                    rec->status = st;
-                    rec->elapsedUs = t1 - t0;
+                    if (batch->len == ReqBatch::CAP) {
+                        ch.enqueue(batch);
+                        batch = new ReqBatch();
+                    }
+                }
 
-                    ch.enqueue(rec);
+                // flush remaining
+                if (batch->len > 0) {
+                    ch.enqueue(batch);
+                } else {
+                    delete batch;
                 }
             });
         }
