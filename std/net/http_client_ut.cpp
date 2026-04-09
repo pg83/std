@@ -29,11 +29,11 @@ using namespace stl;
 namespace {
     struct ReqRecord {
         u32 status;
-        u64 elapsedUs;
+        u32 elapsedUs;
     };
 
     struct ReqBatch {
-        static constexpr u32 CAP = 100;
+        static constexpr u32 CAP = 256;
 
         ReqRecord records[CAP];
         u32 len;
