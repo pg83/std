@@ -23,9 +23,6 @@ int main(int argc, char** argv) {
         cfg.setReactors(sv->stou());
     }
 
-    if (auto sv = a.find(u8"coro-offload-threads"); sv) {
-        cfg.setOffloadThreads(sv->stou());
-    }
 
     DnsConfig dnsCfg;
 
