@@ -1,4 +1,5 @@
 #include "reactor_poll.h"
+#include "io_reactor.h"
 
 #include "coro.h"
 #include "mutex.h"
@@ -63,7 +64,7 @@ namespace {
 
         PollGroupImpl(ObjPool* pool, const PollFD* fds, size_t count);
 
-        int fd() const noexcept override;
+        int fd() const noexcept;
         void resetResult() noexcept;
         void visitResults(VisitorFace& visitor) noexcept;
     };
@@ -302,8 +303,12 @@ void PollGroupImpl::visitResults(VisitorFace& visitor) noexcept {
     }
 }
 
-PollGroup* PollGroup::create(ObjPool* pool, const PollFD* fds, size_t count) {
+PollGroup* ReactorIface::createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) {
     return pool->make<PollGroupImpl>(pool, fds, count);
+}
+
+int ReactorIface::pollGroupFd(const PollGroup* g) noexcept {
+    return ((const PollGroupImpl*)g)->fd();
 }
 
 void ReactorState::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {

@@ -245,11 +245,11 @@ u32 PollIoReactor::poll(PollFD pfd, u64 deadlineUs) {
 }
 
 void PollIoReactor::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
-    reactor(g->fd())->poll(g, visitor, deadlineUs);
+    reactor(ReactorIface::pollGroupFd(g))->poll(g, visitor, deadlineUs);
 }
 
 PollGroup* PollIoReactor::createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) {
-    return PollGroup::create(pool, fds, count);
+    return ReactorIface::createPollGroup(pool, fds, count);
 }
 
 IoReactor* stl::createPollIoReactor(ObjPool* pool, CoroExecutor* exec, size_t reactors) {

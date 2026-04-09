@@ -9,8 +9,10 @@ namespace stl {
     class ObjPool;
 
     struct PollFD;
-    struct PollGroup;
     struct VisitorFace;
+
+    struct PollGroup {
+    };
 
     struct IoReactor {
         virtual int connect(int fd, const sockaddr* addr, u32 addrLen, u64 deadlineUs) = 0;
