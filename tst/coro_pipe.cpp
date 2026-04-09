@@ -49,7 +49,7 @@ int main() {
                 if (n > 0) {
                     received += (size_t)n;
                 } else if (errno == EAGAIN) {
-                    ex->io(rfd)->poll({rfd, PollFlag::In}, UINT64_MAX);
+                    ex->io()->poll({rfd, PollFlag::In}, UINT64_MAX);
                 }
             }
         }));
@@ -65,7 +65,7 @@ int main() {
                 if (n > 0) {
                     sent += (size_t)n;
                 } else if (errno == EAGAIN) {
-                    ex->io(wfd)->poll({wfd, PollFlag::Out}, UINT64_MAX);
+                    ex->io()->poll({wfd, PollFlag::Out}, UINT64_MAX);
                 }
             }
         }));

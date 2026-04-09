@@ -22,7 +22,7 @@ CoroFDInput::~CoroFDInput() noexcept {
 size_t CoroFDInput::readImpl(void* data, size_t len) {
     size_t n = 0;
 
-    if (int r = exec->io(fd->get())->pread(fd->get(), &n, data, len, offset)) {
+    if (int r = exec->io()->pread(fd->get(), &n, data, len, offset)) {
         Errno(r).raise(StringBuilder() << StringView(u8"pread() failed"));
     }
 

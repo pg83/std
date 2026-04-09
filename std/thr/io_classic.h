@@ -1,5 +1,7 @@
 #pragma once
 
+#include <std/sys/types.h>
+
 namespace stl {
     class ObjPool;
 
@@ -7,5 +9,5 @@ namespace stl {
     struct ThreadPool;
     struct CoroExecutor;
 
-    IoReactor* createPollIoReactor(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, ThreadPool* offload);
+    IoReactor* createPollIoReactor(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, size_t reactors, size_t offloadThreads);
 }

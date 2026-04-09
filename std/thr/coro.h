@@ -49,7 +49,7 @@ namespace stl {
         virtual void parkWith(Runable&&, Task**) noexcept = 0;
         virtual void offloadRun(ThreadPool* pool, Runable&& work) = 0;
 
-        virtual IoReactor* io(int fd) noexcept = 0;
+        virtual IoReactor* io() noexcept = 0;
 
         virtual void createEvent(void* buf) = 0;
         virtual ThreadIface* createThread() = 0;

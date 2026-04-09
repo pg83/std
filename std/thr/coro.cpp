@@ -4,7 +4,6 @@
 #include "mutex.h"
 #include "guard.h"
 #include "thread.h"
-#include "poll_fd.h"
 #include "context.h"
 #include "cond_var.h"
 #include "semaphore.h"
@@ -23,7 +22,6 @@
 #include <std/alg/defer.h>
 #include <std/alg/range.h>
 #include <std/sys/atomic.h>
-#include <std/lib/vector.h>
 #include <std/dbg/insist.h>
 #include <std/ptr/scoped.h>
 #include <std/alg/minmax.h>
@@ -31,7 +29,6 @@
 #include <std/alg/exchange.h>
 #include <std/alg/destruct.h>
 #include <std/mem/obj_pool.h>
-#include <std/rng/split_mix_64.h>
 
 #include <errno.h>
 #include <time.h>
@@ -117,8 +114,7 @@ namespace {
         alignas(64) int inflight_ = 0;
         JoinPipe* join_;
         const u64 tlsKey_;
-        Vector<IoReactor*> ioReactors_;
-        ThreadPool* offload_;
+        IoReactor* io_;
         ThreadPool* pool_;
 
         CoroExecutorImpl(ObjPool* pool, const CoroConfig& cfg);
@@ -154,8 +150,8 @@ namespace {
         CondVarIface* createCondVar() override;
         SemaphoreIface* createSemaphore(size_t initial) override;
 
-        IoReactor* io(int fd) noexcept override {
-            return ioReactors_[splitMix64(fd) % ioReactors_.length()];
+        IoReactor* io() noexcept override {
+            return io_;
         }
 
         void parkWith(Runable&&, Task**) noexcept override;
@@ -168,11 +164,7 @@ CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, const CoroConfig& cfg)
     , tlsKey_(ThreadPool::registerTlsKey())
     , pool_(ThreadPool::workStealing(pool, cfg.threads))
 {
-    offload_ = ThreadPool::simple(pool, cfg.offloadThreads);
-
-    for (size_t i = 0; i < cfg.reactors; ++i) {
-        ioReactors_.pushBack(createPollIoReactor(pool, this, pool_, offload_));
-    }
+    io_ = createPollIoReactor(pool, this, pool_, cfg.reactors, cfg.offloadThreads);
 }
 
 Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {

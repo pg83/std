@@ -41,7 +41,7 @@ STD_TEST_SUITE(IoReactorPoll) {
         int result = 0;
 
         exec->spawn([&] {
-            auto io = exec->io(readEnd.get());
+            auto io = exec->io();
             u32 ready = io->poll({readEnd.get(), PollFlag::In}, UINT64_MAX);
             STD_INSIST(ready & PollFlag::In);
             char buf;
@@ -65,7 +65,7 @@ STD_TEST_SUITE(IoReactorPoll) {
         createPipeFD(readEnd, writeEnd);
 
         auto f = async(exec, [&] {
-            return exec->io(readEnd.get())->poll({readEnd.get(), PollFlag::In}, 1000);
+            return exec->io()->poll({readEnd.get(), PollFlag::In}, 1000);
         });
 
         STD_INSIST(f.wait() == 0);
@@ -85,7 +85,7 @@ STD_TEST_SUITE(IoReactorPoll) {
 
         for (int i = 0; i < N; i++) {
             exec->spawn([&, i] {
-                auto io = exec->io(readEnds[i].get());
+                auto io = exec->io();
                 u32 ready = io->poll({readEnds[i].get(), PollFlag::In}, UINT64_MAX);
                 STD_INSIST(ready & PollFlag::In);
                 char buf;
@@ -115,7 +115,7 @@ STD_TEST_SUITE(IoReactorPoll) {
 
         for (int i = 0; i < N; i++) {
             exec->spawn([&] {
-                u32 ready = exec->io(readEnd.get())->poll({readEnd.get(), PollFlag::In}, UINT64_MAX);
+                u32 ready = exec->io()->poll({readEnd.get(), PollFlag::In}, UINT64_MAX);
                 STD_INSIST(ready & PollFlag::In);
                 stdAtomicAddAndFetch(&woken, 1, MemoryOrder::Relaxed);
             });
@@ -167,7 +167,7 @@ STD_TEST_SUITE(IoReactorPoll) {
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         auto f = async(exec, [&] {
-            exec->io(-1)->poll({-1, 0}, monotonicNowUs());
+            exec->io()->poll({-1, 0}, monotonicNowUs());
             return true;
         });
 
@@ -181,7 +181,7 @@ STD_TEST_SUITE(IoReactorPoll) {
 
         for (int i = 0; i < 100; ++i) {
             exec->spawn([&] {
-                exec->io(-1)->poll({-1, 0}, monotonicNowUs());
+                exec->io()->poll({-1, 0}, monotonicNowUs());
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             });
         }
@@ -195,7 +195,7 @@ STD_TEST_SUITE(IoReactorPoll) {
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         auto f = async(exec, [&] {
-            exec->io(-1)->poll({-1, 0}, monotonicNowUs());
+            exec->io()->poll({-1, 0}, monotonicNowUs());
             return 2;
         });
 
@@ -216,7 +216,7 @@ STD_TEST_SUITE(IoReactorPoll) {
             auto g = PollGroup::create(opool.mutPtr(), in, 2);
 
             // clang-format off
-            exec->io(g->fd())->poll(g, makeVisitor([&](void* ptr) {
+            exec->io()->poll(g, makeVisitor([&](void* ptr) {
                 result |= ((PollFD*)ptr)->flags;
             }), UINT64_MAX);
             // clang-format on
@@ -245,7 +245,7 @@ STD_TEST_SUITE(IoReactorPoll) {
             auto g = PollGroup::create(opool.mutPtr(), in, 2);
 
             // clang-format off
-            exec->io(g->fd())->poll(g, makeVisitor([&](void* ptr) {
+            exec->io()->poll(g, makeVisitor([&](void* ptr) {
                 result |= ((PollFD*)ptr)->flags;
             }), UINT64_MAX);
             // clang-format on
@@ -274,7 +274,7 @@ STD_TEST_SUITE(IoReactorPoll) {
             size_t n = 0;
 
             // clang-format off
-            exec->io(g->fd())->poll(g, makeVisitor([&](void*) {
+            exec->io()->poll(g, makeVisitor([&](void*) {
                 ++n;
             }), 1);
             // clang-format on
@@ -308,7 +308,7 @@ STD_TEST_SUITE(IoReactorPoll) {
             auto g = PollGroup::create(opool.mutPtr(), in, N);
 
             // clang-format off
-            exec->io(g->fd())->poll(g, makeVisitor([&](void* ptr) {
+            exec->io()->poll(g, makeVisitor([&](void* ptr) {
                 result |= ((PollFD*)ptr)->flags;
             }), UINT64_MAX);
             // clang-format on
@@ -337,7 +337,7 @@ STD_TEST_SUITE(IoReactorFS) {
 
             char buf[32] = {};
             size_t n = 0;
-            STD_INSIST(exec->io(fd)->pread(fd, &n, buf, sizeof(buf), 0) == 0);
+            STD_INSIST(exec->io()->pread(fd, &n, buf, sizeof(buf), 0) == 0);
 
             STD_INSIST(n == sizeof(data));
             STD_INSIST(memcmp(buf, data, sizeof(data)) == 0);
@@ -357,7 +357,7 @@ STD_TEST_SUITE(IoReactorFS) {
 
             const char data[] = "hello pwrite";
             size_t n = 0;
-            STD_INSIST(exec->io(fd)->pwrite(fd, &n, data, sizeof(data), 0) == 0);
+            STD_INSIST(exec->io()->pwrite(fd, &n, data, sizeof(data), 0) == 0);
 
             STD_INSIST(n == sizeof(data));
 
@@ -380,12 +380,12 @@ STD_TEST_SUITE(IoReactorFS) {
 
             const char msg[] = "roundtrip";
             size_t w = 0;
-            STD_INSIST(exec->io(fd)->pwrite(fd, &w, msg, sizeof(msg), 0) == 0);
+            STD_INSIST(exec->io()->pwrite(fd, &w, msg, sizeof(msg), 0) == 0);
             STD_INSIST(w == sizeof(msg));
 
             char buf[32] = {};
             size_t r = 0;
-            STD_INSIST(exec->io(fd)->pread(fd, &r, buf, sizeof(buf), 0) == 0);
+            STD_INSIST(exec->io()->pread(fd, &r, buf, sizeof(buf), 0) == 0);
             STD_INSIST(r == sizeof(msg));
             STD_INSIST(memcmp(buf, msg, sizeof(msg)) == 0);
 
@@ -407,7 +407,7 @@ STD_TEST_SUITE(IoReactorFS) {
 
             char buf[4] = {};
             size_t n = 0;
-            STD_INSIST(exec->io(fd)->pread(fd, &n, buf, 4, 3) == 0);
+            STD_INSIST(exec->io()->pread(fd, &n, buf, 4, 3) == 0);
 
             STD_INSIST(n == 4);
             STD_INSIST(memcmp(buf, "3456", 4) == 0);
@@ -433,7 +433,7 @@ STD_TEST_SUITE(IoReactorFS) {
                 exec->spawn([&] {
                     char buf[16] = {};
                     size_t n = 0;
-                    STD_INSIST(exec->io(fd)->pread(fd, &n, buf, sizeof(buf), 0) == 0);
+                    STD_INSIST(exec->io()->pread(fd, &n, buf, sizeof(buf), 0) == 0);
                     STD_INSIST(n == sizeof(data));
                     STD_INSIST(memcmp(buf, data, sizeof(data)) == 0);
                     sem.post();

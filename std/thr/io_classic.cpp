@@ -8,6 +8,8 @@
 #include "reactor_poll.h"
 
 #include <std/mem/obj_pool.h>
+#include <std/lib/vector.h>
+#include <std/rng/split_mix_64.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -31,11 +33,15 @@ using namespace stl;
 
 namespace {
     struct PollIoReactor: public IoReactor {
-        ReactorIface* reactor_;
+        Vector<ReactorIface*> reactors_;
         CoroExecutor* exec_;
         ThreadPool* offload_;
 
-        PollIoReactor(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, ThreadPool* offload);
+        PollIoReactor(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, size_t reactors, size_t offloadThreads);
+
+        ReactorIface* reactor(int fd) noexcept {
+            return reactors_[splitMix64(fd) % reactors_.length()];
+        }
 
         int recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) override;
         int send(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) override;
@@ -53,11 +59,13 @@ namespace {
     };
 }
 
-PollIoReactor::PollIoReactor(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, ThreadPool* offload)
-    : reactor_(ReactorIface::create(exec, mainPool, pool))
-    , exec_(exec)
-    , offload_(offload)
+PollIoReactor::PollIoReactor(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, size_t reactors, size_t offloadThreads)
+    : exec_(exec)
+    , offload_(ThreadPool::simple(pool, offloadThreads))
 {
+    for (size_t i = 0; i < reactors; ++i) {
+        reactors_.pushBack(ReactorIface::create(exec, mainPool, pool));
+    }
 }
 
 int PollIoReactor::recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) {
@@ -73,7 +81,7 @@ int PollIoReactor::recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadli
             return errno;
         }
 
-        if (!reactor_->poll({fd, PollFlag::In}, deadlineUs)) {
+        if (!reactor(fd)->poll({fd, PollFlag::In}, deadlineUs)) {
             return EAGAIN;
         }
     }
@@ -92,7 +100,7 @@ int PollIoReactor::send(int fd, size_t* nWritten, const void* buf, size_t len, u
             return errno;
         }
 
-        if (!reactor_->poll({fd, PollFlag::Out}, deadlineUs)) {
+        if (!reactor(fd)->poll({fd, PollFlag::Out}, deadlineUs)) {
             return EAGAIN;
         }
     }
@@ -111,7 +119,7 @@ int PollIoReactor::writev(int fd, size_t* nWritten, iovec* iov, size_t iovcnt, u
             return errno;
         }
 
-        if (!reactor_->poll({fd, PollFlag::Out}, deadlineUs)) {
+        if (!reactor(fd)->poll({fd, PollFlag::Out}, deadlineUs)) {
             return EAGAIN;
         }
     }
@@ -141,7 +149,7 @@ int PollIoReactor::accept(int fd, int* newFd, sockaddr* addr, u32* addrLen, u64 
             return errno;
         }
 
-        if (!reactor_->poll({fd, PollFlag::In}, deadlineUs)) {
+        if (!reactor(fd)->poll({fd, PollFlag::In}, deadlineUs)) {
             return EAGAIN;
         }
     }
@@ -154,7 +162,7 @@ int PollIoReactor::connect(int fd, const sockaddr* addr, u32 addrLen, u64 deadli
         return errno;
     }
 
-    reactor_->poll({fd, PollFlag::Out}, deadlineUs);
+    reactor(fd)->poll({fd, PollFlag::Out}, deadlineUs);
 
     int err = 0;
     socklen_t len = sizeof(err);
@@ -231,13 +239,13 @@ int PollIoReactor::fdatasync(int fd) {
 }
 
 u32 PollIoReactor::poll(PollFD pfd, u64 deadlineUs) {
-    return reactor_->poll(pfd, deadlineUs);
+    return reactor(pfd.fd)->poll(pfd, deadlineUs);
 }
 
 void PollIoReactor::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
-    reactor_->poll(g, visitor, deadlineUs);
+    reactor(g->fd())->poll(g, visitor, deadlineUs);
 }
 
-IoReactor* stl::createPollIoReactor(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, ThreadPool* offload) {
-    return pool->make<PollIoReactor>(pool, exec, mainPool, offload);
+IoReactor* stl::createPollIoReactor(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, size_t reactors, size_t offloadThreads) {
+    return pool->make<PollIoReactor>(pool, exec, mainPool, reactors, offloadThreads);
 }

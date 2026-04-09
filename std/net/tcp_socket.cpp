@@ -50,7 +50,7 @@ namespace {
 
 TcpSocket::TcpSocket(int fd, CoroExecutor* exec) noexcept
     : fd(fd)
-    , io(exec->io(fd))
+    , io(exec->io())
 {
 }
 
@@ -123,7 +123,7 @@ int TcpSocket::connect(int* out, CoroExecutor* exec, const sockaddr* addr, u32 a
 
     setSockFlags(fd);
 
-    if (int r = exec->io(fd)->connect(fd, addr, addrLen, deadlineUs)) {
+    if (int r = exec->io()->connect(fd, addr, addrLen, deadlineUs)) {
         ::close(fd);
         return r;
     }

@@ -265,7 +265,7 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
             ares_timeout(channel_, nullptr, &tv);
 
             // clang-format off
-            exec_->io(pollGroup_->fd())->poll(pollGroup_, makeVisitor([this](void* ptr) {
+            exec_->io()->poll(pollGroup_, makeVisitor([this](void* ptr) {
                 auto ev = (PollFD*)ptr;
 
                 if (ev->fd == parker_.fd()) {
