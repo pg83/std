@@ -1,12 +1,15 @@
+#include <std/ios/sys.h>
 #include <std/tst/args.h>
 #include <std/thr/coro.h>
+#include <std/thr/async.h>
+#include <std/dns/result.h>
+#include <std/dns/record.h>
 #include <std/mem/obj_pool.h>
 #include <std/net/http_srv.h>
 #include <std/net/ssl_socket.h>
 #include <std/thr/wait_group.h>
 #include <std/thr/coro_config.h>
 
-#include <arpa/inet.h>
 #include <netinet/in.h>
 
 using namespace stl;
@@ -31,14 +34,6 @@ namespace {
         "R4bbSCCAbt0MrRex/LkuoYW1/myhRANCAARfsZNKls055081/xImV4diaUrCimYW\n"
         "2k0m7Rhq/B5xBjWP5ETfBy3XaoUXGA02bImZaTSTLd43TWTCB5IbRkng\n"
         "-----END PRIVATE KEY-----";
-
-    sockaddr_in makeAddr(u16 port) {
-        sockaddr_in addr{};
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons(port);
-        inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
-        return addr;
-    }
 }
 
 int main(int argc, char** argv) {
@@ -71,20 +66,41 @@ int main(int argc, char** argv) {
         port = (u16)v->stou();
     }
 
-    auto addr = makeAddr(port);
+    auto dns = async(exec, [&] {
+        return exec->resolve(pool.mutPtr(), StringView("localhost"));
+    }).wait();
+
+    if (!dns->ok() || !dns->record) {
+        sysE << StringView(u8"dns resolve failed: ") << dns << endL;
+        return 1;
+    }
+
+    sysE << StringView(u8"resolved: ") << dns->record << endL;
 
     WaitGroup wg(exec);
 
-    serve(
-        pool.mutPtr(),
-        {
-            .handler = &handler,
-            .exec = exec,
-            .wg = &wg,
-            .addr = (const sockaddr*)&addr,
-            .addrLen = sizeof(addr),
+    for (auto rec = dns->record; rec; rec = rec->next) {
+        if (rec->family == AF_INET) {
+            ((sockaddr_in*)rec->addr)->sin_port = htons(port);
+        } else {
+            ((sockaddr_in6*)rec->addr)->sin6_port = htons(port);
         }
-    );
+
+        u32 addrLen = (rec->family == AF_INET) ? (u32)sizeof(sockaddr_in) : (u32)sizeof(sockaddr_in6);
+
+        sysE << StringView(u8"serving on ") << rec << StringView(u8":") << (u64)port << endL;
+
+        serve(
+            pool.mutPtr(),
+            {
+                .handler = &handler,
+                .exec = exec,
+                .wg = &wg,
+                .addr = rec->addr,
+                .addrLen = addrLen,
+            }
+        );
+    }
 
     exec->spawn([&] {
         wg.wait();

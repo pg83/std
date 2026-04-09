@@ -4,10 +4,13 @@
 #include <std/sys/crt.h>
 #include <std/tst/args.h>
 #include <std/thr/coro.h>
+#include <std/thr/async.h>
 #include <std/alg/defer.h>
 #include <std/dbg/insist.h>
 #include <std/lib/buffer.h>
 #include <std/ios/in_buf.h>
+#include <std/dns/result.h>
+#include <std/dns/record.h>
 #include <std/str/builder.h>
 #include <std/thr/channel.h>
 #include <std/mem/obj_pool.h>
@@ -19,7 +22,6 @@
 
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
 
 using namespace stl;
 
@@ -63,7 +65,6 @@ int main(int argc, char** argv) {
 
     if (!url.split('/', hostPort, path)) {
         hostPort = url;
-        path = StringView("/");
     }
 
     StringView host, portStr;
@@ -96,11 +97,26 @@ int main(int argc, char** argv) {
         payloadLen = (u32)v->stou();
     }
 
-    sockaddr_in addr{};
+    auto exec = CoroExecutor::create(pool.mutPtr(), CoroConfig(numThreads));
 
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = htonl(0x7f000001);
+    auto dns = async(exec, [&] {
+        return exec->resolve(pool.mutPtr(), host);
+    }).wait();
+
+    if (!dns->ok() || !dns->record) {
+        sysE << StringView(u8"dns resolve failed: ") << dns << endL;
+        return 1;
+    }
+
+    auto rec = dns->record;
+
+    sysE << StringView(u8"resolved: ") << rec << endL;
+
+    if (rec->family == AF_INET) {
+        ((sockaddr_in*)rec->addr)->sin_port = htons(port);
+    } else {
+        ((sockaddr_in6*)rec->addr)->sin6_port = htons(port);
+    }
 
     Buffer payloadBuf;
 
@@ -111,11 +127,17 @@ int main(int argc, char** argv) {
 
     StringView payloadVal(payloadBuf);
 
-    StringBuilder pathBuf;
+    StringView fullPath;
 
-    pathBuf << StringView(u8"/") << path;
+    if (path.empty()) {
+        fullPath = StringView("/");
+    } else {
+        StringBuilder pathBuf;
 
-    StringView fullPath = pool.mutPtr()->intern(StringView(pathBuf));
+        pathBuf << StringView(u8"/") << path;
+
+        fullPath = pool.mutPtr()->intern(StringView(pathBuf));
+    }
 
     sysE << StringView(u8"host: ") << host << endL;
     sysE << StringView(u8"port: ") << (u64)port << endL;
@@ -124,8 +146,6 @@ int main(int argc, char** argv) {
     sysE << StringView(u8"coros: ") << (u64)numCoros << endL;
     sysE << StringView(u8"duration: ") << (u64)durationSec << StringView(u8"s") << endL;
     sysE << StringView(u8"payload: ") << (u64)payloadLen << endL;
-
-    auto exec = CoroExecutor::create(pool.mutPtr(), CoroConfig(numThreads));
 
     Channel ch(exec, numCoros * 4);
     WaitGroup wg(exec);
@@ -161,13 +181,15 @@ int main(int argc, char** argv) {
 
             TcpSocket sock(exec);
 
-            STD_INSIST(sock.socket(AF_INET, SOCK_STREAM, 0) == 0);
+            u32 addrLen = (rec->family == AF_INET) ? (u32)sizeof(sockaddr_in) : (u32)sizeof(sockaddr_in6);
+
+            STD_INSIST(sock.socket(rec->family, SOCK_STREAM, 0) == 0);
 
             STD_DEFER {
                 sock.close();
             };
 
-            STD_INSIST(sock.connectInf((const sockaddr*)&addr, sizeof(addr)) == 0);
+            STD_INSIST(sock.connectInf(rec->addr, addrLen) == 0);
 
             TcpStream stream(sock);
             InBuf in(stream);
