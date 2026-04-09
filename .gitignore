@@ -12,3 +12,17 @@ libstd.a
 core
 core.*
 perf.*
+tst/channel_pipeline
+tst/coro_pipe
+tst/coro_sw
+tst/dns_stress
+tst/http_load
+tst/http_serve_files
+tst/http_serve_ok
+tst/perf_hash
+tst/perf_malloc
+tst/perf_map
+tst/perf_objpool
+tst/pool_sd
+tst/pool_ss
+tst/pool_sw
