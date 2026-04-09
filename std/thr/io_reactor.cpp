@@ -35,17 +35,16 @@ namespace {
 
         PollIoReactor(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, ThreadPool* offload);
 
-        ssize_t recv(int fd, void* buf, size_t len, u64 deadlineUs) override;
-        ssize_t send(int fd, const void* buf, size_t len, u64 deadlineUs) override;
-        int accept(int fd, sockaddr* addr, u32* addrLen, u64 deadlineUs) override;
+        int recv(int fd, void* buf, size_t len, size_t* nRead, u64 deadlineUs) override;
+        int send(int fd, const void* buf, size_t len, size_t* nWritten, u64 deadlineUs) override;
+        int writev(int fd, iovec* iov, size_t iovcnt, size_t* nWritten, u64 deadlineUs) override;
+        int accept(int fd, sockaddr* addr, u32* addrLen, int* newFd, u64 deadlineUs) override;
         int connect(int fd, const sockaddr* addr, u32 addrLen, u64 deadlineUs) override;
 
-        ssize_t pread(int fd, void* buf, size_t len, off_t offset) override;
-        ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) override;
+        int pread(int fd, void* buf, size_t len, off_t offset, size_t* nRead) override;
+        int pwrite(int fd, const void* buf, size_t len, off_t offset, size_t* nWritten) override;
         int fsync(int fd) override;
         int fdatasync(int fd) override;
-
-        ssize_t writev(int fd, iovec* iov, size_t iovcnt, u64 deadlineUs) override;
 
         u32 poll(PollFD pfd, u64 deadlineUs) override;
         void poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) override;
@@ -59,66 +58,89 @@ PollIoReactor::PollIoReactor(ObjPool* pool, CoroExecutor* exec, ThreadPool* main
 {
 }
 
-ssize_t PollIoReactor::recv(int fd, void* buf, size_t len, u64 deadlineUs) {
+int PollIoReactor::recv(int fd, void* buf, size_t len, size_t* nRead, u64 deadlineUs) {
     for (;;) {
         ssize_t n = ::recv(fd, buf, len, 0);
 
         if (n >= 0) {
-            return n;
+            *nRead = (size_t)n;
+            return 0;
         }
 
         if (errno != EAGAIN) {
-            return -errno;
+            return errno;
         }
 
         if (!reactor_->poll({fd, PollFlag::In}, deadlineUs)) {
-            return -EAGAIN;
+            return EAGAIN;
         }
     }
 }
 
-ssize_t PollIoReactor::send(int fd, const void* buf, size_t len, u64 deadlineUs) {
+int PollIoReactor::send(int fd, const void* buf, size_t len, size_t* nWritten, u64 deadlineUs) {
     for (;;) {
         ssize_t n = ::send(fd, buf, len, MSG_NOSIGNAL);
 
         if (n >= 0) {
-            return n;
+            *nWritten = (size_t)n;
+            return 0;
         }
 
         if (errno != EAGAIN) {
-            return -errno;
+            return errno;
         }
 
         if (!reactor_->poll({fd, PollFlag::Out}, deadlineUs)) {
-            return -EAGAIN;
+            return EAGAIN;
         }
     }
 }
 
-int PollIoReactor::accept(int fd, sockaddr* addr, u32* addrLen, u64 deadlineUs) {
+int PollIoReactor::writev(int fd, iovec* iov, size_t iovcnt, size_t* nWritten, u64 deadlineUs) {
+    for (;;) {
+        ssize_t n = ::writev(fd, iov, iovcnt);
+
+        if (n >= 0) {
+            *nWritten = (size_t)n;
+            return 0;
+        }
+
+        if (errno != EAGAIN) {
+            return errno;
+        }
+
+        if (!reactor_->poll({fd, PollFlag::Out}, deadlineUs)) {
+            return EAGAIN;
+        }
+    }
+}
+
+int PollIoReactor::accept(int fd, sockaddr* addr, u32* addrLen, int* newFd, u64 deadlineUs) {
     for (;;) {
         socklen_t slen = addrLen ? (socklen_t)*addrLen : 0;
 
 #ifdef __linux__
-        int newFd = ::accept4(fd, addr, addrLen ? &slen : nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
+        int r = ::accept4(fd, addr, addrLen ? &slen : nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
 #else
-        int newFd = ::accept(fd, addr, addrLen ? &slen : nullptr);
+        int r = ::accept(fd, addr, addrLen ? &slen : nullptr);
 #endif
 
-        if (newFd >= 0) {
+        if (r >= 0) {
             if (addrLen) {
                 *addrLen = (u32)slen;
             }
 
-            return newFd;
+            *newFd = r;
+
+            return 0;
         }
 
         if (errno != EAGAIN) {
-            return -errno;
+            return errno;
         }
 
         if (!reactor_->poll({fd, PollFlag::In}, deadlineUs)) {
-            return -EAGAIN;
+            return EAGAIN;
         }
     }
 }
@@ -127,7 +149,7 @@ int PollIoReactor::connect(int fd, const sockaddr* addr, u32 addrLen, u64 deadli
     if (int r = ::connect(fd, addr, addrLen); r == 0) {
         return 0;
     } else if (errno != EINPROGRESS) {
-        return -errno;
+        return errno;
     }
 
     reactor_->poll({fd, PollFlag::Out}, deadlineUs);
@@ -136,80 +158,74 @@ int PollIoReactor::connect(int fd, const sockaddr* addr, u32 addrLen, u64 deadli
     socklen_t len = sizeof(err);
 
     if (::getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) < 0) {
-        return -errno;
+        return errno;
     }
 
-    if (err) {
-        return -err;
-    }
-
-    return 0;
+    return err;
 }
 
-ssize_t PollIoReactor::pread(int fd, void* buf, size_t len, off_t offset) {
-    ssize_t result;
+int PollIoReactor::pread(int fd, void* buf, size_t len, off_t offset, size_t* nRead) {
+    int result = 0;
 
     exec_->offload(offload_, [&] {
         ssize_t n = ::pread(fd, buf, len, offset);
-        result = n < 0 ? -errno : n;
+
+        if (n < 0) {
+            result = errno;
+        } else {
+            *nRead = (size_t)n;
+        }
     });
 
     return result;
 }
 
-ssize_t PollIoReactor::pwrite(int fd, const void* buf, size_t len, off_t offset) {
-    ssize_t result;
+int PollIoReactor::pwrite(int fd, const void* buf, size_t len, off_t offset, size_t* nWritten) {
+    int result = 0;
 
     exec_->offload(offload_, [&] {
         ssize_t n = ::pwrite(fd, buf, len, offset);
-        result = n < 0 ? -errno : n;
+
+        if (n < 0) {
+            result = errno;
+        } else {
+            *nWritten = (size_t)n;
+        }
     });
 
     return result;
 }
 
 int PollIoReactor::fsync(int fd) {
-    int result;
+    int result = 0;
 
     exec_->offload(offload_, [&] {
-        result = ::fsync(fd) < 0 ? -errno : 0;
+        if (::fsync(fd) < 0) {
+            result = errno;
+        }
     });
 
     return result;
 }
 
 int PollIoReactor::fdatasync(int fd) {
-    int result;
+    int result = 0;
 
     // clang-format off
     exec_->offload(offload_, [&] {
 #if defined(__APPLE__)
-        result = ::fcntl(fd, F_FULLFSYNC) < 0 ? -errno : 0;
+        if (::fcntl(fd, F_FULLFSYNC) < 0) {
+            result = errno;
+        }
 #else
-        result = ::fdatasync(fd) < 0 ? -errno : 0;
+        if (::fdatasync(fd) < 0) {
+            result = errno;
+        }
 #endif
     });
     // clang-format on
 
     return result;
-}
-
-ssize_t PollIoReactor::writev(int fd, iovec* iov, size_t iovcnt, u64 deadlineUs) {
-    for (;;) {
-        ssize_t n = ::writev(fd, iov, iovcnt);
-
-        if (n >= 0) {
-            return n;
-        }
-
-        if (errno != EAGAIN) {
-            return -errno;
-        }
-
-        if (!reactor_->poll({fd, PollFlag::Out}, deadlineUs)) {
-            return -EAGAIN;
-        }
-    }
 }
 
 u32 PollIoReactor::poll(PollFD pfd, u64 deadlineUs) {

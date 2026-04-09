@@ -15,17 +15,16 @@ namespace stl {
     struct CoroExecutor;
 
     struct IoReactor {
-        virtual ssize_t recv(int fd, void* buf, size_t len, u64 deadlineUs) = 0;
-        virtual ssize_t send(int fd, const void* buf, size_t len, u64 deadlineUs) = 0;
-        virtual int accept(int fd, sockaddr* addr, u32* addrLen, u64 deadlineUs) = 0;
+        virtual int recv(int fd, void* buf, size_t len, size_t* nRead, u64 deadlineUs) = 0;
+        virtual int send(int fd, const void* buf, size_t len, size_t* nWritten, u64 deadlineUs) = 0;
+        virtual int writev(int fd, iovec* iov, size_t iovcnt, size_t* nWritten, u64 deadlineUs) = 0;
+        virtual int accept(int fd, sockaddr* addr, u32* addrLen, int* newFd, u64 deadlineUs) = 0;
         virtual int connect(int fd, const sockaddr* addr, u32 addrLen, u64 deadlineUs) = 0;
 
-        virtual ssize_t pread(int fd, void* buf, size_t len, off_t offset) = 0;
-        virtual ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) = 0;
+        virtual int pread(int fd, void* buf, size_t len, off_t offset, size_t* nRead) = 0;
+        virtual int pwrite(int fd, const void* buf, size_t len, off_t offset, size_t* nWritten) = 0;
         virtual int fsync(int fd) = 0;
         virtual int fdatasync(int fd) = 0;
-
-        virtual ssize_t writev(int fd, iovec* iov, size_t iovcnt, u64 deadlineUs) = 0;
 
         virtual u32 poll(PollFD pfd, u64 deadlineUs) = 0;
         virtual void poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) = 0;

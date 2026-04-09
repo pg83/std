@@ -325,19 +325,31 @@ void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {
 }
 
 ssize_t CoroExecutorImpl::pread(int fd, void* buf, size_t len, off_t offset) {
-    return io(fd)->pread(fd, buf, len, offset);
+    size_t nRead = 0;
+
+    if (int r = io(fd)->pread(fd, buf, len, offset, &nRead); r) {
+        return -r;
+    }
+
+    return (ssize_t)nRead;
 }
 
 ssize_t CoroExecutorImpl::pwrite(int fd, const void* buf, size_t len, off_t offset) {
-    return io(fd)->pwrite(fd, buf, len, offset);
+    size_t nWritten = 0;
+
+    if (int r = io(fd)->pwrite(fd, buf, len, offset, &nWritten); r) {
+        return -r;
+    }
+
+    return (ssize_t)nWritten;
 }
 
 int CoroExecutorImpl::fsync(int fd) {
-    return io(fd)->fsync(fd);
+    return -io(fd)->fsync(fd);
 }
 
 int CoroExecutorImpl::fdatasync(int fd) {
-    return io(fd)->fdatasync(fd);
+    return -io(fd)->fdatasync(fd);
 }
 
 u64 Cont::id() const noexcept {

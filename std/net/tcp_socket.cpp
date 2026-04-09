@@ -122,9 +122,9 @@ int TcpSocket::connect(CoroExecutor* exec, const sockaddr* addr, u32 addrLen, u6
 
     setSockFlags(fd);
 
-    if (int r = exec->io(fd)->connect(fd, addr, addrLen, deadlineUs); r < 0) {
+    if (int r = exec->io(fd)->connect(fd, addr, addrLen, deadlineUs); r) {
         ::close(fd);
-        return r;
+        return -r;
     }
 
     return fd;
@@ -139,10 +139,10 @@ int TcpSocket::connectInf(CoroExecutor* exec, const sockaddr* addr, u32 addrLen)
 }
 
 int TcpSocket::accept(ScopedFD& out, sockaddr* addr, u32* addrLen, u64 deadlineUs) {
-    int newFd = io->accept(fd, addr, addrLen, deadlineUs);
+    int newFd;
 
-    if (newFd < 0) {
-        return newFd;
+    if (int r = io->accept(fd, addr, addrLen, &newFd, deadlineUs); r) {
+        return -r;
     }
 
     setSockFlags(newFd);
@@ -162,13 +162,9 @@ int TcpSocket::acceptInf(ScopedFD& out, sockaddr* addr, u32* addrLen) {
 }
 
 int TcpSocket::read(size_t* nRead, void* buf, size_t len, u64 deadlineUs) {
-    ssize_t n = io->recv(fd, buf, len, deadlineUs);
-
-    if (n < 0) {
-        return (int)n;
+    if (int r = io->recv(fd, buf, len, nRead, deadlineUs); r) {
+        return -r;
     }
-
-    *nRead = (size_t)n;
 
     return 0;
 }
@@ -182,13 +178,9 @@ int TcpSocket::readInf(size_t* nRead, void* buf, size_t len) {
 }
 
 int TcpSocket::write(size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
-    ssize_t n = io->send(fd, buf, len, deadlineUs);
-
-    if (n < 0) {
-        return (int)n;
+    if (int r = io->send(fd, buf, len, nWritten, deadlineUs); r) {
+        return -r;
     }
-
-    *nWritten = (size_t)n;
 
     return 0;
 }
@@ -202,13 +194,9 @@ int TcpSocket::writeInf(size_t* nWritten, const void* buf, size_t len) {
 }
 
 int TcpSocket::writev(size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs) {
-    ssize_t n = io->writev(fd, iov, iovcnt, deadlineUs);
-
-    if (n < 0) {
-        return (int)n;
+    if (int r = io->writev(fd, iov, iovcnt, nWritten, deadlineUs); r) {
+        return -r;
     }
-
-    *nWritten = (size_t)n;
 
     return 0;
 }
