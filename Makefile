@@ -1,4 +1,4 @@
-HDRS = $(wildcard std/*/*.h)
+HDRS = $(wildcard std/*/*.h) Makefile dev/build.sh dev/run.sh
 SRCS = $(wildcard std/*/*.cpp)
 TMPS = $(subst _ut.cpp,_ut.u,$(SRCS))
 
@@ -25,17 +25,17 @@ CXXF = -I. -W -Wall -std=c++26 $(OPTF) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $(EXTRA
 
 all: $(LIBA) $(TSTA) $(BINS)
 
-$(LIBA): $(LIBO) Makefile dev/build.sh dev/run.sh
+$(LIBA): $(LIBO)
 	rm -rf $(LIBA)
 	llvm-ar q $(LIBA) $(LIBO)
 
-$(TSTA): tst/test.cpp.o $(UTSO) $(LIBA) Makefile
-	$(CXX) -fuse-ld=lld $(OPTF) $(LDFLAGS) -o $@ tst/test.cpp.o $(UTSO) $(LIBA)
+$(TSTA): tst/test.cpp.o $(UTSO) $(LIBA)
+	$(CXX) $(OPTF) $(LDFLAGS) -o $@ tst/test.cpp.o $(UTSO) $(LIBA)
 
-$(BINS): %: %.cpp.o $(LIBA) Makefile
-	$(CXX) -fuse-ld=lld $(OPTF) $(LDFLAGS) -o $@ $< $(LIBA)
+$(BINS): %: %.cpp.o $(LIBA)
+	$(CXX) $(OPTF) $(LDFLAGS) -o $@ $< $(LIBA)
 
-%.cpp.o: %.cpp $(HDRS) Makefile
+%.cpp.o: %.cpp $(HDRS)
 	$(CXX) $(CXXF) -o $@ -c $<
 
 install: $(LIBA)
