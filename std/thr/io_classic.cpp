@@ -57,6 +57,7 @@ namespace {
 
         u32 poll(PollFD pfd, u64 deadlineUs) override;
         void poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) override;
+        void sleep(u64 deadlineUs) override;
     };
 }
 
@@ -245,6 +246,10 @@ u32 PollIoReactor::poll(PollFD pfd, u64 deadlineUs) {
 
 void PollIoReactor::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
     reactor(ReactorIface::pollGroupFd(g))->poll(g, visitor, deadlineUs);
+}
+
+void PollIoReactor::sleep(u64 deadlineUs) {
+    poll({-1, 0}, deadlineUs);
 }
 
 PollGroup* PollIoReactor::createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) {

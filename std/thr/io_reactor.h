@@ -30,6 +30,8 @@ namespace stl {
         virtual void poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) = 0;
         virtual PollGroup* createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) = 0;
 
+        virtual void sleep(u64 deadlineUs) = 0;
+
         void poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs);
     };
 }
