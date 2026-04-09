@@ -41,7 +41,7 @@ namespace {
 int main(int argc, char** argv) {
     auto pool = ObjPool::fromMemory();
     TestArgs a(pool.mutPtr(), argc, argv);
-    auto exec = CoroExecutor::create(pool.mutPtr(), 32);
+    auto exec = CoroExecutor::create(pool.mutPtr(), 8);
     auto sslCtx = SslCtx::create(pool.mutPtr(), StringView(testCert), StringView(testKey));
 
     struct Handler: HttpServe {
