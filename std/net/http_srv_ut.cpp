@@ -69,8 +69,8 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
 
         exec->spawn([&] {
             auto caddr = makeAddr(17670);
-            int cfd = TcpSocket::connectInf(exec, (const sockaddr*)&caddr, sizeof(caddr));
-            STD_INSIST(cfd >= 0);
+            int cfd;
+            STD_INSIST(TcpSocket::connectInf(&cfd, exec, (const sockaddr*)&caddr, sizeof(caddr)) == 0);
             TcpSocket cli(cfd, exec);
             STD_DEFER {
                 cli.close();
@@ -125,8 +125,8 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
 
         exec->spawn([&] {
             auto caddr = makeAddr(17671);
-            int cfd = TcpSocket::connectInf(exec, (const sockaddr*)&caddr, sizeof(caddr));
-            STD_INSIST(cfd >= 0);
+            int cfd;
+            STD_INSIST(TcpSocket::connectInf(&cfd, exec, (const sockaddr*)&caddr, sizeof(caddr)) == 0);
             TcpSocket cli(cfd, exec);
             STD_DEFER {
                 cli.close();
@@ -181,8 +181,8 @@ STD_TEST_SUITE(HttpServer) {
 
         exec->spawn([&] {
             auto caddr = makeAddr(17661);
-            int cfd = TcpSocket::connectInf(exec, (const sockaddr*)&caddr, sizeof(caddr));
-            STD_INSIST(cfd >= 0);
+            int cfd;
+            STD_INSIST(TcpSocket::connectInf(&cfd, exec, (const sockaddr*)&caddr, sizeof(caddr)) == 0);
             TcpSocket cli(cfd, exec);
             STD_DEFER {
                 cli.close();
@@ -244,8 +244,8 @@ STD_TEST_SUITE(HttpServer) {
 
         exec->spawn([&] {
             auto caddr = makeAddr(17663);
-            int cfd = TcpSocket::connectInf(exec, (const sockaddr*)&caddr, sizeof(caddr));
-            STD_INSIST(cfd >= 0);
+            int cfd;
+            STD_INSIST(TcpSocket::connectInf(&cfd, exec, (const sockaddr*)&caddr, sizeof(caddr)) == 0);
             TcpSocket cli(cfd, exec);
             STD_DEFER {
                 cli.close();
@@ -324,8 +324,8 @@ STD_TEST_SUITE(HttpServer) {
 
         exec->spawn([&] {
             auto caddr = makeAddr(17662);
-            int cfd = TcpSocket::connectInf(exec, (const sockaddr*)&caddr, sizeof(caddr));
-            STD_INSIST(cfd >= 0);
+            int cfd;
+            STD_INSIST(TcpSocket::connectInf(&cfd, exec, (const sockaddr*)&caddr, sizeof(caddr)) == 0);
             TcpSocket cli(cfd, exec);
             STD_DEFER {
                 cli.close();

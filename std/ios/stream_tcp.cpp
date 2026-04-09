@@ -20,8 +20,8 @@ TcpStream::~TcpStream() noexcept {
 size_t TcpStream::readImpl(void* data, size_t len) {
     size_t n = 0;
 
-    if (int r = sock->readInf(&n, data, len); r < 0) {
-        Errno(-r).raise(StringBuilder() << StringView(u8"tcp read() failed"));
+    if (int r = sock->readInf(&n, data, len); r) {
+        Errno(r).raise(StringBuilder() << StringView(u8"tcp read() failed"));
     }
 
     return n;
@@ -30,8 +30,8 @@ size_t TcpStream::readImpl(void* data, size_t len) {
 size_t TcpStream::writeImpl(const void* data, size_t len) {
     size_t n = 0;
 
-    if (int r = sock->writeInf(&n, data, len); r < 0) {
-        Errno(-r).raise(StringBuilder() << StringView(u8"tcp write() failed"));
+    if (int r = sock->writeInf(&n, data, len); r) {
+        Errno(r).raise(StringBuilder() << StringView(u8"tcp write() failed"));
     }
 
     return n;
@@ -40,8 +40,8 @@ size_t TcpStream::writeImpl(const void* data, size_t len) {
 size_t TcpStream::writeVImpl(iovec* iov, size_t count) {
     size_t n = 0;
 
-    if (int r = sock->writevInf(&n, iov, count); r < 0) {
-        Errno(-r).raise(StringBuilder() << StringView(u8"tcp writev() failed"));
+    if (int r = sock->writevInf(&n, iov, count); r) {
+        Errno(r).raise(StringBuilder() << StringView(u8"tcp writev() failed"));
     }
 
     return n;

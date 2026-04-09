@@ -198,9 +198,9 @@ int main(int argc, char** argv) {
 
             u32 addrLen = (rec->family == AF_INET) ? (u32)sizeof(sockaddr_in) : (u32)sizeof(sockaddr_in6);
 
-            int cfd = TcpSocket::connectInf(exec, rec->addr, addrLen);
+            int cfd;
 
-            STD_INSIST(cfd >= 0);
+            STD_INSIST(TcpSocket::connectInf(&cfd, exec, rec->addr, addrLen) == 0);
 
             TcpSocket sock(cfd, exec);
 

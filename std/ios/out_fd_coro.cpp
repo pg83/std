@@ -19,10 +19,10 @@ CoroFDOutput::~CoroFDOutput() noexcept {
 }
 
 size_t CoroFDOutput::writeImpl(const void* data, size_t len) {
-    auto n = exec->pwrite(fd->get(), data, len, offset);
+    size_t n = 0;
 
-    if (n < 0) {
-        Errno((int)-n).raise(StringBuilder() << StringView(u8"pwrite() failed"));
+    if (int r = exec->pwrite(fd->get(), &n, data, len, offset)) {
+        Errno(r).raise(StringBuilder() << StringView(u8"pwrite() failed"));
     }
 
     offset += n;
@@ -35,17 +35,13 @@ size_t CoroFDOutput::hintImpl() const noexcept {
 }
 
 void CoroFDOutput::sync() {
-    auto n = exec->fsync(fd->get());
-
-    if (n < 0) {
-        Errno((int)-n).raise(StringBuilder() << StringView(u8"fsync() failed"));
+    if (int r = exec->fsync(fd->get())) {
+        Errno(r).raise(StringBuilder() << StringView(u8"fsync() failed"));
     }
 }
 
 void CoroFDOutput::dataSync() {
-    auto n = exec->fdatasync(fd->get());
-
-    if (n < 0) {
-        Errno((int)-n).raise(StringBuilder() << StringView(u8"fdatasync() failed"));
+    if (int r = exec->fdatasync(fd->get())) {
+        Errno(r).raise(StringBuilder() << StringView(u8"fdatasync() failed"));
     }
 }

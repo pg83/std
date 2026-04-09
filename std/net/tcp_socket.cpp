@@ -54,16 +54,17 @@ TcpSocket::TcpSocket(int fd, CoroExecutor* exec) noexcept
 {
 }
 
-int TcpSocket::socket(int domain, int type, int protocol) {
+int TcpSocket::socket(int* out, int domain, int type, int protocol) {
     int fd = ::socket(domain, type | SOCK_NONBLOCK | SOCK_CLOEXEC, protocol);
 
     if (fd < 0) {
-        return -errno;
+        return errno;
     }
 
     setSockFlags(fd);
+    *out = fd;
 
-    return fd;
+    return 0;
 }
 
 void TcpSocket::close() {
@@ -81,7 +82,7 @@ int TcpSocket::setReuseAddr(bool on) {
     int opt = on ? 1 : 0;
 
     if (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-        return -errno;
+        return errno;
     }
 
     return 0;
@@ -91,7 +92,7 @@ int TcpSocket::setNoDelay(bool on) {
     int opt = on ? 1 : 0;
 
     if (::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0) {
-        return -errno;
+        return errno;
     }
 
     return 0;
@@ -99,7 +100,7 @@ int TcpSocket::setNoDelay(bool on) {
 
 int TcpSocket::bind(const sockaddr* addr, u32 addrLen) {
     if (int r = ::bind(fd, addr, addrLen); r < 0) {
-        return -errno;
+        return errno;
     }
 
     return 0;
@@ -107,42 +108,44 @@ int TcpSocket::bind(const sockaddr* addr, u32 addrLen) {
 
 int TcpSocket::listen(int backlog) {
     if (int r = ::listen(fd, backlog); r < 0) {
-        return -errno;
+        return errno;
     }
 
     return 0;
 }
 
-int TcpSocket::connect(CoroExecutor* exec, const sockaddr* addr, u32 addrLen, u64 deadlineUs) {
+int TcpSocket::connect(int* out, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, u64 deadlineUs) {
     int fd = ::socket(addr->sa_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
 
     if (fd < 0) {
-        return -errno;
+        return errno;
     }
 
     setSockFlags(fd);
 
-    if (int r = exec->io(fd)->connect(fd, addr, addrLen, deadlineUs); r) {
+    if (int r = exec->io(fd)->connect(fd, addr, addrLen, deadlineUs)) {
         ::close(fd);
-        return -r;
+        return r;
     }
 
-    return fd;
+    *out = fd;
+
+    return 0;
 }
 
-int TcpSocket::connectTout(CoroExecutor* exec, const sockaddr* addr, u32 addrLen, u64 timeoutUs) {
-    return connect(exec, addr, addrLen, monotonicNowUs() + timeoutUs);
+int TcpSocket::connectTout(int* out, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, u64 timeoutUs) {
+    return connect(out, exec, addr, addrLen, monotonicNowUs() + timeoutUs);
 }
 
-int TcpSocket::connectInf(CoroExecutor* exec, const sockaddr* addr, u32 addrLen) {
-    return connect(exec, addr, addrLen, UINT64_MAX);
+int TcpSocket::connectInf(int* out, CoroExecutor* exec, const sockaddr* addr, u32 addrLen) {
+    return connect(out, exec, addr, addrLen, UINT64_MAX);
 }
 
 int TcpSocket::accept(ScopedFD& out, sockaddr* addr, u32* addrLen, u64 deadlineUs) {
     int newFd;
 
-    if (int r = io->accept(fd, addr, addrLen, &newFd, deadlineUs); r) {
-        return -r;
+    if (int r = io->accept(fd, &newFd, addr, addrLen, deadlineUs)) {
+        return r;
     }
 
     setSockFlags(newFd);
@@ -162,11 +165,7 @@ int TcpSocket::acceptInf(ScopedFD& out, sockaddr* addr, u32* addrLen) {
 }
 
 int TcpSocket::read(size_t* nRead, void* buf, size_t len, u64 deadlineUs) {
-    if (int r = io->recv(fd, buf, len, nRead, deadlineUs); r) {
-        return -r;
-    }
-
-    return 0;
+    return io->recv(fd, nRead, buf, len, deadlineUs);
 }
 
 int TcpSocket::readTout(size_t* nRead, void* buf, size_t len, u64 timeoutUs) {
@@ -178,11 +177,7 @@ int TcpSocket::readInf(size_t* nRead, void* buf, size_t len) {
 }
 
 int TcpSocket::write(size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
-    if (int r = io->send(fd, buf, len, nWritten, deadlineUs); r) {
-        return -r;
-    }
-
-    return 0;
+    return io->send(fd, nWritten, buf, len, deadlineUs);
 }
 
 int TcpSocket::writeTout(size_t* nWritten, const void* buf, size_t len, u64 timeoutUs) {
@@ -194,11 +189,7 @@ int TcpSocket::writeInf(size_t* nWritten, const void* buf, size_t len) {
 }
 
 int TcpSocket::writev(size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs) {
-    if (int r = io->writev(fd, iov, iovcnt, nWritten, deadlineUs); r) {
-        return -r;
-    }
-
-    return 0;
+    return io->writev(fd, nWritten, iov, iovcnt, deadlineUs);
 }
 
 int TcpSocket::writevInf(size_t* nWritten, iovec* iov, size_t iovcnt) {

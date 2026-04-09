@@ -19,10 +19,10 @@ CoroFDInput::~CoroFDInput() noexcept {
 }
 
 size_t CoroFDInput::readImpl(void* data, size_t len) {
-    auto n = exec->pread(fd->get(), data, len, offset);
+    size_t n = 0;
 
-    if (n < 0) {
-        Errno((int)-n).raise(StringBuilder() << StringView(u8"pread() failed"));
+    if (int r = exec->pread(fd->get(), &n, data, len, offset)) {
+        Errno(r).raise(StringBuilder() << StringView(u8"pread() failed"));
     }
 
     offset += n;

@@ -30,8 +30,8 @@ STD_TEST_SUITE(TcpSocket) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
-        int sfd = TcpSocket::socket(AF_INET, SOCK_STREAM, 0);
-        STD_INSIST(sfd >= 0);
+        int sfd;
+        STD_INSIST(TcpSocket::socket(&sfd, AF_INET, SOCK_STREAM, 0) == 0);
 
         auto srv = TcpSocket::create(pool.mutPtr(), sfd, exec);
         srv->setReuseAddr(true);
@@ -59,8 +59,8 @@ STD_TEST_SUITE(TcpSocket) {
 
         exec->spawn([&] {
             auto caddr = makeAddr(17654);
-            int cfd = TcpSocket::connectInf(exec, (sockaddr*)&caddr, sizeof(caddr));
-            STD_INSIST(cfd >= 0);
+            int cfd;
+            STD_INSIST(TcpSocket::connectInf(&cfd, exec, (sockaddr*)&caddr, sizeof(caddr)) == 0);
 
             TcpSocket cli(cfd, exec);
 
@@ -88,8 +88,8 @@ STD_TEST_SUITE(TcpSocket) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
-        int sfd = TcpSocket::socket(AF_INET, SOCK_STREAM, 0);
-        STD_INSIST(sfd >= 0);
+        int sfd;
+        STD_INSIST(TcpSocket::socket(&sfd, AF_INET, SOCK_STREAM, 0) == 0);
 
         auto srv = TcpSocket::create(pool.mutPtr(), sfd, exec);
         srv->setReuseAddr(true);

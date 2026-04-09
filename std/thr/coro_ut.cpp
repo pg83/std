@@ -770,9 +770,10 @@ STD_TEST_SUITE(CoroExecutorFS) {
             ::write(fd, data, sizeof(data));
 
             char buf[32] = {};
-            ssize_t n = exec->pread(fd, buf, sizeof(buf), 0);
+            size_t n = 0;
+            STD_INSIST(exec->pread(fd, &n, buf, sizeof(buf), 0) == 0);
 
-            STD_INSIST(n == (ssize_t)sizeof(data));
+            STD_INSIST(n == sizeof(data));
             STD_INSIST(memcmp(buf, data, sizeof(data)) == 0);
 
             ::close(fd);
@@ -789,9 +790,10 @@ STD_TEST_SUITE(CoroExecutorFS) {
             int fd = makeTmpFd();
 
             const char data[] = "hello pwrite";
-            ssize_t n = exec->pwrite(fd, data, sizeof(data), 0);
+            size_t n = 0;
+            STD_INSIST(exec->pwrite(fd, &n, data, sizeof(data), 0) == 0);
 
-            STD_INSIST(n == (ssize_t)sizeof(data));
+            STD_INSIST(n == sizeof(data));
 
             char buf[32] = {};
             ::pread(fd, buf, sizeof(buf), 0);
@@ -811,12 +813,14 @@ STD_TEST_SUITE(CoroExecutorFS) {
             int fd = makeTmpFd();
 
             const char msg[] = "roundtrip";
-            ssize_t w = exec->pwrite(fd, msg, sizeof(msg), 0);
-            STD_INSIST(w == (ssize_t)sizeof(msg));
+            size_t w = 0;
+            STD_INSIST(exec->pwrite(fd, &w, msg, sizeof(msg), 0) == 0);
+            STD_INSIST(w == sizeof(msg));
 
             char buf[32] = {};
-            ssize_t r = exec->pread(fd, buf, sizeof(buf), 0);
-            STD_INSIST(r == (ssize_t)sizeof(msg));
+            size_t r = 0;
+            STD_INSIST(exec->pread(fd, &r, buf, sizeof(buf), 0) == 0);
+            STD_INSIST(r == sizeof(msg));
             STD_INSIST(memcmp(buf, msg, sizeof(msg)) == 0);
 
             ::close(fd);
@@ -836,7 +840,8 @@ STD_TEST_SUITE(CoroExecutorFS) {
             ::write(fd, data, sizeof(data));
 
             char buf[4] = {};
-            ssize_t n = exec->pread(fd, buf, 4, 3);
+            size_t n = 0;
+            STD_INSIST(exec->pread(fd, &n, buf, 4, 3) == 0);
 
             STD_INSIST(n == 4);
             STD_INSIST(memcmp(buf, "3456", 4) == 0);
@@ -861,8 +866,9 @@ STD_TEST_SUITE(CoroExecutorFS) {
             for (int i = 0; i < 8; ++i) {
                 exec->spawn([&] {
                     char buf[16] = {};
-                    ssize_t n = exec->pread(fd, buf, sizeof(buf), 0);
-                    STD_INSIST(n == (ssize_t)sizeof(data));
+                    size_t n = 0;
+                    STD_INSIST(exec->pread(fd, &n, buf, sizeof(buf), 0) == 0);
+                    STD_INSIST(n == sizeof(data));
                     STD_INSIST(memcmp(buf, data, sizeof(data)) == 0);
                     sem.post();
                 });

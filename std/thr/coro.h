@@ -63,8 +63,8 @@ namespace stl {
 
         virtual int fsync(int fd) = 0;
         virtual int fdatasync(int fd) = 0;
-        virtual ssize_t pread(int fd, void* buf, size_t len, off_t offset) = 0;
-        virtual ssize_t pwrite(int fd, const void* buf, size_t len, off_t offset) = 0;
+        virtual int pread(int fd, size_t* nRead, void* buf, size_t len, off_t offset) = 0;
+        virtual int pwrite(int fd, size_t* nWritten, const void* buf, size_t len, off_t offset) = 0;
 
         virtual void createEvent(void* buf) = 0;
         virtual ThreadIface* createThread() = 0;
