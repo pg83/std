@@ -43,6 +43,8 @@ namespace {
             return reactors_[splitMix64(fd) % reactors_.length()];
         }
 
+        PollGroup* createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) override;
+
         int recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) override;
         int send(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) override;
         int writev(int fd, size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs) override;
@@ -244,6 +246,10 @@ u32 PollIoReactor::poll(PollFD pfd, u64 deadlineUs) {
 
 void PollIoReactor::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
     reactor(g->fd())->poll(g, visitor, deadlineUs);
+}
+
+PollGroup* PollIoReactor::createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) {
+    return PollGroup::create(pool, fds, count);
 }
 
 IoReactor* stl::createPollIoReactor(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, size_t reactors, size_t offloadThreads) {

@@ -6,7 +6,6 @@
 #include "channel.h"
 #include "semaphore.h"
 #include "coro_config.h"
-#include "reactor_poll.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/fd.h>
@@ -213,7 +212,7 @@ STD_TEST_SUITE(IoReactorPoll) {
         exec->spawn([&] {
             auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
-            auto g = PollGroup::create(opool.mutPtr(), in, 2);
+            auto g = exec->io()->createPollGroup(opool.mutPtr(), in, 2);
 
             // clang-format off
             exec->io()->poll(g, makeVisitor([&](void* ptr) {
@@ -242,7 +241,7 @@ STD_TEST_SUITE(IoReactorPoll) {
         exec->spawn([&] {
             auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
-            auto g = PollGroup::create(opool.mutPtr(), in, 2);
+            auto g = exec->io()->createPollGroup(opool.mutPtr(), in, 2);
 
             // clang-format off
             exec->io()->poll(g, makeVisitor([&](void* ptr) {
@@ -270,7 +269,7 @@ STD_TEST_SUITE(IoReactorPoll) {
         auto f = async(exec, [&] {
             auto opool = ObjPool::fromMemory();
             PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
-            auto g = PollGroup::create(opool.mutPtr(), in, 2);
+            auto g = exec->io()->createPollGroup(opool.mutPtr(), in, 2);
             size_t n = 0;
 
             // clang-format off
@@ -305,7 +304,7 @@ STD_TEST_SUITE(IoReactorPoll) {
                 in[i] = {readEnds[i].get(), PollFlag::In};
             }
 
-            auto g = PollGroup::create(opool.mutPtr(), in, N);
+            auto g = exec->io()->createPollGroup(opool.mutPtr(), in, N);
 
             // clang-format off
             exec->io()->poll(g, makeVisitor([&](void* ptr) {

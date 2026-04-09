@@ -246,7 +246,7 @@ void DnsResolverImpl::rebuildFds() {
     fds_.pushBack({parker_.fd(), PollFlag::In});
 
     pollPool_ = ObjPool::fromMemory();
-    pollGroup_ = PollGroup::create(pollPool_.mutPtr(), fds_.data(), fds_.length());
+    pollGroup_ = exec_->io()->createPollGroup(pollPool_.mutPtr(), fds_.data(), fds_.length());
 }
 
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
