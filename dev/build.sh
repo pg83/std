@@ -2,4 +2,4 @@
 
 set -xue
 
-(make -j 48 EXTRA=-DENABLE_ASSERT=1 || make EXTRA=-DENABLE_ASSERT=1) > /dev/null
+(make -j 48 LDFLAGS="-fuse-ld=lld ${LDFLAGS}" EXTRA=-DENABLE_ASSERT=1 || make LDFLAGS="-fuse-ld=lld ${LDFLAGS}" EXTRA=-DENABLE_ASSERT=1) > /dev/null
