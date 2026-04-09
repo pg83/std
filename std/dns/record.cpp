@@ -1,9 +1,9 @@
 #include "record.h"
 
 #include <std/sys/crt.h>
-#include <std/ios/outable.h>
-#include <std/ios/out_zc.h>
 #include <std/str/view.h>
+#include <std/ios/out_zc.h>
+#include <std/ios/outable.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
