@@ -1,5 +1,6 @@
 #include "record.h"
 
+#include <std/sys/crt.h>
 #include <std/ios/outable.h>
 #include <std/ios/out_zc.h>
 #include <std/str/view.h>
@@ -10,6 +11,20 @@
 using namespace stl;
 
 template <>
+void stl::output<ZeroCopyOutput, DnsRecord>(ZeroCopyOutput& out, DnsRecord rec) {
+    size_t avail = 64;
+    auto buf = (char*)out.imbue(&avail);
+
+    if (rec.family == AF_INET) {
+        inet_ntop(AF_INET, &((const sockaddr_in*)rec.addr)->sin_addr, buf, avail);
+    } else {
+        inet_ntop(AF_INET6, &((const sockaddr_in6*)rec.addr)->sin6_addr, buf, avail);
+    }
+
+    out.commit(strLen((const u8*)buf));
+}
+
+template <>
 void stl::output<ZeroCopyOutput, DnsRecord*>(ZeroCopyOutput& out, DnsRecord* rec) {
     if (!rec) {
         out << StringView(u8"(null)");
@@ -17,15 +32,7 @@ void stl::output<ZeroCopyOutput, DnsRecord*>(ZeroCopyOutput& out, DnsRecord* rec
         return;
     }
 
-    char buf[64];
-
-    if (rec->family == AF_INET) {
-        inet_ntop(AF_INET, &((const sockaddr_in*)rec->addr)->sin_addr, buf, sizeof(buf));
-    } else {
-        inet_ntop(AF_INET6, &((const sockaddr_in6*)rec->addr)->sin6_addr, buf, sizeof(buf));
-    }
-
-    out << StringView(buf);
+    out << *rec;
 
     if (rec->next) {
         out << StringView(u8", ") << rec->next;

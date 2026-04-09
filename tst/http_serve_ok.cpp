@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
 
         u32 addrLen = (rec->family == AF_INET) ? (u32)sizeof(sockaddr_in) : (u32)sizeof(sockaddr_in6);
 
-        sysE << StringView(u8"serving on ") << rec << StringView(u8":") << (u64)port << endL;
+        sysE << StringView(u8"serving on ") << *rec << StringView(u8":") << (u64)port << endL;
 
         serve(
             pool.mutPtr(),
