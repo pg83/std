@@ -6,13 +6,9 @@ struct iovec;
 struct sockaddr;
 
 namespace stl {
-    class ObjPool;
-
     struct PollFD;
     struct PollGroup;
-    struct ThreadPool;
     struct VisitorFace;
-    struct CoroExecutor;
 
     struct IoReactor {
         virtual int recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) = 0;
@@ -30,7 +26,5 @@ namespace stl {
         virtual void poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) = 0;
 
         void poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs);
-
-        static IoReactor* createPoll(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, ThreadPool* offload);
     };
 }

@@ -11,8 +11,7 @@
 #include "event_iface.h"
 #include "coro_config.h"
 #include "thread_iface.h"
-#include "io_reactor.h"
-#include "reactor_poll.h"
+#include "io_classic.h"
 #include "cond_var_iface.h"
 #include "semaphore_iface.h"
 
@@ -172,7 +171,7 @@ CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, const CoroConfig& cfg)
     offload_ = ThreadPool::simple(pool, cfg.offloadThreads);
 
     for (size_t i = 0; i < cfg.reactors; ++i) {
-        ioReactors_.pushBack(IoReactor::createPoll(pool, this, pool_, offload_));
+        ioReactors_.pushBack(createPollIoReactor(pool, this, pool_, offload_));
     }
 }
 
