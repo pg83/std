@@ -196,17 +196,17 @@ int main(int argc, char** argv) {
                 wg.done();
             };
 
-            TcpSocket sock(exec);
-
             u32 addrLen = (rec->family == AF_INET) ? (u32)sizeof(sockaddr_in) : (u32)sizeof(sockaddr_in6);
 
-            STD_INSIST(sock.socket(rec->family, SOCK_STREAM, 0) == 0);
+            int cfd = TcpSocket::connectInf(exec, rec->addr, addrLen);
+
+            STD_INSIST(cfd >= 0);
+
+            TcpSocket sock(cfd, exec);
 
             STD_DEFER {
                 sock.close();
             };
-
-            STD_INSIST(sock.connectInf(rec->addr, addrLen) == 0);
 
             TcpStream stream(sock);
             InBuf in(stream);

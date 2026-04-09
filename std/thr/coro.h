@@ -11,6 +11,7 @@ namespace stl {
     struct Task;
     struct PollFD;
     struct PollGroup;
+    struct IoReactor;
     struct DnsResult;
     struct ThreadPool;
     struct EventIface;
@@ -57,6 +58,8 @@ namespace stl {
         virtual void poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs) = 0;
 
         virtual DnsResult* resolve(ObjPool* pool, const StringView& name) = 0;
+
+        virtual IoReactor* io(int fd) noexcept = 0;
 
         virtual int fsync(int fd) = 0;
         virtual int fdatasync(int fd) = 0;

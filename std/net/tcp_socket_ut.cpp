@@ -4,6 +4,7 @@
 #include <std/tst/ut.h>
 #include <std/thr/coro.h>
 #include <std/thr/async.h>
+#include <std/alg/defer.h>
 #include <std/dbg/insist.h>
 #include <std/mem/obj_pool.h>
 #include <std/thr/coro_config.h>
@@ -29,8 +30,10 @@ STD_TEST_SUITE(TcpSocket) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
-        auto srv = TcpSocket::create(pool.mutPtr(), exec);
-        STD_INSIST(srv->socket(AF_INET, SOCK_STREAM, 0) == 0);
+        int sfd = TcpSocket::socket(AF_INET, SOCK_STREAM, 0);
+        STD_INSIST(sfd >= 0);
+
+        auto srv = TcpSocket::create(pool.mutPtr(), sfd, exec);
         srv->setReuseAddr(true);
 
         auto addr = makeAddr(17654);
@@ -55,19 +58,24 @@ STD_TEST_SUITE(TcpSocket) {
         });
 
         exec->spawn([&] {
-            auto cpool = ObjPool::fromMemory();
-            auto cli = TcpSocket::create(cpool.mutPtr(), exec);
             auto caddr = makeAddr(17654);
-            STD_INSIST(cli->connectInf((sockaddr*)&caddr, sizeof(caddr)) == 0);
+            int cfd = TcpSocket::connectInf(exec, (sockaddr*)&caddr, sizeof(caddr));
+            STD_INSIST(cfd >= 0);
+
+            TcpSocket cli(cfd, exec);
+
+            STD_DEFER {
+                cli.close();
+            };
 
             const char* msg = "hello";
             size_t msgLen = strlen(msg);
             size_t w = 0;
-            STD_INSIST(cli->writeInf(&w, msg, msgLen) == 0);
+            STD_INSIST(cli.writeInf(&w, msg, msgLen) == 0);
             STD_INSIST(w == msgLen);
 
             size_t n = 0;
-            STD_INSIST(cli->readInf(&n, recvBuf, sizeof(recvBuf)) == 0);
+            STD_INSIST(cli.readInf(&n, recvBuf, sizeof(recvBuf)) == 0);
             STD_INSIST(n == msgLen);
         });
 
@@ -80,8 +88,10 @@ STD_TEST_SUITE(TcpSocket) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
-        auto srv = TcpSocket::create(pool.mutPtr(), exec);
-        STD_INSIST(srv->socket(AF_INET, SOCK_STREAM, 0) == 0);
+        int sfd = TcpSocket::socket(AF_INET, SOCK_STREAM, 0);
+        STD_INSIST(sfd >= 0);
+
+        auto srv = TcpSocket::create(pool.mutPtr(), sfd, exec);
         srv->setReuseAddr(true);
 
         auto addr = makeAddr(17655);

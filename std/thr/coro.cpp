@@ -11,6 +11,7 @@
 #include "event_iface.h"
 #include "coro_config.h"
 #include "thread_iface.h"
+#include "io_reactor.h"
 #include "reactor_poll.h"
 #include "cond_var_iface.h"
 #include "semaphore_iface.h"
@@ -119,7 +120,7 @@ namespace {
         alignas(64) int inflight_ = 0;
         JoinPipe* join_;
         const u64 tlsKey_;
-        Vector<ReactorIface*> reactors_;
+        Vector<IoReactor*> ioReactors_;
         Vector<DnsResolver*> dnsResolvers_;
         Semaphore* dnsSem_ = nullptr;
         ThreadPool* offload_;
@@ -160,6 +161,10 @@ namespace {
 
         DnsResult* resolve(ObjPool* pool, const StringView& name) override;
 
+        IoReactor* io(int fd) noexcept override {
+            return ioReactors_[splitMix64(fd) % ioReactors_.length()];
+        }
+
         int fsync(int fd) override;
         int fdatasync(int fd) override;
         ssize_t pread(int fd, void* buf, size_t len, off_t offset) override;
@@ -178,11 +183,11 @@ CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, const CoroConfig& cfg)
     , tlsKey_(ThreadPool::registerTlsKey())
     , pool_(ThreadPool::workStealing(pool, cfg.threads))
 {
-    for (size_t i = 0; i < cfg.reactors; ++i) {
-        reactors_.pushBack(ReactorIface::create(this, pool_, pool));
-    }
-
     offload_ = ThreadPool::simple(pool, cfg.offloadThreads);
+
+    for (size_t i = 0; i < cfg.reactors; ++i) {
+        ioReactors_.pushBack(IoReactor::createPoll(pool, this, pool_, offload_));
+    }
     dnsSem_ = pool->make<Semaphore>(cfg.maxDnsQueries, this);
 
     DnsConfig dnsCfg;
@@ -301,11 +306,11 @@ DnsResult* CoroExecutorImpl::resolve(ObjPool* pool, const StringView& name) {
 }
 
 u32 CoroExecutorImpl::poll(PollFD pfd, u64 deadlineUs) {
-    return reactors_[splitMix64(pfd.fd) % reactors_.length()]->poll(pfd, deadlineUs);
+    return io(pfd.fd)->poll(pfd, deadlineUs);
 }
 
 void CoroExecutorImpl::poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs) {
-    reactors_[splitMix64(g->fd()) % reactors_.length()]->poll(g, visitor, deadlineUs);
+    io(g->fd())->poll(g, visitor, deadlineUs);
 }
 
 void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {
@@ -320,57 +325,19 @@ void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {
 }
 
 ssize_t CoroExecutorImpl::pread(int fd, void* buf, size_t len, off_t offset) {
-    ssize_t result = 0;
-
-    // clang-format off
-    offload(offload_, [&] {
-        ssize_t n = ::pread(fd, buf, len, offset);
-        result = n < 0 ? -errno : n;
-    });
-    // clang-format on
-
-    return result;
+    return io(fd)->pread(fd, buf, len, offset);
 }
 
 ssize_t CoroExecutorImpl::pwrite(int fd, const void* buf, size_t len, off_t offset) {
-    ssize_t result = 0;
-
-    // clang-format off
-    offload(offload_, [&] {
-        ssize_t n = ::pwrite(fd, buf, len, offset);
-        result = n < 0 ? -errno : n;
-    });
-    // clang-format on
-
-    return result;
+    return io(fd)->pwrite(fd, buf, len, offset);
 }
 
 int CoroExecutorImpl::fsync(int fd) {
-    int result = 0;
-
-    // clang-format off
-    offload(offload_, [&] {
-        result = ::fsync(fd) < 0 ? -errno : 0;
-    });
-    // clang-format on
-
-    return result;
+    return io(fd)->fsync(fd);
 }
 
 int CoroExecutorImpl::fdatasync(int fd) {
-    int result = 0;
-
-    // clang-format off
-    offload(offload_, [&] {
-#if defined(__APPLE__)
-        result = ::fcntl(fd, F_FULLFSYNC) < 0 ? -errno : 0;
-#else
-        result = ::fdatasync(fd) < 0 ? -errno : 0;
-#endif
-    });
-    // clang-format on
-
-    return result;
+    return io(fd)->fdatasync(fd);
 }
 
 u64 Cont::id() const noexcept {

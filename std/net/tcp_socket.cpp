@@ -4,6 +4,7 @@
 #include <std/sys/crt.h>
 #include <std/thr/coro.h>
 #include <std/thr/poll_fd.h>
+#include <std/thr/io_reactor.h>
 #include <std/mem/obj_pool.h>
 
 #include <fcntl.h>
@@ -49,30 +50,26 @@ namespace {
 
 TcpSocket::TcpSocket() noexcept
     : fd(-1)
-    , exec(nullptr)
-{
-}
-
-TcpSocket::TcpSocket(CoroExecutor* exec) noexcept
-    : fd(-1)
-    , exec(exec)
+    , io(nullptr)
 {
 }
 
 TcpSocket::TcpSocket(int fd, CoroExecutor* exec) noexcept
     : fd(fd)
-    , exec(exec)
+    , io(fd >= 0 ? exec->io(fd) : nullptr)
 {
 }
 
 int TcpSocket::socket(int domain, int type, int protocol) {
-    if (fd = ::socket(domain, type | SOCK_NONBLOCK | SOCK_CLOEXEC, protocol); fd < 0) {
+    int fd = ::socket(domain, type | SOCK_NONBLOCK | SOCK_CLOEXEC, protocol);
+
+    if (fd < 0) {
         return -errno;
     }
 
     setSockFlags(fd);
 
-    return 0;
+    return fd;
 }
 
 void TcpSocket::close() {
@@ -122,61 +119,39 @@ int TcpSocket::listen(int backlog) {
     return 0;
 }
 
-int TcpSocket::connect(const sockaddr* addr, u32 addrLen, u64 deadlineUs) {
-    if (int r = socket(addr->sa_family, SOCK_STREAM, 0); r < 0) {
+int TcpSocket::connect(CoroExecutor* exec, const sockaddr* addr, u32 addrLen, u64 deadlineUs) {
+    int fd = ::socket(addr->sa_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+
+    if (fd < 0) {
+        return -errno;
+    }
+
+    setSockFlags(fd);
+
+    if (int r = exec->io(fd)->connect(fd, addr, addrLen, deadlineUs); r < 0) {
+        ::close(fd);
         return r;
     }
 
-    if (int r = ::connect(fd, addr, addrLen); r == 0) {
-        return 0;
-    } else if (errno != EINPROGRESS) {
-        return -errno;
-    }
-
-    exec->poll(fd, PollFlag::Out, deadlineUs);
-
-    int err = 0;
-    socklen_t len = sizeof(err);
-
-    if (int r = ::getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len); r < 0) {
-        return -errno;
-    }
-
-    if (err) {
-        return -err;
-    }
-
-    return 0;
+    return fd;
 }
 
-int TcpSocket::connectTout(const sockaddr* addr, u32 addrLen, u64 timeoutUs) {
-    return connect(addr, addrLen, monotonicNowUs() + timeoutUs);
+int TcpSocket::connectTout(CoroExecutor* exec, const sockaddr* addr, u32 addrLen, u64 timeoutUs) {
+    return connect(exec, addr, addrLen, monotonicNowUs() + timeoutUs);
 }
 
-int TcpSocket::connectInf(const sockaddr* addr, u32 addrLen) {
-    return connect(addr, addrLen, UINT64_MAX);
+int TcpSocket::connectInf(CoroExecutor* exec, const sockaddr* addr, u32 addrLen) {
+    return connect(exec, addr, addrLen, UINT64_MAX);
 }
 
 int TcpSocket::accept(ScopedFD& out, sockaddr* addr, u32* addrLen, u64 deadlineUs) {
-    exec->poll(fd, PollFlag::In, deadlineUs);
-
-    socklen_t slen = addrLen ? (socklen_t)*addrLen : 0;
-
-#ifdef __linux__
-    int newFd = ::accept4(fd, addr, addrLen ? &slen : nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
-#else
-    int newFd = ::accept(fd, addr, addrLen ? &slen : nullptr);
-#endif
+    int newFd = io->accept(fd, addr, addrLen, deadlineUs);
 
     if (newFd < 0) {
-        return -errno;
+        return newFd;
     }
 
     setSockFlags(newFd);
-
-    if (addrLen) {
-        *addrLen = (u32)slen;
-    }
 
     ScopedFD tmp(newFd);
     out.xchg(tmp);
@@ -193,19 +168,15 @@ int TcpSocket::acceptInf(ScopedFD& out, sockaddr* addr, u32* addrLen) {
 }
 
 int TcpSocket::read(size_t* nRead, void* buf, size_t len, u64 deadlineUs) {
-    for (;;) {
-        if (ssize_t n = ::read(fd, buf, len); n > 0) {
-            *nRead = (size_t)n;
-            return 0;
-        } else if (n == 0) {
-            *nRead = 0;
-            return 0;
-        } else if (errno != EAGAIN) {
-            return -errno;
-        }
+    ssize_t n = io->recv(fd, buf, len, deadlineUs);
 
-        exec->poll(fd, PollFlag::In, deadlineUs);
+    if (n < 0) {
+        return (int)n;
     }
+
+    *nRead = (size_t)n;
+
+    return 0;
 }
 
 int TcpSocket::readTout(size_t* nRead, void* buf, size_t len, u64 timeoutUs) {
@@ -217,16 +188,15 @@ int TcpSocket::readInf(size_t* nRead, void* buf, size_t len) {
 }
 
 int TcpSocket::write(size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
-    for (;;) {
-        if (ssize_t n = ::send(fd, buf, len, MSG_NOSIGNAL); n > 0) {
-            *nWritten = (size_t)n;
-            return 0;
-        } else if (errno != EAGAIN) {
-            return -errno;
-        }
+    ssize_t n = io->send(fd, buf, len, deadlineUs);
 
-        exec->poll(fd, PollFlag::Out, deadlineUs);
+    if (n < 0) {
+        return (int)n;
     }
+
+    *nWritten = (size_t)n;
+
+    return 0;
 }
 
 int TcpSocket::writeTout(size_t* nWritten, const void* buf, size_t len, u64 timeoutUs) {
@@ -246,7 +216,7 @@ int TcpSocket::writev(size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineU
             return -errno;
         }
 
-        exec->poll(fd, PollFlag::Out, deadlineUs);
+        io->poll({fd, PollFlag::Out}, deadlineUs);
     }
 }
 
@@ -255,13 +225,9 @@ int TcpSocket::writevInf(size_t* nWritten, iovec* iov, size_t iovcnt) {
 }
 
 bool TcpSocket::peek(u8& out) {
-    exec->poll(fd, PollFlag::In);
+    io->poll({fd, PollFlag::In}, UINT64_MAX);
 
     return ::recv(fd, &out, 1, MSG_PEEK) == 1;
-}
-
-TcpSocket* TcpSocket::create(ObjPool* pool, CoroExecutor* exec) {
-    return create(pool, -1, exec);
 }
 
 TcpSocket* TcpSocket::create(ObjPool* pool, int fd, CoroExecutor* exec) {

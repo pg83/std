@@ -9,14 +9,14 @@ namespace stl {
     class ObjPool;
 
     struct ScopedFD;
+    struct IoReactor;
     struct CoroExecutor;
 
     struct TcpSocket {
         int fd;
-        CoroExecutor* exec;
+        IoReactor* io;
 
         TcpSocket() noexcept;
-        TcpSocket(CoroExecutor* exec) noexcept;
         TcpSocket(int fd, CoroExecutor* exec) noexcept;
 
         void close();
@@ -24,14 +24,15 @@ namespace stl {
 
         int listen(int backlog);
         int bind(const sockaddr* addr, u32 addrLen);
-        int socket(int domain, int type, int protocol);
+
+        static int socket(int domain, int type, int protocol);
 
         int setReuseAddr(bool on);
         int setNoDelay(bool on);
 
-        int connectInf(const sockaddr* addr, u32 addrLen);
-        int connect(const sockaddr* addr, u32 addrLen, u64 deadlineUs);
-        int connectTout(const sockaddr* addr, u32 addrLen, u64 timeoutUs);
+        static int connectInf(CoroExecutor* exec, const sockaddr* addr, u32 addrLen);
+        static int connect(CoroExecutor* exec, const sockaddr* addr, u32 addrLen, u64 deadlineUs);
+        static int connectTout(CoroExecutor* exec, const sockaddr* addr, u32 addrLen, u64 timeoutUs);
 
         int acceptInf(ScopedFD& out, sockaddr* addr, u32* addrLen);
         int accept(ScopedFD& out, sockaddr* addr, u32* addrLen, u64 deadlineUs);
@@ -50,7 +51,6 @@ namespace stl {
 
         bool peek(u8& out);
 
-        static TcpSocket* create(ObjPool* pool, CoroExecutor* exec);
         static TcpSocket* create(ObjPool* pool, int fd, CoroExecutor* exec);
     };
 }

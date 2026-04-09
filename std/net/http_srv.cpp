@@ -292,19 +292,20 @@ void HttpServerCtlImpl::stop() {
     stdAtomicStore(&stopped, true, stl::MemoryOrder::Release);
 
     opts_->exec->spawn([this] {
-        TcpSocket sock(opts_->exec);
+        int cfd = TcpSocket::connectInf(opts_->exec, opts_->addr, opts_->addrLen);
 
-        if (sock.socket(opts_->addr->sa_family, SOCK_STREAM, 0) == 0) {
-            sock.connectInf(opts_->addr, opts_->addrLen);
-            sock.close();
+        if (cfd >= 0) {
+            ::close(cfd);
         }
     });
 }
 
 TcpSocket* HttpServerCtlImpl::listen(ObjPool* pool) {
-    auto srv = TcpSocket::create(pool, opts_->exec);
+    int sfd = TcpSocket::socket(opts_->addr->sa_family, SOCK_STREAM, 0);
 
-    STD_VERIFY(srv->socket(opts_->addr->sa_family, SOCK_STREAM, 0) == 0);
+    STD_VERIFY(sfd >= 0);
+
+    auto srv = TcpSocket::create(pool, sfd, opts_->exec);
 
     srv->setReuseAddr(true);
 

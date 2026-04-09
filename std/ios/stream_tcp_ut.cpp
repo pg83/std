@@ -31,8 +31,10 @@ STD_TEST_SUITE(TcpStream) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
-        TcpSocket srv(exec);
-        STD_INSIST(srv.socket(AF_INET, SOCK_STREAM, 0) == 0);
+        int sfd = TcpSocket::socket(AF_INET, SOCK_STREAM, 0);
+        STD_INSIST(sfd >= 0);
+
+        TcpSocket srv(sfd, exec);
         STD_DEFER {
             srv.close();
         };
@@ -60,9 +62,11 @@ STD_TEST_SUITE(TcpStream) {
         });
 
         exec->spawn([&] {
-            TcpSocket cli(exec);
             auto caddr = makeAddr(17660);
-            STD_INSIST(cli.connectInf((sockaddr*)&caddr, sizeof(caddr)) == 0);
+            int cfd = TcpSocket::connectInf(exec, (sockaddr*)&caddr, sizeof(caddr));
+            STD_INSIST(cfd >= 0);
+
+            TcpSocket cli(cfd, exec);
             STD_DEFER {
                 cli.close();
             };

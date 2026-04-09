@@ -68,9 +68,10 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
                                         });
 
         exec->spawn([&] {
-            TcpSocket cli(exec);
             auto caddr = makeAddr(17670);
-            STD_INSIST(cli.connectInf((const sockaddr*)&caddr, sizeof(caddr)) == 0);
+            int cfd = TcpSocket::connectInf(exec, (const sockaddr*)&caddr, sizeof(caddr));
+            STD_INSIST(cfd >= 0);
+            TcpSocket cli(cfd, exec);
             STD_DEFER {
                 cli.close();
             };
@@ -123,9 +124,10 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
                                         });
 
         exec->spawn([&] {
-            TcpSocket cli(exec);
             auto caddr = makeAddr(17671);
-            STD_INSIST(cli.connectInf((const sockaddr*)&caddr, sizeof(caddr)) == 0);
+            int cfd = TcpSocket::connectInf(exec, (const sockaddr*)&caddr, sizeof(caddr));
+            STD_INSIST(cfd >= 0);
+            TcpSocket cli(cfd, exec);
             STD_DEFER {
                 cli.close();
             };
@@ -178,9 +180,10 @@ STD_TEST_SUITE(HttpServer) {
         Buffer respBody;
 
         exec->spawn([&] {
-            TcpSocket cli(exec);
             auto caddr = makeAddr(17661);
-            STD_INSIST(cli.connectInf((const sockaddr*)&caddr, sizeof(caddr)) == 0);
+            int cfd = TcpSocket::connectInf(exec, (const sockaddr*)&caddr, sizeof(caddr));
+            STD_INSIST(cfd >= 0);
+            TcpSocket cli(cfd, exec);
             STD_DEFER {
                 cli.close();
             };
@@ -240,9 +243,10 @@ STD_TEST_SUITE(HttpServer) {
         Buffer body2;
 
         exec->spawn([&] {
-            TcpSocket cli(exec);
             auto caddr = makeAddr(17663);
-            STD_INSIST(cli.connectInf((const sockaddr*)&caddr, sizeof(caddr)) == 0);
+            int cfd = TcpSocket::connectInf(exec, (const sockaddr*)&caddr, sizeof(caddr));
+            STD_INSIST(cfd >= 0);
+            TcpSocket cli(cfd, exec);
             STD_DEFER {
                 cli.close();
             };
@@ -319,9 +323,10 @@ STD_TEST_SUITE(HttpServer) {
         Buffer body2;
 
         exec->spawn([&] {
-            TcpSocket cli(exec);
             auto caddr = makeAddr(17662);
-            STD_INSIST(cli.connectInf((const sockaddr*)&caddr, sizeof(caddr)) == 0);
+            int cfd = TcpSocket::connectInf(exec, (const sockaddr*)&caddr, sizeof(caddr));
+            STD_INSIST(cfd >= 0);
+            TcpSocket cli(cfd, exec);
             STD_DEFER {
                 cli.close();
             };
