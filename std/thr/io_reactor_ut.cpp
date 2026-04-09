@@ -1,10 +1,9 @@
-#include "io_reactor.h"
 #include "coro.h"
-
 #include "async.h"
 #include "poll_fd.h"
 #include "channel.h"
 #include "semaphore.h"
+#include "io_reactor.h"
 #include "coro_config.h"
 
 #include <std/tst/ut.h>

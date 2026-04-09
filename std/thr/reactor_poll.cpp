@@ -1,5 +1,4 @@
 #include "reactor_poll.h"
-#include "io_reactor.h"
 
 #include "coro.h"
 #include "mutex.h"
@@ -8,6 +7,7 @@
 #include "parker.h"
 #include "poller.h"
 #include "poll_fd.h"
+#include "io_reactor.h"
 
 #include <std/mem/new.h>
 #include <std/sys/crt.h>

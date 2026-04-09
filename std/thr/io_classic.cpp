@@ -1,14 +1,13 @@
 #include "io_classic.h"
 
-#include "io_reactor.h"
-
 #include "coro.h"
 #include "pool.h"
 #include "poll_fd.h"
+#include "io_reactor.h"
 #include "reactor_poll.h"
 
-#include <std/mem/obj_pool.h>
 #include <std/lib/vector.h>
+#include <std/mem/obj_pool.h>
 #include <std/rng/split_mix_64.h>
 
 #include <errno.h>
