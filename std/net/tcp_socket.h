@@ -16,7 +16,6 @@ namespace stl {
         int fd;
         IoReactor* io;
 
-        TcpSocket() noexcept;
         TcpSocket(int fd, CoroExecutor* exec) noexcept;
 
         void close();

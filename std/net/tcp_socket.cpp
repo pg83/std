@@ -48,15 +48,9 @@ namespace {
     }
 }
 
-TcpSocket::TcpSocket() noexcept
-    : fd(-1)
-    , io(nullptr)
-{
-}
-
 TcpSocket::TcpSocket(int fd, CoroExecutor* exec) noexcept
     : fd(fd)
-    , io(fd >= 0 ? exec->io(fd) : nullptr)
+    , io(exec->io(fd))
 {
 }
 
