@@ -47,13 +47,12 @@ namespace stl {
         virtual u32 random() noexcept = 0;
         virtual Cont* me() const noexcept = 0;
         virtual Cont* spawnRun(SpawnParams params) = 0;
+        virtual void reSchedule(Task* task) noexcept = 0;
         virtual void parkWith(Runable&&, Task**) noexcept = 0;
+        virtual void reSchedule(IntrusiveList& tasks) noexcept = 0;
         virtual void offloadRun(ThreadPool* pool, Runable&& work) = 0;
 
         virtual IoReactor* io() noexcept = 0;
-
-        virtual void reSchedule(Task* task) noexcept = 0;
-        virtual void reSchedule(IntrusiveList& tasks) noexcept = 0;
 
         virtual void createEvent(void* buf) = 0;
         virtual ThreadIface* createThread() = 0;
