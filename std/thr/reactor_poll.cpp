@@ -1,7 +1,6 @@
 #include "reactor_poll.h"
 
 #include "coro.h"
-#include "pool.h"
 #include "mutex.h"
 #include "guard.h"
 #include "thread.h"
@@ -75,7 +74,6 @@ namespace {
 
     struct ReactorState: public ReactorIface, public Runable {
         CoroExecutor* exec_;
-        ThreadPool* pool;
         PollerIface* poller;
         DeadlineTreap timers;
         DeadlineTreap sleepers;
@@ -86,7 +84,7 @@ namespace {
         bool stopped_ = false;
         Thread* thread_ = nullptr;
 
-        ReactorState(CoroExecutor* exec, ThreadPool* p, ObjPool* opool);
+        ReactorState(CoroExecutor* exec, ObjPool* opool);
         ~ReactorState() noexcept;
 
         void drainQueue();
@@ -151,9 +149,8 @@ u32 FdEntry::flags() const noexcept {
     return f;
 }
 
-ReactorState::ReactorState(CoroExecutor* exec, ThreadPool* p, ObjPool* opool)
+ReactorState::ReactorState(CoroExecutor* exec, ObjPool* opool)
     : exec_(exec)
-    , pool(p)
     , poller(PollerIface::create(opool))
     , fdMap_(ObjPool::create(opool))
     , queueMutex_(Mutex::spinLock(exec))
@@ -265,7 +262,7 @@ void ReactorState::run() noexcept {
         }
 
         if (!ready.empty()) {
-            pool->submitTasks(ready);
+            exec_->reSchedule(ready);
         }
     }
 }
@@ -359,6 +356,6 @@ u32 ReactorState::poll(PollFD pfd, u64 deadlineUs) {
     return resultVal;
 }
 
-ReactorIface* ReactorIface::create(CoroExecutor* exec, ThreadPool* pool, ObjPool* opool) {
-    return opool->make<ReactorState>(exec, pool, opool);
+ReactorIface* ReactorIface::create(CoroExecutor* exec, ObjPool* opool) {
+    return opool->make<ReactorState>(exec, opool);
 }

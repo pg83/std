@@ -9,6 +9,7 @@ namespace stl {
 
     struct Task;
     struct IoReactor;
+    class IntrusiveList;
     struct ThreadPool;
     struct EventIface;
     struct CoroConfig;
@@ -50,6 +51,9 @@ namespace stl {
         virtual void offloadRun(ThreadPool* pool, Runable&& work) = 0;
 
         virtual IoReactor* io() noexcept = 0;
+
+        virtual void reSchedule(Task* task) noexcept = 0;
+        virtual void reSchedule(IntrusiveList& tasks) noexcept = 0;
 
         virtual void createEvent(void* buf) = 0;
         virtual ThreadIface* createThread() = 0;

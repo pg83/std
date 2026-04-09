@@ -37,7 +37,7 @@ namespace {
         CoroExecutor* exec_;
         ThreadPool* offload_;
 
-        PollIoReactor(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, size_t reactors, size_t offloadThreads);
+        PollIoReactor(ObjPool* pool, CoroExecutor* exec, size_t reactors);
 
         ReactorIface* reactor(int fd) noexcept {
             return reactors_[splitMix64(fd) % reactors_.length()];
@@ -61,12 +61,12 @@ namespace {
     };
 }
 
-PollIoReactor::PollIoReactor(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, size_t reactors, size_t offloadThreads)
+PollIoReactor::PollIoReactor(ObjPool* pool, CoroExecutor* exec, size_t reactors)
     : exec_(exec)
-    , offload_(ThreadPool::simple(pool, offloadThreads))
+    , offload_(ThreadPool::simple(pool, reactors))
 {
     for (size_t i = 0; i < reactors; ++i) {
-        reactors_.pushBack(ReactorIface::create(exec, mainPool, pool));
+        reactors_.pushBack(ReactorIface::create(exec, pool));
     }
 }
 
@@ -252,6 +252,6 @@ PollGroup* PollIoReactor::createPollGroup(ObjPool* pool, const PollFD* fds, size
     return PollGroup::create(pool, fds, count);
 }
 
-IoReactor* stl::createPollIoReactor(ObjPool* pool, CoroExecutor* exec, ThreadPool* mainPool, size_t reactors, size_t offloadThreads) {
-    return pool->make<PollIoReactor>(pool, exec, mainPool, reactors, offloadThreads);
+IoReactor* stl::createPollIoReactor(ObjPool* pool, CoroExecutor* exec, size_t reactors) {
+    return pool->make<PollIoReactor>(pool, exec, reactors);
 }

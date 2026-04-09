@@ -5,7 +5,6 @@ using namespace stl;
 CoroConfig::CoroConfig(size_t threads) noexcept
     : threads(threads)
     , reactors(threads)
-    , offloadThreads(threads)
 {
 }
 
@@ -17,12 +16,6 @@ CoroConfig& CoroConfig::setThreads(size_t v) noexcept {
 
 CoroConfig& CoroConfig::setReactors(size_t v) noexcept {
     reactors = v;
-
-    return *this;
-}
-
-CoroConfig& CoroConfig::setOffloadThreads(size_t v) noexcept {
-    offloadThreads = v;
 
     return *this;
 }

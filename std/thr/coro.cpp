@@ -154,6 +154,14 @@ namespace {
             return io_;
         }
 
+        void reSchedule(Task* task) noexcept override {
+            pool_->submitTask(task);
+        }
+
+        void reSchedule(IntrusiveList& tasks) noexcept override {
+            pool_->submitTasks(tasks);
+        }
+
         void parkWith(Runable&&, Task**) noexcept override;
         void offloadRun(ThreadPool* pool, Runable&& work) override;
     };
@@ -164,7 +172,7 @@ CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, const CoroConfig& cfg)
     , tlsKey_(ThreadPool::registerTlsKey())
     , pool_(ThreadPool::workStealing(pool, cfg.threads))
 {
-    io_ = createPollIoReactor(pool, this, pool_, cfg.reactors, cfg.offloadThreads);
+    io_ = createPollIoReactor(pool, this, cfg.reactors);
 }
 
 Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
@@ -214,7 +222,7 @@ ContImpl::~ContImpl() {
 
 void ContImpl::reSchedule() noexcept {
     STD_ASSERT(!workerCtx_);
-    exec_->pool_->submitTask(this);
+    exec_->reSchedule(this);
 }
 
 void ContImpl::parkWith(Runable* afterSuspend) noexcept {
