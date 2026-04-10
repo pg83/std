@@ -134,7 +134,7 @@ namespace {
     };
 
     struct ExternalRing: public Ring {
-        Mutex mutex_{true};
+        Mutex mutex_;
 
         ExternalRing();
 
@@ -234,7 +234,6 @@ void Ring::wakeUp(int targetFd) noexcept {
 ExternalRing::ExternalRing()
     : Ring(0)
 {
-    mutex_.unlock();
 }
 
 void ExternalRing::wakeUp(int targetFd) noexcept {
@@ -248,7 +247,6 @@ UringCondVarImpl::UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexce
     , reactor_(reactor)
 {
 }
-
 
 void UringCondVarImpl::wait(Mutex& mutex) noexcept {
     mutex.unlock();
