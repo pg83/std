@@ -26,3 +26,4 @@ tst/perf_objpool
 tst/pool_sd
 tst/pool_ss
 tst/pool_sw
+tst/io_uring_msg
