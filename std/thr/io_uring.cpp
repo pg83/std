@@ -163,53 +163,13 @@ namespace {
         Ring* myRing() noexcept;
 
         template <typename Req, typename F>
-        void submit(Req& req, F prep, u64 deadlineUs) noexcept {
-            if (deadlineUs == UINT64_MAX) {
-                submitReq(req, prep);
-            } else {
-                submitReq(req, prep, deadlineUs);
-            }
-        }
+        void submit(Req& req, F prep, u64 deadlineUs) noexcept;
 
         template <typename Req, typename F>
-        void submitReq(Req& req, F prep) noexcept {
-            auto ring = myRing();
-
-            req.exec = exec_;
-
-            exec_->parkWith(makeRunable([&] {
-                auto sqe = io_uring_get_sqe(ring);
-
-                prep(sqe);
-
-                io_uring_sqe_set_data(sqe, static_cast<UringReqBase*>(&req));
-                io_uring_submit(ring);
-            }), &req.task);
-        }
+        void submitReq(Req& req, F prep) noexcept;
 
         template <typename Req, typename F>
-        void submitReq(Req& req, F prep, u64 deadlineUs) noexcept {
-            auto ring = myRing();
-            auto now = monotonicNowUs();
-            auto ts = (now < deadlineUs) ? usToTimespec(deadlineUs - now) : usToTimespec(0);
-
-            req.exec = exec_;
-
-            exec_->parkWith(makeRunable([&] {
-                auto sqe = io_uring_get_sqe(ring);
-
-                prep(sqe);
-
-                io_uring_sqe_set_data(sqe, static_cast<UringReqBase*>(&req));
-                sqe->flags |= IOSQE_IO_LINK;
-
-                auto tsqe = io_uring_get_sqe(ring);
-
-                io_uring_prep_link_timeout(tsqe, &ts, 0);
-                io_uring_sqe_set_data64(tsqe, SENDER_COOKIE);
-                io_uring_submit(ring);
-            }), &req.task);
-        }
+        void submitReq(Req& req, F prep, u64 deadlineUs) noexcept;
 
         UringReactorImpl(ObjPool* pool, CoroExecutor* exec, size_t threads);
 
@@ -367,6 +327,55 @@ Ring* UringReactorImpl::myRing() noexcept {
     }
 
     return nullptr;
+}
+
+template <typename Req, typename F>
+void UringReactorImpl::submit(Req& req, F prep, u64 deadlineUs) noexcept {
+    if (deadlineUs == UINT64_MAX) {
+        submitReq(req, prep);
+    } else {
+        submitReq(req, prep, deadlineUs);
+    }
+}
+
+template <typename Req, typename F>
+void UringReactorImpl::submitReq(Req& req, F prep) noexcept {
+    auto ring = myRing();
+
+    req.exec = exec_;
+
+    exec_->parkWith(makeRunable([&] {
+        auto sqe = io_uring_get_sqe(ring);
+
+        prep(sqe);
+
+        io_uring_sqe_set_data(sqe, static_cast<UringReqBase*>(&req));
+        io_uring_submit(ring);
+    }), &req.task);
+}
+
+template <typename Req, typename F>
+void UringReactorImpl::submitReq(Req& req, F prep, u64 deadlineUs) noexcept {
+    auto ring = myRing();
+    auto now = monotonicNowUs();
+    auto ts = (now < deadlineUs) ? usToTimespec(deadlineUs - now) : usToTimespec(0);
+
+    req.exec = exec_;
+
+    exec_->parkWith(makeRunable([&] {
+        auto sqe = io_uring_get_sqe(ring);
+
+        prep(sqe);
+
+        io_uring_sqe_set_data(sqe, static_cast<UringReqBase*>(&req));
+        sqe->flags |= IOSQE_IO_LINK;
+
+        auto tsqe = io_uring_get_sqe(ring);
+
+        io_uring_prep_link_timeout(tsqe, &ts, 0);
+        io_uring_sqe_set_data64(tsqe, SENDER_COOKIE);
+        io_uring_submit(ring);
+    }), &req.task);
 }
 
 CondVarIface* UringReactorImpl::createCondVar(size_t index) {
