@@ -11,6 +11,7 @@ namespace stl {
     struct PollFD;
     struct VisitorFace;
     struct CondVarIface;
+    struct CoroExecutor;
 
     struct PollGroup {
     };
@@ -37,5 +38,7 @@ namespace stl {
         virtual void bindThread(size_t index);
 
         void poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs);
+
+        static IoReactor* create(ObjPool* pool, CoroExecutor* exec, size_t threads);
     };
 }

@@ -9,8 +9,7 @@
 #include "semaphore.h"
 #include "event_iface.h"
 #include "thread_iface.h"
-#include "io_uring.h"
-#include "io_classic.h"
+#include "io_reactor.h"
 #include "cond_var_iface.h"
 #include "semaphore_iface.h"
 
@@ -171,11 +170,7 @@ CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads)
     : join_(pool->make<JoinPipe>())
     , tlsKey_(ThreadPool::registerTlsKey())
 {
-    io_ = createIoUringReactor(pool, threads);
-
-    if (!io_) {
-        io_ = createPollIoReactor(pool, this, threads);
-    }
+    io_ = IoReactor::create(pool, this, threads);
 
     pool_ = ThreadPool::workStealing(pool, threads, io_);
 }
