@@ -23,6 +23,7 @@ using namespace stl;
 #if __has_include(<liburing.h>)
 namespace {
     constexpr u64 WAKEUP_COOKIE = 0xCAFE;
+    constexpr u64 SENDER_COOKIE = 0xDEAD;
 
     struct Ring;
 
@@ -187,6 +188,7 @@ void Ring::sendMsg(int targetFd) noexcept {
     auto sqe = io_uring_get_sqe(this);
 
     io_uring_prep_msg_ring(sqe, targetFd, 0, WAKEUP_COOKIE, 0);
+    io_uring_sqe_set_data64(sqe, SENDER_COOKIE);
     io_uring_submit(this);
 }
 
@@ -241,6 +243,8 @@ void UringCondVarImpl::wait(Mutex& mutex) noexcept {
 
             if (ud == WAKEUP_COOKIE) {
                 hasWork = true;
+            } else if (ud == SENDER_COOKIE) {
+                // ignore sender's own MSG_RING completion
             } else {
                 auto req = (UringReq*)ud;
 
