@@ -29,7 +29,7 @@ namespace {
 
     struct Ring;
 
-    thread_local Ring* currentRing = nullptr;
+    thread_local Ring* currentRing_ = nullptr;
 
     struct UringReqBase {
         virtual void complete(int result) noexcept = 0;
@@ -148,8 +148,6 @@ namespace {
 
         UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexcept;
 
-        Ring* currentRing() noexcept;
-
         void signal() noexcept override;
         void broadcast() noexcept override;
         void wait(Mutex& mutex) noexcept override;
@@ -160,7 +158,7 @@ namespace {
         Ring* ext_;
         CoroExecutor* exec_;
 
-        Ring* myRing() noexcept;
+        Ring* currentRing() noexcept;
 
         template <typename Req, typename F>
         void submit(Req& req, F prep, u64 deadlineUs) noexcept;
@@ -249,13 +247,6 @@ UringCondVarImpl::UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexce
 {
 }
 
-Ring* UringCondVarImpl::currentRing() noexcept {
-    if (auto r = reactor_->myRing(); r) {
-        return r;
-    }
-
-    return reactor_->ext_;
-}
 
 void UringCondVarImpl::wait(Mutex& mutex) noexcept {
     mutex.unlock();
@@ -290,7 +281,7 @@ void UringCondVarImpl::wait(Mutex& mutex) noexcept {
 }
 
 void UringCondVarImpl::signal() noexcept {
-    currentRing()->wakeUp(ring_->ring_fd);
+    reactor_->currentRing()->wakeUp(ring_->ring_fd);
 }
 
 void UringCondVarImpl::broadcast() noexcept {
@@ -310,8 +301,8 @@ ThreadPoolHooks* UringReactorImpl::hooks() {
     return this;
 }
 
-Ring* UringReactorImpl::myRing() noexcept {
-    if (auto r = ::currentRing; r) {
+Ring* UringReactorImpl::currentRing() noexcept {
+    if (auto r = currentRing_; r) {
         return r;
     }
 
@@ -321,12 +312,12 @@ Ring* UringReactorImpl::myRing() noexcept {
         auto r = rings_[id];
 
         r->enable();
-        ::currentRing = r;
+        currentRing_ = r;
 
         return r;
     }
 
-    return nullptr;
+    return ext_;
 }
 
 template <typename Req, typename F>
@@ -340,7 +331,7 @@ void UringReactorImpl::submit(Req& req, F prep, u64 deadlineUs) noexcept {
 
 template <typename Req, typename F>
 void UringReactorImpl::submitReq(Req& req, F prep) noexcept {
-    auto ring = myRing();
+    auto ring = currentRing();
 
     req.exec = exec_;
 
@@ -356,7 +347,7 @@ void UringReactorImpl::submitReq(Req& req, F prep) noexcept {
 
 template <typename Req, typename F>
 void UringReactorImpl::submitReq(Req& req, F prep, u64 deadlineUs) noexcept {
-    auto ring = myRing();
+    auto ring = currentRing();
     auto now = monotonicNowUs();
     auto ts = (now < deadlineUs) ? usToTimespec(deadlineUs - now) : usToTimespec(0);
 
