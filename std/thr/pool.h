@@ -9,7 +9,12 @@ namespace stl {
     class ObjPool;
     class IntrusiveList;
 
-    struct IoReactor;
+    struct CondVarIface;
+
+    struct ThreadPoolHooks {
+        virtual CondVarIface* createCondVar(size_t index) = 0;
+        virtual void bindThread(size_t index) = 0;
+    };
 
     struct ThreadPool {
         virtual void join() noexcept = 0;
@@ -27,7 +32,7 @@ namespace stl {
         static ThreadPool* sync(ObjPool* pool);
         static ThreadPool* simple(ObjPool* pool, size_t threads);
         static ThreadPool* workStealing(ObjPool* pool, size_t threads);
-        static ThreadPool* workStealing(ObjPool* pool, size_t threads, IoReactor* io);
+        static ThreadPool* workStealing(ObjPool* pool, size_t threads, ThreadPoolHooks* hooks);
 
         static u64 registerTlsKey() noexcept;
     };

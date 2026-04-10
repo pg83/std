@@ -109,7 +109,7 @@ namespace {
         }
     };
 
-    struct CoroExecutorImpl: public CoroExecutor {
+    struct CoroExecutorImpl: public CoroExecutor, public ThreadPoolHooks {
         alignas(64) int inflight_ = 0;
         JoinPipe* join_;
         const u64 tlsKey_;
@@ -153,6 +153,14 @@ namespace {
             return io_;
         }
 
+        CondVarIface* createCondVar(size_t index) override {
+            return io_->createCondVar(index);
+        }
+
+        void bindThread(size_t index) override {
+            io_->bindThread(index);
+        }
+
         void reSchedule(Task* task) noexcept override {
             pool_->submitTask(task);
         }
@@ -170,7 +178,7 @@ CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads)
     : join_(pool->make<JoinPipe>())
     , tlsKey_(ThreadPool::registerTlsKey())
     , io_(IoReactor::create(pool, this, threads))
-    , pool_(ThreadPool::workStealing(pool, threads, io_))
+    , pool_(ThreadPool::workStealing(pool, threads, this))
 {
 }
 

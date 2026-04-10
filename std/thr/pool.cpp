@@ -6,7 +6,6 @@
 #include "runable.h"
 #include "cond_var.h"
 #include "wait_queue.h"
-#include "io_reactor.h"
 
 #include <std/rng/mix.h>
 #include <std/rng/pcg.h>
@@ -36,6 +35,15 @@ namespace {
 
         void run() override {
             throw this;
+        }
+    };
+
+    struct DefaultThreadPoolHooks: public ThreadPoolHooks {
+        CondVarIface* createCondVar(size_t) override {
+            return CondVar::createDefault();
+        }
+
+        void bindThread(size_t) override {
         }
     };
 
@@ -249,11 +257,11 @@ namespace {
         IntMap<Worker*> workers_;
         Vector<Worker*> index_;
         WaitQueue* wq;
-        IoReactor* io_ = nullptr;
+        ThreadPoolHooks* hooks_ = nullptr;
         alignas(64) i32 taskCount_ = 0;
         alignas(64) i32 searching_ = 0;
 
-        WorkStealingThreadPool(ObjPool* pool, size_t numThreads, IoReactor* io);
+        WorkStealingThreadPool(ObjPool* pool, size_t numThreads, ThreadPoolHooks* hooks);
         ~WorkStealingThreadPool() noexcept;
 
         void join() noexcept override;
@@ -286,15 +294,15 @@ void WorkStealingThreadPool::Worker::push(IntrusiveList* tasks) noexcept {
     condVar_.signal();
 }
 
-WorkStealingThreadPool::WorkStealingThreadPool(ObjPool* pool, size_t numThreads, IoReactor* io)
+WorkStealingThreadPool::WorkStealingThreadPool(ObjPool* pool, size_t numThreads, ThreadPoolHooks* hooks)
     : workers_(pool)
     , wq(WaitQueue::construct(pool, numThreads))
-    , io_(io)
+    , hooks_(hooks)
 {
     PCG32 rng(this);
 
     for (size_t i = 0; i < numThreads; ++i) {
-        auto w = pool->make<Worker>(this, i, rng.nextU64(), io ? io->createCondVar(i) : CondVar::createDefault());
+        auto w = pool->make<Worker>(this, i, rng.nextU64(), hooks->createCondVar(i));
         workers_.insert(w->key(), w);
     }
 
@@ -417,9 +425,7 @@ void WorkStealingThreadPool::Worker::trySteal(IntrusiveList* stolen) noexcept {
 }
 
 void WorkStealingThreadPool::Worker::run() noexcept {
-    if (pool_->io_) {
-        pool_->io_->bindThread(index);
-    }
+    pool_->hooks_->bindThread(index);
 
     try {
         loop();
@@ -489,15 +495,15 @@ ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads) {
         return simple(pool, threads);
     }
 
-    return pool->make<WorkStealingThreadPool>(pool, threads, (IoReactor*)nullptr);
+    return pool->make<WorkStealingThreadPool>(pool, threads, pool->make<DefaultThreadPoolHooks>());
 }
 
-ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads, IoReactor* io) {
+ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads, ThreadPoolHooks* hooks) {
     if (threads <= 1) {
         return simple(pool, threads);
     }
 
-    return pool->make<WorkStealingThreadPool>(pool, threads, io);
+    return pool->make<WorkStealingThreadPool>(pool, threads, hooks);
 }
 
 u64 ThreadPool::registerTlsKey() noexcept {
