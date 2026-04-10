@@ -27,10 +27,12 @@ namespace {
 
     struct Ring: public io_uring {
         Ring();
+
         virtual ~Ring() noexcept;
 
         void enable() noexcept;
         void sendMsg(int targetFd) noexcept;
+
         virtual void wakeUp(int targetFd) noexcept;
     };
 
@@ -52,14 +54,14 @@ namespace {
 
         Ring* currentRing() noexcept;
 
-        void wait(Mutex& mutex) noexcept override;
         void signal() noexcept override;
         void broadcast() noexcept override;
+        void wait(Mutex& mutex) noexcept override;
     };
 
     struct UringReactorImpl: public IoReactor, public ThreadPoolHooks {
         Vector<Ring*> rings_;
-        ExternalRing* ext_;
+        Ring* ext_;
 
         UringReactorImpl(ObjPool* pool, size_t threads);
 
@@ -83,14 +85,10 @@ namespace {
     };
 }
 
-// Ring
-
 Ring::Ring() {
     struct io_uring_params params = {};
 
-    params.flags = IORING_SETUP_SINGLE_ISSUER
-                 | IORING_SETUP_DEFER_TASKRUN
-                 | IORING_SETUP_R_DISABLED;
+    params.flags = IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_R_DISABLED;
 
     if (io_uring_queue_init_params(64, this, &params) < 0) {
         throw 1;
@@ -116,8 +114,6 @@ void Ring::wakeUp(int targetFd) noexcept {
     sendMsg(targetFd);
 }
 
-// ExternalRing
-
 ExternalRing::ExternalRing() {
     io_uring_queue_exit(this);
 
@@ -133,8 +129,6 @@ void ExternalRing::wakeUp(int targetFd) noexcept {
     sendMsg(targetFd);
     mutex_.unlock();
 }
-
-// UringCondVarImpl
 
 UringCondVarImpl::UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexcept
     : ring_(ring)
@@ -181,8 +175,6 @@ void UringCondVarImpl::broadcast() noexcept {
     signal();
 }
 
-// UringReactorImpl
-
 UringReactorImpl::UringReactorImpl(ObjPool* pool, size_t threads)
     : ext_(pool->make<ExternalRing>())
 {
@@ -200,10 +192,7 @@ CondVarIface* UringReactorImpl::createCondVar(size_t index) {
 }
 
 void UringReactorImpl::bindThread(size_t index) {
-    auto ring = rings_[index];
-
-    ring->enable();
-    currentRing = ring;
+    (currentRing = rings_[index])->enable();
 }
 
 int UringReactorImpl::recv(int, size_t*, void*, size_t, u64) {
