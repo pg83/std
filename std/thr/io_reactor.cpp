@@ -12,7 +12,7 @@ void IoReactor::poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs) {
 }
 
 IoReactor* IoReactor::create(ObjPool* pool, CoroExecutor* exec, size_t threads) {
-    if (auto io = createIoUringReactor(pool, threads); io) {
+    if (auto io = createIoUringReactor(pool, exec, threads); io) {
         return io;
     } else {
         return createPollIoReactor(pool, exec, threads);

@@ -6,6 +6,7 @@ namespace stl {
     class ObjPool;
 
     struct IoReactor;
+    struct CoroExecutor;
 
-    IoReactor* createIoUringReactor(ObjPool* pool, size_t threads);
+    IoReactor* createIoUringReactor(ObjPool* pool, CoroExecutor* exec, size_t threads);
 }
