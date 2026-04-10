@@ -5,7 +5,6 @@
 #include "thread.h"
 #include "runable.h"
 #include "cond_var.h"
-#include "coro_config.h"
 
 #include <std/tst/ut.h>
 #include <std/mem/obj_pool.h>

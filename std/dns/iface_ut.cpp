@@ -9,7 +9,6 @@
 #include <std/dbg/insist.h>
 #include <std/lib/vector.h>
 #include <std/mem/obj_pool.h>
-#include <std/thr/coro_config.h>
 
 #include <stdio.h>
 #include <stdlib.h>

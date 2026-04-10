@@ -4,7 +4,6 @@
 #include <std/thr/poll_fd.h>
 #include <std/mem/obj_pool.h>
 #include <std/thr/io_reactor.h>
-#include <std/thr/coro_config.h>
 
 #include <errno.h>
 #include <unistd.h>

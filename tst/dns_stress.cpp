@@ -3,7 +3,6 @@
 #include <std/dns/iface.h>
 #include <std/dns/config.h>
 #include <std/mem/obj_pool.h>
-#include <std/thr/coro_config.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -13,14 +12,10 @@ using namespace stl;
 int main(int argc, char** argv) {
     auto pool = ObjPool::fromMemory();
     TestArgs a(pool.mutPtr(), argc, argv);
-    auto cfg = CoroConfig(8);
+    size_t threads = 8;
 
     if (auto sv = a.find(u8"coro-threads"); sv) {
-        cfg.setThreads(sv->stou());
-    }
-
-    if (auto sv = a.find(u8"coro-reactors"); sv) {
-        cfg.setReactors(sv->stou());
+        threads = sv->stou();
     }
 
 
@@ -50,7 +45,7 @@ int main(int argc, char** argv) {
         dnsCfg.server = *sv;
     }
 
-    auto exec = CoroExecutor::create(pool.mutPtr(), cfg);
+    auto exec = CoroExecutor::create(pool.mutPtr(), threads);
     auto resolver = DnsResolver::create(pool.mutPtr(), exec, nullptr, dnsCfg);
 
     for (int i = 0; i < 100000; ++i) {

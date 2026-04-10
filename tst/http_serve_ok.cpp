@@ -10,7 +10,6 @@
 #include <std/net/http_srv.h>
 #include <std/net/ssl_socket.h>
 #include <std/thr/wait_group.h>
-#include <std/thr/coro_config.h>
 
 #include <netinet/in.h>
 

@@ -6,7 +6,6 @@
 #include <std/dbg/insist.h>
 #include <std/sys/mem_fd.h>
 #include <std/mem/obj_pool.h>
-#include <std/thr/coro_config.h>
 
 #include <string.h>
 #include <unistd.h>

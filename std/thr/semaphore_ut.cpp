@@ -1,7 +1,6 @@
 #include "coro.h"
 #include "thread.h"
 #include "semaphore.h"
-#include "coro_config.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/atomic.h>

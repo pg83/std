@@ -18,7 +18,6 @@
 #include <std/thr/channel.h>
 #include <std/thr/wait_group.h>
 #include <std/ios/stream_tcp.h>
-#include <std/thr/coro_config.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>

@@ -7,7 +7,6 @@
 #include "channel.h"
 #include "cond_var.h"
 #include "semaphore.h"
-#include "coro_config.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/fd.h>

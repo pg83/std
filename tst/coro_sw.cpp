@@ -1,7 +1,6 @@
 #include <std/thr/coro.h>
 #include <std/sys/atomic.h>
 #include <std/mem/obj_pool.h>
-#include <std/thr/coro_config.h>
 
 using namespace stl;
 

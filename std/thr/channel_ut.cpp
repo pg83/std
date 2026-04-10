@@ -3,7 +3,6 @@
 #include "thread.h"
 #include "channel.h"
 #include "wait_group.h"
-#include "coro_config.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/atomic.h>

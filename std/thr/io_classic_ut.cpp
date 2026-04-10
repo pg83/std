@@ -5,7 +5,6 @@
 #include "semaphore.h"
 #include "io_classic.h"
 #include "io_reactor.h"
-#include "coro_config.h"
 
 #include <std/tst/ut.h>
 #include <std/sys/fd.h>

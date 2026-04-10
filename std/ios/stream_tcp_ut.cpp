@@ -8,7 +8,6 @@
 #include <std/dbg/insist.h>
 #include <std/mem/obj_pool.h>
 #include <std/net/tcp_socket.h>
-#include <std/thr/coro_config.h>
 
 #include <string.h>
 #include <arpa/inet.h>

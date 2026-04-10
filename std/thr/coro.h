@@ -12,7 +12,6 @@ namespace stl {
     class IntrusiveList;
     struct ThreadPool;
     struct EventIface;
-    struct CoroConfig;
     struct ThreadIface;
     struct CondVarIface;
     struct CoroExecutor;
@@ -71,6 +70,6 @@ namespace stl {
             offloadRun(pool, makeRunable(f));
         }
 
-        static CoroExecutor* create(ObjPool* pool, const CoroConfig& cfg);
+        static CoroExecutor* create(ObjPool* pool, size_t threads);
     };
 }

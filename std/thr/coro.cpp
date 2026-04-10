@@ -8,7 +8,6 @@
 #include "cond_var.h"
 #include "semaphore.h"
 #include "event_iface.h"
-#include "coro_config.h"
 #include "thread_iface.h"
 #include "io_uring.h"
 #include "io_classic.h"
@@ -118,7 +117,7 @@ namespace {
         IoReactor* io_;
         ThreadPool* pool_;
 
-        CoroExecutorImpl(ObjPool* pool, const CoroConfig& cfg);
+        CoroExecutorImpl(ObjPool* pool, size_t threads);
         ~CoroExecutorImpl() noexcept;
 
         void join() noexcept override;
@@ -168,17 +167,17 @@ namespace {
     };
 }
 
-CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, const CoroConfig& cfg)
+CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads)
     : join_(pool->make<JoinPipe>())
     , tlsKey_(ThreadPool::registerTlsKey())
 {
-    io_ = createIoUringReactor(pool, cfg.threads);
+    io_ = createIoUringReactor(pool, threads);
 
     if (!io_) {
-        io_ = createPollIoReactor(pool, this, cfg.reactors);
+        io_ = createPollIoReactor(pool, this, threads);
     }
 
-    pool_ = ThreadPool::workStealing(pool, cfg.threads, io_);
+    pool_ = ThreadPool::workStealing(pool, threads, io_);
 }
 
 Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
@@ -483,8 +482,8 @@ SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
     return new CoroSemaphoreImpl(this, initial);
 }
 
-CoroExecutor* CoroExecutor::create(ObjPool* pool, const CoroConfig& cfg) {
-    return pool->make<CoroExecutorImpl>(pool, cfg);
+CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads) {
+    return pool->make<CoroExecutorImpl>(pool, threads);
 }
 
 u64 CoroExecutor::currentCoroId() const noexcept {

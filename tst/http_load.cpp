@@ -20,7 +20,6 @@
 #include <std/thr/wait_group.h>
 #include <std/ios/stream_tcp.h>
 #include <std/net/tcp_socket.h>
-#include <std/thr/coro_config.h>
 #include <std/net/http_client.h>
 #include <std/net/http_reason.h>
 
@@ -101,7 +100,7 @@ int main(int argc, char** argv) {
         payloadLen = (u32)v->stou();
     }
 
-    auto exec = CoroExecutor::create(pool.mutPtr(), CoroConfig(numThreads));
+    auto exec = CoroExecutor::create(pool.mutPtr(), numThreads);
 
     auto resolver = DnsResolver::create(pool.mutPtr(), exec, nullptr, DnsConfig());
 

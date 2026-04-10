@@ -19,7 +19,6 @@
 #include <std/thr/wait_group.h>
 #include <std/ios/stream_tcp.h>
 #include <std/ios/in_fd_coro.h>
-#include <std/thr/coro_config.h>
 
 #include <fcntl.h>
 #include <string.h>

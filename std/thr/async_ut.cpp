@@ -1,7 +1,6 @@
 #include "coro.h"
 #include "pool.h"
 #include "async.h"
-#include "coro_config.h"
 
 #include <std/tst/ut.h>
 #include <std/mem/obj_pool.h>
