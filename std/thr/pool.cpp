@@ -39,13 +39,7 @@ namespace {
     };
 
     struct SyncThreadPool: public ThreadPool {
-        IntMap<void*> tls_;
         PCG32 rng_{this};
-
-        SyncThreadPool(ObjPool* pool)
-            : tls_(pool)
-        {
-        }
 
         void submitTasks(IntrusiveList& tasks) noexcept override {
             while (auto t = (Task*)tasks.popFrontOrNull()) {
@@ -56,8 +50,10 @@ namespace {
         void join() noexcept override {
         }
 
-        void** tls(u64 key) noexcept override {
-            return &tls_[key];
+        bool workerId(size_t* id) noexcept override {
+            *id = 0;
+
+            return true;
         }
 
         PCG32& random() noexcept override {
@@ -68,8 +64,6 @@ namespace {
     class ThreadPoolImpl: public ThreadPool {
         struct Worker: public Runable {
             ThreadPoolImpl* pool_;
-            ObjPool::Ref opool_ = ObjPool::fromMemory();
-            IntMap<void*> tls_{opool_.mutPtr()};
             PCG32 rng_;
             Thread thread_;
 
@@ -107,7 +101,7 @@ namespace {
 
         void submitTasks(IntrusiveList& tasks) noexcept override;
         void join() noexcept override;
-        void** tls(u64 key) noexcept override;
+        bool workerId(size_t* id) noexcept override;
         PCG32& random() noexcept override;
     };
 }
@@ -149,12 +143,8 @@ ThreadPoolImpl::~ThreadPoolImpl() noexcept {
     });
 }
 
-void** ThreadPoolImpl::tls(u64 key) noexcept {
-    if (auto w = workers_.find(Thread::currentThreadId()); w) {
-        return &w->tls_[key];
-    }
-
-    return nullptr;
+bool ThreadPoolImpl::workerId(size_t*) noexcept {
+    return false;
 }
 
 PCG32& ThreadPoolImpl::random() noexcept {
@@ -184,7 +174,7 @@ void ThreadPool::submitTask(Task* task) noexcept {
 }
 
 ThreadPool* ThreadPool::sync(ObjPool* pool) {
-    return pool->make<SyncThreadPool>(pool);
+    return pool->make<SyncThreadPool>();
 }
 
 ThreadPool* ThreadPool::simple(ObjPool* pool, size_t threads) {
@@ -199,8 +189,7 @@ namespace {
     struct WorkStealingThreadPool: public ThreadPool {
         struct Worker: public Runable, public WaitQueue::Item {
             WorkStealingThreadPool* pool_;
-            ObjPool::Ref opool_ = ObjPool::fromMemory();
-            IntMap<void*> tls_{opool_.mutPtr()};
+            u32 index_;
             PCG32 rng_;
             Vector<Worker*> so_;
             Mutex mutex_;
@@ -221,10 +210,6 @@ namespace {
 
             Task* popNoLock() noexcept {
                 return (Task*)tasks_.popFrontOrNull();
-            }
-
-            void** tls(u64 key) noexcept {
-                return &tls_[key];
             }
 
             PCG32& random() noexcept {
@@ -258,7 +243,7 @@ namespace {
         void join() noexcept override;
         Worker* localWorker() noexcept;
         PCG32& random() noexcept override;
-        void** tls(u64 key) noexcept override;
+        bool workerId(size_t* id) noexcept override;
         void submitTasks(IntrusiveList& tasks) noexcept override;
     };
 }
@@ -337,12 +322,14 @@ void WorkStealingThreadPool::submitTasks(IntrusiveList& tasks) noexcept {
     }
 }
 
-void** WorkStealingThreadPool::tls(u64 key) noexcept {
+bool WorkStealingThreadPool::workerId(size_t* id) noexcept {
     if (auto w = localWorker()) {
-        return w->tls(key);
+        *id = w->index_;
+
+        return true;
     }
 
-    return nullptr;
+    return false;
 }
 
 PCG32& WorkStealingThreadPool::random() noexcept {
@@ -368,6 +355,7 @@ WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
 WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u64 seed, CondVarIface* cv)
     : WaitQueue::Item{nullptr, (u8)myIndex}
     , pool_(pool)
+    , index_(myIndex)
     , rng_(seed)
     , mutex_(true)
     , condVar_(cv)
@@ -416,8 +404,6 @@ void WorkStealingThreadPool::Worker::trySteal(IntrusiveList* stolen) noexcept {
 }
 
 void WorkStealingThreadPool::Worker::run() noexcept {
-    pool_->hooks_->bindThread(index);
-
     try {
         loop();
     } catch (ShutDown* sh) {
@@ -486,9 +472,6 @@ ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads) {
         CondVarIface* createCondVar(size_t) override {
             return CondVar::createDefault();
         }
-
-        void bindThread(size_t) override {
-        }
     };
 
     return workStealing(pool, threads, pool->make<DefaultThreadPoolHooks>());
@@ -500,10 +483,4 @@ ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads, ThreadPoolHo
     }
 
     return pool->make<WorkStealingThreadPool>(pool, threads, hooks);
-}
-
-u64 ThreadPool::registerTlsKey() noexcept {
-    static u64 tlsKeyCounter = 0;
-
-    return stdAtomicAddAndFetch(&tlsKeyCounter, 1, MemoryOrder::Relaxed);
 }

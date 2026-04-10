@@ -49,9 +49,6 @@ namespace {
 
         CondVarIface* createCondVar(size_t) override;
 
-        void bindThread(size_t) override {
-        }
-
         PollGroup* createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) override;
 
         int recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) override;

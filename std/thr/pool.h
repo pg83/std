@@ -13,13 +13,12 @@ namespace stl {
 
     struct ThreadPoolHooks {
         virtual CondVarIface* createCondVar(size_t index) = 0;
-        virtual void bindThread(size_t index) = 0;
     };
 
     struct ThreadPool {
         virtual void join() noexcept = 0;
         virtual PCG32& random() noexcept = 0;
-        virtual void** tls(u64 key) noexcept = 0;
+        virtual bool workerId(size_t* id) noexcept = 0;
         virtual void submitTasks(IntrusiveList& tasks) noexcept = 0;
 
         void submitTask(Task* task) noexcept;
@@ -33,7 +32,5 @@ namespace stl {
         static ThreadPool* simple(ObjPool* pool, size_t threads);
         static ThreadPool* workStealing(ObjPool* pool, size_t threads);
         static ThreadPool* workStealing(ObjPool* pool, size_t threads, ThreadPoolHooks* hooks);
-
-        static u64 registerTlsKey() noexcept;
     };
 }

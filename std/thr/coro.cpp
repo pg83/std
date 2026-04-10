@@ -1,6 +1,8 @@
 #include "coro.h"
 #include "task.h"
 #include "pool.h"
+
+#include <std/lib/vector.h>
 #include "mutex.h"
 #include "guard.h"
 #include "thread.h"
@@ -112,7 +114,7 @@ namespace {
     struct CoroExecutorImpl: public CoroExecutor {
         alignas(64) int inflight_ = 0;
         JoinPipe* join_;
-        const u64 tlsKey_;
+        Vector<ContImpl*> conts_;
         IoReactor* io_;
         ThreadPool* pool_;
 
@@ -122,17 +124,25 @@ namespace {
         void join() noexcept override;
         void spawnRun(SpawnParams params) override;
 
-        auto tls() {
-            return pool_->tls(tlsKey_);
+        ContImpl** contSlot() {
+            size_t id;
+
+            if (pool_->workerId(&id)) {
+                return &conts_.mutData()[id];
+            }
+
+            return nullptr;
         }
 
         ContImpl* currentCont() {
-            return (ContImpl*)*tls();
+            return *contSlot();
         }
 
         void* currentCoroId() const noexcept override {
-            if (auto t = ((CoroExecutorImpl*)this)->tls(); t) {
-                return *t;
+            size_t id;
+
+            if (((CoroExecutorImpl*)this)->pool_->workerId(&id)) {
+                return ((CoroExecutorImpl*)this)->conts_[id];
             }
 
             return nullptr;
@@ -153,6 +163,10 @@ namespace {
             return io_;
         }
 
+        bool workerId(size_t* id) noexcept override {
+            return pool_->workerId(id);
+        }
+
         void reSchedule(Task* task) noexcept override {
             pool_->submitTask(task);
         }
@@ -168,10 +182,12 @@ namespace {
 
 CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads)
     : join_(pool->make<JoinPipe>())
-    , tlsKey_(ThreadPool::registerTlsKey())
     , io_(IoReactor::create(pool, this, threads))
     , pool_(ThreadPool::workStealing(pool, threads, io_->hooks()))
 {
+    for (size_t i = 0; i < threads; ++i) {
+        conts_.pushBack(nullptr);
+    }
 }
 
 void CoroExecutorImpl::spawnRun(SpawnParams params) {
@@ -234,13 +250,13 @@ void ContImpl::run() noexcept {
         return;
     }
 
-    auto tls = exec_->tls();
+    auto slot = exec_->contSlot();
 
-    *tls = this;
+    *slot = this;
     (workerCtx_ = Context::create(alloca(Context::implSize())))->switchTo(*ctx_.ptr);
     delete workerCtx_;
     workerCtx_ = nullptr;
-    *tls = nullptr;
+    *slot = nullptr;
 
     if (auto as = runable_; as) {
         runable_ = nullptr;
