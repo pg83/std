@@ -163,6 +163,10 @@ namespace {
             return pool_->workerId(id);
         }
 
+        void flushLocal() noexcept override {
+            pool_->flushLocal();
+        }
+
         void reSchedule(Task* task) noexcept override {
             pool_->submitTask(task);
         }

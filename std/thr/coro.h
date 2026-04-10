@@ -47,6 +47,7 @@ namespace stl {
 
         virtual IoReactor* io() noexcept = 0;
         virtual bool workerId(size_t* id) noexcept = 0;
+        virtual void flushLocal() noexcept = 0;
 
         virtual void createEvent(void* buf) = 0;
         virtual ThreadIface* createThread() = 0;

@@ -25,7 +25,6 @@ using namespace stl;
 #if __has_include(<liburing.h>)
 namespace {
     constexpr u64 WAKEUP_COOKIE = 0xCAFE;
-    constexpr u64 SENDER_COOKIE = 0xDEAD;
 
     struct Ring;
 
@@ -223,7 +222,7 @@ void Ring::sendMsg(int targetFd) noexcept {
     auto sqe = io_uring_get_sqe(this);
 
     io_uring_prep_msg_ring(sqe, targetFd, 0, WAKEUP_COOKIE, 0);
-    io_uring_sqe_set_data64(sqe, SENDER_COOKIE);
+    sqe->flags |= IOSQE_CQE_SKIP_SUCCESS;
     io_uring_submit(this);
 }
 
@@ -249,6 +248,11 @@ UringCondVarImpl::UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexce
 }
 
 void UringCondVarImpl::wait(Mutex& mutex) noexcept {
+    if (!currentRing_) {
+        ring_->enable();
+        currentRing_ = ring_;
+    }
+
     mutex.unlock();
 
     for (;;) {
@@ -265,10 +269,9 @@ void UringCondVarImpl::wait(Mutex& mutex) noexcept {
 
             if (ud == WAKEUP_COOKIE) {
                 signaled = true;
-            } else if (ud == SENDER_COOKIE) {
-                // ignore
             } else {
                 ((UringReqBase*)ud)->complete(res);
+                reactor_->exec_->flushLocal();
             }
         }
 
@@ -281,7 +284,8 @@ void UringCondVarImpl::wait(Mutex& mutex) noexcept {
 }
 
 void UringCondVarImpl::signal() noexcept {
-    reactor_->currentRing()->wakeUp(ring_->ring_fd);
+    auto src = reactor_->currentRing();
+    src->wakeUp(ring_->ring_fd);
 }
 
 void UringCondVarImpl::broadcast() noexcept {
@@ -364,7 +368,8 @@ void UringReactorImpl::submitReq(Req& req, F prep, u64 deadlineUs) noexcept {
         auto tsqe = io_uring_get_sqe(ring);
 
         io_uring_prep_link_timeout(tsqe, &ts, 0);
-        io_uring_sqe_set_data64(tsqe, SENDER_COOKIE);
+        io_uring_sqe_set_data64(tsqe, WAKEUP_COOKIE);
+        tsqe->flags |= IOSQE_CQE_SKIP_SUCCESS;
         io_uring_submit(ring);
     }), &req.task);
 }

@@ -53,6 +53,9 @@ namespace {
 
             return true;
         }
+
+        void flushLocal() noexcept override {
+        }
     };
 
     class ThreadPoolImpl: public ThreadPool {
@@ -94,6 +97,7 @@ namespace {
         void submitTasks(IntrusiveList& tasks) noexcept override;
         void join() noexcept override;
         bool workerId(size_t* id) noexcept override;
+        void flushLocal() noexcept override;
     };
 }
 
@@ -136,6 +140,9 @@ ThreadPoolImpl::~ThreadPoolImpl() noexcept {
 
 bool ThreadPoolImpl::workerId(size_t*) noexcept {
     return false;
+}
+
+void ThreadPoolImpl::flushLocal() noexcept {
 }
 
 void ThreadPoolImpl::workerLoop() {
@@ -230,6 +237,7 @@ namespace {
         void join() noexcept override;
         Worker* localWorker() noexcept;
         bool workerId(size_t* id) noexcept override;
+        void flushLocal() noexcept override;
         void submitTasks(IntrusiveList& tasks) noexcept override;
     };
 }
@@ -316,6 +324,36 @@ bool WorkStealingThreadPool::workerId(size_t* id) noexcept {
     }
 
     return false;
+}
+
+void WorkStealingThreadPool::flushLocal() noexcept {
+    if (auto w = localWorker()) {
+        if (w->local_.empty()) {
+            return;
+        }
+
+        Task* stolen = nullptr;
+        Worker* target = nullptr;
+
+        {
+            LockGuard lock(w->mutex_);
+
+            w->flushLocal();
+
+            if (auto s = (Worker*)wq->dequeue(); s) {
+                if (s == w) {
+                    w->condVar_.signal();
+                } else {
+                    target = s;
+                    stolen = w->popNoLock();
+                }
+            }
+        }
+
+        if (target) {
+            target->push(stolen);
+        }
+    }
 }
 
 void WorkStealingThreadPool::join() noexcept {
