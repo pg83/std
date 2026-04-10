@@ -38,8 +38,12 @@ namespace {
     };
 }
 
+CondVarIface* CondVar::createDefault() {
+    return new PosixCondVarImpl();
+}
+
 CondVar::CondVar()
-    : CondVar(new PosixCondVarImpl())
+    : CondVar(createDefault())
 {
 }
 

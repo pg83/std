@@ -6,6 +6,7 @@
 #include "runable.h"
 #include "cond_var.h"
 #include "wait_queue.h"
+#include "io_reactor.h"
 
 #include <std/rng/mix.h>
 #include <std/rng/pcg.h>
@@ -209,7 +210,7 @@ namespace {
             IntrusiveList local_;
             Thread thread_;
 
-            Worker(WorkStealingThreadPool* pool, u32 myIndex, u64 seed);
+            Worker(WorkStealingThreadPool* pool, u32 myIndex, u64 seed, CondVarIface* cv);
 
             auto key() const noexcept {
                 return thread_.threadId();
@@ -248,10 +249,11 @@ namespace {
         IntMap<Worker*> workers_;
         Vector<Worker*> index_;
         WaitQueue* wq;
+        IoReactor* io_ = nullptr;
         alignas(64) i32 taskCount_ = 0;
         alignas(64) i32 searching_ = 0;
 
-        WorkStealingThreadPool(ObjPool* pool, size_t numThreads);
+        WorkStealingThreadPool(ObjPool* pool, size_t numThreads, IoReactor* io);
         ~WorkStealingThreadPool() noexcept;
 
         void join() noexcept override;
@@ -284,14 +286,15 @@ void WorkStealingThreadPool::Worker::push(IntrusiveList* tasks) noexcept {
     condVar_.signal();
 }
 
-WorkStealingThreadPool::WorkStealingThreadPool(ObjPool* pool, size_t numThreads)
+WorkStealingThreadPool::WorkStealingThreadPool(ObjPool* pool, size_t numThreads, IoReactor* io)
     : workers_(pool)
     , wq(WaitQueue::construct(pool, numThreads))
+    , io_(io)
 {
     PCG32 rng(this);
 
     for (size_t i = 0; i < numThreads; ++i) {
-        auto w = pool->make<Worker>(this, i, rng.nextU64());
+        auto w = pool->make<Worker>(this, i, rng.nextU64(), io ? io->createCondVar(i) : CondVar::createDefault());
         workers_.insert(w->key(), w);
     }
 
@@ -363,11 +366,12 @@ WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
     STD_INSIST(taskCount_ == 0);
 }
 
-WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u64 seed)
+WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u64 seed, CondVarIface* cv)
     : WaitQueue::Item{nullptr, (u8)myIndex}
     , pool_(pool)
     , rng_(seed)
     , mutex_(true)
+    , condVar_(cv)
     , thread_(*this)
 {
 }
@@ -413,6 +417,10 @@ void WorkStealingThreadPool::Worker::trySteal(IntrusiveList* stolen) noexcept {
 }
 
 void WorkStealingThreadPool::Worker::run() noexcept {
+    if (pool_->io_) {
+        pool_->io_->bindThread(index);
+    }
+
     try {
         loop();
     } catch (ShutDown* sh) {
@@ -481,7 +489,15 @@ ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads) {
         return simple(pool, threads);
     }
 
-    return pool->make<WorkStealingThreadPool>(pool, threads);
+    return pool->make<WorkStealingThreadPool>(pool, threads, (IoReactor*)nullptr);
+}
+
+ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads, IoReactor* io) {
+    if (threads <= 1) {
+        return simple(pool, threads);
+    }
+
+    return pool->make<WorkStealingThreadPool>(pool, threads, io);
 }
 
 u64 ThreadPool::registerTlsKey() noexcept {

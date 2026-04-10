@@ -8,6 +8,7 @@ namespace stl {
     class PCG32;
     class ObjPool;
     class IntrusiveList;
+    struct IoReactor;
 
     struct ThreadPool {
         virtual void join() noexcept = 0;
@@ -25,6 +26,7 @@ namespace stl {
         static ThreadPool* sync(ObjPool* pool);
         static ThreadPool* simple(ObjPool* pool, size_t threads);
         static ThreadPool* workStealing(ObjPool* pool, size_t threads);
+        static ThreadPool* workStealing(ObjPool* pool, size_t threads, IoReactor* io);
 
         static u64 registerTlsKey() noexcept;
     };

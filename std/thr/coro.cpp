@@ -10,6 +10,7 @@
 #include "event_iface.h"
 #include "coro_config.h"
 #include "thread_iface.h"
+#include "io_uring.h"
 #include "io_classic.h"
 #include "cond_var_iface.h"
 #include "semaphore_iface.h"
@@ -170,9 +171,14 @@ namespace {
 CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, const CoroConfig& cfg)
     : join_(pool->make<JoinPipe>())
     , tlsKey_(ThreadPool::registerTlsKey())
-    , pool_(ThreadPool::workStealing(pool, cfg.threads))
 {
-    io_ = createPollIoReactor(pool, this, cfg.reactors);
+    io_ = createIoUringReactor(pool, cfg.threads);
+
+    if (!io_) {
+        io_ = createPollIoReactor(pool, this, cfg.reactors);
+    }
+
+    pool_ = ThreadPool::workStealing(pool, cfg.threads, io_);
 }
 
 Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {

@@ -14,6 +14,8 @@ namespace stl {
         CondVar(CoroExecutor* exec);
         CondVar(CondVarIface* iface);
 
+        static CondVarIface* createDefault();
+
         ~CondVar() noexcept;
 
         void wait(Mutex& mutex) noexcept;

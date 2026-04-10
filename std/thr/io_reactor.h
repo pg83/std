@@ -10,6 +10,7 @@ namespace stl {
 
     struct PollFD;
     struct VisitorFace;
+    struct CondVarIface;
 
     struct PollGroup {
     };
@@ -31,6 +32,9 @@ namespace stl {
         virtual PollGroup* createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) = 0;
 
         virtual void sleep(u64 deadlineUs) = 0;
+
+        virtual CondVarIface* createCondVar(size_t index);
+        virtual void bindThread(size_t index);
 
         void poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs);
     };
