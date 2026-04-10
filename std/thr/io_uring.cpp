@@ -21,39 +21,47 @@ using namespace stl;
 namespace {
     constexpr u64 WAKEUP_COOKIE = 0xCAFE;
 
-    thread_local struct io_uring* currentRing = nullptr;
+    struct Ring;
+
+    thread_local Ring* currentRing = nullptr;
 
     struct Ring: public io_uring {
         Ring();
 
-        ~Ring() noexcept {
+        virtual ~Ring() noexcept {
             io_uring_queue_exit(this);
         }
 
         void enable() noexcept;
+
+        void sendMsg(int targetFd) noexcept;
+
+        virtual void wakeUp(int targetFd) noexcept {
+            sendMsg(targetFd);
+        }
     };
 
-    struct ExternalRing: public io_uring {
+    struct ExternalRing: public Ring {
         Mutex mutex_{true};
 
         ExternalRing();
 
-        ~ExternalRing() noexcept {
-            io_uring_queue_exit(this);
-        }
-
-        void sendMsg(int targetFd) noexcept;
+        void wakeUp(int targetFd) noexcept override;
     };
+
+    struct UringReactorImpl;
 
     struct UringCondVarImpl: public CondVarIface {
         Ring* ring_;
-        ExternalRing* ext_;
+        UringReactorImpl* reactor_;
 
-        UringCondVarImpl(Ring* ring, ExternalRing* ext) noexcept
+        UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexcept
             : ring_(ring)
-            , ext_(ext)
+            , reactor_(reactor)
         {
         }
+
+        Ring* currentRing() noexcept;
 
         void wait(Mutex& mutex) noexcept override;
         void signal() noexcept override;
@@ -74,7 +82,7 @@ namespace {
         }
 
         CondVarIface* createCondVar(size_t index) override {
-            return new UringCondVarImpl(rings_[index], ext_);
+            return new UringCondVarImpl(rings_[index], this);
         }
 
         void bindThread(size_t index) override {
@@ -116,7 +124,16 @@ void Ring::enable() noexcept {
     io_uring_enable_rings(this);
 }
 
+void Ring::sendMsg(int targetFd) noexcept {
+    auto sqe = io_uring_get_sqe(this);
+
+    io_uring_prep_msg_ring(sqe, targetFd, 0, WAKEUP_COOKIE, 0);
+    io_uring_submit(this);
+}
+
 ExternalRing::ExternalRing() {
+    io_uring_queue_exit(this);
+
     if (io_uring_queue_init(64, this, 0) < 0) {
         throw 1;
     }
@@ -124,14 +141,9 @@ ExternalRing::ExternalRing() {
     mutex_.unlock();
 }
 
-void ExternalRing::sendMsg(int targetFd) noexcept {
+void ExternalRing::wakeUp(int targetFd) noexcept {
     mutex_.lock();
-
-    auto sqe = io_uring_get_sqe(this);
-
-    io_uring_prep_msg_ring(sqe, targetFd, 0, WAKEUP_COOKIE, 0);
-    io_uring_submit(this);
-
+    sendMsg(targetFd);
     mutex_.unlock();
 }
 
@@ -158,17 +170,16 @@ done:
     mutex.lock();
 }
 
-void UringCondVarImpl::signal() noexcept {
-    auto targetFd = ring_->ring_fd;
-
-    if (auto myRing = currentRing; myRing) {
-        auto sqe = io_uring_get_sqe(myRing);
-
-        io_uring_prep_msg_ring(sqe, targetFd, 0, WAKEUP_COOKIE, 0);
-        io_uring_submit(myRing);
-    } else {
-        ext_->sendMsg(targetFd);
+Ring* UringCondVarImpl::currentRing() noexcept {
+    if (auto r = ::currentRing; r) {
+        return r;
     }
+
+    return reactor_->ext_;
+}
+
+void UringCondVarImpl::signal() noexcept {
+    currentRing()->wakeUp(ring_->ring_fd);
 }
 
 UringReactorImpl::UringReactorImpl(ObjPool* pool, size_t threads)
