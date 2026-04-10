@@ -266,14 +266,13 @@ void CoroExecutorImpl::parkWith(Runable&& afterSuspend, Task** out) noexcept {
 void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {
     auto cont = currentCont();
 
-    cont->park([&] {
-        pool->submit([&] {
+    cont->park([pool, cont, &work] {
+        pool->submit([cont, &work] {
             work.run();
             cont->reSchedule();
         });
     });
 }
-
 
 void CoroExecutorImpl::createEvent(void* buf) {
     struct CoroEventImpl: public EventIface, public Newable {
