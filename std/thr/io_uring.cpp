@@ -8,12 +8,14 @@
 
 #include <std/sys/crt.h>
 #include <std/lib/vector.h>
+#include <std/lib/visitor.h>
 #include <std/mem/obj_pool.h>
 
 #if __has_include(<liburing.h>)
     #include <liburing.h>
 #endif
 
+#include <errno.h>
 #include <stdlib.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -32,6 +34,18 @@ namespace {
     struct UringReqBase {
         virtual void complete(int result) noexcept = 0;
     };
+
+    static int toErrno(int res) noexcept {
+        if (res >= 0) {
+            return 0;
+        }
+
+        if (res == -ECANCELED) {
+            return EAGAIN;
+        }
+
+        return -res;
+    }
 
     struct UringReq: UringReqBase {
         CoroExecutor* exec;
@@ -55,6 +69,12 @@ namespace {
         __kernel_timespec ts;
     };
 
+    struct UringPollGroup: public PollGroup {
+        PollFD* fds_;
+        size_t count_;
+
+        UringPollGroup(ObjPool* pool, const PollFD* fds, size_t count);
+    };
 
     static u32 toPollMask(u32 flags) noexcept {
         u32 r = 0;
@@ -121,16 +141,36 @@ namespace {
     };
 
     template <typename Req, typename F>
-    void submitReq(CoroExecutor* exec, Req& req, F prep) noexcept {
+    void submitReq(CoroExecutor* exec, Req& req, F prep, u64 deadlineUs = UINT64_MAX) noexcept {
         auto ring = currentRing;
 
         req.exec = exec;
+
+        __kernel_timespec ts;
+        bool hasTimeout = (deadlineUs != UINT64_MAX);
+
+        if (hasTimeout) {
+            auto now = monotonicNowUs();
+
+            ts = (now < deadlineUs) ? usToTimespec(deadlineUs - now) : usToTimespec(0);
+        }
 
         exec->parkWith(makeRunable([&] {
             auto sqe = io_uring_get_sqe(ring);
 
             prep(sqe);
             io_uring_sqe_set_data(sqe, static_cast<UringReqBase*>(&req));
+
+            if (hasTimeout) {
+                sqe->flags |= IOSQE_IO_LINK;
+
+                auto tsqe = io_uring_get_sqe(ring);
+
+                io_uring_prep_link_timeout(tsqe, &ts, 0);
+                io_uring_sqe_set_data64(tsqe, SENDER_COOKIE);
+            }
+
+            io_uring_submit(ring);
         }), &req.task);
     }
 
@@ -303,15 +343,15 @@ void UringReactorImpl::bindThread(size_t index) {
     (currentRing = rings_[index])->enable();
 }
 
-int UringReactorImpl::recv(int fd, size_t* nRead, void* buf, size_t len, u64) {
+int UringReactorImpl::recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) {
     RecvReq req;
 
     submitReq(exec_, req, [&](auto sqe) {
         io_uring_prep_recv(sqe, fd, buf, len, 0);
-    });
+    }, deadlineUs);
 
-    if (req.res < 0) {
-        return -req.res;
+    if (auto e = toErrno(req.res)) {
+        return e;
     }
 
     *nRead = req.res;
@@ -319,15 +359,15 @@ int UringReactorImpl::recv(int fd, size_t* nRead, void* buf, size_t len, u64) {
     return 0;
 }
 
-int UringReactorImpl::send(int fd, size_t* nWritten, const void* buf, size_t len, u64) {
+int UringReactorImpl::send(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
     SendReq req;
 
     submitReq(exec_, req, [&](auto sqe) {
         io_uring_prep_send(sqe, fd, buf, len, MSG_NOSIGNAL);
-    });
+    }, deadlineUs);
 
-    if (req.res < 0) {
-        return -req.res;
+    if (auto e = toErrno(req.res)) {
+        return e;
     }
 
     *nWritten = req.res;
@@ -335,15 +375,15 @@ int UringReactorImpl::send(int fd, size_t* nWritten, const void* buf, size_t len
     return 0;
 }
 
-int UringReactorImpl::writev(int fd, size_t* nWritten, iovec* iov, size_t iovcnt, u64) {
+int UringReactorImpl::writev(int fd, size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs) {
     WritevReq req;
 
     submitReq(exec_, req, [&](auto sqe) {
         io_uring_prep_writev(sqe, fd, iov, iovcnt, 0);
-    });
+    }, deadlineUs);
 
-    if (req.res < 0) {
-        return -req.res;
+    if (auto e = toErrno(req.res)) {
+        return e;
     }
 
     *nWritten = req.res;
@@ -351,15 +391,15 @@ int UringReactorImpl::writev(int fd, size_t* nWritten, iovec* iov, size_t iovcnt
     return 0;
 }
 
-int UringReactorImpl::accept(int fd, int* newFd, sockaddr* addr, u32* addrLen, u64) {
+int UringReactorImpl::accept(int fd, int* newFd, sockaddr* addr, u32* addrLen, u64 deadlineUs) {
     AcceptReq req;
 
     submitReq(exec_, req, [&](auto sqe) {
         io_uring_prep_accept(sqe, fd, addr, (socklen_t*)addrLen, SOCK_NONBLOCK | SOCK_CLOEXEC);
-    });
+    }, deadlineUs);
 
-    if (req.res < 0) {
-        return -req.res;
+    if (auto e = toErrno(req.res)) {
+        return e;
     }
 
     *newFd = req.res;
@@ -367,18 +407,14 @@ int UringReactorImpl::accept(int fd, int* newFd, sockaddr* addr, u32* addrLen, u
     return 0;
 }
 
-int UringReactorImpl::connect(int fd, const sockaddr* addr, u32 addrLen, u64) {
+int UringReactorImpl::connect(int fd, const sockaddr* addr, u32 addrLen, u64 deadlineUs) {
     ConnectReq req;
 
     submitReq(exec_, req, [&](auto sqe) {
         io_uring_prep_connect(sqe, fd, addr, addrLen);
-    });
+    }, deadlineUs);
 
-    if (req.res < 0) {
-        return -req.res;
-    }
-
-    return 0;
+    return toErrno(req.res);
 }
 
 int UringReactorImpl::pread(int fd, size_t* nRead, void* buf, size_t len, off_t offset) {
@@ -388,8 +424,8 @@ int UringReactorImpl::pread(int fd, size_t* nRead, void* buf, size_t len, off_t 
         io_uring_prep_read(sqe, fd, buf, len, offset);
     });
 
-    if (req.res < 0) {
-        return -req.res;
+    if (auto e = toErrno(req.res)) {
+        return e;
     }
 
     *nRead = req.res;
@@ -404,8 +440,8 @@ int UringReactorImpl::pwrite(int fd, size_t* nWritten, const void* buf, size_t l
         io_uring_prep_write(sqe, fd, buf, len, offset);
     });
 
-    if (req.res < 0) {
-        return -req.res;
+    if (auto e = toErrno(req.res)) {
+        return e;
     }
 
     *nWritten = req.res;
@@ -420,7 +456,7 @@ int UringReactorImpl::fsync(int fd) {
         io_uring_prep_fsync(sqe, fd, 0);
     });
 
-    return req.res < 0 ? -req.res : 0;
+    return toErrno(req.res);
 }
 
 int UringReactorImpl::fdatasync(int fd) {
@@ -430,25 +466,47 @@ int UringReactorImpl::fdatasync(int fd) {
         io_uring_prep_fsync(sqe, fd, IORING_FSYNC_DATASYNC);
     });
 
-    return req.res < 0 ? -req.res : 0;
+    return toErrno(req.res);
 }
 
-u32 UringReactorImpl::poll(PollFD pfd, u64) {
+u32 UringReactorImpl::poll(PollFD pfd, u64 deadlineUs) {
     PollReq req;
 
     submitReq(exec_, req, [&](auto sqe) {
         io_uring_prep_poll_add(sqe, pfd.fd, toPollMask(pfd.flags));
-    });
+    }, deadlineUs);
+
+    if (req.res <= 0) {
+        return 0;
+    }
 
     return fromPollMask(req.res);
 }
 
-void UringReactorImpl::poll(PollGroup*, VisitorFace&, u64) {
-    abort();
+void UringReactorImpl::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
+    auto impl = (UringPollGroup*)g;
+
+    for (;;) {
+        for (size_t i = 0; i < impl->count_; ++i) {
+            auto res = poll(impl->fds_[i], monotonicNowUs() + 10000);
+
+            if (res) {
+                PollFD pfd = {impl->fds_[i].fd, res};
+
+                visitor.visit(&pfd);
+
+                return;
+            }
+        }
+
+        if (monotonicNowUs() >= deadlineUs) {
+            return;
+        }
+    }
 }
 
-PollGroup* UringReactorImpl::createPollGroup(ObjPool*, const PollFD*, size_t) {
-    abort();
+PollGroup* UringReactorImpl::createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) {
+    return pool->make<UringPollGroup>(pool, fds, count);
 }
 
 void UringReactorImpl::sleep(u64 deadlineUs) {
@@ -459,6 +517,17 @@ void UringReactorImpl::sleep(u64 deadlineUs) {
     submitReq(exec_, req, [&](auto sqe) {
         io_uring_prep_timeout(sqe, &req.ts, 0, IORING_TIMEOUT_ABS);
     });
+}
+
+// UringPollGroup
+
+UringPollGroup::UringPollGroup(ObjPool* pool, const PollFD* fds, size_t count)
+    : fds_((PollFD*)pool->allocate(sizeof(PollFD) * count))
+    , count_(count)
+{
+    for (size_t i = 0; i < count; ++i) {
+        fds_[i] = fds[i];
+    }
 }
 
 // factory
