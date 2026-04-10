@@ -38,15 +38,6 @@ namespace {
         }
     };
 
-    struct DefaultThreadPoolHooks: public ThreadPoolHooks {
-        CondVarIface* createCondVar(size_t) override {
-            return CondVar::createDefault();
-        }
-
-        void bindThread(size_t) override {
-        }
-    };
-
     struct SyncThreadPool: public ThreadPool {
         IntMap<void*> tls_;
         PCG32 rng_{this};
@@ -491,11 +482,16 @@ void WorkStealingThreadPool::Worker::splitHalf(IntrusiveList* stolen) noexcept {
 }
 
 ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads) {
-    if (threads <= 1) {
-        return simple(pool, threads);
-    }
+    struct DefaultThreadPoolHooks: public ThreadPoolHooks {
+        CondVarIface* createCondVar(size_t) override {
+            return CondVar::createDefault();
+        }
 
-    return pool->make<WorkStealingThreadPool>(pool, threads, pool->make<DefaultThreadPoolHooks>());
+        void bindThread(size_t) override {
+        }
+    };
+
+    return workStealing(pool, threads, pool->make<DefaultThreadPoolHooks>());
 }
 
 ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads, ThreadPoolHooks* hooks) {
