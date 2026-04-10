@@ -18,7 +18,6 @@ int main(int argc, char** argv) {
         threads = sv->stou();
     }
 
-
     DnsConfig dnsCfg;
 
     if (auto sv = a.find(u8"dns-family"); sv) {

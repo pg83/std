@@ -169,10 +169,9 @@ namespace {
 CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads)
     : join_(pool->make<JoinPipe>())
     , tlsKey_(ThreadPool::registerTlsKey())
+    , io_(IoReactor::create(pool, this, threads))
+    , pool_(ThreadPool::workStealing(pool, threads, io_))
 {
-    io_ = IoReactor::create(pool, this, threads);
-
-    pool_ = ThreadPool::workStealing(pool, threads, io_);
 }
 
 Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
@@ -484,7 +483,6 @@ CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads) {
 u64 CoroExecutor::currentCoroId() const noexcept {
     return me()->id();
 }
-
 
 SpawnParams& SpawnParams::setStackSize(size_t v) noexcept {
     stackSize = v;

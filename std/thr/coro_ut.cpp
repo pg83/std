@@ -436,4 +436,3 @@ STD_TEST_SUITE(CoroOffload) {
         STD_INSIST(f.wait() == 1);
     }
 }
-
