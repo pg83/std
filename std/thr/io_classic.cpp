@@ -2,6 +2,7 @@
 
 #include "coro.h"
 #include "pool.h"
+#include "cond_var.h"
 #include "poll_fd.h"
 #include "io_reactor.h"
 #include "reactor_poll.h"
@@ -31,7 +32,7 @@
 using namespace stl;
 
 namespace {
-    struct PollIoReactor: public IoReactor {
+    struct PollIoReactor: public IoReactor, public ThreadPoolHooks {
         Vector<ReactorIface*> reactors_;
         CoroExecutor* exec_;
         ThreadPool* offload_;
@@ -40,6 +41,15 @@ namespace {
 
         ReactorIface* reactor(int fd) noexcept {
             return reactors_[splitMix64(fd) % reactors_.length()];
+        }
+
+        ThreadPoolHooks* hooks() override {
+            return this;
+        }
+
+        CondVarIface* createCondVar(size_t) override;
+
+        void bindThread(size_t) override {
         }
 
         PollGroup* createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) override;
@@ -254,6 +264,10 @@ void PollIoReactor::sleep(u64 deadlineUs) {
 
 PollGroup* PollIoReactor::createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) {
     return ReactorIface::createPollGroup(pool, fds, count);
+}
+
+CondVarIface* PollIoReactor::createCondVar(size_t) {
+    return CondVar::createDefault();
 }
 
 IoReactor* stl::createPollIoReactor(ObjPool* pool, CoroExecutor* exec, size_t reactors) {

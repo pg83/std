@@ -12,6 +12,7 @@ namespace stl {
     struct VisitorFace;
     struct CondVarIface;
     struct CoroExecutor;
+    struct ThreadPoolHooks;
 
     struct PollGroup {
     };
@@ -34,8 +35,7 @@ namespace stl {
 
         virtual void sleep(u64 deadlineUs) = 0;
 
-        virtual CondVarIface* createCondVar(size_t index);
-        virtual void bindThread(size_t index);
+        virtual ThreadPoolHooks* hooks() = 0;
 
         void poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs);
 

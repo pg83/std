@@ -1,4 +1,5 @@
 #include "io_uring.h"
+#include "pool.h"
 #include "io_reactor.h"
 #include "cond_var_iface.h"
 #include "mutex.h"
@@ -44,10 +45,14 @@ namespace {
         }
     };
 
-    struct UringReactorImpl: public IoReactor {
+    struct UringReactorImpl: public IoReactor, public ThreadPoolHooks {
         Vector<Ring*> rings_;
 
         UringReactorImpl(ObjPool* pool, size_t threads);
+
+        ThreadPoolHooks* hooks() override {
+            return this;
+        }
 
         CondVarIface* createCondVar(size_t index) override {
             return new UringCondVarImpl(rings_[index]);
