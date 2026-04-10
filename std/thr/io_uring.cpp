@@ -29,9 +29,16 @@ namespace {
 
     thread_local Ring* currentRing = nullptr;
 
-    struct UringReq {
+    struct UringReqBase {
+        virtual void complete(int result) noexcept = 0;
+    };
+
+    struct UringReq: UringReqBase {
+        CoroExecutor* exec;
         Task* task;
         int res;
+
+        void complete(int result) noexcept override;
     };
 
     struct RecvReq: UringReq {};
@@ -47,6 +54,7 @@ namespace {
     struct TimeoutReq: UringReq {
         __kernel_timespec ts;
     };
+
 
     static u32 toPollMask(u32 flags) noexcept {
         u32 r = 0;
@@ -116,11 +124,13 @@ namespace {
     void submitReq(CoroExecutor* exec, Req& req, F prep) noexcept {
         auto ring = currentRing;
 
+        req.exec = exec;
+
         exec->parkWith(makeRunable([&] {
             auto sqe = io_uring_get_sqe(ring);
 
             prep(sqe);
-            io_uring_sqe_set_data(sqe, static_cast<UringReq*>(&req));
+            io_uring_sqe_set_data(sqe, static_cast<UringReqBase*>(&req));
         }), &req.task);
     }
 
@@ -164,6 +174,11 @@ namespace {
         PollGroup* createPollGroup(ObjPool*, const PollFD*, size_t) override;
         void sleep(u64) override;
     };
+}
+
+void UringReq::complete(int result) noexcept {
+    res = result;
+    exec->reSchedule(task);
 }
 
 Ring::Ring() {
@@ -244,12 +259,9 @@ void UringCondVarImpl::wait(Mutex& mutex) noexcept {
             if (ud == WAKEUP_COOKIE) {
                 hasWork = true;
             } else if (ud == SENDER_COOKIE) {
-                // ignore sender's own MSG_RING completion
+                // ignore
             } else {
-                auto req = (UringReq*)ud;
-
-                req->res = res;
-                reactor_->exec_->reSchedule(req->task);
+                ((UringReqBase*)ud)->complete(res);
                 hasWork = true;
             }
         }
