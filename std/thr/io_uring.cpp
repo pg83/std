@@ -123,6 +123,7 @@ namespace {
 
     struct Ring: public io_uring {
         Ring();
+        Ring(u32 flags);
 
         virtual ~Ring() noexcept;
 
@@ -195,10 +196,15 @@ void UringReq::complete(int result) noexcept {
     exec->reSchedule(task);
 }
 
-Ring::Ring() {
+Ring::Ring()
+    : Ring(IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_R_DISABLED)
+{
+}
+
+Ring::Ring(u32 flags) {
     struct io_uring_params params = {};
 
-    params.flags = IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_R_DISABLED;
+    params.flags = flags;
 
     if (io_uring_queue_init_params(64, this, &params) < 0) {
         throw 1;
@@ -225,13 +231,9 @@ void Ring::wakeUp(int targetFd) noexcept {
     sendMsg(targetFd);
 }
 
-ExternalRing::ExternalRing() {
-    io_uring_queue_exit(this);
-
-    if (io_uring_queue_init(64, this, 0) < 0) {
-        throw 1;
-    }
-
+ExternalRing::ExternalRing()
+    : Ring(0)
+{
     mutex_.unlock();
 }
 
