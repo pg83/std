@@ -6,10 +6,10 @@
 
 namespace stl {
     class ObjPool;
+    class IntrusiveList;
 
     struct Task;
     struct IoReactor;
-    class IntrusiveList;
     struct ThreadPool;
     struct EventIface;
     struct ThreadIface;
