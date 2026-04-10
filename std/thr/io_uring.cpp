@@ -21,15 +21,7 @@ namespace {
     thread_local struct io_uring* currentRing = nullptr;
 
     struct Ring: public io_uring {
-        Ring() {
-            struct io_uring_params params = {};
-
-            params.flags = IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_DEFER_TASKRUN;
-
-            if (io_uring_queue_init_params(64, this, &params) < 0) {
-                throw 1;
-            }
-        }
+        Ring();
 
         ~Ring() noexcept {
             io_uring_queue_exit(this);
@@ -44,25 +36,8 @@ namespace {
         {
         }
 
-        void wait(Mutex& mutex) noexcept override {
-            mutex.unlock();
-            io_uring_submit_and_wait(ring_, 1);
-
-            struct io_uring_cqe* cqe;
-
-            while (io_uring_peek_cqe(ring_, &cqe) == 0) {
-                io_uring_cqe_seen(ring_, cqe);
-            }
-
-            mutex.lock();
-        }
-
-        void signal() noexcept override {
-            auto sqe = io_uring_get_sqe(currentRing);
-
-            io_uring_prep_msg_ring(sqe, ring_->ring_fd, 0, 0, 0);
-            io_uring_submit(currentRing);
-        }
+        void wait(Mutex& mutex) noexcept override;
+        void signal() noexcept override;
 
         void broadcast() noexcept override {
             signal();
@@ -72,11 +47,7 @@ namespace {
     struct UringReactorImpl: public IoReactor {
         Vector<Ring*> rings_;
 
-        UringReactorImpl(ObjPool* pool, size_t threads) {
-            for (size_t i = 0; i < threads; ++i) {
-                rings_.pushBack(pool->make<Ring>());
-            }
-        }
+        UringReactorImpl(ObjPool* pool, size_t threads);
 
         CondVarIface* createCondVar(size_t index) override {
             return new UringCondVarImpl(rings_[index]);
@@ -138,6 +109,42 @@ namespace {
             abort();
         }
     };
+}
+
+Ring::Ring() {
+    struct io_uring_params params = {};
+
+    params.flags = IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_DEFER_TASKRUN;
+
+    if (io_uring_queue_init_params(64, this, &params) < 0) {
+        throw 1;
+    }
+}
+
+void UringCondVarImpl::wait(Mutex& mutex) noexcept {
+    mutex.unlock();
+    io_uring_submit_and_wait(ring_, 1);
+
+    struct io_uring_cqe* cqe;
+
+    while (io_uring_peek_cqe(ring_, &cqe) == 0) {
+        io_uring_cqe_seen(ring_, cqe);
+    }
+
+    mutex.lock();
+}
+
+void UringCondVarImpl::signal() noexcept {
+    auto sqe = io_uring_get_sqe(currentRing);
+
+    io_uring_prep_msg_ring(sqe, ring_->ring_fd, 0, 0, 0);
+    io_uring_submit(currentRing);
+}
+
+UringReactorImpl::UringReactorImpl(ObjPool* pool, size_t threads) {
+    for (size_t i = 0; i < threads; ++i) {
+        rings_.pushBack(pool->make<Ring>());
+    }
 }
 
 IoReactor* stl::createIoUringReactor(ObjPool* pool, size_t threads) {
