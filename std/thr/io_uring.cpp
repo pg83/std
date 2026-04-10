@@ -27,18 +27,11 @@ namespace {
 
     struct Ring: public io_uring {
         Ring();
-
-        virtual ~Ring() noexcept {
-            io_uring_queue_exit(this);
-        }
+        virtual ~Ring() noexcept;
 
         void enable() noexcept;
-
         void sendMsg(int targetFd) noexcept;
-
-        virtual void wakeUp(int targetFd) noexcept {
-            sendMsg(targetFd);
-        }
+        virtual void wakeUp(int targetFd) noexcept;
     };
 
     struct ExternalRing: public Ring {
@@ -55,20 +48,13 @@ namespace {
         Ring* ring_;
         UringReactorImpl* reactor_;
 
-        UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexcept
-            : ring_(ring)
-            , reactor_(reactor)
-        {
-        }
+        UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexcept;
 
         Ring* currentRing() noexcept;
 
         void wait(Mutex& mutex) noexcept override;
         void signal() noexcept override;
-
-        void broadcast() noexcept override {
-            signal();
-        }
+        void broadcast() noexcept override;
     };
 
     struct UringReactorImpl: public IoReactor, public ThreadPoolHooks {
@@ -77,36 +63,27 @@ namespace {
 
         UringReactorImpl(ObjPool* pool, size_t threads);
 
-        ThreadPoolHooks* hooks() override {
-            return this;
-        }
+        ThreadPoolHooks* hooks() override;
+        CondVarIface* createCondVar(size_t index) override;
+        void bindThread(size_t index) override;
 
-        CondVarIface* createCondVar(size_t index) override {
-            return new UringCondVarImpl(rings_[index], this);
-        }
-
-        void bindThread(size_t index) override {
-            auto ring = rings_[index];
-
-            ring->enable();
-            currentRing = ring;
-        }
-
-        int recv(int, size_t*, void*, size_t, u64) override { abort(); }
-        int send(int, size_t*, const void*, size_t, u64) override { abort(); }
-        int writev(int, size_t*, iovec*, size_t, u64) override { abort(); }
-        int accept(int, int*, sockaddr*, u32*, u64) override { abort(); }
-        int connect(int, const sockaddr*, u32, u64) override { abort(); }
-        int pread(int, size_t*, void*, size_t, off_t) override { abort(); }
-        int pwrite(int, size_t*, const void*, size_t, off_t) override { abort(); }
-        int fsync(int) override { abort(); }
-        int fdatasync(int) override { abort(); }
-        u32 poll(PollFD, u64) override { abort(); }
-        void poll(PollGroup*, VisitorFace&, u64) override { abort(); }
-        PollGroup* createPollGroup(ObjPool*, const PollFD*, size_t) override { abort(); }
-        void sleep(u64) override { abort(); }
+        int recv(int, size_t*, void*, size_t, u64) override;
+        int send(int, size_t*, const void*, size_t, u64) override;
+        int writev(int, size_t*, iovec*, size_t, u64) override;
+        int accept(int, int*, sockaddr*, u32*, u64) override;
+        int connect(int, const sockaddr*, u32, u64) override;
+        int pread(int, size_t*, void*, size_t, off_t) override;
+        int pwrite(int, size_t*, const void*, size_t, off_t) override;
+        int fsync(int) override;
+        int fdatasync(int) override;
+        u32 poll(PollFD, u64) override;
+        void poll(PollGroup*, VisitorFace&, u64) override;
+        PollGroup* createPollGroup(ObjPool*, const PollFD*, size_t) override;
+        void sleep(u64) override;
     };
 }
+
+// Ring
 
 Ring::Ring() {
     struct io_uring_params params = {};
@@ -120,6 +97,10 @@ Ring::Ring() {
     }
 }
 
+Ring::~Ring() noexcept {
+    io_uring_queue_exit(this);
+}
+
 void Ring::enable() noexcept {
     io_uring_enable_rings(this);
 }
@@ -130,6 +111,12 @@ void Ring::sendMsg(int targetFd) noexcept {
     io_uring_prep_msg_ring(sqe, targetFd, 0, WAKEUP_COOKIE, 0);
     io_uring_submit(this);
 }
+
+void Ring::wakeUp(int targetFd) noexcept {
+    sendMsg(targetFd);
+}
+
+// ExternalRing
 
 ExternalRing::ExternalRing() {
     io_uring_queue_exit(this);
@@ -145,6 +132,22 @@ void ExternalRing::wakeUp(int targetFd) noexcept {
     mutex_.lock();
     sendMsg(targetFd);
     mutex_.unlock();
+}
+
+// UringCondVarImpl
+
+UringCondVarImpl::UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexcept
+    : ring_(ring)
+    , reactor_(reactor)
+{
+}
+
+Ring* UringCondVarImpl::currentRing() noexcept {
+    if (auto r = ::currentRing; r) {
+        return r;
+    }
+
+    return reactor_->ext_;
 }
 
 void UringCondVarImpl::wait(Mutex& mutex) noexcept {
@@ -170,17 +173,15 @@ done:
     mutex.lock();
 }
 
-Ring* UringCondVarImpl::currentRing() noexcept {
-    if (auto r = ::currentRing; r) {
-        return r;
-    }
-
-    return reactor_->ext_;
-}
-
 void UringCondVarImpl::signal() noexcept {
     currentRing()->wakeUp(ring_->ring_fd);
 }
+
+void UringCondVarImpl::broadcast() noexcept {
+    signal();
+}
+
+// UringReactorImpl
 
 UringReactorImpl::UringReactorImpl(ObjPool* pool, size_t threads)
     : ext_(pool->make<ExternalRing>())
@@ -189,6 +190,75 @@ UringReactorImpl::UringReactorImpl(ObjPool* pool, size_t threads)
         rings_.pushBack(pool->make<Ring>());
     }
 }
+
+ThreadPoolHooks* UringReactorImpl::hooks() {
+    return this;
+}
+
+CondVarIface* UringReactorImpl::createCondVar(size_t index) {
+    return new UringCondVarImpl(rings_[index], this);
+}
+
+void UringReactorImpl::bindThread(size_t index) {
+    auto ring = rings_[index];
+
+    ring->enable();
+    currentRing = ring;
+}
+
+int UringReactorImpl::recv(int, size_t*, void*, size_t, u64) {
+    abort();
+}
+
+int UringReactorImpl::send(int, size_t*, const void*, size_t, u64) {
+    abort();
+}
+
+int UringReactorImpl::writev(int, size_t*, iovec*, size_t, u64) {
+    abort();
+}
+
+int UringReactorImpl::accept(int, int*, sockaddr*, u32*, u64) {
+    abort();
+}
+
+int UringReactorImpl::connect(int, const sockaddr*, u32, u64) {
+    abort();
+}
+
+int UringReactorImpl::pread(int, size_t*, void*, size_t, off_t) {
+    abort();
+}
+
+int UringReactorImpl::pwrite(int, size_t*, const void*, size_t, off_t) {
+    abort();
+}
+
+int UringReactorImpl::fsync(int) {
+    abort();
+}
+
+int UringReactorImpl::fdatasync(int) {
+    abort();
+}
+
+u32 UringReactorImpl::poll(PollFD, u64) {
+    abort();
+}
+
+void UringReactorImpl::poll(PollGroup*, VisitorFace&, u64) {
+    abort();
+}
+
+PollGroup* UringReactorImpl::createPollGroup(ObjPool*, const PollFD*, size_t) {
+    abort();
+}
+
+void UringReactorImpl::sleep(u64) {
+    abort();
+}
+
+// factory
 
 IoReactor* stl::createIoUringReactor(ObjPool* pool, size_t threads) {
     try {
