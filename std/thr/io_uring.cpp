@@ -20,13 +20,27 @@ using namespace stl;
 namespace {
     thread_local struct io_uring* currentRing = nullptr;
 
-    struct UringCondVarImpl: public CondVarIface {
-        struct io_uring* ring_;
-        int ringFd_;
+    struct Ring: public io_uring {
+        Ring() {
+            struct io_uring_params params = {};
 
-        UringCondVarImpl(struct io_uring* ring) noexcept
+            params.flags = IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_DEFER_TASKRUN;
+
+            if (io_uring_queue_init_params(64, this, &params) < 0) {
+                throw 1;
+            }
+        }
+
+        ~Ring() noexcept {
+            io_uring_queue_exit(this);
+        }
+    };
+
+    struct UringCondVarImpl: public CondVarIface {
+        Ring* ring_;
+
+        UringCondVarImpl(Ring* ring) noexcept
             : ring_(ring)
-            , ringFd_(ring->ring_fd)
         {
         }
 
@@ -44,11 +58,10 @@ namespace {
         }
 
         void signal() noexcept override {
-            auto myRing = currentRing;
-            auto sqe = io_uring_get_sqe(myRing);
+            auto sqe = io_uring_get_sqe(currentRing);
 
-            io_uring_prep_msg_ring(sqe, ringFd_, 0, 0, 0);
-            io_uring_submit(myRing);
+            io_uring_prep_msg_ring(sqe, ring_->ring_fd, 0, 0, 0);
+            io_uring_submit(currentRing);
         }
 
         void broadcast() noexcept override {
@@ -57,39 +70,20 @@ namespace {
     };
 
     struct UringReactorImpl: public IoReactor {
-        Vector<struct io_uring> rings_;
+        Vector<Ring*> rings_;
 
-        UringReactorImpl(size_t threads) {
+        UringReactorImpl(ObjPool* pool, size_t threads) {
             for (size_t i = 0; i < threads; ++i) {
-                struct io_uring ring;
-                struct io_uring_params params = {};
-
-                params.flags = IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_DEFER_TASKRUN;
-
-                if (io_uring_queue_init_params(64, &ring, &params) < 0) {
-                    for (size_t j = 0; j < rings_.length(); ++j) {
-                        io_uring_queue_exit(&rings_.mut(j));
-                    }
-
-                    throw this;
-                }
-
-                rings_.pushBack(ring);
-            }
-        }
-
-        ~UringReactorImpl() noexcept {
-            for (size_t i = 0; i < rings_.length(); ++i) {
-                io_uring_queue_exit(&rings_.mut(i));
+                rings_.pushBack(pool->make<Ring>());
             }
         }
 
         CondVarIface* createCondVar(size_t index) override {
-            return new UringCondVarImpl(&rings_.mut(index));
+            return new UringCondVarImpl(rings_[index]);
         }
 
         void bindThread(size_t index) override {
-            currentRing = &rings_.mut(index);
+            currentRing = rings_[index];
         }
 
         int recv(int, size_t*, void*, size_t, u64) override {
@@ -148,8 +142,8 @@ namespace {
 
 IoReactor* stl::createIoUringReactor(ObjPool* pool, size_t threads) {
     try {
-        return pool->make<UringReactorImpl>(threads);
-    } catch (UringReactorImpl*) {
+        return pool->make<UringReactorImpl>(pool, threads);
+    } catch (int) {
         return nullptr;
     }
 }

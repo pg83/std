@@ -8,6 +8,7 @@ namespace stl {
     class PCG32;
     class ObjPool;
     class IntrusiveList;
+
     struct IoReactor;
 
     struct ThreadPool {
