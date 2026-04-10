@@ -1,6 +1,8 @@
 #include "io_uring.h"
 #include "io_reactor.h"
 #include "cond_var_iface.h"
+#include "mutex.h"
+#include "poll_fd.h"
 
 #include <std/sys/crt.h>
 #include <std/lib/vector.h>
@@ -66,7 +68,7 @@ namespace {
 
                 if (io_uring_queue_init_params(64, &ring, &params) < 0) {
                     for (size_t j = 0; j < rings_.length(); ++j) {
-                        io_uring_queue_exit(&rings_[j]);
+                        io_uring_queue_exit(&rings_.mut(j));
                     }
 
                     throw this;
@@ -78,16 +80,16 @@ namespace {
 
         ~UringReactorImpl() noexcept {
             for (size_t i = 0; i < rings_.length(); ++i) {
-                io_uring_queue_exit(&rings_[i]);
+                io_uring_queue_exit(&rings_.mut(i));
             }
         }
 
         CondVarIface* createCondVar(size_t index) override {
-            return new UringCondVarImpl(&rings_[index]);
+            return new UringCondVarImpl(&rings_.mut(index));
         }
 
         void bindThread(size_t index) override {
-            currentRing = &rings_[index];
+            currentRing = &rings_.mut(index);
         }
 
         int recv(int, size_t*, void*, size_t, u64) override {
