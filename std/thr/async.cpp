@@ -88,7 +88,7 @@ FutureIfaceRef stl::asyncImpl(ProducerIface* prod, ThreadPool* pool) {
 }
 
 FutureIfaceRef stl::asyncImpl(ProducerIface* prod, CoroExecutor* exec) {
-    auto fi = makeIntrusivePtr(exec->me() ? new FutureImpl(exec, prod) : new FutureImpl(prod));
+    auto fi = makeIntrusivePtr(exec->currentCoroId() ? new FutureImpl(exec, prod) : new FutureImpl(prod));
 
     exec->spawn([fi] mutable {
         fi->execute();

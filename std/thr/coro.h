@@ -17,10 +17,6 @@ namespace stl {
     struct CoroExecutor;
     struct SemaphoreIface;
 
-    struct Cont {
-        u64 id() const noexcept;
-    };
-
     struct SpawnParams {
         size_t stackSize;
         void* stackPtr;
@@ -44,8 +40,7 @@ namespace stl {
         virtual void join() noexcept = 0;
         virtual void yield() noexcept = 0;
         virtual u32 random() noexcept = 0;
-        virtual Cont* me() const noexcept = 0;
-        virtual Cont* spawnRun(SpawnParams params) = 0;
+        virtual void spawnRun(SpawnParams params) = 0;
         virtual void reSchedule(Task* task) noexcept = 0;
         virtual void parkWith(Runable&&, Task**) noexcept = 0;
         virtual void reSchedule(IntrusiveList& tasks) noexcept = 0;
@@ -58,11 +53,11 @@ namespace stl {
         virtual CondVarIface* createCondVar() = 0;
         virtual SemaphoreIface* createSemaphore(size_t initial) = 0;
 
-        u64 currentCoroId() const noexcept;
+        virtual void* currentCoroId() const noexcept = 0;
 
         template <typename F>
-        Cont* spawn(F f) {
-            return spawnRun(SpawnParams().setRunable(f));
+        void spawn(F f) {
+            spawnRun(SpawnParams().setRunable(f));
         }
 
         template <typename F>

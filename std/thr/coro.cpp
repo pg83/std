@@ -41,7 +41,7 @@ using namespace stl;
 namespace {
     struct CoroExecutorImpl;
 
-    struct ContImpl: public Cont, public Task {
+    struct ContImpl: public Task {
         CoroExecutorImpl* exec_;
         ScopedPtr<Context> ctx_;
         Context* workerCtx_;
@@ -120,7 +120,7 @@ namespace {
         ~CoroExecutorImpl() noexcept;
 
         void join() noexcept override;
-        Cont* spawnRun(SpawnParams params) override;
+        void spawnRun(SpawnParams params) override;
 
         auto tls() {
             return pool_->tls(tlsKey_);
@@ -130,9 +130,9 @@ namespace {
             return (ContImpl*)*tls();
         }
 
-        Cont* me() const noexcept override {
+        void* currentCoroId() const noexcept override {
             if (auto t = ((CoroExecutorImpl*)this)->tls(); t) {
-                return (ContImpl*)*t;
+                return *t;
             }
 
             return nullptr;
@@ -174,12 +174,8 @@ CoroExecutorImpl::CoroExecutorImpl(ObjPool* pool, size_t threads)
 {
 }
 
-Cont* CoroExecutorImpl::spawnRun(SpawnParams params) {
-    auto task = makeContImpl(this, params);
-
-    task->reSchedule();
-
-    return task;
+void CoroExecutorImpl::spawnRun(SpawnParams params) {
+    makeContImpl(this, params)->reSchedule();
 }
 
 void CoroExecutorImpl::yield() noexcept {
@@ -278,9 +274,6 @@ void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {
     });
 }
 
-u64 Cont::id() const noexcept {
-    return (u64)(size_t)this;
-}
 
 void CoroExecutorImpl::createEvent(void* buf) {
     struct CoroEventImpl: public EventIface, public Newable {
@@ -377,8 +370,8 @@ ThreadIface* CoroExecutorImpl::createThread() {
             sem_.post();
         }
 
-        auto start(Runable& runable) {
-            return exec()->spawn([ref = makeIntrusivePtr(this), &runable] mutable {
+        void start(Runable& runable) {
+            exec()->spawn([ref = makeIntrusivePtr(this), &runable] mutable {
                 ref->run(runable);
             });
         }
@@ -390,7 +383,6 @@ ThreadIface* CoroExecutorImpl::createThread() {
 
     struct CoroThreadImpl: public ThreadIface {
         IntrusivePtr<State> state_;
-        Cont* cont_ = nullptr;
 
         CoroThreadImpl(State* s) noexcept
             : state_(s)
@@ -398,7 +390,7 @@ ThreadIface* CoroExecutorImpl::createThread() {
         }
 
         void start(Runable& runable) override {
-            cont_ = state_->start(runable);
+            state_->start(runable);
         }
 
         void join() noexcept override {
@@ -409,7 +401,7 @@ ThreadIface* CoroExecutorImpl::createThread() {
         }
 
         u64 threadId() const noexcept override {
-            return cont_->id();
+            return (u64)(size_t)state_.ptr();
         }
     };
 
@@ -480,9 +472,6 @@ CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads) {
     return pool->make<CoroExecutorImpl>(pool, threads);
 }
 
-u64 CoroExecutor::currentCoroId() const noexcept {
-    return me()->id();
-}
 
 SpawnParams& SpawnParams::setStackSize(size_t v) noexcept {
     stackSize = v;

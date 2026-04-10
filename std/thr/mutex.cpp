@@ -23,7 +23,7 @@ namespace {
         }
 
         void spin() noexcept {
-            if (exec_ && exec_->me()) {
+            if (exec_ && exec_->currentCoroId()) {
                 exec_->yield();
             } else {
                 sched_yield();
