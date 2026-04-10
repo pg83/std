@@ -39,8 +39,6 @@ namespace {
     };
 
     struct SyncThreadPool: public ThreadPool {
-        PCG32 rng_{this};
-
         void submitTasks(IntrusiveList& tasks) noexcept override {
             while (auto t = (Task*)tasks.popFrontOrNull()) {
                 t->run();
@@ -55,21 +53,15 @@ namespace {
 
             return true;
         }
-
-        PCG32& random() noexcept override {
-            return rng_;
-        }
     };
 
     class ThreadPoolImpl: public ThreadPool {
         struct Worker: public Runable {
             ThreadPoolImpl* pool_;
-            PCG32 rng_;
             Thread thread_;
 
             explicit Worker(ThreadPoolImpl* p) noexcept
                 : pool_(p)
-                , rng_(this)
                 , thread_(*this)
             {
             }
@@ -102,7 +94,6 @@ namespace {
         void submitTasks(IntrusiveList& tasks) noexcept override;
         void join() noexcept override;
         bool workerId(size_t* id) noexcept override;
-        PCG32& random() noexcept override;
     };
 }
 
@@ -145,10 +136,6 @@ ThreadPoolImpl::~ThreadPoolImpl() noexcept {
 
 bool ThreadPoolImpl::workerId(size_t*) noexcept {
     return false;
-}
-
-PCG32& ThreadPoolImpl::random() noexcept {
-    return workers_.find(Thread::currentThreadId())->rng_;
 }
 
 void ThreadPoolImpl::workerLoop() {
@@ -242,7 +229,6 @@ namespace {
 
         void join() noexcept override;
         Worker* localWorker() noexcept;
-        PCG32& random() noexcept override;
         bool workerId(size_t* id) noexcept override;
         void submitTasks(IntrusiveList& tasks) noexcept override;
     };
@@ -330,10 +316,6 @@ bool WorkStealingThreadPool::workerId(size_t* id) noexcept {
     }
 
     return false;
-}
-
-PCG32& WorkStealingThreadPool::random() noexcept {
-    return localWorker()->random();
 }
 
 void WorkStealingThreadPool::join() noexcept {

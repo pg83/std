@@ -290,56 +290,6 @@ STD_TEST_SUITE(CoroExecutor) {
     }
 }
 
-STD_TEST_SUITE(CoroRandom) {
-    STD_TEST(NonZero) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-
-        auto f = async(exec, [&] {
-            return exec->random();
-        });
-
-        STD_INSIST(f.wait() != 0);
-    }
-
-    STD_TEST(DifferentPerCoro) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        const int N = 8;
-        u32 values[N] = {};
-
-        for (int i = 0; i < N; ++i) {
-            exec->spawn([&, i] {
-                values[i] = exec->random();
-            });
-        }
-
-        exec->join();
-
-        for (int i = 0; i < N; ++i) {
-            for (int j = i + 1; j < N; ++j) {
-                STD_INSIST(values[i] != values[j]);
-            }
-        }
-    }
-
-    STD_TEST(Successive) {
-        auto pool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-
-        struct Pair {
-            u32 a, b;
-        };
-
-        auto f = async(exec, [&] {
-            return Pair{exec->random(), exec->random()};
-        });
-
-        auto& p = f.wait();
-        STD_INSIST(p.a != p.b);
-    }
-}
-
 STD_TEST_SUITE(CoroMisc) {
     STD_TEST(SpawnFromMain) {
         auto pool = ObjPool::fromMemory();

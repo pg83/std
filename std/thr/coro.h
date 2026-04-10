@@ -39,7 +39,6 @@ namespace stl {
     struct CoroExecutor {
         virtual void join() noexcept = 0;
         virtual void yield() noexcept = 0;
-        virtual u32 random() noexcept = 0;
         virtual void spawnRun(SpawnParams params) = 0;
         virtual void reSchedule(Task* task) noexcept = 0;
         virtual void parkWith(Runable&&, Task**) noexcept = 0;

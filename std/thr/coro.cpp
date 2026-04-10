@@ -150,10 +150,6 @@ namespace {
 
         void yield() noexcept override;
 
-        u32 random() noexcept override {
-            return pool_->random().nextU32();
-        }
-
         void createEvent(void* buf) override;
         ThreadIface* createThread() override;
         CondVarIface* createCondVar() override;
