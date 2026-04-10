@@ -287,7 +287,7 @@ void UringCondVarImpl::wait(Mutex& mutex) noexcept {
     for (;;) {
         io_uring_submit_and_wait(ring_, 1);
 
-        bool hasWork = false;
+        bool signaled = false;
         struct io_uring_cqe* cqe;
 
         while (io_uring_peek_cqe(ring_, &cqe) == 0) {
@@ -297,16 +297,15 @@ void UringCondVarImpl::wait(Mutex& mutex) noexcept {
             io_uring_cqe_seen(ring_, cqe);
 
             if (ud == WAKEUP_COOKIE) {
-                hasWork = true;
+                signaled = true;
             } else if (ud == SENDER_COOKIE) {
                 // ignore
             } else {
                 ((UringReqBase*)ud)->complete(res);
-                hasWork = true;
             }
         }
 
-        if (hasWork) {
+        if (signaled) {
             break;
         }
     }
