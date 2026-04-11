@@ -221,7 +221,7 @@ Ring::Ring(u32 flags) {
 
     params.flags = flags;
 
-    if (io_uring_queue_init_params(64, this, &params) < 0) {
+    if (io_uring_queue_init_params(256, this, &params) < 0) {
         throw 1;
     }
 }
