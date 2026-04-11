@@ -1,4 +1,5 @@
 #include "io_uring.h"
+
 #include "coro.h"
 #include "pool.h"
 #include "mutex.h"
@@ -12,14 +13,14 @@
 #include <std/lib/visitor.h>
 #include <std/mem/obj_pool.h>
 
+#include <poll.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+
 #if __has_include(<liburing.h>)
     #include <liburing.h>
 #endif
-
-#include <errno.h>
-#include <stdlib.h>
-#include <poll.h>
-#include <sys/socket.h>
 
 using namespace stl;
 
