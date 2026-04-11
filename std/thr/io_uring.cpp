@@ -351,7 +351,6 @@ void UringReactorImpl::submitReq(Req& req, F prep) noexcept {
         prep(sqe);
 
         io_uring_sqe_set_data(sqe, static_cast<UringReqBase*>(&req));
-        io_uring_submit(ring);
     }), &req.task);
 }
 
@@ -374,7 +373,6 @@ void UringReactorImpl::submitReq(Req& req, F prep, u64 deadlineUs) noexcept {
         io_uring_prep_link_timeout(tsqe, &ts, 0);
         io_uring_sqe_set_data64(tsqe, WAKEUP_COOKIE);
         tsqe->flags |= IOSQE_CQE_SKIP_SUCCESS;
-        io_uring_submit(ring);
     }), &req.task);
 }
 
