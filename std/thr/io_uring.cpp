@@ -29,8 +29,6 @@ namespace {
 
     struct Ring;
 
-    thread_local Ring* currentRing_ = nullptr;
-
     struct UringReqBase {
         virtual void complete(int result, IntrusiveList& ready) noexcept = 0;
     };
@@ -246,6 +244,7 @@ UringCondVarImpl::UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexce
     : ring_(ring)
     , reactor_(reactor)
 {
+    ring_->enable();
 }
 
 bool UringCondVarImpl::cycle() noexcept {
@@ -277,11 +276,6 @@ bool UringCondVarImpl::cycle() noexcept {
 }
 
 void UringCondVarImpl::wait(Mutex& mutex) noexcept {
-    if (!currentRing_) {
-        ring_->enable();
-        currentRing_ = ring_;
-    }
-
     mutex.unlock();
 
     while (!cycle()) {
@@ -312,19 +306,10 @@ ThreadPoolHooks* UringReactorImpl::hooks() {
 }
 
 Ring* UringReactorImpl::currentRing() noexcept {
-    if (auto r = currentRing_; r) {
-        return r;
-    }
-
     size_t id;
 
     if (exec_->workerId(&id)) {
-        auto r = rings_[id];
-
-        r->enable();
-        currentRing_ = r;
-
-        return r;
+        return rings_[id];
     }
 
     return ext_;

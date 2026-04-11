@@ -187,12 +187,12 @@ namespace {
             PCG32 rng_;
             Vector<Worker*> so_;
             Mutex mutex_;
-            CondVar condVar_;
+            CondVar* condVar_;
             IntrusiveList tasks_;
             IntrusiveList local_;
             Thread thread_;
 
-            Worker(WorkStealingThreadPool* pool, u32 myIndex, u64 seed, CondVarIface* cv);
+            Worker(WorkStealingThreadPool* pool, u32 myIndex, u64 seed);
 
             auto key() const noexcept {
                 return thread_.threadId();
@@ -244,13 +244,13 @@ namespace {
 
 void WorkStealingThreadPool::Worker::sleep() noexcept {
     pool_->wq->enqueue(this);
-    condVar_.wait(mutex_);
+    condVar_->wait(mutex_);
 }
 
 void WorkStealingThreadPool::Worker::push(Task* task) noexcept {
     LockGuard lock(mutex_);
     tasks_.pushBack(task);
-    condVar_.signal();
+    condVar_->signal();
 }
 
 void WorkStealingThreadPool::Worker::pushNoSignal(IntrusiveList& tasks) noexcept {
@@ -261,7 +261,7 @@ void WorkStealingThreadPool::Worker::pushNoSignal(IntrusiveList& tasks) noexcept
 void WorkStealingThreadPool::Worker::push(IntrusiveList* tasks) noexcept {
     LockGuard lock(mutex_);
     tasks_.pushBack(*tasks);
-    condVar_.signal();
+    condVar_->signal();
 }
 
 WorkStealingThreadPool::WorkStealingThreadPool(ObjPool* pool, size_t numThreads, ThreadPoolHooks* hooks)
@@ -272,7 +272,7 @@ WorkStealingThreadPool::WorkStealingThreadPool(ObjPool* pool, size_t numThreads,
     PCG32 rng(this);
 
     for (size_t i = 0; i < numThreads; ++i) {
-        auto w = pool->make<Worker>(this, i, rng.nextU64(), hooks->createCondVar(i));
+        auto w = pool->make<Worker>(this, i, rng.nextU64());
         workers_.insert(w->key(), w);
     }
 
@@ -342,7 +342,7 @@ void WorkStealingThreadPool::flushLocal() noexcept {
 
             if (auto s = (Worker*)wq->dequeue(); s) {
                 if (s == w) {
-                    w->condVar_.signal();
+                    w->condVar_->signal();
                 } else {
                     target = s;
                     stolen = w->popNoLock();
@@ -372,13 +372,13 @@ WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
     STD_INSIST(taskCount_ == 0);
 }
 
-WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u64 seed, CondVarIface* cv)
+WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, u32 myIndex, u64 seed)
     : WaitQueue::Item{nullptr, (u8)myIndex}
     , pool_(pool)
     , index_(myIndex)
     , rng_(seed)
     , mutex_(true)
-    , condVar_(cv)
+    , condVar_(nullptr)
     , thread_(*this)
 {
 }
@@ -431,6 +431,7 @@ void WorkStealingThreadPool::Worker::run() noexcept {
 }
 
 void WorkStealingThreadPool::Worker::loop() {
+    condVar_ = new CondVar(pool_->hooks_->createCondVar(index_));
     LockGuard lock(mutex_);
 
     while (true) {
