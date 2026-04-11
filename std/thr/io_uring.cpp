@@ -54,16 +54,6 @@ namespace {
         void complete(int result, IntrusiveList& ready) noexcept override;
     };
 
-    struct RecvReq: UringReq {};
-    struct SendReq: UringReq {};
-    struct WritevReq: UringReq {};
-    struct AcceptReq: UringReq {};
-    struct ConnectReq: UringReq {};
-    struct PreadReq: UringReq {};
-    struct PwriteReq: UringReq {};
-    struct FsyncReq: UringReq {};
-    struct PollReq: UringReq {};
-
     struct TimeoutReq: UringReq {
         __kernel_timespec ts;
     };
@@ -165,11 +155,11 @@ namespace {
 
         Ring* currentRing() noexcept;
 
-        template <typename Req, typename F>
-        int submit(Req& req, F prep, u64 deadlineUs) noexcept;
+        template <typename F>
+        int submit(F prep, u64 deadlineUs) noexcept;
 
-        template <typename T, typename Req, typename F>
-        int submit(T* out, Req& req, F prep, u64 deadlineUs) noexcept;
+        template <typename T, typename F>
+        int submit(T* out, F prep, u64 deadlineUs) noexcept;
 
         template <typename Req, typename F>
         void submitReq(Req& req, F prep) noexcept;
@@ -359,8 +349,10 @@ Ring* UringReactorImpl::currentRing() noexcept {
     return ext_;
 }
 
-template <typename Req, typename F>
-int UringReactorImpl::submit(Req& req, F prep, u64 deadlineUs) noexcept {
+template <typename F>
+int UringReactorImpl::submit(F prep, u64 deadlineUs) noexcept {
+    UringReq req;
+
     if (deadlineUs == UINT64_MAX) {
         submitReq(req, prep);
     } else {
@@ -370,8 +362,10 @@ int UringReactorImpl::submit(Req& req, F prep, u64 deadlineUs) noexcept {
     return toErrno(req.res);
 }
 
-template <typename T, typename Req, typename F>
-int UringReactorImpl::submit(T* out, Req& req, F prep, u64 deadlineUs) noexcept {
+template <typename T, typename F>
+int UringReactorImpl::submit(T* out, F prep, u64 deadlineUs) noexcept {
+    UringReq req;
+
     if (deadlineUs == UINT64_MAX) {
         submitReq(req, prep);
     } else {
@@ -428,83 +422,71 @@ CondVarIface* UringReactorImpl::createCondVar(size_t index) {
 }
 
 int UringReactorImpl::recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) {
-    RecvReq req;
-
-    return submit(nRead, req, [&](auto sqe) {
+    return submit(nRead, [&](auto sqe) {
         io_uring_prep_recv(sqe, fd, buf, len, 0);
     }, deadlineUs);
 }
 
 int UringReactorImpl::send(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
-    SendReq req;
-
-    return submit(nWritten, req, [&](auto sqe) {
+    return submit(nWritten, [&](auto sqe) {
         io_uring_prep_send(sqe, fd, buf, len, MSG_NOSIGNAL);
     }, deadlineUs);
 }
 
 int UringReactorImpl::writev(int fd, size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs) {
-    WritevReq req;
-
-    return submit(nWritten, req, [&](auto sqe) {
+    return submit(nWritten, [&](auto sqe) {
         io_uring_prep_writev(sqe, fd, iov, iovcnt, 0);
     }, deadlineUs);
 }
 
 int UringReactorImpl::accept(int fd, int* newFd, sockaddr* addr, u32* addrLen, u64 deadlineUs) {
-    AcceptReq req;
-
-    return submit(newFd, req, [&](auto sqe) {
+    return submit(newFd, [&](auto sqe) {
         io_uring_prep_accept(sqe, fd, addr, (socklen_t*)addrLen, SOCK_NONBLOCK | SOCK_CLOEXEC);
     }, deadlineUs);
 }
 
 int UringReactorImpl::connect(int fd, const sockaddr* addr, u32 addrLen, u64 deadlineUs) {
-    ConnectReq req;
-
-    return submit(req, [&](auto sqe) {
+    return submit([&](auto sqe) {
         io_uring_prep_connect(sqe, fd, addr, addrLen);
     }, deadlineUs);
 }
 
 int UringReactorImpl::pread(int fd, size_t* nRead, void* buf, size_t len, off_t offset) {
-    PreadReq req;
-
-    return submit(nRead, req, [&](auto sqe) {
+    return submit(nRead, [&](auto sqe) {
         io_uring_prep_read(sqe, fd, buf, len, offset);
     }, UINT64_MAX);
 }
 
 int UringReactorImpl::pwrite(int fd, size_t* nWritten, const void* buf, size_t len, off_t offset) {
-    PwriteReq req;
-
-    return submit(nWritten, req, [&](auto sqe) {
+    return submit(nWritten, [&](auto sqe) {
         io_uring_prep_write(sqe, fd, buf, len, offset);
     }, UINT64_MAX);
 }
 
 int UringReactorImpl::fsync(int fd) {
-    FsyncReq req;
-
-    return submit(req, [&](auto sqe) {
+    return submit([&](auto sqe) {
         io_uring_prep_fsync(sqe, fd, 0);
     }, UINT64_MAX);
 }
 
 int UringReactorImpl::fdatasync(int fd) {
-    FsyncReq req;
-
-    return submit(req, [&](auto sqe) {
+    return submit([&](auto sqe) {
         io_uring_prep_fsync(sqe, fd, IORING_FSYNC_DATASYNC);
     }, UINT64_MAX);
 }
 
 u32 UringReactorImpl::poll(PollFD pfd, u64 deadlineUs) {
-    PollReq req;
+    UringReq req;
 
-    submit(req, [&](auto sqe) {
-        io_uring_prep_poll_add(sqe, pfd.fd, toPollMask(pfd.flags));
-    }, deadlineUs);
+    if (deadlineUs == UINT64_MAX) {
+        submitReq(req, [&](auto sqe) {
+            io_uring_prep_poll_add(sqe, pfd.fd, toPollMask(pfd.flags));
+        });
+    } else {
+        submitReq(req, [&](auto sqe) {
+            io_uring_prep_poll_add(sqe, pfd.fd, toPollMask(pfd.flags));
+        }, deadlineUs);
+    }
 
     if (req.res <= 0) {
         return 0;
@@ -544,9 +526,9 @@ void UringReactorImpl::sleep(u64 deadlineUs) {
 
     req.ts = usToTimespec(deadlineUs);
 
-    submit(req, [&](auto sqe) {
+    submitReq(req, [&](auto sqe) {
         io_uring_prep_timeout(sqe, &req.ts, 0, IORING_TIMEOUT_ABS);
-    }, UINT64_MAX);
+    });
 }
 
 // UringPollGroup
