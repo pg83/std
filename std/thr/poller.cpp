@@ -210,42 +210,6 @@ namespace {
 #endif
 
 namespace {
-    static short toPollEvents(u32 flags) noexcept {
-        short r = 0;
-
-        if (flags & PollFlag::In) {
-            r |= POLLIN;
-        }
-
-        if (flags & PollFlag::Out) {
-            r |= POLLOUT;
-        }
-
-        return r;
-    }
-
-    static u32 fromPollEvents(short events) noexcept {
-        u32 r = 0;
-
-        if (events & POLLIN) {
-            r |= PollFlag::In;
-        }
-
-        if (events & POLLOUT) {
-            r |= PollFlag::Out;
-        }
-
-        if (events & POLLERR) {
-            r |= PollFlag::Err;
-        }
-
-        if (events & POLLHUP) {
-            r |= PollFlag::Hup;
-        }
-
-        return r;
-    }
-
     struct PollPoller: public PollerIface {
         IntMap<PollFD> armed_;
         Vector<struct pollfd> fds_; // rebuilt each wait()
@@ -269,7 +233,7 @@ namespace {
             armed_.visit([&](const PollFD& e) {
                 fds_.pushBack({
                     .fd = e.fd,
-                    .events = toPollEvents(e.flags),
+                    .events = e.toPollEvents(),
                     .revents = 0,
                 });
             });
@@ -289,7 +253,7 @@ namespace {
                     continue;
                 }
 
-                PollFD ev{pfd.fd, fromPollEvents(pfd.revents)};
+                PollFD ev{pfd.fd, PollFD::fromPollEvents(pfd.revents)};
 
                 v.visit(&ev);
             }

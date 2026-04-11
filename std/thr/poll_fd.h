@@ -13,5 +13,9 @@ namespace stl {
     struct PollFD {
         int fd;
         u32 flags;
+
+        short toPollEvents() const noexcept;
+
+        static u32 fromPollEvents(short events) noexcept;
     };
 }

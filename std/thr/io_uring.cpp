@@ -13,7 +13,6 @@
 #include <std/lib/visitor.h>
 #include <std/mem/obj_pool.h>
 
-#include <poll.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -70,42 +69,6 @@ namespace {
 
         UringPollGroup(ObjPool* pool, const PollFD* fds, size_t count);
     };
-
-    static u32 toPollMask(u32 flags) noexcept {
-        u32 r = 0;
-
-        if (flags & PollFlag::In) {
-            r |= POLLIN;
-        }
-
-        if (flags & PollFlag::Out) {
-            r |= POLLOUT;
-        }
-
-        return r;
-    }
-
-    static u32 fromPollMask(u32 events) noexcept {
-        u32 r = 0;
-
-        if (events & POLLIN) {
-            r |= PollFlag::In;
-        }
-
-        if (events & POLLOUT) {
-            r |= PollFlag::Out;
-        }
-
-        if (events & POLLERR) {
-            r |= PollFlag::Err;
-        }
-
-        if (events & POLLHUP) {
-            r |= PollFlag::Hup;
-        }
-
-        return r;
-    }
 
     static __kernel_timespec usToTimespec(u64 us) noexcept {
         __kernel_timespec ts;
@@ -476,14 +439,14 @@ int UringReactorImpl::fdatasync(int fd) {
 
 u32 UringReactorImpl::poll(PollFD pfd, u64 deadlineUs) {
     auto req = submit([&](auto sqe) {
-        io_uring_prep_poll_add(sqe, pfd.fd, toPollMask(pfd.flags));
+        io_uring_prep_poll_add(sqe, pfd.fd, pfd.toPollEvents());
     }, deadlineUs);
 
     if (req.res <= 0) {
         return 0;
     }
 
-    return fromPollMask(req.res);
+    return PollFD::fromPollEvents(req.res);
 }
 
 void UringReactorImpl::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
