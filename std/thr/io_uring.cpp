@@ -320,8 +320,7 @@ void UringCondVarImpl::wait(Mutex& mutex) noexcept {
 }
 
 void UringCondVarImpl::signal() noexcept {
-    auto src = reactor_->currentRing();
-    src->wakeUp(ring_->ring_fd);
+    reactor_->currentRing()->wakeUp(ring_->ring_fd);
 }
 
 void UringCondVarImpl::broadcast() noexcept {
