@@ -7,6 +7,7 @@
 #include "cond_var_iface.h"
 
 #include <std/sys/crt.h>
+#include <std/lib/list.h>
 #include <std/lib/vector.h>
 #include <std/lib/visitor.h>
 #include <std/mem/obj_pool.h>
@@ -31,7 +32,7 @@ namespace {
     thread_local Ring* currentRing_ = nullptr;
 
     struct UringReqBase {
-        virtual void complete(int result) noexcept = 0;
+        virtual void complete(int result, IntrusiveList& ready) noexcept = 0;
     };
 
     static int toErrno(int res) noexcept {
@@ -47,11 +48,10 @@ namespace {
     }
 
     struct UringReq: UringReqBase {
-        CoroExecutor* exec;
         Task* task;
         int res;
 
-        void complete(int result) noexcept override;
+        void complete(int result, IntrusiveList& ready) noexcept override;
     };
 
     struct RecvReq: UringReq {};
@@ -190,9 +190,9 @@ namespace {
     };
 }
 
-void UringReq::complete(int result) noexcept {
+void UringReq::complete(int result, IntrusiveList& ready) noexcept {
     res = result;
-    exec->reSchedule(task);
+    ready.pushBack(task);
 }
 
 Ring::Ring()
@@ -260,6 +260,7 @@ void UringCondVarImpl::wait(Mutex& mutex) noexcept {
 
         bool signaled = false;
         struct io_uring_cqe* cqe;
+        IntrusiveList ready;
 
         while (io_uring_peek_cqe(ring_, &cqe) == 0) {
             auto ud = cqe->user_data;
@@ -270,9 +271,13 @@ void UringCondVarImpl::wait(Mutex& mutex) noexcept {
             if (ud == WAKEUP_COOKIE) {
                 signaled = true;
             } else {
-                ((UringReqBase*)ud)->complete(res);
-                reactor_->exec_->flushLocal();
+                ((UringReqBase*)ud)->complete(res, ready);
             }
+        }
+
+        if (!ready.empty()) {
+            reactor_->exec_->reSchedule(ready);
+            reactor_->exec_->flushLocal();
         }
 
         if (signaled) {
@@ -337,8 +342,6 @@ template <typename Req, typename F>
 void UringReactorImpl::submitReq(Req& req, F prep) noexcept {
     auto ring = currentRing();
 
-    req.exec = exec_;
-
     exec_->parkWith(makeRunable([&] {
         auto sqe = io_uring_get_sqe(ring);
 
@@ -354,8 +357,6 @@ void UringReactorImpl::submitReq(Req& req, F prep, u64 deadlineUs) noexcept {
     auto ring = currentRing();
     auto now = monotonicNowUs();
     auto ts = (now < deadlineUs) ? usToTimespec(deadlineUs - now) : usToTimespec(0);
-
-    req.exec = exec_;
 
     exec_->parkWith(makeRunable([&] {
         auto sqe = io_uring_get_sqe(ring);
