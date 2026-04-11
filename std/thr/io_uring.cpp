@@ -126,6 +126,8 @@ namespace {
 
         virtual ~Ring() noexcept;
 
+        io_uring_sqe* getSqe() noexcept;
+
         void enable() noexcept;
         void sendMsg(int targetFd) noexcept;
 
@@ -216,12 +218,23 @@ Ring::~Ring() noexcept {
     io_uring_queue_exit(this);
 }
 
+io_uring_sqe* Ring::getSqe() noexcept {
+    auto sqe = io_uring_get_sqe(this);
+
+    if (!sqe) {
+        io_uring_submit(this);
+        sqe = io_uring_get_sqe(this);
+    }
+
+    return sqe;
+}
+
 void Ring::enable() noexcept {
     io_uring_enable_rings(this);
 }
 
 void Ring::sendMsg(int targetFd) noexcept {
-    auto sqe = io_uring_get_sqe(this);
+    auto sqe = getSqe();
 
     io_uring_prep_msg_ring(sqe, targetFd, 0, WAKEUP_COOKIE, 0);
     sqe->flags |= IOSQE_CQE_SKIP_SUCCESS;
@@ -346,7 +359,7 @@ void UringReactorImpl::submitReq(Req& req, F prep) noexcept {
     auto ring = currentRing();
 
     exec_->parkWith(makeRunable([&] {
-        auto sqe = io_uring_get_sqe(ring);
+        auto sqe = ring->getSqe();
 
         prep(sqe);
 
@@ -361,14 +374,14 @@ void UringReactorImpl::submitReq(Req& req, F prep, u64 deadlineUs) noexcept {
     auto ts = (now < deadlineUs) ? usToTimespec(deadlineUs - now) : usToTimespec(0);
 
     exec_->parkWith(makeRunable([&] {
-        auto sqe = io_uring_get_sqe(ring);
+        auto sqe = ring->getSqe();
 
         prep(sqe);
 
         io_uring_sqe_set_data(sqe, static_cast<UringReqBase*>(&req));
         sqe->flags |= IOSQE_IO_LINK;
 
-        auto tsqe = io_uring_get_sqe(ring);
+        auto tsqe = ring->getSqe();
 
         io_uring_prep_link_timeout(tsqe, &ts, 0);
         io_uring_sqe_set_data64(tsqe, WAKEUP_COOKIE);
