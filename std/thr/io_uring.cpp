@@ -148,6 +148,8 @@ namespace {
 
         UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexcept;
 
+        bool cycle() noexcept;
+
         void signal() noexcept override;
         void broadcast() noexcept override;
         void wait(Mutex& mutex) noexcept override;
@@ -247,6 +249,34 @@ UringCondVarImpl::UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexce
 {
 }
 
+bool UringCondVarImpl::cycle() noexcept {
+    io_uring_submit_and_wait(ring_, 1);
+
+    bool signaled = false;
+    struct io_uring_cqe* cqe;
+    IntrusiveList ready;
+
+    while (io_uring_peek_cqe(ring_, &cqe) == 0) {
+        auto ud = cqe->user_data;
+        auto res = cqe->res;
+
+        io_uring_cqe_seen(ring_, cqe);
+
+        if (ud == WAKEUP_COOKIE) {
+            signaled = true;
+        } else {
+            ((UringReqBase*)ud)->complete(res, ready);
+        }
+    }
+
+    if (!ready.empty()) {
+        reactor_->exec_->reSchedule(ready);
+        reactor_->exec_->flushLocal();
+    }
+
+    return signaled;
+}
+
 void UringCondVarImpl::wait(Mutex& mutex) noexcept {
     if (!currentRing_) {
         ring_->enable();
@@ -255,34 +285,7 @@ void UringCondVarImpl::wait(Mutex& mutex) noexcept {
 
     mutex.unlock();
 
-    for (;;) {
-        io_uring_submit_and_wait(ring_, 1);
-
-        bool signaled = false;
-        struct io_uring_cqe* cqe;
-        IntrusiveList ready;
-
-        while (io_uring_peek_cqe(ring_, &cqe) == 0) {
-            auto ud = cqe->user_data;
-            auto res = cqe->res;
-
-            io_uring_cqe_seen(ring_, cqe);
-
-            if (ud == WAKEUP_COOKIE) {
-                signaled = true;
-            } else {
-                ((UringReqBase*)ud)->complete(res, ready);
-            }
-        }
-
-        if (!ready.empty()) {
-            reactor_->exec_->reSchedule(ready);
-            reactor_->exec_->flushLocal();
-        }
-
-        if (signaled) {
-            break;
-        }
+    while (!cycle()) {
     }
 
     mutex.lock();
