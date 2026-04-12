@@ -14,7 +14,10 @@
 #include <std/mem/obj_pool.h>
 
 #include <errno.h>
+#include <poll.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
 
 #if __has_include(<liburing.h>)
@@ -62,10 +65,12 @@ namespace {
     };
 
     struct UringPollGroup: public PollGroup {
-        PollFD* fds_;
+        int epfd_;
+        struct pollfd* pfds_;
         size_t count_;
 
         UringPollGroup(ObjPool* pool, const PollFD* fds, size_t count);
+        ~UringPollGroup() noexcept;
     };
 
     static __kernel_timespec usToTimespec(u64 us) noexcept {
@@ -473,22 +478,20 @@ u32 UringReactorImpl::poll(PollFD pfd, u64 deadlineUs) {
 void UringReactorImpl::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
     auto impl = (UringPollGroup*)g;
 
-    for (;;) {
-        for (size_t i = 0; i < impl->count_; ++i) {
-            auto res = poll(impl->fds_[i], monotonicNowUs() + 10000);
+    if (!poll({impl->epfd_, PollFlag::In}, deadlineUs)) {
+        return;
+    }
 
-            if (res) {
-                PollFD pfd = {impl->fds_[i].fd, res};
+    ::poll(impl->pfds_, impl->count_, 0);
 
-                visitor.visit(&pfd);
+    for (size_t i = 0; i < impl->count_; ++i) {
+        if (auto res = PollFD::fromPollEvents(impl->pfds_[i].revents); res) {
+            PollFD pfd = {impl->pfds_[i].fd, res};
 
-                return;
-            }
+            visitor.visit(&pfd);
         }
 
-        if (monotonicNowUs() >= deadlineUs) {
-            return;
-        }
+        impl->pfds_[i].revents = 0;
     }
 }
 
@@ -509,12 +512,26 @@ void UringReactorImpl::sleep(u64 deadlineUs) {
 // UringPollGroup
 
 UringPollGroup::UringPollGroup(ObjPool* pool, const PollFD* fds, size_t count)
-    : fds_((PollFD*)pool->allocate(sizeof(PollFD) * count))
+    : epfd_(epoll_create1(EPOLL_CLOEXEC))
+    , pfds_((struct pollfd*)pool->allocate(sizeof(struct pollfd) * count))
     , count_(count)
 {
     for (size_t i = 0; i < count; ++i) {
-        fds_[i] = fds[i];
+        pfds_[i].fd = fds[i].fd;
+        pfds_[i].events = fds[i].toPollEvents();
+        pfds_[i].revents = 0;
+
+        struct epoll_event ev = {};
+
+        ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
+        ev.data.fd = fds[i].fd;
+
+        epoll_ctl(epfd_, EPOLL_CTL_ADD, fds[i].fd, &ev);
     }
+}
+
+UringPollGroup::~UringPollGroup() noexcept {
+    ::close(epfd_);
 }
 
 // factory
