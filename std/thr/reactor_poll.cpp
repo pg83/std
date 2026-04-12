@@ -292,7 +292,7 @@ PollerIface* ReactorState::createPoller(ObjPool* pool) {
 // ReactorPoller
 
 ReactorPoller::ReactorPoller(ObjPool* pool, ReactorState* rs)
-    : fds_(ObjPool::create(pool))
+    : fds_(pool)
 {
     reactor = rs;
 }

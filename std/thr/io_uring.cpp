@@ -12,6 +12,7 @@
 #include <std/lib/list.h>
 #include <std/lib/vector.h>
 #include <std/lib/visitor.h>
+#include <std/sym/i_map.h>
 #include <std/mem/obj_pool.h>
 
 #include <errno.h>
@@ -69,10 +70,8 @@ namespace {
 
     struct UringPoller: public PollerIface {
         int epfd_;
-        struct pollfd* pfds_;
-        size_t count_;
-        size_t cap_;
-        ObjPool* pool_;
+        IntMap<PollFD> fds_;
+        Vector<struct pollfd> pfds_;
         UringReactorImpl* reactor_;
 
         UringPoller(ObjPool* pool, UringReactorImpl* reactor);
@@ -502,10 +501,7 @@ void UringReactorImpl::sleep(u64 deadlineUs) {
 
 UringPoller::UringPoller(ObjPool* pool, UringReactorImpl* reactor)
     : epfd_(epoll_create1(EPOLL_CLOEXEC))
-    , pfds_(nullptr)
-    , count_(0)
-    , cap_(0)
-    , pool_(pool)
+    , fds_(pool)
     , reactor_(reactor)
 {
 }
@@ -521,38 +517,15 @@ void UringPoller::arm(PollFD pfd) {
     ev.data.fd = pfd.fd;
 
     if (epoll_ctl(epfd_, EPOLL_CTL_ADD, pfd.fd, &ev) && errno == EEXIST) {
-        return;
+        epoll_ctl(epfd_, EPOLL_CTL_MOD, pfd.fd, &ev);
     }
 
-    if (count_ == cap_) {
-        size_t newCap = cap_ ? cap_ * 2 : 8;
-        auto newPfds = (struct pollfd*)pool_->allocate(sizeof(struct pollfd) * newCap);
-
-        for (size_t i = 0; i < count_; ++i) {
-            newPfds[i] = pfds_[i];
-        }
-
-        pfds_ = newPfds;
-        cap_ = newCap;
-    }
-
-    pfds_[count_].fd = pfd.fd;
-    pfds_[count_].events = pfd.toPollEvents();
-    pfds_[count_].revents = 0;
-    count_++;
+    fds_[pfd.fd] = pfd;
 }
 
 void UringPoller::disarm(int fd) {
     epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr);
-
-    for (size_t i = 0; i < count_; ++i) {
-        if (pfds_[i].fd == fd) {
-            pfds_[i] = pfds_[count_ - 1];
-            count_--;
-
-            return;
-        }
-    }
+    fds_.erase(fd);
 }
 
 void UringPoller::waitImpl(VisitorFace& v, u32 timeoutUs) {
@@ -562,16 +535,26 @@ void UringPoller::waitImpl(VisitorFace& v, u32 timeoutUs) {
         return;
     }
 
-    ::poll(pfds_, count_, 0);
+    pfds_.clear();
 
-    for (size_t i = 0; i < count_; ++i) {
+    fds_.visit([this](PollFD pfd) {
+        struct pollfd p;
+
+        p.fd = pfd.fd;
+        p.events = pfd.toPollEvents();
+        p.revents = 0;
+
+        pfds_.pushBack(p);
+    });
+
+    ::poll(pfds_.mutData(), pfds_.length(), 0);
+
+    for (size_t i = 0; i < pfds_.length(); ++i) {
         if (auto res = PollFD::fromPollEvents(pfds_[i].revents); res) {
             PollFD pfd = {pfds_[i].fd, res};
 
             v.visit(&pfd);
         }
-
-        pfds_[i].revents = 0;
     }
 }
 
