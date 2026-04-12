@@ -12,14 +12,10 @@
 #include <std/lib/list.h>
 #include <std/lib/vector.h>
 #include <std/lib/visitor.h>
-#include <std/sym/i_map.h>
 #include <std/mem/obj_pool.h>
 
 #include <errno.h>
-#include <poll.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/epoll.h>
 #include <sys/socket.h>
 
 #if __has_include(<liburing.h>)
@@ -68,18 +64,16 @@ namespace {
 
     struct UringReactorImpl;
 
-    struct UringPoller: public PollerIface {
-        int epfd_;
-        IntMap<PollFD> fds_;
-        Vector<struct pollfd> pfds_;
+    struct UringPoller: public WaitablePoller {
+        WaitablePoller* slave_;
         UringReactorImpl* reactor_;
 
         UringPoller(ObjPool* pool, UringReactorImpl* reactor);
-        ~UringPoller() noexcept;
 
         void arm(PollFD pfd) override;
         void disarm(int fd) override;
         void waitImpl(VisitorFace& v, u32 timeoutUs) override;
+        int fd() override;
     };
 
     static __kernel_timespec usToTimespec(u64 us) noexcept {
@@ -500,62 +494,31 @@ void UringReactorImpl::sleep(u64 deadlineUs) {
 // UringPoller
 
 UringPoller::UringPoller(ObjPool* pool, UringReactorImpl* reactor)
-    : epfd_(epoll_create1(EPOLL_CLOEXEC))
-    , fds_(pool)
+    : slave_(WaitablePoller::create(pool))
     , reactor_(reactor)
 {
 }
 
-UringPoller::~UringPoller() noexcept {
-    ::close(epfd_);
-}
-
 void UringPoller::arm(PollFD pfd) {
-    struct epoll_event ev = {};
-
-    ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
-    ev.data.fd = pfd.fd;
-
-    if (epoll_ctl(epfd_, EPOLL_CTL_ADD, pfd.fd, &ev) && errno == EEXIST) {
-        epoll_ctl(epfd_, EPOLL_CTL_MOD, pfd.fd, &ev);
-    }
-
-    fds_[pfd.fd] = pfd;
+    slave_->arm(pfd);
 }
 
 void UringPoller::disarm(int fd) {
-    epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr);
-    fds_.erase(fd);
+    slave_->disarm(fd);
 }
 
 void UringPoller::waitImpl(VisitorFace& v, u32 timeoutUs) {
     auto deadlineUs = monotonicNowUs() + (u64)timeoutUs;
 
-    if (!reactor_->poll({epfd_, PollFlag::In}, deadlineUs)) {
+    if (!reactor_->poll({slave_->fd(), PollFlag::In}, deadlineUs)) {
         return;
     }
 
-    pfds_.clear();
+    slave_->waitImpl(v, 0);
+}
 
-    fds_.visit([this](PollFD pfd) {
-        struct pollfd p;
-
-        p.fd = pfd.fd;
-        p.events = pfd.toPollEvents();
-        p.revents = 0;
-
-        pfds_.pushBack(p);
-    });
-
-    ::poll(pfds_.mutData(), pfds_.length(), 0);
-
-    for (size_t i = 0; i < pfds_.length(); ++i) {
-        if (auto res = PollFD::fromPollEvents(pfds_[i].revents); res) {
-            PollFD pfd = {pfds_[i].fd, res};
-
-            v.visit(&pfd);
-        }
-    }
+int UringPoller::fd() {
+    return slave_->fd();
 }
 
 // factory

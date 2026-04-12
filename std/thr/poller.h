@@ -29,4 +29,10 @@ namespace stl {
 
         static PollerIface* create(ObjPool* pool);
     };
+
+    struct WaitablePoller: public PollerIface {
+        virtual int fd() = 0;
+
+        static WaitablePoller* create(ObjPool* pool);
+    };
 }

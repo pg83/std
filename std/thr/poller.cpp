@@ -79,7 +79,7 @@ namespace {
         return r;
     }
 
-    struct EpollPoller: public PollerIface {
+    struct EpollPoller: public WaitablePoller {
         int epfd_;
 
         EpollPoller() {
@@ -107,6 +107,10 @@ namespace {
             epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr);
         }
 
+        int fd() override {
+            return epfd_;
+        }
+
         void waitImpl(VisitorFace& v, u32 timeoutUs) override {
             epoll_event raw[1024];
 
@@ -128,7 +132,7 @@ namespace {
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
 namespace {
-    struct KqueuePoller: public PollerIface {
+    struct KqueuePoller: public WaitablePoller {
         int kqfd_;
 
         KqueuePoller() {
@@ -205,6 +209,10 @@ namespace {
                 v.visit(&ev);
             }
         }
+
+        int fd() override {
+            return kqfd_;
+        }
     };
 }
 #endif
@@ -258,6 +266,7 @@ namespace {
                 v.visit(&ev);
             }
         }
+
     };
 
     template <typename NativePoller>
@@ -320,6 +329,16 @@ PollerIface* PollerIface::create(ObjPool* pool) {
 #endif
 
     return pool->make<PollPoller>(pool);
+}
+
+WaitablePoller* WaitablePoller::create(ObjPool* pool) {
+#if defined(__linux__)
+    return pool->make<EpollPoller>();
+#elif defined(__APPLE__) || defined(__FreeBSD__)
+    return pool->make<KqueuePoller>();
+#else
+    return nullptr;
+#endif
 }
 
 void PollerIface::waitBase(VisitorFace&& v, u64 deadlineUs) {
