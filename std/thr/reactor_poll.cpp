@@ -286,7 +286,7 @@ u32 ReactorState::poll(PollFD pfd, u64 deadlineUs) {
 }
 
 PollerIface* ReactorState::createPoller(ObjPool* pool) {
-    if (auto p = WaitablePoller::createSlave(pool, this); p) {
+    if (auto p = WaitablePoller::create(pool, this); p) {
         return p;
     }
 

@@ -9,7 +9,6 @@ namespace stl {
     struct PollFD;
     struct Pollable;
 
-
     struct PollerIface {
         // add or re-arm fd with ONESHOT semantics
         virtual void arm(PollFD pfd) = 0;
@@ -36,6 +35,6 @@ namespace stl {
         virtual int fd() = 0;
 
         static WaitablePoller* create(ObjPool* pool);
-        static WaitablePoller* createSlave(ObjPool* pool, Pollable* reactor);
+        static WaitablePoller* create(ObjPool* pool, Pollable* reactor);
     };
 }

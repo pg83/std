@@ -464,7 +464,7 @@ u32 UringReactorImpl::poll(PollFD pfd, u64 deadlineUs) {
 }
 
 PollerIface* UringReactorImpl::createPoller(ObjPool* pool) {
-    return WaitablePoller::createSlave(pool, this);
+    return WaitablePoller::create(pool, this);
 }
 
 void UringReactorImpl::sleep(u64 deadlineUs) {

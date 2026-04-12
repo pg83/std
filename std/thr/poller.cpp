@@ -372,7 +372,7 @@ namespace {
     };
 }
 
-WaitablePoller* WaitablePoller::createSlave(ObjPool* pool, Pollable* reactor) {
+WaitablePoller* WaitablePoller::create(ObjPool* pool, Pollable* reactor) {
     if (auto native = WaitablePoller::create(pool); native) {
         return pool->make<SlavePoller>(native, reactor);
     }
