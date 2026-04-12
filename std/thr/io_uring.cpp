@@ -137,7 +137,9 @@ namespace {
         CondVarIface* createCondVar(size_t index) override;
 
         int recv(int, size_t*, void*, size_t, u64) override;
+        int recvfrom(int, size_t*, void*, size_t, sockaddr*, u32*, u64) override;
         int send(int, size_t*, const void*, size_t, u64) override;
+        int sendto(int, size_t*, const void*, size_t, const sockaddr*, u32, u64) override;
         int writev(int, size_t*, iovec*, size_t, u64) override;
         int accept(int, int*, sockaddr*, u32*, u64) override;
         int connect(int, const sockaddr*, u32, u64) override;
@@ -374,9 +376,43 @@ int UringReactorImpl::recv(int fd, size_t* nRead, void* buf, size_t len, u64 dea
     }, deadlineUs).readInto(nRead);
 }
 
+int UringReactorImpl::recvfrom(int fd, size_t* nRead, void* buf, size_t len, sockaddr* addr, u32* addrLen, u64 deadlineUs) {
+    struct msghdr msg = {};
+    struct iovec iov = {buf, len};
+
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_name = addr;
+    msg.msg_namelen = addrLen ? *addrLen : 0;
+
+    auto res = submit([&](auto sqe) {
+        io_uring_prep_recvmsg(sqe, fd, &msg, 0);
+    }, deadlineUs).readInto(nRead);
+
+    if (!res && addrLen) {
+        *addrLen = msg.msg_namelen;
+    }
+
+    return res;
+}
+
 int UringReactorImpl::send(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
     return submit([&](auto sqe) {
         io_uring_prep_send(sqe, fd, buf, len, MSG_NOSIGNAL);
+    }, deadlineUs).readInto(nWritten);
+}
+
+int UringReactorImpl::sendto(int fd, size_t* nWritten, const void* buf, size_t len, const sockaddr* addr, u32 addrLen, u64 deadlineUs) {
+    struct msghdr msg = {};
+    struct iovec iov = {const_cast<void*>(buf), len};
+
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_name = const_cast<sockaddr*>(addr);
+    msg.msg_namelen = addrLen;
+
+    return submit([&](auto sqe) {
+        io_uring_prep_sendmsg(sqe, fd, &msg, MSG_NOSIGNAL);
     }, deadlineUs).readInto(nWritten);
 }
 

@@ -20,8 +20,10 @@ namespace stl {
     struct IoReactor {
         virtual int connect(int fd, const sockaddr* addr, u32 addrLen, u64 deadlineUs) = 0;
         virtual int recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) = 0;
+        virtual int recvfrom(int fd, size_t* nRead, void* buf, size_t len, sockaddr* addr, u32* addrLen, u64 deadlineUs) = 0;
         virtual int accept(int fd, int* newFd, sockaddr* addr, u32* addrLen, u64 deadlineUs) = 0;
         virtual int send(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) = 0;
+        virtual int sendto(int fd, size_t* nWritten, const void* buf, size_t len, const sockaddr* addr, u32 addrLen, u64 deadlineUs) = 0;
         virtual int writev(int fd, size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs) = 0;
 
         virtual int fsync(int fd) = 0;
