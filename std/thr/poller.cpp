@@ -269,29 +269,26 @@ namespace {
 
     };
 
-    template <typename NativePoller>
     struct HybridPoller: public PollerIface {
         static constexpr size_t threshold = 100;
 
-        ObjPool* pool_;
         PollPoller* poll_;
         PollerIface* current_;
-        PollerIface* native;
+        PollerIface* native_;
 
-        HybridPoller(ObjPool* pool)
-            : pool_(pool)
-            , poll_(pool->make<PollPoller>(pool))
+        HybridPoller(ObjPool* pool, PollerIface* native)
+            : poll_(pool->make<PollPoller>(pool))
             , current_(poll_)
-            , native(pool_->make<NativePoller>())
+            , native_(native)
         {
         }
 
         void migrate() {
             poll_->armed_.visit([&](const PollFD& pfd) {
-                native->arm(pfd);
+                native_->arm(pfd);
             });
 
-            current_ = native;
+            current_ = native_;
             poll_ = nullptr;
         }
 
@@ -322,11 +319,9 @@ PollerIface* PollerIface::create(ObjPool* pool) {
         return pool->make<PollPoller>(pool);
     }
 
-#if defined(__linux__)
-    return pool->make<HybridPoller<EpollPoller>>(pool);
-#elif defined(__APPLE__) || defined(__FreeBSD__)
-    return pool->make<HybridPoller<KqueuePoller>>(pool);
-#endif
+    if (auto native = WaitablePoller::create(pool); native) {
+        return pool->make<HybridPoller>(pool, native);
+    }
 
     return pool->make<PollPoller>(pool);
 }
