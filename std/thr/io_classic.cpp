@@ -7,7 +7,7 @@
 #include "io_reactor.h"
 #include "reactor_poll.h"
 
-#include <std/sys/crt.h>
+#include <std/rng/mix.h>
 #include <std/lib/vector.h>
 #include <std/mem/obj_pool.h>
 #include <std/rng/split_mix_64.h>
@@ -302,9 +302,7 @@ void PollIoReactor::sleep(u64 deadlineUs) {
 }
 
 PollerIface* PollIoReactor::createPoller(ObjPool* pool) {
-    auto p = reactors_[splitMix64(monotonicNowUs()) % reactors_.length()]->createPoller(pool);
-
-    return p;
+    return reactors_[mix(&pool, pool) % reactors_.length()]->createPoller(pool);
 }
 
 CondVarIface* PollIoReactor::createCondVar(size_t) {
