@@ -2,6 +2,7 @@
 #include <std/thr/coro.h>
 #include <std/dns/iface.h>
 #include <std/dns/config.h>
+#include <std/lib/vector.h>
 #include <std/mem/obj_pool.h>
 
 #include <stdio.h>
@@ -45,7 +46,12 @@ int main(int argc, char** argv) {
     }
 
     auto exec = CoroExecutor::create(pool.mutPtr(), threads);
-    auto resolver = DnsResolver::create(pool.mutPtr(), exec, nullptr, dnsCfg);
+
+    Vector<DnsResolver*> resolvers;
+
+    for (size_t j = 0; j < threads; ++j) {
+        resolvers.pushBack(DnsResolver::create(pool.mutPtr(), exec, nullptr, dnsCfg));
+    }
 
     for (int i = 0; i < 100000; ++i) {
         exec->spawn([&, i] {
@@ -53,7 +59,7 @@ int main(int argc, char** argv) {
             char buf[64];
 
             snprintf(buf, sizeof(buf), "host%d.test.invalid", i);
-            resolver->resolve(rpool.mutPtr(), StringView((const u8*)buf, strlen(buf)));
+            resolvers[i % threads]->resolve(rpool.mutPtr(), StringView((const u8*)buf, strlen(buf)));
         });
     }
 
