@@ -62,20 +62,6 @@ namespace {
         __kernel_timespec ts;
     };
 
-    struct UringReactorImpl;
-
-    struct UringPoller: public WaitablePoller {
-        WaitablePoller* slave_;
-        UringReactorImpl* reactor_;
-
-        UringPoller(ObjPool* pool, UringReactorImpl* reactor);
-
-        void arm(PollFD pfd) override;
-        void disarm(int fd) override;
-        void waitImpl(VisitorFace& v, u32 timeoutUs) override;
-        int fd() override;
-    };
-
     static __kernel_timespec usToTimespec(u64 us) noexcept {
         __kernel_timespec ts;
 
@@ -478,7 +464,7 @@ u32 UringReactorImpl::poll(PollFD pfd, u64 deadlineUs) {
 }
 
 PollerIface* UringReactorImpl::createPoller(ObjPool* pool) {
-    return pool->make<UringPoller>(pool, this);
+    return WaitablePoller::createSlave(pool, this);
 }
 
 void UringReactorImpl::sleep(u64 deadlineUs) {
@@ -489,36 +475,6 @@ void UringReactorImpl::sleep(u64 deadlineUs) {
     submitReq(req, [&](auto sqe) {
         io_uring_prep_timeout(sqe, &req.ts, 0, IORING_TIMEOUT_ABS);
     });
-}
-
-// UringPoller
-
-UringPoller::UringPoller(ObjPool* pool, UringReactorImpl* reactor)
-    : slave_(WaitablePoller::create(pool))
-    , reactor_(reactor)
-{
-}
-
-void UringPoller::arm(PollFD pfd) {
-    slave_->arm(pfd);
-}
-
-void UringPoller::disarm(int fd) {
-    slave_->disarm(fd);
-}
-
-void UringPoller::waitImpl(VisitorFace& v, u32 timeoutUs) {
-    auto deadlineUs = monotonicNowUs() + (u64)timeoutUs;
-
-    if (!reactor_->poll({slave_->fd(), PollFlag::In}, deadlineUs)) {
-        return;
-    }
-
-    slave_->waitImpl(v, 0);
-}
-
-int UringPoller::fd() {
-    return slave_->fd();
 }
 
 // factory

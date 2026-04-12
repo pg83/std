@@ -7,6 +7,8 @@ namespace stl {
     class ObjPool;
 
     struct PollFD;
+    struct Pollable;
+
 
     struct PollerIface {
         // add or re-arm fd with ONESHOT semantics
@@ -34,5 +36,6 @@ namespace stl {
         virtual int fd() = 0;
 
         static WaitablePoller* create(ObjPool* pool);
+        static WaitablePoller* createSlave(ObjPool* pool, Pollable* reactor);
     };
 }

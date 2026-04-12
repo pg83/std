@@ -1,6 +1,6 @@
 #pragma once
 
-#include <std/sys/types.h>
+#include "pollable.h"
 
 struct iovec;
 struct sockaddr;
@@ -8,13 +8,12 @@ struct sockaddr;
 namespace stl {
     class ObjPool;
 
-    struct PollFD;
     struct PollerIface;
     struct CondVarIface;
     struct CoroExecutor;
     struct ThreadPoolHooks;
 
-    struct IoReactor {
+    struct IoReactor: public Pollable {
         virtual int connect(int fd, const sockaddr* addr, u32 addrLen, u64 deadlineUs) = 0;
         virtual int recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) = 0;
         virtual int recvfrom(int fd, size_t* nRead, void* buf, size_t len, sockaddr* addr, u32* addrLen, u64 deadlineUs) = 0;
@@ -28,7 +27,6 @@ namespace stl {
         virtual int pread(int fd, size_t* nRead, void* buf, size_t len, off_t offset) = 0;
         virtual int pwrite(int fd, size_t* nWritten, const void* buf, size_t len, off_t offset) = 0;
 
-        virtual u32 poll(PollFD pfd, u64 deadlineUs) = 0;
         virtual PollerIface* createPoller(ObjPool* pool) = 0;
 
         virtual void sleep(u64 deadlineUs) = 0;

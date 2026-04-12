@@ -1,5 +1,6 @@
 #include "poller.h"
 #include "poll_fd.h"
+#include "pollable.h"
 
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
@@ -334,6 +335,49 @@ WaitablePoller* WaitablePoller::create(ObjPool* pool) {
 #else
     return nullptr;
 #endif
+}
+
+namespace {
+    struct SlavePoller: public WaitablePoller {
+        WaitablePoller* slave_;
+        Pollable* reactor_;
+
+        SlavePoller(WaitablePoller* slave, Pollable* reactor)
+            : slave_(slave)
+            , reactor_(reactor)
+        {
+        }
+
+        void arm(PollFD pfd) override {
+            slave_->arm(pfd);
+        }
+
+        void disarm(int fd) override {
+            slave_->disarm(fd);
+        }
+
+        void waitImpl(VisitorFace& v, u32 timeoutUs) override {
+            auto deadlineUs = monotonicNowUs() + (u64)timeoutUs;
+
+            if (!reactor_->poll({slave_->fd(), PollFlag::In}, deadlineUs)) {
+                return;
+            }
+
+            slave_->waitImpl(v, 0);
+        }
+
+        int fd() override {
+            return slave_->fd();
+        }
+    };
+}
+
+WaitablePoller* WaitablePoller::createSlave(ObjPool* pool, Pollable* reactor) {
+    if (auto native = WaitablePoller::create(pool); native) {
+        return pool->make<SlavePoller>(native, reactor);
+    }
+
+    return nullptr;
 }
 
 void PollerIface::waitBase(VisitorFace&& v, u64 deadlineUs) {
