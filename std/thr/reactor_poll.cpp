@@ -34,6 +34,7 @@ namespace {
     };
 
     struct ReactorState;
+    struct ReactorPoller;
 
     struct ReqCommon {
         u64 deadline = 0;
@@ -45,28 +46,14 @@ namespace {
 
     struct InternalReq: public TreapNode, public IntrusiveNode {
         PollFD pfd = {};
-        u32* result = nullptr;
+        u32 result = 0;
         ReqCommon* common = nullptr;
 
         virtual void complete(u32 res, IntrusiveList& ready) noexcept;
     };
 
-    struct PollGroupImpl;
-
     struct InternalMultiReq: public InternalReq {
         void complete(u32 res, IntrusiveList& ready) noexcept override;
-    };
-
-    struct PollGroupImpl: public PollGroup, public ReqCommon {
-        InternalMultiReq** reqs_;
-        u32* results_;
-        size_t count_;
-
-        PollGroupImpl(ObjPool* pool, const PollFD* fds, size_t count);
-
-        int fd() const noexcept;
-        void resetResult() noexcept;
-        void visitResults(VisitorFace& visitor) noexcept;
     };
 
     struct FdEntry: public IntrusiveList {
@@ -94,8 +81,19 @@ namespace {
         void cancelInternal(InternalReq* req);
         void processEvent(PollFD* ev, IntrusiveList& ready) noexcept;
 
-        void poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) override;
         u32 poll(PollFD pfd, u64 deadlineUs) override;
+        PollerIface* createPoller(ObjPool* pool) override;
+    };
+
+    struct ReactorPoller: public PollerIface, public ReqCommon {
+        IntMap<InternalMultiReq> fds_;
+
+        ReactorPoller(ObjPool* pool, ReactorState* rs);
+
+        void arm(PollFD pfd) override;
+        void disarm(int fd) override;
+        void waitImpl(VisitorFace& v, u32 timeoutUs) override;
+        void cancelOthers(InternalMultiReq* except);
     };
 }
 
@@ -123,21 +121,14 @@ void ReqCommon::reset(ReactorState* r, u64 dl) noexcept {
 }
 
 void InternalReq::complete(u32 res, IntrusiveList& ready) noexcept {
-    *result = res;
+    result = res;
     ready.pushBack(common->task);
 }
 
 void InternalMultiReq::complete(u32 res, IntrusiveList& ready) noexcept {
-    *result = res;
+    result = res;
     ready.pushBack(common->task);
-
-    auto g = (PollGroupImpl*)common;
-
-    for (auto r : range(g->reqs_, g->reqs_ + g->count_)) {
-        if (r != this) {
-            common->reactor->cancelInternal(r);
-        }
-    }
+    ((ReactorPoller*)common)->cancelOthers(this);
 }
 
 u32 FdEntry::flags() const noexcept {
@@ -268,81 +259,14 @@ void ReactorState::run() noexcept {
     }
 }
 
-PollGroupImpl::PollGroupImpl(ObjPool* pool, const PollFD* fds, size_t count)
-    : reqs_((InternalMultiReq**)pool->allocate(sizeof(InternalMultiReq*) * count))
-    , results_((u32*)pool->allocate(sizeof(u32) * count))
-    , count_(count)
-{
-    for (size_t i = 0; i < count; ++i) {
-        auto req = pool->make<InternalMultiReq>();
-
-        req->pfd = fds[i];
-        req->result = &results_[i];
-        req->common = this;
-
-        reqs_[i] = req;
-    }
-
-    resetResult();
-}
-
-int PollGroupImpl::fd() const noexcept {
-    return reqs_[0]->pfd.fd;
-}
-
-void PollGroupImpl::resetResult() noexcept {
-    memZero(results_, results_ + count_);
-}
-
-void PollGroupImpl::visitResults(VisitorFace& visitor) noexcept {
-    for (size_t i = 0; i < count_; ++i) {
-        if (auto res = results_[i]; res) {
-            PollFD pfd = {reqs_[i]->pfd.fd, res};
-            visitor.visit(&pfd);
-        }
-    }
-}
-
-PollGroup* ReactorIface::createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) {
-    return pool->make<PollGroupImpl>(pool, fds, count);
-}
-
-int ReactorIface::pollGroupFd(const PollGroup* g) noexcept {
-    return ((const PollGroupImpl*)g)->fd();
-}
-
-void ReactorState::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
-    auto impl = (PollGroupImpl*)g;
-
-    impl->reset(this, deadlineUs);
-    impl->resetResult();
-
-    queueMutex_.lock();
-
-    for (size_t i = 0; i < impl->count_; ++i) {
-        queue_.insert(impl->reqs_[i]);
-    }
-
-    // clang-format off
-    exec_->parkWith(makeRunable([this] {
-        queueMutex_.unlock();
-        parker_.unpark();
-    }), &impl->task);
-    // clang-format on
-
-    impl->visitResults(visitor);
-}
-
 u32 ReactorState::poll(PollFD pfd, u64 deadlineUs) {
     ReqCommon common;
 
     common.reset(this, deadlineUs);
 
-    u32 resultVal = 0;
     InternalReq req;
 
     req.pfd = pfd;
-    req.result = &resultVal;
     req.common = &common;
 
     queueMutex_.lock();
@@ -358,7 +282,70 @@ u32 ReactorState::poll(PollFD pfd, u64 deadlineUs) {
     }), &common.task);
     // clang-format on
 
-    return resultVal;
+    return req.result;
+}
+
+PollerIface* ReactorState::createPoller(ObjPool* pool) {
+    return pool->make<ReactorPoller>(pool, this);
+}
+
+// ReactorPoller
+
+ReactorPoller::ReactorPoller(ObjPool* pool, ReactorState* rs)
+    : fds_(ObjPool::create(pool))
+{
+    reactor = rs;
+}
+
+void ReactorPoller::arm(PollFD pfd) {
+    fds_[pfd.fd].pfd = pfd;
+}
+
+void ReactorPoller::disarm(int fd) {
+    fds_.erase(fd);
+}
+
+void ReactorPoller::waitImpl(VisitorFace& v, u32 timeoutUs) {
+    auto rs = reactor;
+    auto dl = monotonicNowUs() + (u64)timeoutUs;
+
+    reset(rs, dl);
+
+    fds_.visit([](InternalMultiReq& req) {
+        req.result = 0;
+        req.left = nullptr;
+        req.right = nullptr;
+    });
+
+    rs->queueMutex_.lock();
+
+    fds_.visit([this, rs](InternalMultiReq& req) {
+        req.common = this;
+        rs->queue_.insert(&req);
+    });
+
+    // clang-format off
+    rs->exec_->parkWith(makeRunable([rs] {
+        rs->queueMutex_.unlock();
+        rs->parker_.unpark();
+    }), &task);
+    // clang-format on
+
+    fds_.visit([&v](InternalMultiReq& req) {
+        if (auto res = req.result; res) {
+            PollFD pfd = {req.pfd.fd, res};
+
+            v.visit(&pfd);
+        }
+    });
+}
+
+void ReactorPoller::cancelOthers(InternalMultiReq* except) {
+    fds_.visit([this, except](InternalMultiReq& req) {
+        if (&req != except) {
+            reactor->cancelInternal(&req);
+        }
+    });
 }
 
 ReactorIface* ReactorIface::create(CoroExecutor* exec, ObjPool* opool) {

@@ -8,18 +8,15 @@
 #include <std/lib/list.h>
 #include <std/lib/node.h>
 #include <std/thr/coro.h>
-#include <std/sym/i_map.h>
 #include <std/thr/event.h>
 #include <std/thr/mutex.h>
 #include <std/thr/guard.h>
 #include <std/alg/defer.h>
-#include <std/lib/vector.h>
 #include <std/thr/parker.h>
+#include <std/thr/poller.h>
 #include <std/thr/poll_fd.h>
-#include <std/lib/visitor.h>
 #include <std/mem/obj_pool.h>
 #include <std/thr/io_reactor.h>
-#include <std/thr/reactor_poll.h>
 
 #if __has_include(<ares.h>)
     #include <ares.h>
@@ -67,10 +64,8 @@ namespace {
         bool driving_ = false;
         IntrusiveList pending_;
         IntrusiveList waiters_;
-        IntMap<PollFD> fdMap_;
-        Vector<PollFD> fds_;
-        ObjPool::Ref pollPool_;
-        PollGroup* pollGroup_ = nullptr;
+        ObjPool::Ref pollerPool_;
+        PollerIface* poller_ = nullptr;
         Parker parker_;
 
         DnsResolverImpl(ObjPool* pool, CoroExecutor* exec, const DnsConfig& cfg);
@@ -78,7 +73,6 @@ namespace {
 
         DnsResult* resolve(ObjPool* pool, const StringView& name) override;
 
-        void rebuildFds();
         void submitPending();
         void driverLoop(DnsRequest& req);
         void onSockState(ares_socket_t fd, int readable, int writable);
@@ -148,18 +142,19 @@ void DnsResolverImpl::onSockState(ares_socket_t fd, int readable, int writable) 
     u32 flags = (readable ? PollFlag::In : 0) | (writable ? PollFlag::Out : 0);
 
     if (flags) {
-        fdMap_.insert(fd, (int)fd, flags);
+        poller_->arm({(int)fd, flags});
     } else {
-        fdMap_.erase(fd);
+        poller_->disarm((int)fd);
     }
 }
 
 DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec, const DnsConfig& cfg)
     : exec_(exec)
     , lock_(Mutex::spinLock(exec))
-    , fdMap_(ObjPool::create(pool))
-    , pollPool_(ObjPool::fromMemory())
+    , pollerPool_(ObjPool::fromMemory())
 {
+    poller_ = exec->io()->createPoller(pollerPool_.mutPtr());
+    poller_->arm({parker_.fd(), PollFlag::In});
     ares_options opts;
     memset(&opts, 0, sizeof(opts));
 
@@ -236,19 +231,6 @@ void DnsResolverImpl::submitPending() {
     }
 }
 
-void DnsResolverImpl::rebuildFds() {
-    fds_.clear();
-
-    fdMap_.visit([this](PollFD pfd) {
-        fds_.pushBack(pfd);
-    });
-
-    fds_.pushBack({parker_.fd(), PollFlag::In});
-
-    pollPool_ = ObjPool::fromMemory();
-    pollGroup_ = exec_->io()->createPollGroup(pollPool_.mutPtr(), fds_.data(), fds_.length());
-}
-
 void DnsResolverImpl::driverLoop(DnsRequest& req) {
     if (!req.submitted) {
         ares_getaddrinfo(channel_, req.name, nullptr, &hints_, DnsRequest::callback, &req);
@@ -258,16 +240,14 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
     while (!req.result) {
         parker_.park([&] {
             submitPending();
-            rebuildFds();
 
             struct timeval tv;
 
             ares_timeout(channel_, nullptr, &tv);
 
-            // clang-format off
-            exec_->io()->poll(pollGroup_, makeVisitor([this](void* ptr) {
-                auto ev = (PollFD*)ptr;
+            auto deadlineUs = monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
 
+            poller_->wait([this](PollFD* ev) {
                 if (ev->fd == parker_.fd()) {
                     parker_.drain();
                 } else {
@@ -276,8 +256,7 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
 
                     ares_process_fd(channel_, rfd, wfd);
                 }
-            }), monotonicNowUs() + (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec);
-            // clang-format on
+            }, deadlineUs);
         });
 
         ares_process_fd(channel_, ARES_SOCKET_BAD, ARES_SOCKET_BAD);

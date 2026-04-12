@@ -9,13 +9,10 @@ namespace stl {
     class ObjPool;
 
     struct PollFD;
-    struct VisitorFace;
+    struct PollerIface;
     struct CondVarIface;
     struct CoroExecutor;
     struct ThreadPoolHooks;
-
-    struct PollGroup {
-    };
 
     struct IoReactor {
         virtual int connect(int fd, const sockaddr* addr, u32 addrLen, u64 deadlineUs) = 0;
@@ -32,14 +29,11 @@ namespace stl {
         virtual int pwrite(int fd, size_t* nWritten, const void* buf, size_t len, off_t offset) = 0;
 
         virtual u32 poll(PollFD pfd, u64 deadlineUs) = 0;
-        virtual void poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) = 0;
-        virtual PollGroup* createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) = 0;
+        virtual PollerIface* createPoller(ObjPool* pool) = 0;
 
         virtual void sleep(u64 deadlineUs) = 0;
 
         virtual ThreadPoolHooks* hooks() = 0;
-
-        void poll(PollGroup* g, VisitorFace&& visitor, u64 deadlineUs);
 
         static IoReactor* create(ObjPool* pool, CoroExecutor* exec, size_t threads);
     };

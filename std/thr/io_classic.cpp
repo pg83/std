@@ -7,6 +7,7 @@
 #include "io_reactor.h"
 #include "reactor_poll.h"
 
+#include <std/sys/crt.h>
 #include <std/lib/vector.h>
 #include <std/mem/obj_pool.h>
 #include <std/rng/split_mix_64.h>
@@ -49,7 +50,7 @@ namespace {
 
         CondVarIface* createCondVar(size_t) override;
 
-        PollGroup* createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) override;
+        PollerIface* createPoller(ObjPool* pool) override;
 
         int recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) override;
         int recvfrom(int fd, size_t* nRead, void* buf, size_t len, sockaddr* addr, u32* addrLen, u64 deadlineUs) override;
@@ -65,7 +66,6 @@ namespace {
         int fdatasync(int fd) override;
 
         u32 poll(PollFD pfd, u64 deadlineUs) override;
-        void poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) override;
         void sleep(u64 deadlineUs) override;
     };
 }
@@ -297,16 +297,14 @@ u32 PollIoReactor::poll(PollFD pfd, u64 deadlineUs) {
     return reactor(pfd.fd)->poll(pfd, deadlineUs);
 }
 
-void PollIoReactor::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
-    reactor(ReactorIface::pollGroupFd(g))->poll(g, visitor, deadlineUs);
-}
-
 void PollIoReactor::sleep(u64 deadlineUs) {
     poll({-1, 0}, deadlineUs);
 }
 
-PollGroup* PollIoReactor::createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) {
-    return ReactorIface::createPollGroup(pool, fds, count);
+PollerIface* PollIoReactor::createPoller(ObjPool* pool) {
+    auto p = reactors_[splitMix64(monotonicNowUs()) % reactors_.length()]->createPoller(pool);
+
+    return p;
 }
 
 CondVarIface* PollIoReactor::createCondVar(size_t) {

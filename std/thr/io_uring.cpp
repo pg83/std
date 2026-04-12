@@ -3,6 +3,7 @@
 #include "coro.h"
 #include "pool.h"
 #include "mutex.h"
+#include "poller.h"
 #include "poll_fd.h"
 #include "io_reactor.h"
 #include "cond_var_iface.h"
@@ -64,13 +65,22 @@ namespace {
         __kernel_timespec ts;
     };
 
-    struct UringPollGroup: public PollGroup {
+    struct UringReactorImpl;
+
+    struct UringPoller: public PollerIface {
         int epfd_;
         struct pollfd* pfds_;
         size_t count_;
+        size_t cap_;
+        ObjPool* pool_;
+        UringReactorImpl* reactor_;
 
-        UringPollGroup(ObjPool* pool, const PollFD* fds, size_t count);
-        ~UringPollGroup() noexcept;
+        UringPoller(ObjPool* pool, UringReactorImpl* reactor);
+        ~UringPoller() noexcept;
+
+        void arm(PollFD pfd) override;
+        void disarm(int fd) override;
+        void waitImpl(VisitorFace& v, u32 timeoutUs) override;
     };
 
     static __kernel_timespec usToTimespec(u64 us) noexcept {
@@ -153,8 +163,7 @@ namespace {
         int fsync(int) override;
         int fdatasync(int) override;
         u32 poll(PollFD, u64) override;
-        void poll(PollGroup*, VisitorFace&, u64) override;
-        PollGroup* createPollGroup(ObjPool*, const PollFD*, size_t) override;
+        PollerIface* createPoller(ObjPool*) override;
         void sleep(u64) override;
     };
 }
@@ -475,28 +484,8 @@ u32 UringReactorImpl::poll(PollFD pfd, u64 deadlineUs) {
     return PollFD::fromPollEvents(req.res);
 }
 
-void UringReactorImpl::poll(PollGroup* g, VisitorFace& visitor, u64 deadlineUs) {
-    auto impl = (UringPollGroup*)g;
-
-    if (!poll({impl->epfd_, PollFlag::In}, deadlineUs)) {
-        return;
-    }
-
-    ::poll(impl->pfds_, impl->count_, 0);
-
-    for (size_t i = 0; i < impl->count_; ++i) {
-        if (auto res = PollFD::fromPollEvents(impl->pfds_[i].revents); res) {
-            PollFD pfd = {impl->pfds_[i].fd, res};
-
-            visitor.visit(&pfd);
-        }
-
-        impl->pfds_[i].revents = 0;
-    }
-}
-
-PollGroup* UringReactorImpl::createPollGroup(ObjPool* pool, const PollFD* fds, size_t count) {
-    return pool->make<UringPollGroup>(pool, fds, count);
+PollerIface* UringReactorImpl::createPoller(ObjPool* pool) {
+    return pool->make<UringPoller>(pool, this);
 }
 
 void UringReactorImpl::sleep(u64 deadlineUs) {
@@ -509,29 +498,81 @@ void UringReactorImpl::sleep(u64 deadlineUs) {
     });
 }
 
-// UringPollGroup
+// UringPoller
 
-UringPollGroup::UringPollGroup(ObjPool* pool, const PollFD* fds, size_t count)
+UringPoller::UringPoller(ObjPool* pool, UringReactorImpl* reactor)
     : epfd_(epoll_create1(EPOLL_CLOEXEC))
-    , pfds_((struct pollfd*)pool->allocate(sizeof(struct pollfd) * count))
-    , count_(count)
+    , pfds_(nullptr)
+    , count_(0)
+    , cap_(0)
+    , pool_(pool)
+    , reactor_(reactor)
 {
-    for (size_t i = 0; i < count; ++i) {
-        pfds_[i].fd = fds[i].fd;
-        pfds_[i].events = fds[i].toPollEvents();
-        pfds_[i].revents = 0;
+}
 
-        struct epoll_event ev = {};
+UringPoller::~UringPoller() noexcept {
+    ::close(epfd_);
+}
 
-        ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
-        ev.data.fd = fds[i].fd;
+void UringPoller::arm(PollFD pfd) {
+    struct epoll_event ev = {};
 
-        epoll_ctl(epfd_, EPOLL_CTL_ADD, fds[i].fd, &ev);
+    ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
+    ev.data.fd = pfd.fd;
+
+    if (epoll_ctl(epfd_, EPOLL_CTL_ADD, pfd.fd, &ev) && errno == EEXIST) {
+        return;
+    }
+
+    if (count_ == cap_) {
+        size_t newCap = cap_ ? cap_ * 2 : 8;
+        auto newPfds = (struct pollfd*)pool_->allocate(sizeof(struct pollfd) * newCap);
+
+        for (size_t i = 0; i < count_; ++i) {
+            newPfds[i] = pfds_[i];
+        }
+
+        pfds_ = newPfds;
+        cap_ = newCap;
+    }
+
+    pfds_[count_].fd = pfd.fd;
+    pfds_[count_].events = pfd.toPollEvents();
+    pfds_[count_].revents = 0;
+    count_++;
+}
+
+void UringPoller::disarm(int fd) {
+    epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr);
+
+    for (size_t i = 0; i < count_; ++i) {
+        if (pfds_[i].fd == fd) {
+            pfds_[i] = pfds_[count_ - 1];
+            count_--;
+
+            return;
+        }
     }
 }
 
-UringPollGroup::~UringPollGroup() noexcept {
-    ::close(epfd_);
+void UringPoller::waitImpl(VisitorFace& v, u32 timeoutUs) {
+    auto deadlineUs = monotonicNowUs() + (u64)timeoutUs;
+
+    if (!reactor_->poll({epfd_, PollFlag::In}, deadlineUs)) {
+        return;
+    }
+
+    ::poll(pfds_, count_, 0);
+
+    for (size_t i = 0; i < count_; ++i) {
+        if (auto res = PollFD::fromPollEvents(pfds_[i].revents); res) {
+            PollFD pfd = {pfds_[i].fd, res};
+
+            v.visit(&pfd);
+        }
+
+        pfds_[i].revents = 0;
+    }
 }
 
 // factory

@@ -1,5 +1,6 @@
 #include "coro.h"
 #include "async.h"
+#include "poller.h"
 #include "poll_fd.h"
 #include "channel.h"
 #include "semaphore.h"
@@ -11,7 +12,6 @@
 #include <std/sys/crt.h>
 #include <std/sys/mem_fd.h>
 #include <std/sys/atomic.h>
-#include <std/lib/visitor.h>
 #include <std/mem/obj_pool.h>
 
 #include <string.h>
@@ -229,14 +229,14 @@ STD_TEST_SUITE(IoClassicPoll) {
 
         exec->spawn([&] {
             auto opool = ObjPool::fromMemory();
-            PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
-            auto g = io->createPollGroup(opool.mutPtr(), in, 2);
+            auto p = io->createPoller(opool.mutPtr());
 
-            // clang-format off
-            io->poll(g, makeVisitor([&](void* ptr) {
-                result |= ((PollFD*)ptr)->flags;
-            }), UINT64_MAX);
-            // clang-format on
+            p->arm({r1.get(), PollFlag::In});
+            p->arm({r2.get(), PollFlag::In});
+
+            p->wait([&](PollFD* ev) {
+                result |= ev->flags;
+            }, UINT64_MAX);
         });
 
         exec->spawn([&] {
@@ -259,14 +259,14 @@ STD_TEST_SUITE(IoClassicPoll) {
 
         exec->spawn([&] {
             auto opool = ObjPool::fromMemory();
-            PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
-            auto g = io->createPollGroup(opool.mutPtr(), in, 2);
+            auto p = io->createPoller(opool.mutPtr());
 
-            // clang-format off
-            io->poll(g, makeVisitor([&](void* ptr) {
-                result |= ((PollFD*)ptr)->flags;
-            }), UINT64_MAX);
-            // clang-format on
+            p->arm({r1.get(), PollFlag::In});
+            p->arm({r2.get(), PollFlag::In});
+
+            p->wait([&](PollFD* ev) {
+                result |= ev->flags;
+            }, UINT64_MAX);
         });
 
         exec->spawn([&] {
@@ -288,15 +288,16 @@ STD_TEST_SUITE(IoClassicPoll) {
 
         auto f = async(exec, [&] {
             auto opool = ObjPool::fromMemory();
-            PollFD in[] = {{r1.get(), PollFlag::In}, {r2.get(), PollFlag::In}};
-            auto g = io->createPollGroup(opool.mutPtr(), in, 2);
+            auto p = io->createPoller(opool.mutPtr());
+
+            p->arm({r1.get(), PollFlag::In});
+            p->arm({r2.get(), PollFlag::In});
+
             size_t n = 0;
 
-            // clang-format off
-            io->poll(g, makeVisitor([&](void*) {
+            p->wait([&](PollFD*) {
                 ++n;
-            }), 1);
-            // clang-format on
+            }, 1);
 
             return n;
         });
@@ -319,19 +320,15 @@ STD_TEST_SUITE(IoClassicPoll) {
 
         exec->spawn([&] {
             auto opool = ObjPool::fromMemory();
-            PollFD in[N];
+            auto p = io->createPoller(opool.mutPtr());
 
             for (int i = 0; i < N; ++i) {
-                in[i] = {readEnds[i].get(), PollFlag::In};
+                p->arm({readEnds[i].get(), PollFlag::In});
             }
 
-            auto g = io->createPollGroup(opool.mutPtr(), in, N);
-
-            // clang-format off
-            io->poll(g, makeVisitor([&](void* ptr) {
-                result |= ((PollFD*)ptr)->flags;
-            }), UINT64_MAX);
-            // clang-format on
+            p->wait([&](PollFD* ev) {
+                result |= ev->flags;
+            }, UINT64_MAX);
         });
 
         exec->spawn([&] {
