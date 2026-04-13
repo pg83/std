@@ -236,8 +236,8 @@ namespace {
 
         void join() noexcept override;
         Worker* localWorker() noexcept;
-        bool workerId(size_t* id) noexcept override;
         void flushLocal() noexcept override;
+        bool workerId(size_t* id) noexcept override;
         void submitTasks(IntrusiveList& tasks) noexcept override;
     };
 }

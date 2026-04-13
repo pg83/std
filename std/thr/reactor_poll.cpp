@@ -1,6 +1,7 @@
 #include "reactor_poll.h"
 
 #include "coro.h"
+#include "pool.h"
 #include "mutex.h"
 #include "guard.h"
 #include "thread.h"
@@ -254,7 +255,7 @@ void ReactorState::run() noexcept {
         }
 
         if (!ready.empty()) {
-            exec_->reSchedule(ready);
+            exec_->pool()->submitTasks(ready);
         }
     }
 }

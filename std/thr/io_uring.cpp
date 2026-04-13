@@ -263,8 +263,8 @@ bool UringCondVarImpl::cycle() noexcept {
     }
 
     if (!ready.empty()) {
-        reactor_->exec_->reSchedule(ready);
-        reactor_->exec_->flushLocal();
+        reactor_->exec_->pool()->submitTasks(ready);
+        reactor_->exec_->pool()->flushLocal();
     }
 
     return signaled;
@@ -303,7 +303,7 @@ ThreadPoolHooks* UringReactorImpl::hooks() {
 Ring* UringReactorImpl::currentRing() noexcept {
     size_t id;
 
-    if (exec_->workerId(&id)) {
+    if (exec_->pool()->workerId(&id)) {
         return rings_[id];
     }
 

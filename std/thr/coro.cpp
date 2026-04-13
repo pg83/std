@@ -159,20 +159,8 @@ namespace {
             return io_;
         }
 
-        bool workerId(size_t* id) noexcept override {
-            return pool_->workerId(id);
-        }
-
-        void flushLocal() noexcept override {
-            pool_->flushLocal();
-        }
-
-        void reSchedule(Task* task) noexcept override {
-            pool_->submitTask(task);
-        }
-
-        void reSchedule(IntrusiveList& tasks) noexcept override {
-            pool_->submitTasks(tasks);
+        ThreadPool* pool() noexcept override {
+            return pool_;
         }
 
         void parkWith(Runable&&, Task**) noexcept override;
@@ -233,7 +221,7 @@ ContImpl::~ContImpl() {
 
 void ContImpl::reSchedule() noexcept {
     STD_ASSERT(!workerCtx_);
-    exec_->reSchedule(this);
+    exec_->pool_->submitTask(this);
 }
 
 void ContImpl::parkWith(Runable* afterSuspend) noexcept {

@@ -40,14 +40,11 @@ namespace stl {
         virtual void join() noexcept = 0;
         virtual void yield() noexcept = 0;
         virtual void spawnRun(SpawnParams params) = 0;
-        virtual void reSchedule(Task* task) noexcept = 0;
         virtual void parkWith(Runable&&, Task**) noexcept = 0;
-        virtual void reSchedule(IntrusiveList& tasks) noexcept = 0;
         virtual void offloadRun(ThreadPool* pool, Runable&& work) = 0;
 
         virtual IoReactor* io() noexcept = 0;
-        virtual bool workerId(size_t* id) noexcept = 0;
-        virtual void flushLocal() noexcept = 0;
+        virtual ThreadPool* pool() noexcept = 0;
 
         virtual void createEvent(void* buf) = 0;
         virtual ThreadIface* createThread() = 0;
