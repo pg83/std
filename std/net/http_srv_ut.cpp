@@ -295,7 +295,7 @@ STD_TEST_SUITE(HttpServer) {
         STD_INSIST(StringView(body2) == StringView("ok"));
     }
 
-    STD_TEST(KeepAlive) {
+    STD_TEST(KeepAliveX) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
