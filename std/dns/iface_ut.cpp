@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 
 using namespace stl;
 
@@ -72,7 +73,9 @@ STD_TEST_SUITE(DnsResolver) {
     STD_TEST(ResolveBadName) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        auto resolver = DnsResolver::create(pool.mutPtr(), exec, nullptr, DnsConfig());
+        DnsConfig cfg;
+        cfg.family = AF_INET;
+        auto resolver = DnsResolver::create(pool.mutPtr(), exec, nullptr, cfg);
 
         auto f = async(exec, [&, rpool = pool->create(pool.mutPtr())] {
             return resolver->resolve(rpool, u8"this.name.does.not.exist.invalid");
