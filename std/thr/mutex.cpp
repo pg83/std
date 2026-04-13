@@ -3,6 +3,7 @@
 #include "semaphore_iface.h"
 
 #include <std/str/view.h>
+#include <std/mem/obj_pool.h>
 #include <std/sys/throw.h>
 #include <std/dbg/insist.h>
 #include <std/str/builder.h>
@@ -96,6 +97,17 @@ Mutex::Mutex(CoroExecutor* exec)
 
 SemaphoreIface* Mutex::spinLock(CoroExecutor* exec) {
     return new SpinSemImpl(exec);
+}
+
+SemaphoreIface* Mutex::spinLock(ObjPool* pool, CoroExecutor* exec) {
+    struct PoolSpinSemImpl: public SpinSemImpl {
+        using SpinSemImpl::SpinSemImpl;
+
+        void operator delete(void*) noexcept {
+        }
+    };
+
+    return pool->make<PoolSpinSemImpl>(exec);
 }
 
 Mutex::Mutex(SemaphoreIface* iface)

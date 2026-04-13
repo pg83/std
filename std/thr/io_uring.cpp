@@ -365,7 +365,7 @@ void UringReactorImpl::submitReq(Req& req, F prep, u64 deadlineUs) noexcept {
 }
 
 Mutex* UringReactorImpl::createMutex(ObjPool* pool) {
-    return pool->make<Mutex>(Mutex::spinLock(nullptr));
+    return pool->make<Mutex>(Mutex::spinLock(pool, nullptr));
 }
 
 CondVar* UringReactorImpl::createCondVar(ObjPool* pool, size_t index) {

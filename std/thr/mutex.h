@@ -1,6 +1,8 @@
 #pragma once
 
 namespace stl {
+    class ObjPool;
+
     struct CoroExecutor;
     struct SemaphoreIface;
 
@@ -14,6 +16,7 @@ namespace stl {
         Mutex(SemaphoreIface* iface);
 
         static SemaphoreIface* spinLock(CoroExecutor*);
+        static SemaphoreIface* spinLock(ObjPool*, CoroExecutor*);
 
         ~Mutex() noexcept;
 
