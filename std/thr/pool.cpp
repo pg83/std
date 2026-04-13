@@ -182,16 +182,16 @@ ThreadPool* ThreadPool::simple(ObjPool* pool, size_t threads) {
 namespace {
     struct WorkStealingThreadPool: public ThreadPool {
         struct Worker: public Runable, public WaitQueue::Item {
-            ObjPool* opool_;
-            WorkStealingThreadPool* pool_;
+            ObjPool* opool_ = nullptr;
+            WorkStealingThreadPool* pool_ = nullptr;
             u32 index_;
             PCG32 rng_;
             Vector<Worker*> so_;
-            Mutex* mutex_;
-            CondVar* condVar_;
+            Mutex* mutex_ = nullptr;
+            CondVar* condVar_ = nullptr;
             IntrusiveList tasks_;
             IntrusiveList local_;
-            Thread* thread_;
+            Thread* thread_ = nullptr;
 
             Worker(WorkStealingThreadPool* pool, ObjPool* opool, u32 myIndex, u64 seed);
 
@@ -380,8 +380,6 @@ WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, ObjPool* op
     , index_(myIndex)
     , rng_(seed)
     , mutex_(pool->hooks_->createMutex(opool_))
-    , condVar_(nullptr)
-    , thread_(nullptr)
 {
     mutex_->lock();
     thread_ = opool_->make<Thread>(*this);
