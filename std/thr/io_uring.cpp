@@ -46,7 +46,7 @@ namespace {
         return -res;
     }
 
-    struct UringReq: UringReqBase {
+    struct UringReq: public UringReqBase {
         Task* task;
         int res;
 
@@ -58,7 +58,7 @@ namespace {
         int readInto(T* out) noexcept;
     };
 
-    struct TimeoutReq: UringReq {
+    struct TimeoutReq: public UringReq {
         __kernel_timespec ts;
     };
 
