@@ -5,13 +5,14 @@
 #include <std/sys/types.h>
 
 namespace stl {
+    class Mutex;
     class ObjPool;
+    class CondVar;
     class IntrusiveList;
 
-    struct CondVarIface;
-
     struct ThreadPoolHooks {
-        virtual CondVarIface* createCondVar(size_t index) = 0;
+        virtual Mutex* createMutex(ObjPool* pool) = 0;
+        virtual CondVar* createCondVar(ObjPool* pool, size_t index) = 0;
     };
 
     struct ThreadPool {

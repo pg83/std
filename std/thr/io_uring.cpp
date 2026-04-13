@@ -6,6 +6,7 @@
 #include "poller.h"
 #include "poll_fd.h"
 #include "io_reactor.h"
+#include "cond_var.h"
 #include "cond_var_iface.h"
 
 #include <std/sys/crt.h>
@@ -128,7 +129,8 @@ namespace {
         UringReactorImpl(ObjPool* pool, CoroExecutor* exec, size_t threads);
 
         ThreadPoolHooks* hooks() override;
-        CondVarIface* createCondVar(size_t index) override;
+        Mutex* createMutex(ObjPool* pool) override;
+        CondVar* createCondVar(ObjPool* pool, size_t index) override;
 
         int recv(int, size_t*, void*, size_t, u64) override;
         int recvfrom(int, size_t*, void*, size_t, sockaddr*, u32*, u64) override;
@@ -359,8 +361,12 @@ void UringReactorImpl::submitReq(Req& req, F prep, u64 deadlineUs) noexcept {
     }), &req.task);
 }
 
-CondVarIface* UringReactorImpl::createCondVar(size_t index) {
-    return new UringCondVarImpl(rings_[index], this);
+Mutex* UringReactorImpl::createMutex(ObjPool* pool) {
+    return pool->make<Mutex>(Mutex::spinLock(nullptr));
+}
+
+CondVar* UringReactorImpl::createCondVar(ObjPool* pool, size_t index) {
+    return pool->make<CondVar>(new UringCondVarImpl(rings_[index], this));
 }
 
 int UringReactorImpl::recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) {

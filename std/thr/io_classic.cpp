@@ -2,6 +2,7 @@
 
 #include "coro.h"
 #include "pool.h"
+#include "mutex.h"
 #include "poll_fd.h"
 #include "cond_var.h"
 #include "io_reactor.h"
@@ -48,7 +49,8 @@ namespace {
             return this;
         }
 
-        CondVarIface* createCondVar(size_t) override;
+        Mutex* createMutex(ObjPool* pool) override;
+        CondVar* createCondVar(ObjPool* pool, size_t) override;
 
         PollerIface* createPoller(ObjPool* pool) override;
 
@@ -305,8 +307,12 @@ PollerIface* PollIoReactor::createPoller(ObjPool* pool) {
     return reactors_[mix(&pool, pool) % reactors_.length()]->createPoller(pool);
 }
 
-CondVarIface* PollIoReactor::createCondVar(size_t) {
-    return CondVar::createDefault();
+Mutex* PollIoReactor::createMutex(ObjPool* pool) {
+    return pool->make<Mutex>();
+}
+
+CondVar* PollIoReactor::createCondVar(ObjPool* pool, size_t) {
+    return pool->make<CondVar>();
 }
 
 IoReactor* stl::createPollIoReactor(ObjPool* pool, CoroExecutor* exec, size_t reactors) {
