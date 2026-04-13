@@ -101,6 +101,9 @@ namespace {
         Ring* ring_;
         UringReactorImpl* reactor_;
 
+        void operator delete(void*) noexcept {
+        }
+
         UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexcept;
 
         bool cycle() noexcept;
@@ -366,7 +369,7 @@ Mutex* UringReactorImpl::createMutex(ObjPool* pool) {
 }
 
 CondVar* UringReactorImpl::createCondVar(ObjPool* pool, size_t index) {
-    return pool->make<CondVar>(new UringCondVarImpl(rings_[index], this));
+    return pool->make<CondVar>(pool->make<UringCondVarImpl>(rings_[index], this));
 }
 
 int UringReactorImpl::recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) {
