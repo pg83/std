@@ -182,6 +182,7 @@ ThreadPool* ThreadPool::simple(ObjPool* pool, size_t threads) {
 namespace {
     struct WorkStealingThreadPool: public ThreadPool {
         struct Worker: public Runable, public WaitQueue::Item {
+            ObjPool* opool_;
             WorkStealingThreadPool* pool_;
             u32 index_;
             PCG32 rng_;
@@ -374,15 +375,16 @@ WorkStealingThreadPool::~WorkStealingThreadPool() noexcept {
 
 WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, ObjPool* opool, u32 myIndex, u64 seed)
     : WaitQueue::Item{nullptr, (u8)myIndex}
+    , opool_(ObjPool::create(opool))
     , pool_(pool)
     , index_(myIndex)
     , rng_(seed)
-    , mutex_(pool->hooks_->createMutex(opool))
+    , mutex_(pool->hooks_->createMutex(opool_))
     , condVar_(nullptr)
     , thread_(nullptr)
 {
     mutex_->lock();
-    thread_ = opool->make<Thread>(*this);
+    thread_ = opool_->make<Thread>(*this);
 }
 
 void WorkStealingThreadPool::Worker::join() noexcept {
@@ -433,8 +435,8 @@ void WorkStealingThreadPool::Worker::run() noexcept {
 }
 
 void WorkStealingThreadPool::Worker::loop() {
-    auto pool = ObjPool::fromMemory();
-    condVar_ = pool_->hooks_->createCondVar(pool.mutPtr(), index_);
+    condVar_ = pool_->hooks_->createCondVar(opool_, index_);
+
     LockGuard lock(*mutex_);
 
     while (true) {
