@@ -52,6 +52,7 @@ TcpSocket::TcpSocket(int fd, CoroExecutor* exec) noexcept
     : fd(fd)
     , io(exec->io())
 {
+    setNoDelay(true);
 }
 
 int TcpSocket::socket(int* out, int domain, int type, int protocol) {
