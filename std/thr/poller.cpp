@@ -401,21 +401,13 @@ namespace {
         }
 
         void waitImpl(VisitorFace& v, u32 timeoutUs) override {
-            struct Ctx {
-                VisitorFace* v;
-                IntMap<PollFD>* armed;
-                PollerIface* slave;
-            };
-
-            Ctx ctx{&v, &armed_, slave_};
-
-            auto wrapper = makeVisitor([&ctx](void* ptr) {
+            auto wrapper = makeVisitor([this, &v](void* ptr) {
                 auto ev = (PollFD*)ptr;
 
-                ctx.v->visit(ev);
+                v.visit(ev);
 
-                if (auto p = ctx.armed->find(ev->fd); p) {
-                    ctx.slave->arm(*p);
+                if (auto p = armed_.find(ev->fd); p) {
+                    slave_->arm(*p);
                 }
             });
 
