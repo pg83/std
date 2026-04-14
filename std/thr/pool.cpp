@@ -502,7 +502,9 @@ ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads) {
         }
     };
 
-    return workStealing(pool, threads, pool->make<DefaultThreadPoolHooks>());
+    static auto df = new DefaultThreadPoolHooks();
+
+    return workStealing(pool, threads, df);
 }
 
 ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads, ThreadPoolHooks* hooks) {
