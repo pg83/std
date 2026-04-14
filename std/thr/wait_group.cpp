@@ -5,6 +5,7 @@
 #include "cond_var.h"
 
 #include <std/sys/types.h>
+#include <std/mem/obj_pool.h>
 
 using namespace stl;
 
@@ -21,6 +22,13 @@ struct WaitGroup::Impl {
     Impl(size_t init, CoroExecutor* exec)
         : mutex(exec)
         , cv(exec)
+        , counter(init)
+    {
+    }
+
+    Impl(ObjPool* pool, size_t init)
+        : mutex(Mutex::defaultImpl(pool))
+        , cv(CondVar::createDefault(pool))
         , counter(init)
     {
     }
@@ -57,6 +65,11 @@ WaitGroup::WaitGroup(CoroExecutor* exec)
 {
 }
 
+WaitGroup::WaitGroup(Impl* impl)
+    : impl(impl)
+{
+}
+
 WaitGroup::WaitGroup(size_t init)
     : impl(new Impl(init))
 {
@@ -81,4 +94,19 @@ void WaitGroup::done() noexcept {
 
 void WaitGroup::wait() noexcept {
     impl->wait();
+}
+
+WaitGroup* WaitGroup::create(ObjPool* pool) {
+    return create(pool, 0);
+}
+
+WaitGroup* WaitGroup::create(ObjPool* pool, size_t init) {
+    struct PoolImpl: public WaitGroup::Impl {
+        using Impl::Impl;
+
+        void operator delete(void*) noexcept {
+        }
+    };
+
+    return pool->make<WaitGroup>(pool->make<PoolImpl>(pool, init));
 }

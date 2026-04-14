@@ -2,6 +2,7 @@
 
 namespace stl {
     class Mutex;
+    class ObjPool;
 
     struct CondVarIface;
     struct CoroExecutor;
@@ -14,7 +15,9 @@ namespace stl {
         CondVar(CoroExecutor* exec);
         CondVar(CondVarIface* iface);
 
+        static CondVar* create(ObjPool* pool);
         static CondVarIface* createDefault();
+        static CondVarIface* createDefault(ObjPool* pool);
 
         ~CondVar() noexcept;
 

@@ -95,13 +95,17 @@ Mutex::Mutex(CoroExecutor* exec)
 {
 }
 
-Mutex* Mutex::createDefault(ObjPool* pool) {
+SemaphoreIface* Mutex::defaultImpl(ObjPool* pool) {
     struct PoolPosixMutexImpl: public PosixMutexImpl {
         void operator delete(void*) noexcept {
         }
     };
 
-    return pool->make<Mutex>(pool->make<PoolPosixMutexImpl>());
+    return pool->make<PoolPosixMutexImpl>();
+}
+
+Mutex* Mutex::createDefault(ObjPool* pool) {
+    return pool->make<Mutex>(defaultImpl(pool));
 }
 
 Mutex* Mutex::createSpinLock(ObjPool* pool) {

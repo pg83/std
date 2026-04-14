@@ -8,6 +8,8 @@
 #include <std/dbg/insist.h>
 #include <std/str/builder.h>
 
+#include <std/mem/obj_pool.h>
+
 #include <pthread.h>
 
 using namespace stl;
@@ -40,6 +42,19 @@ namespace {
 
 CondVarIface* CondVar::createDefault() {
     return new PosixCondVarImpl();
+}
+
+CondVarIface* CondVar::createDefault(ObjPool* pool) {
+    struct PoolPosixCondVarImpl: public PosixCondVarImpl {
+        void operator delete(void*) noexcept {
+        }
+    };
+
+    return pool->make<PoolPosixCondVarImpl>();
+}
+
+CondVar* CondVar::create(ObjPool* pool) {
+    return pool->make<CondVar>(createDefault(pool));
 }
 
 CondVar::CondVar()
