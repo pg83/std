@@ -382,7 +382,7 @@ WorkStealingThreadPool::Worker::Worker(WorkStealingThreadPool* pool, ObjPool* op
     , mutex_(pool->hooks_->createMutex(opool_))
 {
     mutex_->lock();
-    thread_ = opool_->make<Thread>(*this);
+    thread_ = Thread::create(opool_, *this);
 }
 
 void WorkStealingThreadPool::Worker::join() noexcept {

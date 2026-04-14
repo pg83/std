@@ -149,7 +149,7 @@ ReactorState::ReactorState(CoroExecutor* exec, ObjPool* opool)
     , queueMutex_(Mutex::spinLock(exec))
 {
     poller->arm({parker_.fd(), PollFlag::In});
-    thread_ = opool->make<Thread>(*this);
+    thread_ = Thread::create(opool, *this);
 }
 
 void ReactorState::rearmOrDisarm(int fd) {
