@@ -494,7 +494,7 @@ void WorkStealingThreadPool::Worker::splitHalf(IntrusiveList* stolen) noexcept {
 ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads) {
     struct DefaultThreadPoolHooks: public ThreadPoolHooks {
         Mutex* createMutex(ObjPool* pool) override {
-            return pool->make<Mutex>();
+            return Mutex::createDefault(pool);
         }
 
         CondVar* createCondVar(ObjPool* pool, size_t) override {
