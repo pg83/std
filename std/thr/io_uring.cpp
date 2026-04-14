@@ -345,7 +345,7 @@ template <typename Req, typename F>
 void UringReactorImpl::submitReq(Req& req, F prep, u64 deadlineUs) noexcept {
     auto ring = currentRing();
     auto now = monotonicNowUs();
-    auto ts = (now < deadlineUs) ? usToTimespec(deadlineUs - now) : usToTimespec(0);
+    auto ts = usToTimespec(deadlineUs - now);
 
     exec_->parkWith(makeRunable([&] {
         io_uring_sqe* sqe;
