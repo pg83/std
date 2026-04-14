@@ -16,6 +16,7 @@ namespace stl {
         Mutex(SemaphoreIface* iface);
 
         static Mutex* createDefault(ObjPool*);
+        static Mutex* createSpinLock(ObjPool*);
         static Mutex* createSpinLock(ObjPool*, CoroExecutor*);
 
         static SemaphoreIface* spinLock(CoroExecutor*);

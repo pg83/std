@@ -104,6 +104,10 @@ Mutex* Mutex::createDefault(ObjPool* pool) {
     return pool->make<Mutex>(pool->make<PoolPosixMutexImpl>());
 }
 
+Mutex* Mutex::createSpinLock(ObjPool* pool) {
+    return createSpinLock(pool, nullptr);
+}
+
 Mutex* Mutex::createSpinLock(ObjPool* pool, CoroExecutor* exec) {
     return pool->make<Mutex>(spinLock(pool, exec));
 }
