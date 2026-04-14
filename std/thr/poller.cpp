@@ -113,7 +113,7 @@ namespace {
         }
 
         void waitImpl(VisitorFace& v, u32 timeoutUs) override {
-            epoll_event raw[1024];
+            epoll_event raw[64];
 
             int n = epoll_wait(epfd_, raw, sizeof(raw) / sizeof(raw[0]), (int)((timeoutUs + 999) / 1000));
 
@@ -173,7 +173,7 @@ namespace {
         }
 
         void waitImpl(VisitorFace& v, u32 timeoutUs) override {
-            struct kevent raw[1024];
+            struct kevent raw[64];
 
             struct timespec ts;
 
@@ -267,7 +267,6 @@ namespace {
                 v.visit(&ev);
             }
         }
-
     };
 
     struct HybridPoller: public PollerIface {
