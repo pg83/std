@@ -55,17 +55,7 @@ struct WaitGroup::Impl {
     }
 };
 
-WaitGroup::WaitGroup()
-    : WaitGroup((size_t)0)
-{
-}
-
-WaitGroup::WaitGroup(CoroExecutor* exec)
-    : WaitGroup(0, exec)
-{
-}
-
-WaitGroup::WaitGroup(Impl* impl)
+WaitGroup::WaitGroup(Impl* impl, bool)
     : impl(impl)
 {
 }
@@ -96,10 +86,6 @@ void WaitGroup::wait() noexcept {
     impl->wait();
 }
 
-WaitGroup* WaitGroup::create(ObjPool* pool) {
-    return create(pool, 0);
-}
-
 WaitGroup* WaitGroup::create(ObjPool* pool, size_t init) {
     struct PoolImpl: public WaitGroup::Impl {
         using Impl::Impl;
@@ -108,5 +94,5 @@ WaitGroup* WaitGroup::create(ObjPool* pool, size_t init) {
         }
     };
 
-    return pool->make<WaitGroup>(pool->make<PoolImpl>(pool, init));
+    return pool->make<WaitGroup>(pool->make<PoolImpl>(pool, init), false);
 }

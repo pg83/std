@@ -57,7 +57,7 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
         } handler;
 
         auto addr = makeAddr(17670);
-        WaitGroup wg(exec);
+        WaitGroup wg(0, exec);
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
                                             .exec = exec,
@@ -113,7 +113,7 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
         } handler;
 
         auto addr = makeAddr(17671);
-        WaitGroup wg(exec);
+        WaitGroup wg(0, exec);
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
                                             .exec = exec,
@@ -166,7 +166,7 @@ STD_TEST_SUITE(HttpServer) {
         } handler;
 
         auto addr = makeAddr(17661);
-        WaitGroup wg(exec);
+        WaitGroup wg(0, exec);
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
                                             .exec = exec,
@@ -229,7 +229,7 @@ STD_TEST_SUITE(HttpServer) {
         } handler;
 
         auto addr = makeAddr(17663);
-        WaitGroup wg(exec);
+        WaitGroup wg(0, exec);
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
                                             .exec = exec,
@@ -309,7 +309,7 @@ STD_TEST_SUITE(HttpServer) {
         } handler;
 
         auto addr = makeAddr(17662);
-        WaitGroup wg(exec);
+        WaitGroup wg(0, exec);
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
                                             .exec = exec,

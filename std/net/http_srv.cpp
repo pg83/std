@@ -113,7 +113,7 @@ namespace {
         }
 
         if (!opts.wg) {
-            opts.wg = pool->make<WaitGroup>();
+            opts.wg = WaitGroup::create(pool, 0);
         }
 
         auto storage = pool->make<sockaddr_storage>();

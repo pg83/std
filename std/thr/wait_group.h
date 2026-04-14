@@ -12,13 +12,10 @@ namespace stl {
         Impl* impl;
 
     public:
-        WaitGroup();
-        WaitGroup(Impl* impl);
+        WaitGroup(Impl* impl, bool);
         WaitGroup(size_t init);
-        WaitGroup(CoroExecutor* exec);
         WaitGroup(size_t init, CoroExecutor* exec);
 
-        static WaitGroup* create(ObjPool* pool);
         static WaitGroup* create(ObjPool* pool, size_t init);
 
         ~WaitGroup() noexcept;

@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
     sysE << W << StringView(u8"payload:  ") << G << (u64)payloadLen << R << endL;
 
     Channel ch(exec, numCoros * 4);
-    WaitGroup wg(exec);
+    WaitGroup wg(0, exec);
 
     u64 startUs = monotonicNowUs();
     u64 deadlineUs = startUs + (u64)durationSec * 1000000;
