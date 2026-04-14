@@ -29,6 +29,7 @@ namespace stl {
         }
 
         static PollerIface* create(ObjPool* pool);
+        static PollerIface* createMultishot(ObjPool* pool, PollerIface* slave);
     };
 
     struct WaitablePoller: public PollerIface {

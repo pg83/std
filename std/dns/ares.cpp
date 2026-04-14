@@ -153,7 +153,7 @@ DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec, const DnsCon
     , lock_(Mutex::spinLock(exec))
     , pollerPool_(ObjPool::fromMemory())
 {
-    poller_ = exec->io()->createPoller(pollerPool_.mutPtr());
+    poller_ = PollerIface::createMultishot(pollerPool_.mutPtr(), exec->io()->createPoller(pollerPool_.mutPtr()));
     poller_->arm({parker_.fd(), PollFlag::In});
     ares_options opts;
     memset(&opts, 0, sizeof(opts));
@@ -250,7 +250,6 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
             poller_->wait([this](PollFD* ev) {
                 if (ev->fd == parker_.fd()) {
                     parker_.drain();
-                    poller_->arm({parker_.fd(), PollFlag::In});
                 } else {
                     ares_socket_t rfd = (ev->flags & PollFlag::In) ? ev->fd : ARES_SOCKET_BAD;
                     ares_socket_t wfd = (ev->flags & PollFlag::Out) ? ev->fd : ARES_SOCKET_BAD;

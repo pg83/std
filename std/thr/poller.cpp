@@ -379,6 +379,55 @@ WaitablePoller* WaitablePoller::create(ObjPool* pool, Pollable* reactor) {
     return nullptr;
 }
 
+namespace {
+    struct MultishotPoller: public PollerIface {
+        PollerIface* slave_;
+        IntMap<PollFD> armed_;
+
+        MultishotPoller(ObjPool* pool, PollerIface* slave)
+            : slave_(slave)
+            , armed_(ObjPool::create(pool))
+        {
+        }
+
+        void arm(PollFD pfd) override {
+            armed_[pfd.fd] = pfd;
+            slave_->arm(pfd);
+        }
+
+        void disarm(int fd) override {
+            armed_.erase(fd);
+            slave_->disarm(fd);
+        }
+
+        void waitImpl(VisitorFace& v, u32 timeoutUs) override {
+            struct Ctx {
+                VisitorFace* v;
+                IntMap<PollFD>* armed;
+                PollerIface* slave;
+            };
+
+            Ctx ctx{&v, &armed_, slave_};
+
+            auto wrapper = makeVisitor([&ctx](void* ptr) {
+                auto ev = (PollFD*)ptr;
+
+                ctx.v->visit(ev);
+
+                if (auto p = ctx.armed->find(ev->fd); p) {
+                    ctx.slave->arm(*p);
+                }
+            });
+
+            slave_->waitImpl(wrapper, timeoutUs);
+        }
+    };
+}
+
+PollerIface* PollerIface::createMultishot(ObjPool* pool, PollerIface* slave) {
+    return pool->make<MultishotPoller>(pool, slave);
+}
+
 void PollerIface::waitBase(VisitorFace&& v, u64 deadlineUs) {
     if (auto now = monotonicNowUs(); now >= deadlineUs) {
         waitImpl(v, 0);
