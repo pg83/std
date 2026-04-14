@@ -10,6 +10,8 @@
 #include <std/str/builder.h>
 #include <std/alg/exchange.h>
 
+#include <std/mem/obj_pool.h>
+
 #include <unistd.h>
 #include <pthread.h>
 
@@ -81,6 +83,19 @@ u64 Thread::threadId() const noexcept {
 
 u64 Thread::currentThreadId() noexcept {
     return (u64)pthread_self();
+}
+
+Thread* Thread::create(ObjPool* pool, Runable& runable) {
+    struct PoolPosixThreadImpl: public PosixThreadImpl {
+        void operator delete(void*) noexcept {
+        }
+    };
+
+    auto t = pool->make<Thread>(pool->make<PoolPosixThreadImpl>());
+
+    t->impl->start(runable);
+
+    return t;
 }
 
 void stl::detach(Runable& runable) {

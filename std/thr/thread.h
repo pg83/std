@@ -5,6 +5,8 @@
 #include <std/sys/types.h>
 
 namespace stl {
+    class ObjPool;
+
     struct ThreadIface;
     struct CoroExecutor;
 
@@ -25,6 +27,7 @@ namespace stl {
         u64 threadId() const noexcept;
 
         static u64 currentThreadId() noexcept;
+        static Thread* create(ObjPool* pool, Runable& runable);
     };
 
     class ScopedThread {
