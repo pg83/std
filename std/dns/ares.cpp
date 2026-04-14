@@ -250,6 +250,7 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
             poller_->wait([this](PollFD* ev) {
                 if (ev->fd == parker_.fd()) {
                     parker_.drain();
+                    poller_->arm({parker_.fd(), PollFlag::In});
                 } else {
                     ares_socket_t rfd = (ev->flags & PollFlag::In) ? ev->fd : ARES_SOCKET_BAD;
                     ares_socket_t wfd = (ev->flags & PollFlag::Out) ? ev->fd : ARES_SOCKET_BAD;
