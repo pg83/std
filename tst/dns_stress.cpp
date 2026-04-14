@@ -1,5 +1,6 @@
 #include <std/tst/args.h>
 #include <std/thr/coro.h>
+#include <std/thr/semaphore.h>
 #include <std/dns/iface.h>
 #include <std/dns/config.h>
 #include <std/lib/vector.h>
@@ -47,6 +48,8 @@ int main(int argc, char** argv) {
 
     auto exec = CoroExecutor::create(pool.mutPtr(), threads);
 
+    Semaphore sem(threads * 20, exec);
+
     Vector<DnsResolver*> resolvers;
 
     for (size_t j = 0; j < threads; ++j) {
@@ -59,7 +62,10 @@ int main(int argc, char** argv) {
             char buf[64];
 
             snprintf(buf, sizeof(buf), "host%d.test.invalid", i);
+
+            sem.wait();
             resolvers[i % threads]->resolve(rpool.mutPtr(), StringView((const u8*)buf, strlen(buf)));
+            sem.post();
         });
     }
 
