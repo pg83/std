@@ -4,6 +4,20 @@
 
 using namespace stl;
 
+#if defined(__linux__)
+static_assert(PollFlag::In == POLLIN);
+static_assert(PollFlag::Out == POLLOUT);
+static_assert(PollFlag::Err == POLLERR);
+static_assert(PollFlag::Hup == POLLHUP);
+
+short PollFD::toPollEvents() const noexcept {
+    return (short)flags;
+}
+
+u32 PollFD::fromPollEvents(short events) noexcept {
+    return (u32)events & (PollFlag::In | PollFlag::Out | PollFlag::Err | PollFlag::Hup);
+}
+#else
 short PollFD::toPollEvents() const noexcept {
     short r = 0;
 
@@ -47,3 +61,4 @@ u32 PollFD::fromPollEvents(short events) noexcept {
 
     return r;
 }
+#endif
