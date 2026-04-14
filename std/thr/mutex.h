@@ -15,12 +15,12 @@ namespace stl {
         Mutex(CoroExecutor* exec);
         Mutex(SemaphoreIface* iface);
 
-        static Mutex* createDefault(ObjPool*);
-        static Mutex* createSpinLock(ObjPool*);
-        static Mutex* createSpinLock(ObjPool*, CoroExecutor*);
+        static Mutex* createDefault(ObjPool* pool);
+        static Mutex* createSpinLock(ObjPool* pool);
+        static Mutex* createSpinLock(ObjPool* pool, CoroExecutor* exec);
 
-        static SemaphoreIface* spinLock(CoroExecutor*);
-        static SemaphoreIface* spinLock(ObjPool*, CoroExecutor*);
+        static SemaphoreIface* spinLock(CoroExecutor* exec);
+        static SemaphoreIface* spinLock(ObjPool* pool, CoroExecutor* exec);
 
         ~Mutex() noexcept;
 
