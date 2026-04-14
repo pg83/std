@@ -241,12 +241,17 @@ namespace {
 #endif
 
     struct MutexImpl: public WaitQueue {
-        Mutex mutex;
+        Mutex* mutex_;
         Item* head = nullptr;
         size_t count_ = 0;
 
+        MutexImpl(Mutex* m)
+            : mutex_(m)
+        {
+        }
+
         void enqueue(Item* item) noexcept override {
-            LockGuard lock(mutex);
+            LockGuard lock(*mutex_);
 
             item->next = head;
             head = item;
@@ -259,7 +264,7 @@ namespace {
                 return nullptr;
             }
 
-            LockGuard lock(mutex);
+            LockGuard lock(*mutex_);
 
             Item* item = head;
 
@@ -301,5 +306,5 @@ WaitQueue* WaitQueue::construct(ObjPool* pool, size_t maxWaiters) {
     return pool->make<PointerImpl>();
 #endif
 
-    return pool->make<MutexImpl>();
+    return pool->make<MutexImpl>(Mutex::createDefault(pool));
 }
