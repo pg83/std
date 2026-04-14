@@ -17,8 +17,8 @@ namespace stl {
 
     struct ThreadPool {
         virtual void join() noexcept = 0;
-        virtual bool workerId(size_t* id) noexcept = 0;
         virtual void flushLocal() noexcept = 0;
+        virtual bool workerId(size_t* id) noexcept = 0;
         virtual void submitTasks(IntrusiveList& tasks) noexcept = 0;
 
         void submitTask(Task* task) noexcept;

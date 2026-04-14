@@ -21,9 +21,7 @@ struct Ring {
     void initDeferred() {
         struct io_uring_params params = {};
 
-        params.flags = IORING_SETUP_SINGLE_ISSUER
-                     | IORING_SETUP_DEFER_TASKRUN
-                     | IORING_SETUP_R_DISABLED;
+        params.flags = IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_R_DISABLED;
 
         if (io_uring_queue_init_params(64, &ring, &params) < 0) {
             printf("deferred init failed\n");

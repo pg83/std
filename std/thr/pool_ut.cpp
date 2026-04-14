@@ -280,5 +280,3 @@ for (volatile int i = 0; i < 10000; i = i + 1) {} });
         STD_INSIST(counter == 100);
     }
 }
-
-

@@ -475,7 +475,6 @@ CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads) {
     return pool->make<CoroExecutorImpl>(pool, threads);
 }
 
-
 SpawnParams& SpawnParams::setStackSize(size_t v) noexcept {
     stackSize = v;
 
