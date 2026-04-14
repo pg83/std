@@ -239,6 +239,103 @@ STD_TEST_SUITE(SpinMutex) {
     }
 }
 
+STD_TEST_SUITE(PoolMutex) {
+    STD_TEST(DefaultBasicLockUnlock) {
+        auto pool = ObjPool::fromMemory();
+        auto mtx = Mutex::createDefault(pool.mutPtr());
+
+        mtx->lock();
+        mtx->unlock();
+
+        mtx->lock();
+        mtx->unlock();
+    }
+
+    STD_TEST(DefaultTryLock) {
+        auto pool = ObjPool::fromMemory();
+        auto mtx = Mutex::createDefault(pool.mutPtr());
+
+        bool locked = mtx->tryLock();
+        STD_INSIST(locked == true);
+        mtx->unlock();
+
+        mtx->lock();
+        locked = mtx->tryLock();
+        STD_INSIST(locked == false);
+        mtx->unlock();
+    }
+
+    STD_TEST(DefaultLockGuard) {
+        auto pool = ObjPool::fromMemory();
+        auto mtx = Mutex::createDefault(pool.mutPtr());
+
+        {
+            LockGuard guard(*mtx);
+        }
+
+        bool locked = mtx->tryLock();
+        STD_INSIST(locked == true);
+        mtx->unlock();
+    }
+
+    STD_TEST(SpinLockBasicLockUnlock) {
+        auto pool = ObjPool::fromMemory();
+        auto mtx = Mutex::createSpinLock(pool.mutPtr(), nullptr);
+
+        mtx->lock();
+        mtx->unlock();
+
+        mtx->lock();
+        mtx->unlock();
+    }
+
+    STD_TEST(SpinLockTryLock) {
+        auto pool = ObjPool::fromMemory();
+        auto mtx = Mutex::createSpinLock(pool.mutPtr(), nullptr);
+
+        bool locked = mtx->tryLock();
+        STD_INSIST(locked == true);
+        mtx->unlock();
+
+        mtx->lock();
+        locked = mtx->tryLock();
+        STD_INSIST(locked == false);
+        mtx->unlock();
+    }
+
+    STD_TEST(SpinLockLockGuard) {
+        auto pool = ObjPool::fromMemory();
+        auto mtx = Mutex::createSpinLock(pool.mutPtr(), nullptr);
+
+        {
+            LockGuard guard(*mtx);
+        }
+
+        bool locked = mtx->tryLock();
+        STD_INSIST(locked == true);
+        mtx->unlock();
+    }
+
+    STD_TEST(SpinLockContention) {
+        auto opool = ObjPool::fromMemory();
+        auto mtx = Mutex::createSpinLock(opool.mutPtr(), nullptr);
+        auto pool = ThreadPool::simple(opool.mutPtr(), 4);
+        int counter = 0;
+
+        for (int i = 0; i < 4; ++i) {
+            pool->submit([&] {
+                for (int j = 0; j < 1000; ++j) {
+                    LockGuard guard(*mtx);
+                    ++counter;
+                }
+            });
+        }
+
+        pool->join();
+        STD_INSIST(counter == 4000);
+    }
+}
+
 STD_TEST_SUITE(CoroMutex) {
     STD_TEST(BasicLockUnlock) {
         auto pool = ObjPool::fromMemory();
