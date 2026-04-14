@@ -36,50 +36,6 @@ using namespace stl;
 
 #if defined(__linux__)
 namespace {
-    static u32 toEpollFlags(u32 flags) noexcept {
-        u32 r = 0;
-
-        if (flags & PollFlag::In) {
-            r |= EPOLLIN;
-        }
-
-        if (flags & PollFlag::Out) {
-            r |= EPOLLOUT;
-        }
-
-        if (flags & PollFlag::Err) {
-            r |= EPOLLERR;
-        }
-
-        if (flags & PollFlag::Hup) {
-            r |= EPOLLHUP;
-        }
-
-        return r;
-    }
-
-    static u32 fromEpollFlags(u32 events) noexcept {
-        u32 r = 0;
-
-        if (events & EPOLLIN) {
-            r |= PollFlag::In;
-        }
-
-        if (events & EPOLLOUT) {
-            r |= PollFlag::Out;
-        }
-
-        if (events & EPOLLERR) {
-            r |= PollFlag::Err;
-        }
-
-        if (events & EPOLLHUP) {
-            r |= PollFlag::Hup;
-        }
-
-        return r;
-    }
-
     struct EpollPoller: public WaitablePoller {
         int epfd_;
 
@@ -96,7 +52,7 @@ namespace {
             epoll_event ev{};
 
             ev.data.fd = pfd.fd;
-            ev.events = toEpollFlags(pfd.flags) | EPOLLONESHOT;
+            ev.events = pfd.toPollEvents() | EPOLLONESHOT;
 
             if (epoll_ctl(epfd_, EPOLL_CTL_MOD, pfd.fd, &ev) < 0) {
                 STD_INSIST(errno == ENOENT);
@@ -122,7 +78,7 @@ namespace {
             }
 
             for (auto& e : range(raw, raw + n)) {
-                PollFD ev{e.data.fd, fromEpollFlags(e.events)};
+                PollFD ev{e.data.fd, PollFD::fromPollEvents(e.events)};
 
                 v.visit(&ev);
             }

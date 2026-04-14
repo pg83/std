@@ -15,6 +15,14 @@ short PollFD::toPollEvents() const noexcept {
         r |= POLLOUT;
     }
 
+    if (flags & PollFlag::Err) {
+        r |= POLLERR;
+    }
+
+    if (flags & PollFlag::Hup) {
+        r |= POLLHUP;
+    }
+
     return r;
 }
 
