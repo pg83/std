@@ -9,13 +9,13 @@ namespace stl {
     class IntrusiveList;
 
     struct Task;
+    struct Mutex;
+    struct Thread;
+    struct CondVar;
+    struct Semaphore;
     struct IoReactor;
     struct ThreadPool;
     struct EventIface;
-    struct Thread;
-    struct Mutex;
-    struct CondVar;
-    struct Semaphore;
     struct CoroExecutor;
 
     struct SpawnParams {
@@ -48,12 +48,12 @@ namespace stl {
         virtual ThreadPool* pool() noexcept = 0;
 
         virtual void createEvent(void* buf) = 0;
-        virtual CondVar* createCondVar(ObjPool* pool) = 0;
         virtual Thread* createThread(ObjPool* pool) = 0;
+        virtual CondVar* createCondVar(ObjPool* pool) = 0;
         virtual Mutex* createSemaphoreImpl(ObjPool* pool, size_t initial) = 0;
 
-        Semaphore* createSemaphore(ObjPool* pool, size_t initial);
         Mutex* createMutex(ObjPool* pool);
+        Semaphore* createSemaphore(ObjPool* pool, size_t initial);
 
         virtual void* currentCoroId() const noexcept = 0;
 
