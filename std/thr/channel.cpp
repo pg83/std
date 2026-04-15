@@ -11,64 +11,99 @@
 
 using namespace stl;
 
-struct Channel::Impl {
+namespace {
     struct Waiter: public IntrusiveNode {
         Event* ev;
         void* value;
         bool valueSet;
     };
 
-    CoroExecutor* exec_;
-    ObjPool::Ref muPool_;
-    Mutex* mu_;
-    IntrusiveList senders_;
-    IntrusiveList receivers_;
-    bool closed_;
+    struct ChannelImpl: public Channel {
+        CoroExecutor* exec_;
+        Mutex* mu_;
+        IntrusiveList senders_;
+        IntrusiveList receivers_;
+        bool closed_;
 
-    Impl() noexcept
-        : exec_(nullptr)
-        , muPool_(ObjPool::fromMemory())
-        , mu_(Mutex::create(muPool_.mutPtr()))
-        , closed_(false)
-    {
-    }
+        ChannelImpl(Mutex* mu) noexcept
+            : exec_(nullptr)
+            , mu_(mu)
+            , closed_(false)
+        {
+        }
 
-    Impl(CoroExecutor* exec) noexcept
-        : exec_(exec)
-        , muPool_(ObjPool::fromMemory())
-        , mu_(Mutex::createSpinLock(muPool_.mutPtr(), exec))
-        , closed_(false)
-    {
-    }
+        ChannelImpl(CoroExecutor* exec, Mutex* mu) noexcept
+            : exec_(exec)
+            , mu_(mu)
+            , closed_(false)
+        {
+        }
 
-    bool sendOne(void* v) noexcept;
-    bool recvOne(void** out) noexcept;
+        bool sendOne(void* v) noexcept;
+        bool recvOne(void** out) noexcept;
 
-    virtual bool bufferOne(void*) noexcept {
-        return false;
-    }
+        virtual bool bufferOne(void*) noexcept {
+            return false;
+        }
 
-    virtual bool unbufferOne(void**) noexcept {
-        return false;
-    }
+        virtual bool unbufferOne(void**) noexcept {
+            return false;
+        }
 
-    __attribute__((noinline)) void enqueueSlow(void* v) noexcept;
-    __attribute__((noinline)) bool dequeueSlow(void** out) noexcept;
+        __attribute__((noinline)) void enqueueSlow(void* v) noexcept;
+        __attribute__((noinline)) bool dequeueSlow(void** out) noexcept;
 
-    void enqueue(void* v) noexcept;
-    bool dequeue(void** out) noexcept;
-    size_t dequeue(void** to, size_t len) noexcept;
+        void enqueue(void* v) noexcept override;
+        bool dequeue(void** out) noexcept override;
+        size_t dequeue(void** to, size_t len) noexcept override;
 
-    bool tryEnqueue(void* v) noexcept;
-    bool tryDequeue(void** out) noexcept;
+        bool tryEnqueue(void* v) noexcept override;
+        bool tryDequeue(void** out) noexcept override;
 
-    void close() noexcept;
+        void close() noexcept override;
+    };
 
-    virtual ~Impl() noexcept {
-    }
-};
+    struct Pow2RingBuf {
+        void** buf_;
+        size_t mask_;
+        size_t head_;
+        size_t size_;
 
-bool Channel::Impl::sendOne(void* v) noexcept {
+        Pow2RingBuf(void** buf, size_t capa) noexcept;
+
+        bool empty() const noexcept {
+            return size_ == 0;
+        }
+
+        bool full() const noexcept {
+            return size_ == mask_ + 1;
+        }
+
+        void push(void* v) noexcept;
+        void* pop() noexcept;
+    };
+
+    struct BufferedImpl: public ChannelImpl {
+        Pow2RingBuf buf_;
+
+        BufferedImpl(Mutex* mu, void** storage, size_t capa) noexcept
+            : ChannelImpl(mu)
+            , buf_(storage, capa)
+        {
+        }
+
+        BufferedImpl(CoroExecutor* exec, Mutex* mu, void** storage, size_t capa) noexcept
+            : ChannelImpl(exec, mu)
+            , buf_(storage, capa)
+        {
+        }
+
+        bool bufferOne(void* v) noexcept override;
+        bool unbufferOne(void** out) noexcept override;
+    };
+}
+
+bool ChannelImpl::sendOne(void* v) noexcept {
     if (auto w = (Waiter*)receivers_.popFrontOrNull(); w) {
         w->value = v;
         w->valueSet = true;
@@ -80,7 +115,7 @@ bool Channel::Impl::sendOne(void* v) noexcept {
     return bufferOne(v);
 }
 
-void Channel::Impl::enqueue(void* v) noexcept {
+void ChannelImpl::enqueue(void* v) noexcept {
     mu_->lock();
 
     STD_INSIST(!closed_);
@@ -93,7 +128,7 @@ void Channel::Impl::enqueue(void* v) noexcept {
     enqueueSlow(v);
 }
 
-bool Channel::Impl::tryEnqueue(void* v) noexcept {
+bool ChannelImpl::tryEnqueue(void* v) noexcept {
     LockGuard guard(*mu_);
 
     STD_INSIST(!closed_);
@@ -101,7 +136,7 @@ bool Channel::Impl::tryEnqueue(void* v) noexcept {
     return sendOne(v);
 }
 
-__attribute__((noinline)) void Channel::Impl::enqueueSlow(void* v) noexcept {
+__attribute__((noinline)) void ChannelImpl::enqueueSlow(void* v) noexcept {
     Event ev(exec_);
     Waiter w;
 
@@ -115,7 +150,7 @@ __attribute__((noinline)) void Channel::Impl::enqueueSlow(void* v) noexcept {
     }));
 }
 
-bool Channel::Impl::recvOne(void** out) noexcept {
+bool ChannelImpl::recvOne(void** out) noexcept {
     if (unbufferOne(out)) {
         return true;
     }
@@ -130,7 +165,7 @@ bool Channel::Impl::recvOne(void** out) noexcept {
     return false;
 }
 
-bool Channel::Impl::dequeue(void** out) noexcept {
+bool ChannelImpl::dequeue(void** out) noexcept {
     mu_->lock();
 
     if (recvOne(out)) {
@@ -146,13 +181,13 @@ bool Channel::Impl::dequeue(void** out) noexcept {
     return dequeueSlow(out);
 }
 
-bool Channel::Impl::tryDequeue(void** out) noexcept {
+bool ChannelImpl::tryDequeue(void** out) noexcept {
     LockGuard guard(*mu_);
 
     return recvOne(out);
 }
 
-__attribute__((noinline)) bool Channel::Impl::dequeueSlow(void** out) noexcept {
+__attribute__((noinline)) bool ChannelImpl::dequeueSlow(void** out) noexcept {
     Event ev(exec_);
     Waiter w;
 
@@ -174,7 +209,7 @@ __attribute__((noinline)) bool Channel::Impl::dequeueSlow(void** out) noexcept {
     return false;
 }
 
-size_t Channel::Impl::dequeue(void** to, size_t len) noexcept {
+size_t ChannelImpl::dequeue(void** to, size_t len) noexcept {
     if (len == 0) {
         return 0;
     }
@@ -198,7 +233,7 @@ size_t Channel::Impl::dequeue(void** to, size_t len) noexcept {
     return n;
 }
 
-void Channel::Impl::close() noexcept {
+void ChannelImpl::close() noexcept {
     LockGuard guard(*mu_);
 
     STD_INSIST(!closed_);
@@ -209,54 +244,6 @@ void Channel::Impl::close() noexcept {
     while (auto w = (Waiter*)receivers_.popFrontOrNull()) {
         w->ev->signal();
     }
-}
-
-namespace {
-    struct Pow2RingBuf {
-        void** buf_;
-        size_t mask_;
-        size_t head_;
-        size_t size_;
-
-        Pow2RingBuf(void** buf, size_t capa) noexcept;
-
-        bool empty() const noexcept {
-            return size_ == 0;
-        }
-
-        bool full() const noexcept {
-            return size_ == mask_ + 1;
-        }
-
-        void push(void* v) noexcept;
-        void* pop() noexcept;
-    };
-
-    struct BufferedImpl: public Channel::Impl {
-        Pow2RingBuf buf_;
-
-        BufferedImpl(size_t capa) noexcept
-            : buf_((void**)(this + 1), capa)
-        {
-        }
-
-        BufferedImpl(CoroExecutor* exec, size_t capa) noexcept
-            : Impl(exec)
-            , buf_((void**)(this + 1), capa)
-        {
-        }
-
-        void* operator new(size_t, void* p) noexcept {
-            return p;
-        }
-
-        void operator delete(void* p) noexcept {
-            freeMemory(p);
-        }
-
-        bool bufferOne(void* v) noexcept override;
-        bool unbufferOne(void** out) noexcept override;
-    };
 }
 
 bool BufferedImpl::bufferOne(void* v) noexcept {
@@ -304,54 +291,32 @@ void* Pow2RingBuf::pop() noexcept {
     return v;
 }
 
-Channel::Channel()
-    : impl_(new Impl())
-{
+Channel* Channel::create(ObjPool* pool) {
+    return pool->make<ChannelImpl>(Mutex::create(pool));
 }
 
-Channel::Channel(size_t cap)
-    : impl_(cap == 0
-                ? new Impl()
-                : new (allocateMemory(sizeof(BufferedImpl) + clp2(cap) * sizeof(void*))) BufferedImpl(clp2(cap)))
-{
+Channel* Channel::create(ObjPool* pool, size_t cap) {
+    if (cap == 0) {
+        return create(pool);
+    }
+
+    size_t rcap = clp2(cap);
+    auto storage = (void**)pool->allocate(rcap * sizeof(void*));
+
+    return pool->make<BufferedImpl>(Mutex::create(pool), storage, rcap);
 }
 
-Channel::Channel(CoroExecutor* exec)
-    : Channel(exec, 0)
-{
+Channel* Channel::create(ObjPool* pool, CoroExecutor* exec) {
+    return pool->make<ChannelImpl>(exec, Mutex::createSpinLock(pool, exec));
 }
 
-Channel::Channel(CoroExecutor* exec, size_t cap)
-    : impl_(cap == 0
-                ? new Impl(exec)
-                : new (allocateMemory(sizeof(BufferedImpl) + clp2(cap) * sizeof(void*))) BufferedImpl(exec, clp2(cap)))
-{
-}
+Channel* Channel::create(ObjPool* pool, CoroExecutor* exec, size_t cap) {
+    if (cap == 0) {
+        return create(pool, exec);
+    }
 
-Channel::~Channel() noexcept {
-    delete impl_;
-}
+    size_t rcap = clp2(cap);
+    auto storage = (void**)pool->allocate(rcap * sizeof(void*));
 
-void Channel::enqueue(void* v) noexcept {
-    impl_->enqueue(v);
-}
-
-bool Channel::dequeue(void** out) noexcept {
-    return impl_->dequeue(out);
-}
-
-bool Channel::tryEnqueue(void* v) noexcept {
-    return impl_->tryEnqueue(v);
-}
-
-bool Channel::tryDequeue(void** out) noexcept {
-    return impl_->tryDequeue(out);
-}
-
-size_t Channel::dequeue(void** to, size_t len) noexcept {
-    return impl_->dequeue(to, len);
-}
-
-void Channel::close() noexcept {
-    impl_->close();
+    return pool->make<BufferedImpl>(exec, Mutex::createSpinLock(pool, exec), storage, rcap);
 }

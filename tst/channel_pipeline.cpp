@@ -13,7 +13,7 @@ namespace {
         Vector<Channel*> chArr;
 
         for (int i = 0; i <= nStages; ++i) {
-            chArr.pushBack(opool->make<Channel>(exec, (size_t)5));
+            chArr.pushBack(Channel::create(opool.mutPtr(), exec, (size_t)5));
         }
 
         for (int i = 0; i < nStages; ++i) {

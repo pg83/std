@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
     sysE << W << StringView(u8"duration: ") << G << (u64)durationSec << StringView(u8"s") << R << endL;
     sysE << W << StringView(u8"payload:  ") << G << (u64)payloadLen << R << endL;
 
-    Channel ch(exec, numCoros * 4);
+    auto& ch = *Channel::create(pool.mutPtr(), exec, numCoros * 4);
     auto& wg = *WaitGroup::create(pool.mutPtr(), 0, exec);
 
     u64 startUs = monotonicNowUs();

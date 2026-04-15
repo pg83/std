@@ -3,26 +3,23 @@
 #include <std/sys/types.h>
 
 namespace stl {
+    class ObjPool;
+
     struct CoroExecutor;
 
     struct Channel {
-        struct Impl;
-        Impl* impl_;
+        virtual void enqueue(void* v) noexcept = 0;
+        virtual bool dequeue(void** out) noexcept = 0;
+        virtual size_t dequeue(void** to, size_t len) noexcept = 0;
 
-        Channel();
-        Channel(size_t cap);
-        explicit Channel(CoroExecutor* exec);
-        Channel(CoroExecutor* exec, size_t cap);
+        virtual bool tryEnqueue(void* v) noexcept = 0;
+        virtual bool tryDequeue(void** out) noexcept = 0;
 
-        ~Channel() noexcept;
+        virtual void close() noexcept = 0;
 
-        void enqueue(void* v) noexcept;
-        bool dequeue(void** out) noexcept;
-        size_t dequeue(void** to, size_t len) noexcept;
-
-        bool tryEnqueue(void* v) noexcept;
-        bool tryDequeue(void** out) noexcept;
-
-        void close() noexcept;
+        static Channel* create(ObjPool* pool);
+        static Channel* create(ObjPool* pool, size_t cap);
+        static Channel* create(ObjPool* pool, CoroExecutor* exec);
+        static Channel* create(ObjPool* pool, CoroExecutor* exec, size_t cap);
     };
 }

@@ -146,7 +146,7 @@ STD_TEST_SUITE(IoClassicPoll) {
     STD_TEST(_ExceptionAcrossYield) {
         Ctx ctx;
         auto exec = ctx.exec;
-        Channel ch(exec, 0);
+        auto& ch = *Channel::create(ctx.pool.mutPtr(), exec);
         int caught = 0;
 
         exec->spawn([&] {

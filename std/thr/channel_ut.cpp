@@ -19,7 +19,7 @@ namespace {
         Vector<Channel*> chArr;
 
         for (int i = 0; i <= nStages; ++i) {
-            chArr.pushBack(opool->make<Channel>(exec, (size_t)5));
+            chArr.pushBack(Channel::create(opool.mutPtr(), exec, (size_t)5));
         }
 
         for (int i = 0; i < nStages; ++i) {
@@ -55,7 +55,8 @@ namespace {
 
 STD_TEST_SUITE(ChannelThreaded) {
     STD_TEST(Basic) {
-        Channel ch(1);
+        auto pool = ObjPool::fromMemory();
+        auto& ch = *Channel::create(pool.mutPtr(), (size_t)1);
         void* result = nullptr;
 
         {
@@ -70,7 +71,8 @@ STD_TEST_SUITE(ChannelThreaded) {
     }
 
     STD_TEST(BlockingSender) {
-        Channel ch;
+        auto pool = ObjPool::fromMemory();
+        auto& ch = *Channel::create(pool.mutPtr());
         void* v1 = nullptr;
         void* v2 = nullptr;
 
@@ -89,7 +91,8 @@ STD_TEST_SUITE(ChannelThreaded) {
     }
 
     STD_TEST(ProducerConsumer) {
-        Channel ch(4);
+        auto pool = ObjPool::fromMemory();
+        auto& ch = *Channel::create(pool.mutPtr(), (size_t)4);
         const int N = 100;
         int sum = 0;
 
@@ -113,7 +116,8 @@ STD_TEST_SUITE(ChannelThreaded) {
     }
 
     STD_TEST(MPMC) {
-        Channel ch(8);
+        auto pool = ObjPool::fromMemory();
+        auto& ch = *Channel::create(pool.mutPtr(), (size_t)8);
         const int nProducers = 4;
         const int nPerProducer = 50;
         const int total = nProducers * nPerProducer;
@@ -146,7 +150,8 @@ STD_TEST_SUITE(ChannelThreaded) {
     }
 
     STD_TEST(TryEnqueueDequeue) {
-        Channel ch(2);
+        auto pool = ObjPool::fromMemory();
+        auto& ch = *Channel::create(pool.mutPtr(), (size_t)2);
         void* v;
 
         STD_INSIST(!ch.tryDequeue(&v));
@@ -169,7 +174,7 @@ STD_TEST_SUITE(Channel) {
     STD_TEST(Basic) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Channel ch(exec, 1);
+        auto& ch = *Channel::create(pool.mutPtr(), exec, (size_t)1);
         void* result = nullptr;
 
         exec->spawn([&] {
@@ -185,7 +190,7 @@ STD_TEST_SUITE(Channel) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         const size_t cap = 8;
-        Channel ch(exec, cap);
+        auto& ch = *Channel::create(pool.mutPtr(), exec, cap);
         int count = 0;
 
         exec->spawn([&] {
@@ -209,7 +214,7 @@ STD_TEST_SUITE(Channel) {
     STD_TEST(BlockingSender) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Channel ch(exec, 1);
+        auto& ch = *Channel::create(pool.mutPtr(), exec, (size_t)1);
         void* received = nullptr;
 
         // sender: will block after first enqueue since cap=1
@@ -234,7 +239,7 @@ STD_TEST_SUITE(Channel) {
     STD_TEST(BlockingReceiver) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Channel ch(exec, 1);
+        auto& ch = *Channel::create(pool.mutPtr(), exec, (size_t)1);
         void* received = nullptr;
 
         // receiver: blocks waiting for value
@@ -254,7 +259,7 @@ STD_TEST_SUITE(Channel) {
     STD_TEST(Close) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Channel ch(exec, 4);
+        auto& ch = *Channel::create(pool.mutPtr(), exec, (size_t)4);
         bool got = true;
 
         exec->spawn([&] {
@@ -273,7 +278,7 @@ STD_TEST_SUITE(Channel) {
     STD_TEST(CloseWithPendingReceivers) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Channel ch(exec, 1);
+        auto& ch = *Channel::create(pool.mutPtr(), exec, (size_t)1);
         const int N = 4;
         int falseCount = 0;
 
@@ -298,7 +303,7 @@ STD_TEST_SUITE(Channel) {
     STD_TEST(ProducerConsumer) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Channel ch(exec, 4);
+        auto& ch = *Channel::create(pool.mutPtr(), exec, (size_t)4);
         const int N = 100;
         int sum = 0;
 
@@ -323,7 +328,7 @@ STD_TEST_SUITE(Channel) {
     STD_TEST(MPMC) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Channel ch(exec, 8);
+        auto& ch = *Channel::create(pool.mutPtr(), exec, (size_t)8);
         const int nProducers = 4;
         const int nConsumers = 4;
         const int nPerProducer = 50;
@@ -361,7 +366,7 @@ STD_TEST_SUITE(Channel) {
     STD_TEST(TryEnqueueDequeue) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Channel ch(exec, 2);
+        auto& ch = *Channel::create(pool.mutPtr(), exec, (size_t)2);
 
         exec->spawn([&] {
             void* v;
@@ -391,7 +396,7 @@ STD_TEST_SUITE(Channel) {
     STD_TEST(Stress) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 8);
-        Channel ch(exec, 16);
+        auto& ch = *Channel::create(pool.mutPtr(), exec, (size_t)16);
         const int nProducers = 4;
         const int nConsumers = 4;
         const int nPerProducer = 100;
