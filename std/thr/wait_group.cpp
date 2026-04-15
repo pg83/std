@@ -47,17 +47,9 @@ namespace {
 }
 
 WaitGroup* WaitGroup::create(ObjPool* pool, size_t init) {
-    return pool->make<WaitGroupImpl>(
-        Mutex::create(pool),
-        CondVar::create(pool),
-        init
-    );
+    return pool->make<WaitGroupImpl>(Mutex::create(pool), CondVar::create(pool), init);
 }
 
 WaitGroup* WaitGroup::create(ObjPool* pool, size_t init, CoroExecutor* exec) {
-    return pool->make<WaitGroupImpl>(
-        Mutex::create(pool, exec),
-        CondVar::create(pool, exec),
-        init
-    );
+    return pool->make<WaitGroupImpl>(Mutex::create(pool, exec), CondVar::create(pool, exec), init);
 }
