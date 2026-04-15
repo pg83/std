@@ -101,7 +101,8 @@ namespace {
         Ring* ring_;
         UringReactorImpl* reactor_;
 
-        void operator delete(void*) noexcept {
+        bool owned() const noexcept override {
+            return true;
         }
 
         UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexcept;

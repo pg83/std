@@ -45,12 +45,13 @@ CondVarIface* CondVar::createDefault() {
 }
 
 CondVarIface* CondVar::createDefault(ObjPool* pool) {
-    struct PoolPosixCondVarImpl: public PosixCondVarImpl {
-        void operator delete(void*) noexcept {
+    struct Impl: public PosixCondVarImpl {
+        bool owned() const noexcept override {
+            return true;
         }
     };
 
-    return pool->make<PoolPosixCondVarImpl>();
+    return pool->make<Impl>();
 }
 
 CondVar* CondVar::create(ObjPool* pool) {
@@ -73,7 +74,9 @@ CondVar::CondVar(CoroExecutor* exec)
 }
 
 CondVar::~CondVar() noexcept {
-    delete impl;
+    if (!impl->owned()) {
+        delete impl;
+    }
 }
 
 void CondVar::wait(Mutex& mutex) noexcept {

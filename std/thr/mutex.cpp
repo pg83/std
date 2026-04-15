@@ -96,12 +96,13 @@ Mutex::Mutex(CoroExecutor* exec)
 }
 
 SemaphoreIface* Mutex::defaultImpl(ObjPool* pool) {
-    struct PoolPosixMutexImpl: public PosixMutexImpl {
-        void operator delete(void*) noexcept {
+    struct Impl: public PosixMutexImpl {
+        bool owned() const noexcept override {
+            return true;
         }
     };
 
-    return pool->make<PoolPosixMutexImpl>();
+    return pool->make<Impl>();
 }
 
 Mutex* Mutex::createDefault(ObjPool* pool) {
@@ -121,14 +122,15 @@ SemaphoreIface* Mutex::spinLock(CoroExecutor* exec) {
 }
 
 SemaphoreIface* Mutex::spinLock(ObjPool* pool, CoroExecutor* exec) {
-    struct PoolSpinSemImpl: public SpinSemImpl {
+    struct Impl: public SpinSemImpl {
         using SpinSemImpl::SpinSemImpl;
 
-        void operator delete(void*) noexcept {
+        bool owned() const noexcept override {
+            return true;
         }
     };
 
-    return pool->make<PoolSpinSemImpl>(exec);
+    return pool->make<Impl>(exec);
 }
 
 Mutex::Mutex(SemaphoreIface* iface)
@@ -145,7 +147,9 @@ Mutex::Mutex(bool locked)
 }
 
 Mutex::~Mutex() noexcept {
-    delete impl;
+    if (!impl->owned()) {
+        delete impl;
+    }
 }
 
 void Mutex::lock() noexcept {

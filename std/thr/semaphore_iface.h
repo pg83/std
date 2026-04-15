@@ -9,5 +9,6 @@ namespace stl {
         virtual bool tryWait() noexcept = 0;
 
         virtual void* nativeHandle() noexcept;
+        virtual bool owned() const noexcept;
     };
 }
