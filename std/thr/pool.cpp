@@ -61,16 +61,16 @@ namespace {
     class ThreadPoolImpl: public ThreadPool {
         struct Worker: public Runable {
             ThreadPoolImpl* pool_;
-            Thread thread_;
+            Thread* thread_;
 
-            explicit Worker(ThreadPoolImpl* p) noexcept
+            Worker(ThreadPoolImpl* p, ObjPool* opool) noexcept
                 : pool_(p)
-                , thread_(*this)
+                , thread_(Thread::create(opool, *this))
             {
             }
 
             auto key() const noexcept {
-                return thread_.threadId();
+                return thread_->threadId();
             }
 
             void run() noexcept override {
@@ -107,7 +107,7 @@ ThreadPoolImpl::ThreadPoolImpl(ObjPool* pool, size_t numThreads)
     , workers_(pool)
 {
     for (size_t i = 0; i < numThreads; ++i) {
-        workers_.insertKeyed(this);
+        workers_.insertKeyed(this, pool);
     }
 }
 
@@ -136,7 +136,7 @@ ThreadPoolImpl::~ThreadPoolImpl() noexcept {
     submitTask(&task);
 
     workers_.visit([](Worker& w) {
-        w.thread_.join();
+        w.thread_->join();
     });
 }
 

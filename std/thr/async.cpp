@@ -73,10 +73,13 @@ namespace {
 
 FutureIfaceRef stl::asyncImpl(ProducerIface* prod) {
     auto fi = makeIntrusivePtr(new FutureImpl(prod));
+    auto pool = ObjPool::fromMemory();
 
-    detach(*makeRunablePtr([fi] mutable {
+    auto r = makeRunablePtr([fi, pool] mutable {
         fi->execute();
-    }));
+    });
+
+    Thread::create(pool.mutPtr(), *r);
 
     return fi.mutPtr();
 }

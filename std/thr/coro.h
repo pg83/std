@@ -12,7 +12,7 @@ namespace stl {
     struct IoReactor;
     struct ThreadPool;
     struct EventIface;
-    struct ThreadIface;
+    struct Thread;
     struct Mutex;
     struct CondVar;
     struct Semaphore;
@@ -49,7 +49,7 @@ namespace stl {
 
         virtual void createEvent(void* buf) = 0;
         virtual CondVar* createCondVar(ObjPool* pool) = 0;
-        virtual ThreadIface* createThread(ObjPool* pool) = 0;
+        virtual Thread* createThread(ObjPool* pool) = 0;
         virtual Mutex* createSemaphoreImpl(ObjPool* pool, size_t initial) = 0;
 
         Semaphore* createSemaphore(ObjPool* pool, size_t initial);

@@ -122,7 +122,7 @@ STD_TEST_SUITE(CondVar) {
         bool executed = false;
 
         WaitSignalRunable runnable(&mutex, cv, &ready, &executed);
-        Thread thread(runnable);
+        auto& thread = *Thread::create(pool.mutPtr(), runnable);
 
         {
             LockGuard lock(mutex);
@@ -142,7 +142,7 @@ STD_TEST_SUITE(CondVar) {
         bool executed = false;
 
         WaitSignalRunable runnable(&mutex, cv, &ready, &executed);
-        Thread thread(runnable);
+        auto& thread = *Thread::create(pool.mutPtr(), runnable);
 
         {
             LockGuard lock(mutex);
@@ -165,9 +165,9 @@ STD_TEST_SUITE(CondVar) {
         WaitBroadcastRunable runnable2(&mutex, cv, &ready, &counter);
         WaitBroadcastRunable runnable3(&mutex, cv, &ready, &counter);
 
-        Thread thread1(runnable1);
-        Thread thread2(runnable2);
-        Thread thread3(runnable3);
+        auto& thread1 = *Thread::create(pool.mutPtr(), runnable1);
+        auto& thread2 = *Thread::create(pool.mutPtr(), runnable2);
+        auto& thread3 = *Thread::create(pool.mutPtr(), runnable3);
 
         {
             LockGuard lock(mutex);
@@ -192,8 +192,8 @@ STD_TEST_SUITE(CondVar) {
         WaitBroadcastRunable runnable1(&mutex, cv, &ready, &counter);
         WaitBroadcastRunable runnable2(&mutex, cv, &ready, &counter);
 
-        Thread thread1(runnable1);
-        Thread thread2(runnable2);
+        auto& thread1 = *Thread::create(pool.mutPtr(), runnable1);
+        auto& thread2 = *Thread::create(pool.mutPtr(), runnable2);
 
         {
             LockGuard lock(mutex);
@@ -216,7 +216,7 @@ STD_TEST_SUITE(CondVar) {
         bool dataReady = false;
 
         ProducerConsumerRunable consumer(&mutex, cv, &data, &dataReady, 42);
-        Thread consumerThread(consumer);
+        auto& consumerThread = *Thread::create(pool.mutPtr(), consumer);
 
         {
             LockGuard lock(mutex);
@@ -239,9 +239,9 @@ STD_TEST_SUITE(CondVar) {
         ProducerConsumerRunable consumer2(&mutex, cv, &data, &dataReady, 100);
         ProducerConsumerRunable consumer3(&mutex, cv, &data, &dataReady, 100);
 
-        Thread thread1(consumer1);
-        Thread thread2(consumer2);
-        Thread thread3(consumer3);
+        auto& thread1 = *Thread::create(pool.mutPtr(), consumer1);
+        auto& thread2 = *Thread::create(pool.mutPtr(), consumer2);
+        auto& thread3 = *Thread::create(pool.mutPtr(), consumer3);
 
         {
             LockGuard lock(mutex);
@@ -265,7 +265,7 @@ STD_TEST_SUITE(CondVar) {
         bool executed2 = false;
 
         WaitSignalRunable runnable1(&mutex, cv, &ready1, &executed1);
-        Thread thread1(runnable1);
+        auto& thread1 = *Thread::create(pool.mutPtr(), runnable1);
 
         {
             LockGuard lock(mutex);
@@ -277,7 +277,7 @@ STD_TEST_SUITE(CondVar) {
         STD_INSIST(executed1 == true);
 
         WaitSignalRunable runnable2(&mutex, cv, &ready2, &executed2);
-        Thread thread2(runnable2);
+        auto& thread2 = *Thread::create(pool.mutPtr(), runnable2);
 
         {
             LockGuard lock(mutex);
@@ -322,7 +322,7 @@ STD_TEST_SUITE(CondVar) {
         bool done = false;
 
         SpuriousWaitRunable runnable(&mutex, cv, &value, 5, &done);
-        Thread thread(runnable);
+        auto& thread = *Thread::create(pool.mutPtr(), runnable);
 
         for (int i = 1; i <= 5; ++i) {
             LockGuard lock(mutex);
@@ -348,8 +348,8 @@ STD_TEST_SUITE(CondVar) {
         WaitSignalRunable runnable1(&mutex, cv1, &ready1, &executed1);
         WaitSignalRunable runnable2(&mutex, cv2, &ready2, &executed2);
 
-        Thread thread1(runnable1);
-        Thread thread2(runnable2);
+        auto& thread1 = *Thread::create(pool.mutPtr(), runnable1);
+        auto& thread2 = *Thread::create(pool.mutPtr(), runnable2);
 
         {
             LockGuard lock(mutex);
@@ -380,8 +380,8 @@ STD_TEST_SUITE(CondVar) {
         WaitBroadcastRunable runnable1(&mutex, cv, &ready, &counter);
         WaitBroadcastRunable runnable2(&mutex, cv, &ready, &counter);
 
-        Thread thread1(runnable1);
-        Thread thread2(runnable2);
+        auto& thread1 = *Thread::create(pool.mutPtr(), runnable1);
+        auto& thread2 = *Thread::create(pool.mutPtr(), runnable2);
 
         {
             LockGuard lock(mutex);
@@ -428,7 +428,7 @@ STD_TEST_SUITE(CondVar) {
         int result = 0;
 
         PredicateWaitRunable runnable(&mutex, cv, &predicate, &result);
-        Thread thread(runnable);
+        auto& thread = *Thread::create(pool.mutPtr(), runnable);
 
         {
             LockGuard lock(mutex);
@@ -438,53 +438,6 @@ STD_TEST_SUITE(CondVar) {
 
         thread.join();
         STD_INSIST(result == 123);
-    }
-
-    STD_TEST(DetachWithCondVar) {
-        struct DetachWaitRunable: public Runable {
-            Mutex* mutex;
-            CondVar* cv;
-            bool* ready;
-            bool* done;
-
-            DetachWaitRunable(Mutex* m, CondVar* c, bool* r, bool* d)
-                : mutex(m)
-                , cv(c)
-                , ready(r)
-                , done(d)
-            {
-            }
-
-            void run() noexcept override {
-                LockGuard lock(*mutex);
-                while (!*ready) {
-                    cv->wait(*mutex);
-                }
-                *done = true;
-                cv->signal();
-            }
-        };
-
-        auto pool = ObjPool::fromMemory();
-        auto& mutex = *Mutex::create(pool.mutPtr());
-        auto cv = CondVar::create(pool.mutPtr());
-        bool ready = false;
-        bool done = false;
-
-        {
-            LockGuard lock(mutex);
-            DetachWaitRunable runnable(&mutex, cv, &ready, &done);
-            detach(runnable);
-
-            ready = true;
-            cv->signal();
-
-            while (!done) {
-                cv->wait(mutex);
-            }
-        }
-
-        STD_INSIST(done == true);
     }
 
     STD_TEST(ComplexSynchronizationPattern) {
@@ -540,8 +493,8 @@ STD_TEST_SUITE(CondVar) {
         Phase1Runable runnable1(&mutex, cv, &phase);
         Phase2Runable runnable2(&mutex, cv, &phase);
 
-        Thread thread1(runnable1);
-        Thread thread2(runnable2);
+        auto& thread1 = *Thread::create(pool.mutPtr(), runnable1);
+        auto& thread2 = *Thread::create(pool.mutPtr(), runnable2);
 
         {
             LockGuard lock(mutex);
@@ -602,16 +555,16 @@ STD_TEST_SUITE(CondVar) {
         WaitBroadcastRunable runnable9(&mutex, cv, &ready, &counter);
         WaitBroadcastRunable runnable10(&mutex, cv, &ready, &counter);
 
-        Thread thread1(runnable1);
-        Thread thread2(runnable2);
-        Thread thread3(runnable3);
-        Thread thread4(runnable4);
-        Thread thread5(runnable5);
-        Thread thread6(runnable6);
-        Thread thread7(runnable7);
-        Thread thread8(runnable8);
-        Thread thread9(runnable9);
-        Thread thread10(runnable10);
+        auto& thread1 = *Thread::create(pool.mutPtr(), runnable1);
+        auto& thread2 = *Thread::create(pool.mutPtr(), runnable2);
+        auto& thread3 = *Thread::create(pool.mutPtr(), runnable3);
+        auto& thread4 = *Thread::create(pool.mutPtr(), runnable4);
+        auto& thread5 = *Thread::create(pool.mutPtr(), runnable5);
+        auto& thread6 = *Thread::create(pool.mutPtr(), runnable6);
+        auto& thread7 = *Thread::create(pool.mutPtr(), runnable7);
+        auto& thread8 = *Thread::create(pool.mutPtr(), runnable8);
+        auto& thread9 = *Thread::create(pool.mutPtr(), runnable9);
+        auto& thread10 = *Thread::create(pool.mutPtr(), runnable10);
 
         {
             LockGuard lock(mutex);

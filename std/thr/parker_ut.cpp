@@ -5,6 +5,7 @@
 #include <std/tst/ut.h>
 #include <std/thr/poll_fd.h>
 #include <std/sys/atomic.h>
+#include <std/mem/obj_pool.h>
 
 #include <poll.h>
 
@@ -98,8 +99,9 @@ STD_TEST_SUITE(Parker) {
             }
         };
 
+        auto pool = ObjPool::fromMemory();
         Worker worker(&p, &done);
-        Thread thread(worker);
+        auto& thread = *Thread::create(pool.mutPtr(), worker);
 
         for (int i = 0; i < 100; ++i) {
             p.park([&] {

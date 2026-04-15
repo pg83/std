@@ -134,7 +134,7 @@ STD_TEST_SUITE(EventDefault) {
                 }
             });
 
-            threads.pushBack(pool->make<Thread>(*r));
+            threads.pushBack(Thread::create(pool.mutPtr(), *r));
         }
 
         for (auto t : range(threads)) {

@@ -3,47 +3,36 @@
 #include "runable.h"
 
 #include <std/sys/types.h>
+#include <std/mem/obj_pool.h>
 
 namespace stl {
-    class ObjPool;
-
-    struct ThreadIface;
     struct CoroExecutor;
 
-    // should not be used directly, use ScopedThread or detach(Runable&)
-    class Thread {
-        ThreadIface* impl;
-
-    public:
-        explicit Thread(Runable& runable);
-        explicit Thread(ThreadIface* iface);
-        Thread(ObjPool* pool, CoroExecutor* exec, Runable& runable);
-
-        ~Thread() noexcept;
-
-        void join() noexcept;
-        void detach() noexcept;
-
-        u64 threadId() const noexcept;
+    struct Thread {
+        virtual void start(Runable& runable) = 0;
+        virtual void join() noexcept = 0;
+        virtual u64 threadId() const noexcept = 0;
 
         static u64 currentThreadId() noexcept;
+
         static Thread* create(ObjPool* pool, Runable& runable);
+        static Thread* create(ObjPool* pool, CoroExecutor* exec, Runable& runable);
     };
 
     class ScopedThread {
-        Thread thr;
+        ObjPool::Ref pool_;
+        Thread* thr_;
 
     public:
         template <typename T>
         ScopedThread(T functor)
-            : thr(*makeRunablePtr(functor))
+            : pool_(ObjPool::fromMemory())
+            , thr_(Thread::create(pool_.mutPtr(), *makeRunablePtr(functor)))
         {
         }
 
         ~ScopedThread() noexcept {
-            thr.join();
+            thr_->join();
         }
     };
-
-    void detach(Runable& runable);
 }

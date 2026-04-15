@@ -10,7 +10,6 @@
 #include "cond_var.h"
 #include "semaphore.h"
 #include "event_iface.h"
-#include "thread_iface.h"
 #include "io_reactor.h"
 
 #include <std/sys/fd.h>
@@ -149,7 +148,7 @@ namespace {
         void yield() noexcept override;
 
         void createEvent(void* buf) override;
-        ThreadIface* createThread(ObjPool* pool) override;
+        Thread* createThread(ObjPool* pool) override;
         CondVar* createCondVar(ObjPool* pool) override;
         Mutex* createSemaphoreImpl(ObjPool* pool, size_t initial) override;
 
@@ -353,7 +352,7 @@ CondVar* CoroExecutorImpl::createCondVar(ObjPool* pool) {
     return pool->make<CoroCondVarImpl>(pool, this);
 }
 
-ThreadIface* CoroExecutorImpl::createThread(ObjPool* pool) {
+Thread* CoroExecutorImpl::createThread(ObjPool* pool) {
     struct State: public ARC {
         Semaphore* sem_;
 
@@ -382,7 +381,7 @@ ThreadIface* CoroExecutorImpl::createThread(ObjPool* pool) {
         }
     };
 
-    struct CoroThreadImpl: public ThreadIface {
+    struct CoroThreadImpl: public Thread {
         IntrusivePtr<State> state_;
 
         CoroThreadImpl(State* s) noexcept
@@ -398,15 +397,12 @@ ThreadIface* CoroExecutorImpl::createThread(ObjPool* pool) {
             state_->join();
         }
 
-        void detach() noexcept override {
-        }
-
         u64 threadId() const noexcept override {
             return (u64)(size_t)state_.ptr();
         }
     };
 
-    return new CoroThreadImpl(new State(pool, this));
+    return pool->make<CoroThreadImpl>(new State(pool, this));
 }
 
 Mutex* CoroExecutorImpl::createSemaphoreImpl(ObjPool* pool, size_t initial) {
