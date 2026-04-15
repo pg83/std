@@ -1,9 +1,11 @@
 #include "coro.h"
 #include "pool.h"
 #include "thread.h"
+#include "runable.h"
 #include "wait_group.h"
 
 #include <std/tst/ut.h>
+#include <std/alg/defer.h>
 #include <std/sys/atomic.h>
 #include <std/mem/obj_pool.h>
 
@@ -29,14 +31,22 @@ STD_TEST_SUITE(WaitGroup) {
         int counter = 0;
 
         wg.add(2);
-        ScopedThread t1([&] {
+
+        auto r1 = makeRunable([&] {
             stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             wg.done();
         });
-        ScopedThread t2([&] {
+
+        auto* t1 = Thread::create(pool.mutPtr(), r1);
+        STD_DEFER { t1->join(); };
+
+        auto r2 = makeRunable([&] {
             stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             wg.done();
         });
+
+        auto* t2 = Thread::create(pool.mutPtr(), r2);
+        STD_DEFER { t2->join(); };
 
         wg.wait();
         STD_INSIST(counter == 2);
@@ -49,38 +59,37 @@ STD_TEST_SUITE(WaitGroup) {
         int counter = 0;
 
         wg.add(N);
-        ScopedThread t0([&] {
+
+        auto work = [&] {
             stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             wg.done();
-        });
-        ScopedThread t1([&] {
-            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-            wg.done();
-        });
-        ScopedThread t2([&] {
-            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-            wg.done();
-        });
-        ScopedThread t3([&] {
-            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-            wg.done();
-        });
-        ScopedThread t4([&] {
-            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-            wg.done();
-        });
-        ScopedThread t5([&] {
-            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-            wg.done();
-        });
-        ScopedThread t6([&] {
-            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-            wg.done();
-        });
-        ScopedThread t7([&] {
-            stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
-            wg.done();
-        });
+        };
+
+        auto r0 = makeRunable(work);
+        auto r1 = makeRunable(work);
+        auto r2 = makeRunable(work);
+        auto r3 = makeRunable(work);
+        auto r4 = makeRunable(work);
+        auto r5 = makeRunable(work);
+        auto r6 = makeRunable(work);
+        auto r7 = makeRunable(work);
+
+        auto* t0 = Thread::create(pool.mutPtr(), r0);
+        STD_DEFER { t0->join(); };
+        auto* t1 = Thread::create(pool.mutPtr(), r1);
+        STD_DEFER { t1->join(); };
+        auto* t2 = Thread::create(pool.mutPtr(), r2);
+        STD_DEFER { t2->join(); };
+        auto* t3 = Thread::create(pool.mutPtr(), r3);
+        STD_DEFER { t3->join(); };
+        auto* t4 = Thread::create(pool.mutPtr(), r4);
+        STD_DEFER { t4->join(); };
+        auto* t5 = Thread::create(pool.mutPtr(), r5);
+        STD_DEFER { t5->join(); };
+        auto* t6 = Thread::create(pool.mutPtr(), r6);
+        STD_DEFER { t6->join(); };
+        auto* t7 = Thread::create(pool.mutPtr(), r7);
+        STD_DEFER { t7->join(); };
 
         wg.wait();
         STD_INSIST(counter == N);
@@ -92,22 +101,34 @@ STD_TEST_SUITE(WaitGroup) {
         int counter = 0;
 
         wg.add(1);
-        ScopedThread t1([&] {
+
+        auto r1 = makeRunable([&] {
             stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             wg.done();
         });
 
+        auto* t1 = Thread::create(pool.mutPtr(), r1);
+        STD_DEFER { t1->join(); };
+
         wg.add(1);
-        ScopedThread t2([&] {
+
+        auto r2 = makeRunable([&] {
             stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             wg.done();
         });
 
+        auto* t2 = Thread::create(pool.mutPtr(), r2);
+        STD_DEFER { t2->join(); };
+
         wg.add(1);
-        ScopedThread t3([&] {
+
+        auto r3 = makeRunable([&] {
             stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
             wg.done();
         });
+
+        auto* t3 = Thread::create(pool.mutPtr(), r3);
+        STD_DEFER { t3->join(); };
 
         wg.wait();
         STD_INSIST(counter == 3);
@@ -120,10 +141,15 @@ STD_TEST_SUITE(WaitGroup) {
 
         for (int round = 0; round < 3; ++round) {
             wg.add(1);
-            ScopedThread t([&] {
+
+            auto r = makeRunable([&] {
                 stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
                 wg.done();
             });
+
+            auto* t = Thread::create(pool.mutPtr(), r);
+            STD_DEFER { t->join(); };
+
             wg.wait();
         }
 

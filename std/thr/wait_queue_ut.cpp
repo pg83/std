@@ -1,8 +1,10 @@
 #include "wait_queue.h"
 #include "thread.h"
+#include "runable.h"
 #include "wait_group.h"
 
 #include <std/tst/ut.h>
+#include <std/alg/defer.h>
 #include <std/sys/atomic.h>
 #include <std/mem/obj_pool.h>
 
@@ -87,17 +89,31 @@ STD_TEST_SUITE(WaitQueue) {
             };
         };
 
-        ScopedThread t0(worker(0));
-        ScopedThread t1(worker(1));
-        ScopedThread t2(worker(2));
-        ScopedThread t3(worker(3));
-        ScopedThread t4(worker(4));
-        ScopedThread t5(worker(5));
-        ScopedThread t6(worker(6));
-        ScopedThread t7(worker(7));
+        auto r0 = makeRunable(worker(0));
+        auto r1 = makeRunable(worker(1));
+        auto r2 = makeRunable(worker(2));
+        auto r3 = makeRunable(worker(3));
+        auto r4 = makeRunable(worker(4));
+        auto r5 = makeRunable(worker(5));
+        auto r6 = makeRunable(worker(6));
+        auto r7 = makeRunable(worker(7));
 
-        // ScopedThread джойнит в деструкторе — все enqueue завершены
-        // прежде чем проверяем результат
+        auto* t0 = Thread::create(opool.mutPtr(), r0);
+        STD_DEFER { t0->join(); };
+        auto* t1 = Thread::create(opool.mutPtr(), r1);
+        STD_DEFER { t1->join(); };
+        auto* t2 = Thread::create(opool.mutPtr(), r2);
+        STD_DEFER { t2->join(); };
+        auto* t3 = Thread::create(opool.mutPtr(), r3);
+        STD_DEFER { t3->join(); };
+        auto* t4 = Thread::create(opool.mutPtr(), r4);
+        STD_DEFER { t4->join(); };
+        auto* t5 = Thread::create(opool.mutPtr(), r5);
+        STD_DEFER { t5->join(); };
+        auto* t6 = Thread::create(opool.mutPtr(), r6);
+        STD_DEFER { t6->join(); };
+        auto* t7 = Thread::create(opool.mutPtr(), r7);
+        STD_DEFER { t7->join(); };
     }
 
     STD_TEST(ConcurrentEnqueueDequeue) {
@@ -121,16 +137,31 @@ STD_TEST_SUITE(WaitQueue) {
             };
         };
 
-        ScopedThread t0(worker(0));
-        ScopedThread t1(worker(1));
-        ScopedThread t2(worker(2));
-        ScopedThread t3(worker(3));
-        ScopedThread t4(worker(4));
-        ScopedThread t5(worker(5));
-        ScopedThread t6(worker(6));
-        ScopedThread t7(worker(7));
+        auto r0 = makeRunable(worker(0));
+        auto r1 = makeRunable(worker(1));
+        auto r2 = makeRunable(worker(2));
+        auto r3 = makeRunable(worker(3));
+        auto r4 = makeRunable(worker(4));
+        auto r5 = makeRunable(worker(5));
+        auto r6 = makeRunable(worker(6));
+        auto r7 = makeRunable(worker(7));
 
-        // после джойна всех потоков считаем итог
+        auto* t0 = Thread::create(opool.mutPtr(), r0);
+        STD_DEFER { t0->join(); };
+        auto* t1 = Thread::create(opool.mutPtr(), r1);
+        STD_DEFER { t1->join(); };
+        auto* t2 = Thread::create(opool.mutPtr(), r2);
+        STD_DEFER { t2->join(); };
+        auto* t3 = Thread::create(opool.mutPtr(), r3);
+        STD_DEFER { t3->join(); };
+        auto* t4 = Thread::create(opool.mutPtr(), r4);
+        STD_DEFER { t4->join(); };
+        auto* t5 = Thread::create(opool.mutPtr(), r5);
+        STD_DEFER { t5->join(); };
+        auto* t6 = Thread::create(opool.mutPtr(), r6);
+        STD_DEFER { t6->join(); };
+        auto* t7 = Thread::create(opool.mutPtr(), r7);
+        STD_DEFER { t7->join(); };
     }
 
     STD_TEST(EnqueueDequeueOrdering) {

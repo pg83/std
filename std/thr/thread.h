@@ -1,11 +1,10 @@
 #pragma once
 
-#include "runable.h"
-
 #include <std/sys/types.h>
-#include <std/mem/obj_pool.h>
 
 namespace stl {
+    class ObjPool;
+    struct Runable;
     struct CoroExecutor;
 
     struct Thread {
@@ -17,22 +16,5 @@ namespace stl {
 
         static Thread* create(ObjPool* pool, Runable& runable);
         static Thread* create(ObjPool* pool, CoroExecutor* exec, Runable& runable);
-    };
-
-    class ScopedThread {
-        ObjPool::Ref pool_;
-        Thread* thr_;
-
-    public:
-        template <typename T>
-        ScopedThread(T functor)
-            : pool_(ObjPool::fromMemory())
-            , thr_(Thread::create(pool_.mutPtr(), *makeRunablePtr(functor)))
-        {
-        }
-
-        ~ScopedThread() noexcept {
-            thr_->join();
-        }
     };
 }

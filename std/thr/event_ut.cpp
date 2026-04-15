@@ -2,8 +2,10 @@
 #include "coro.h"
 #include "mutex.h"
 #include "thread.h"
+#include "runable.h"
 
 #include <std/tst/ut.h>
+#include <std/alg/defer.h>
 #include <std/alg/range.h>
 #include <std/lib/vector.h>
 #include <std/sys/atomic.h>
@@ -21,12 +23,16 @@ STD_TEST_SUITE(EventDefault) {
 
     STD_TEST(WaitOnThread) {
         Event ev;
+        auto pool = ObjPool::fromMemory();
         int value = 0;
 
-        ScopedThread t([&] {
+        auto r = makeRunable([&] {
             stdAtomicStore(&value, 1, MemoryOrder::Release);
             ev.signal();
         });
+
+        auto* t = Thread::create(pool.mutPtr(), r);
+        STD_DEFER { t->join(); };
 
         ev.wait(makeRunable([] {}));
         STD_INSIST(stdAtomicFetch(&value, MemoryOrder::Acquire) == 1);
@@ -34,15 +40,19 @@ STD_TEST_SUITE(EventDefault) {
 
     STD_TEST(CallbackRunsBeforeBlock) {
         Event ev;
+        auto pool = ObjPool::fromMemory();
         int order = 0;
 
         {
-            ScopedThread t([&] {
+            auto r = makeRunable([&] {
                 while (stdAtomicFetch(&order, MemoryOrder::Acquire) < 1) {
                 }
 
                 ev.signal();
             });
+
+            auto* t = Thread::create(pool.mutPtr(), r);
+            STD_DEFER { t->join(); };
 
             ev.wait(makeRunable([&] {
                 stdAtomicStore(&order, 1, MemoryOrder::Release);
@@ -61,12 +71,15 @@ STD_TEST_SUITE(EventDefault) {
         mu.lock();
 
         {
-            ScopedThread t([&] {
+            auto r = makeRunable([&] {
                 mu.lock();
                 value = 42;
                 mu.unlock();
                 ev.signal();
             });
+
+            auto* t = Thread::create(pool.mutPtr(), r);
+            STD_DEFER { t->join(); };
 
             ev.wait(makeRunable([&] {
                 mu.unlock();
@@ -78,16 +91,20 @@ STD_TEST_SUITE(EventDefault) {
 
     STD_TEST(StressManyEvents) {
         const int N = 20;
+        auto pool = ObjPool::fromMemory();
 
         for (int i = 0; i < N; ++i) {
             Event ev;
             int value = 0;
 
             {
-                ScopedThread t([&] {
+                auto r = makeRunable([&] {
                     value = i + 1;
                     ev.signal();
                 });
+
+                auto* t = Thread::create(pool.mutPtr(), r);
+                STD_DEFER { t->join(); };
 
                 ev.wait(makeRunable([] {}));
             }
@@ -119,13 +136,17 @@ STD_TEST_SUITE(EventDefault) {
             auto r = makeRunablePtr([&] {
                 for (int i = 0; i < N; ++i) {
                     Event ev;
+                    auto ipool = ObjPool::fromMemory();
                     int v = 0;
 
                     {
-                        ScopedThread t([&] {
+                        auto ri = makeRunable([&] {
                             v = 1;
                             ev.signal();
                         });
+
+                        auto* t = Thread::create(ipool.mutPtr(), ri);
+                        STD_DEFER { t->join(); };
 
                         ev.wait(makeRunable([] {}));
                     }
@@ -146,22 +167,25 @@ STD_TEST_SUITE(EventDefault) {
 
     STD_TEST(StressDirectHandoff) {
         const int N = 10;
+        auto pool = ObjPool::fromMemory();
 
         for (int i = 0; i < N; ++i) {
             Event ev;
-            auto pool = ObjPool::fromMemory();
             auto& mu = *Mutex::create(pool.mutPtr());
             int slot = 0;
 
             mu.lock();
 
             {
-                ScopedThread t([&] {
+                auto r = makeRunable([&] {
                     mu.lock();
                     slot = i + 1;
                     mu.unlock();
                     ev.signal();
                 });
+
+                auto* t = Thread::create(pool.mutPtr(), r);
+                STD_DEFER { t->join(); };
 
                 ev.wait(makeRunable([&] {
                     mu.unlock();

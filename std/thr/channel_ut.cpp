@@ -1,10 +1,12 @@
 #include "coro.h"
 #include "pool.h"
 #include "thread.h"
+#include "runable.h"
 #include "channel.h"
 #include "wait_group.h"
 
 #include <std/tst/ut.h>
+#include <std/alg/defer.h>
 #include <std/sys/atomic.h>
 #include <std/lib/vector.h>
 #include <std/mem/obj_pool.h>
@@ -60,9 +62,12 @@ STD_TEST_SUITE(ChannelThreaded) {
         void* result = nullptr;
 
         {
-            ScopedThread t([&] {
+            auto r = makeRunable([&] {
                 ch.dequeue(&result);
             });
+
+            auto* t = Thread::create(pool.mutPtr(), r);
+            STD_DEFER { t->join(); };
 
             ch.enqueue((void*)42);
         }
@@ -77,10 +82,13 @@ STD_TEST_SUITE(ChannelThreaded) {
         void* v2 = nullptr;
 
         {
-            ScopedThread receiver([&] {
+            auto r = makeRunable([&] {
                 ch.dequeue(&v1);
                 ch.dequeue(&v2);
             });
+
+            auto* t = Thread::create(pool.mutPtr(), r);
+            STD_DEFER { t->join(); };
 
             ch.enqueue((void*)1);
             ch.enqueue((void*)2);
@@ -97,19 +105,24 @@ STD_TEST_SUITE(ChannelThreaded) {
         int sum = 0;
 
         {
-            ScopedThread producer([&] {
+            auto rp = makeRunable([&] {
                 for (int i = 1; i <= N; ++i) {
                     ch.enqueue((void*)(uintptr_t)i);
                 }
                 ch.close();
             });
 
-            ScopedThread consumer([&] {
+            auto rc = makeRunable([&] {
                 void* v;
                 while (ch.dequeue(&v)) {
                     sum += (int)(uintptr_t)v;
                 }
             });
+
+            auto* tp = Thread::create(pool.mutPtr(), rp);
+            STD_DEFER { tp->join(); };
+            auto* tc = Thread::create(pool.mutPtr(), rc);
+            STD_DEFER { tc->join(); };
         }
 
         STD_INSIST(sum == N * (N + 1) / 2);
@@ -142,8 +155,31 @@ STD_TEST_SUITE(ChannelThreaded) {
         };
 
         {
-            ScopedThread p0(produce), p1(produce), p2(produce), p3(produce);
-            ScopedThread c0(consume), c1(consume), c2(consume), c3(consume);
+            auto rp0 = makeRunable(produce);
+            auto rp1 = makeRunable(produce);
+            auto rp2 = makeRunable(produce);
+            auto rp3 = makeRunable(produce);
+            auto rc0 = makeRunable(consume);
+            auto rc1 = makeRunable(consume);
+            auto rc2 = makeRunable(consume);
+            auto rc3 = makeRunable(consume);
+
+            auto* p0 = Thread::create(pool.mutPtr(), rp0);
+            STD_DEFER { p0->join(); };
+            auto* p1 = Thread::create(pool.mutPtr(), rp1);
+            STD_DEFER { p1->join(); };
+            auto* p2 = Thread::create(pool.mutPtr(), rp2);
+            STD_DEFER { p2->join(); };
+            auto* p3 = Thread::create(pool.mutPtr(), rp3);
+            STD_DEFER { p3->join(); };
+            auto* c0 = Thread::create(pool.mutPtr(), rc0);
+            STD_DEFER { c0->join(); };
+            auto* c1 = Thread::create(pool.mutPtr(), rc1);
+            STD_DEFER { c1->join(); };
+            auto* c2 = Thread::create(pool.mutPtr(), rc2);
+            STD_DEFER { c2->join(); };
+            auto* c3 = Thread::create(pool.mutPtr(), rc3);
+            STD_DEFER { c3->join(); };
         }
 
         STD_INSIST(consumed == total);
