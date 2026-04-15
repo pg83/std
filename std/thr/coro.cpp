@@ -12,7 +12,6 @@
 #include "event_iface.h"
 #include "thread_iface.h"
 #include "io_reactor.h"
-#include "semaphore_iface.h"
 
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
@@ -150,9 +149,9 @@ namespace {
         void yield() noexcept override;
 
         void createEvent(void* buf) override;
-        ThreadIface* createThread() override;
-        CondVar* createCondVar() override;
-        SemaphoreIface* createSemaphore(size_t initial) override;
+        ThreadIface* createThread(ObjPool* pool) override;
+        CondVar* createCondVar(ObjPool* pool) override;
+        Mutex* createSemaphoreImpl(ObjPool* pool, size_t initial) override;
 
         IoReactor* io() noexcept override {
             return io_;
@@ -303,33 +302,33 @@ void CoroExecutorImpl::createEvent(void* buf) {
     new (buf) CoroEventImpl(this);
 }
 
-CondVar* CoroExecutorImpl::createCondVar() {
+CondVar* CoroExecutorImpl::createCondVar(ObjPool* pool) {
     struct CoroCondVarImpl: public CondVar {
-        Mutex queueMutex_;
+        Mutex* queueMutex_;
         IntrusiveList waiters_;
 
-        CoroCondVarImpl(CoroExecutorImpl* exec) noexcept
-            : queueMutex_(Mutex::spinLock(exec))
+        CoroCondVarImpl(ObjPool* pool, CoroExecutorImpl* exec) noexcept
+            : queueMutex_(Mutex::createSpinLock(pool, exec))
         {
         }
 
         CoroExecutorImpl* exec() noexcept {
-            return (CoroExecutorImpl*)queueMutex_.nativeHandle();
+            return (CoroExecutorImpl*)queueMutex_->nativeHandle();
         }
 
         void wait(Mutex& mutex) noexcept override {
-            queueMutex_.lock();
+            queueMutex_->lock();
             auto cont = exec()->currentCont();
             waiters_.pushBack(cont);
             cont->park([&] {
-                queueMutex_.unlock();
+                queueMutex_->unlock();
                 mutex.unlock();
             });
             mutex.lock();
         }
 
         void signal() noexcept override {
-            auto node = LockGuard(queueMutex_).run([&] {
+            auto node = LockGuard(*queueMutex_).run([&] {
                 return (ContImpl*)(Task*)waiters_.popFrontOrNull();
             });
 
@@ -341,7 +340,7 @@ CondVar* CoroExecutorImpl::createCondVar() {
         void broadcast() noexcept override {
             IntrusiveList tmp;
 
-            LockGuard(queueMutex_).run([&] {
+            LockGuard(*queueMutex_).run([&] {
                 tmp.xchg(waiters_);
             });
 
@@ -351,25 +350,25 @@ CondVar* CoroExecutorImpl::createCondVar() {
         }
     };
 
-    return new CoroCondVarImpl(this);
+    return pool->make<CoroCondVarImpl>(pool, this);
 }
 
-ThreadIface* CoroExecutorImpl::createThread() {
+ThreadIface* CoroExecutorImpl::createThread(ObjPool* pool) {
     struct State: public ARC {
-        Semaphore sem_;
+        Semaphore* sem_;
 
-        State(CoroExecutorImpl* exec)
-            : sem_(0, exec)
+        State(ObjPool* pool, CoroExecutorImpl* exec)
+            : sem_(Semaphore::create(pool, 0, exec))
         {
         }
 
         CoroExecutorImpl* exec() noexcept {
-            return (CoroExecutorImpl*)sem_.nativeHandle();
+            return (CoroExecutorImpl*)sem_->nativeHandle();
         }
 
         void run(Runable& runable) {
             runable.run();
-            sem_.post();
+            sem_->post();
         }
 
         void start(Runable& runable) {
@@ -379,7 +378,7 @@ ThreadIface* CoroExecutorImpl::createThread() {
         }
 
         void join() noexcept {
-            sem_.wait();
+            sem_->wait();
         }
     };
 
@@ -407,67 +406,78 @@ ThreadIface* CoroExecutorImpl::createThread() {
         }
     };
 
-    return new CoroThreadImpl(new State(this));
+    return new CoroThreadImpl(new State(pool, this));
 }
 
-SemaphoreIface* CoroExecutorImpl::createSemaphore(size_t initial) {
-    struct CoroSemaphoreImpl: public SemaphoreIface {
-        Mutex lock_;
+Mutex* CoroExecutorImpl::createSemaphoreImpl(ObjPool* pool, size_t initial) {
+    struct CoroSemaphoreImpl: public Mutex {
+        Mutex* lock_;
         IntrusiveList waiters_;
         size_t count_;
 
-        CoroSemaphoreImpl(CoroExecutorImpl* exec, size_t initial) noexcept
-            : lock_(Mutex::spinLock(exec))
+        CoroSemaphoreImpl(Mutex* lock, size_t initial) noexcept
+            : lock_(lock)
             , count_(initial)
         {
         }
 
         void post() noexcept override {
-            lock_.lock();
+            lock_->lock();
 
             if (auto cont = (ContImpl*)(Task*)waiters_.popFrontOrNull(); cont) {
-                lock_.unlock();
+                lock_->unlock();
                 cont->reSchedule();
             } else {
                 ++count_;
-                lock_.unlock();
+                lock_->unlock();
             }
         }
 
         void wait() noexcept override {
-            lock_.lock();
+            lock_->lock();
 
             if (count_ > 0) {
                 --count_;
-                lock_.unlock();
+                lock_->unlock();
                 return;
             }
 
             auto cont = ((CoroExecutorImpl*)(CoroExecutor*)nativeHandle())->currentCont();
             waiters_.pushBack(cont);
             cont->park([&] {
-                lock_.unlock();
+                lock_->unlock();
             });
         }
 
         void* nativeHandle() noexcept override {
-            return lock_.nativeHandle();
+            return lock_->nativeHandle();
         }
 
         bool tryWait() noexcept override {
-            LockGuard guard(lock_);
+            lock_->lock();
 
             if (count_ > 0) {
                 --count_;
+                lock_->unlock();
 
                 return true;
             }
+
+            lock_->unlock();
 
             return false;
         }
     };
 
-    return new CoroSemaphoreImpl(this, initial);
+    return pool->make<CoroSemaphoreImpl>(Mutex::createSpinLock(pool, this), initial);
+}
+
+Semaphore* CoroExecutor::createSemaphore(ObjPool* pool, size_t initial) {
+    return createSemaphoreImpl(pool, initial);
+}
+
+Mutex* CoroExecutor::createMutex(ObjPool* pool) {
+    return createSemaphoreImpl(pool, 1);
 }
 
 CoroExecutor* CoroExecutor::create(ObjPool* pool, size_t threads) {

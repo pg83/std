@@ -10,14 +10,16 @@ using namespace stl;
 
 STD_TEST_SUITE(Semaphore) {
     STD_TEST(PostThenWait) {
-        Semaphore sem(0);
+        auto pool = ObjPool::fromMemory();
+        auto& sem = *Semaphore::create(pool.mutPtr(), 0);
 
         sem.post();
         sem.wait();
     }
 
     STD_TEST(InitialCount) {
-        Semaphore sem(3);
+        auto pool = ObjPool::fromMemory();
+        auto& sem = *Semaphore::create(pool.mutPtr(), 3);
 
         sem.wait();
         sem.wait();
@@ -29,7 +31,8 @@ STD_TEST_SUITE(Semaphore) {
     }
 
     STD_TEST(TwoThreads) {
-        Semaphore sem(0);
+        auto pool = ObjPool::fromMemory();
+        auto& sem = *Semaphore::create(pool.mutPtr(), 0);
         int value = 0;
 
         ScopedThread t([&] {
@@ -43,7 +46,8 @@ STD_TEST_SUITE(Semaphore) {
 
     STD_TEST(ManyThreads) {
         const int N = 8;
-        Semaphore sem(0);
+        auto pool = ObjPool::fromMemory();
+        auto& sem = *Semaphore::create(pool.mutPtr(), 0);
         int counter = 0;
 
         auto body = [&] {
@@ -64,7 +68,7 @@ STD_TEST_SUITE(Semaphore) {
     STD_TEST(CoroBasic) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Semaphore sem(0, exec);
+        auto& sem = *Semaphore::create(pool.mutPtr(), 0, exec);
 
         exec->spawn([&] {
             exec->spawn([&] {
@@ -80,7 +84,7 @@ STD_TEST_SUITE(Semaphore) {
     STD_TEST(CoroInitialCount) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Semaphore sem(3, exec);
+        auto& sem = *Semaphore::create(pool.mutPtr(), 3, exec);
 
         exec->spawn([&] {
             sem.wait();
@@ -99,7 +103,7 @@ STD_TEST_SUITE(Semaphore) {
         const int N = 8;
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Semaphore sem(0, exec);
+        auto& sem = *Semaphore::create(pool.mutPtr(), 0, exec);
         int counter = 0;
 
         exec->spawn([&] {

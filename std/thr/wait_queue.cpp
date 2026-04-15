@@ -306,5 +306,5 @@ WaitQueue* WaitQueue::construct(ObjPool* pool, size_t maxWaiters) {
     return pool->make<PointerImpl>();
 #endif
 
-    return pool->make<MutexImpl>(Mutex::createDefault(pool));
+    return pool->make<MutexImpl>(Mutex::create(pool));
 }

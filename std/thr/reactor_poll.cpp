@@ -67,7 +67,7 @@ namespace {
         DeadlineTreap timers;
         DeadlineTreap sleepers;
         IntMap<FdEntry> fdMap_;
-        Mutex queueMutex_;
+        Mutex* queueMutex_;
         DeadlineTreap queue_;
         Parker parker_;
         bool stopped_ = false;
@@ -146,7 +146,7 @@ ReactorState::ReactorState(CoroExecutor* exec, ObjPool* opool)
     : exec_(exec)
     , poller(PollerIface::create(opool))
     , fdMap_(ObjPool::create(opool))
-    , queueMutex_(Mutex::spinLock(exec))
+    , queueMutex_(Mutex::createSpinLock(opool, exec))
 {
     poller->arm({parker_.fd(), PollFlag::In});
     thread_ = Thread::create(opool, *this);
@@ -178,7 +178,7 @@ ReactorState::~ReactorState() noexcept {
 void ReactorState::drainQueue() {
     DeadlineTreap local;
 
-    LockGuard(queueMutex_).run([this, &local] {
+    LockGuard(*queueMutex_).run([this, &local] {
         queue_.xchg(local);
     });
 
@@ -270,12 +270,12 @@ u32 ReactorState::poll(PollFD pfd, u64 deadlineUs) {
     req.pfd = pfd;
     req.common = &common;
 
-    queueMutex_.lock();
+    queueMutex_->lock();
     queue_.insert(&req);
 
     // clang-format off
     exec_->parkWith(makeRunable([this, needsWakeup = (queue_.min() == &req)] {
-        queueMutex_.unlock();
+        queueMutex_->unlock();
 
         if (needsWakeup) {
             parker_.unpark();
@@ -322,7 +322,7 @@ void ReactorPoller::waitImpl(VisitorFace& v, u32 timeoutUs) {
         req.right = nullptr;
     });
 
-    rs->queueMutex_.lock();
+    rs->queueMutex_->lock();
 
     fds_.visit([this, rs](InternalMultiReq& req) {
         req.common = this;
@@ -331,7 +331,7 @@ void ReactorPoller::waitImpl(VisitorFace& v, u32 timeoutUs) {
 
     // clang-format off
     rs->exec_->parkWith(makeRunable([rs] {
-        rs->queueMutex_.unlock();
+        rs->queueMutex_->unlock();
         rs->parker_.unpark();
     }), &task);
     // clang-format on

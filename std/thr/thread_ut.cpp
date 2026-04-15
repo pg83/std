@@ -180,8 +180,8 @@ STD_TEST_SUITE(Thread) {
             }
         };
 
-        Mutex mutex;
         auto pool = ObjPool::fromMemory();
+        auto& mutex = *Mutex::create(pool.mutPtr());
         auto cv = CondVar::create(pool.mutPtr());
         bool executed = false;
 
@@ -218,8 +218,8 @@ STD_TEST_SUITE(Thread) {
             }
         };
 
-        Mutex mutex;
         auto pool = ObjPool::fromMemory();
+        auto& mutex = *Mutex::create(pool.mutPtr());
         auto cv = CondVar::create(pool.mutPtr());
         int counter = 0;
 
@@ -259,8 +259,8 @@ STD_TEST_SUITE(Thread) {
             }
         };
 
-        Mutex mutex;
         auto pool = ObjPool::fromMemory();
+        auto& mutex = *Mutex::create(pool.mutPtr());
         auto cv = CondVar::create(pool.mutPtr());
         int counter = 0;
         int completed = 0;
@@ -320,8 +320,8 @@ STD_TEST_SUITE(Thread) {
             }
         };
 
-        Mutex mutex;
         auto pool = ObjPool::fromMemory();
+        auto& mutex = *Mutex::create(pool.mutPtr());
         auto cv = CondVar::create(pool.mutPtr());
         int counter = 0;
         bool done = false;
@@ -366,8 +366,8 @@ STD_TEST_SUITE(Thread) {
             }
         };
 
-        Mutex mutex;
         auto pool = ObjPool::fromMemory();
+        auto& mutex = *Mutex::create(pool.mutPtr());
         auto cv = CondVar::create(pool.mutPtr());
         int value = 0;
 
@@ -445,8 +445,8 @@ STD_TEST_SUITE(Thread) {
             }
         };
 
-        Mutex mutex;
         auto pool = ObjPool::fromMemory();
+        auto& mutex = *Mutex::create(pool.mutPtr());
         auto cv = CondVar::create(pool.mutPtr());
         int resource = 0;
         bool done1 = false;
@@ -479,7 +479,7 @@ STD_TEST_SUITE(CoroThread) {
         CounterRunable runnable(&counter);
 
         exec->spawn([&] {
-            Thread thread(exec, runnable);
+            Thread thread(pool.mutPtr(), exec, runnable);
             thread.join();
         });
 
@@ -494,9 +494,9 @@ STD_TEST_SUITE(CoroThread) {
         CounterRunable r1(&counter1), r2(&counter2), r3(&counter3);
 
         exec->spawn([&] {
-            Thread t1(exec, r1);
-            Thread t2(exec, r2);
-            Thread t3(exec, r3);
+            Thread t1(pool.mutPtr(), exec, r1);
+            Thread t2(pool.mutPtr(), exec, r2);
+            Thread t3(pool.mutPtr(), exec, r3);
             t1.join();
             t2.join();
             t3.join();
@@ -515,7 +515,7 @@ STD_TEST_SUITE(CoroThread) {
         MultiIncrementRunable runnable(&counter, 1000);
 
         exec->spawn([&] {
-            Thread thread(exec, runnable);
+            Thread thread(pool.mutPtr(), exec, runnable);
             thread.join();
         });
 
@@ -532,7 +532,7 @@ STD_TEST_SUITE(CoroThread) {
             for (int i = 0; i < 10; ++i) {
                 int counter = 0;
                 CounterRunable runnable(&counter);
-                Thread thread(exec, runnable);
+                Thread thread(pool.mutPtr(), exec, runnable);
                 thread.join();
                 total += counter;
             }
@@ -551,9 +551,9 @@ STD_TEST_SUITE(CoroThread) {
         MultiIncrementRunable r3(&counter3, 1000);
 
         exec->spawn([&] {
-            Thread t1(exec, r1);
-            Thread t2(exec, r2);
-            Thread t3(exec, r3);
+            Thread t1(pool.mutPtr(), exec, r1);
+            Thread t2(pool.mutPtr(), exec, r2);
+            Thread t3(pool.mutPtr(), exec, r3);
             t1.join();
             t2.join();
             t3.join();
@@ -572,8 +572,8 @@ STD_TEST_SUITE(CoroThread) {
         CounterRunable r1(&counter1), r2(&counter2);
 
         exec->spawn([&] {
-            Thread t1(exec, r1);
-            Thread t2(exec, r2);
+            Thread t1(pool.mutPtr(), exec, r1);
+            Thread t2(pool.mutPtr(), exec, r2);
             t2.join();
             t1.join();
         });
@@ -603,7 +603,7 @@ STD_TEST_SUITE(CoroThread) {
         BoolRunable runnable(&executed);
 
         exec->spawn([&] {
-            Thread thread(exec, runnable);
+            Thread thread(pool.mutPtr(), exec, runnable);
             id = thread.threadId();
             thread.join();
         });

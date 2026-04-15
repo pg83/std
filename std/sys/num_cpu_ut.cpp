@@ -2,6 +2,7 @@
 
 #include <std/tst/ut.h>
 #include <std/thr/mutex.h>
+#include <std/mem/obj_pool.h>
 #include <std/thr/guard.h>
 #include <std/dbg/insist.h>
 
@@ -11,9 +12,10 @@ using namespace stl;
 
 namespace {
     Mutex& envMutex() {
-        static Mutex m;
+        static auto pool = ObjPool::fromMemory();
+        static auto m = Mutex::create(pool.mutPtr());
 
-        return m;
+        return *m;
     }
 }
 

@@ -308,7 +308,7 @@ PollerIface* PollIoReactor::createPoller(ObjPool* pool) {
 }
 
 Mutex* PollIoReactor::createMutex(ObjPool* pool) {
-    return pool->make<Mutex>();
+    return Mutex::create(pool);
 }
 
 CondVar* PollIoReactor::createCondVar(ObjPool* pool, size_t) {

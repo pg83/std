@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
 
     auto exec = CoroExecutor::create(pool.mutPtr(), threads);
 
-    Semaphore sem(threads * 20, exec);
+    auto& sem = *Semaphore::create(pool.mutPtr(), threads * 20, exec);
 
     Vector<DnsResolver*> resolvers;
 

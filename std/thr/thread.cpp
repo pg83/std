@@ -57,8 +57,8 @@ Thread::Thread(ThreadIface* iface)
 {
 }
 
-Thread::Thread(CoroExecutor* exec, Runable& runable)
-    : impl(exec->createThread())
+Thread::Thread(ObjPool* pool, CoroExecutor* exec, Runable& runable)
+    : impl(exec->createThread(pool))
 {
     impl->start(runable);
 }

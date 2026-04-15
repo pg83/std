@@ -82,7 +82,7 @@ namespace {
             }
         };
 
-        Mutex mutex_;
+        Mutex* mutex_ = nullptr;
         CondVar* condVar_ = nullptr;
         IntrusiveList queue_;
         IntMap<Worker> workers_;
@@ -102,7 +102,8 @@ namespace {
 }
 
 ThreadPoolImpl::ThreadPoolImpl(ObjPool* pool, size_t numThreads)
-    : condVar_(CondVar::create(pool))
+    : mutex_(Mutex::create(pool))
+    , condVar_(CondVar::create(pool))
     , workers_(pool)
 {
     for (size_t i = 0; i < numThreads; ++i) {
@@ -111,17 +112,17 @@ ThreadPoolImpl::ThreadPoolImpl(ObjPool* pool, size_t numThreads)
 }
 
 void ThreadPoolImpl::submitTasks(IntrusiveList& tasks) noexcept {
-    LockGuard lock(mutex_);
+    LockGuard lock(*mutex_);
     inflight_ += tasks.length();
     queue_.pushBack(tasks);
     condVar_->signal();
 }
 
 void ThreadPoolImpl::join() noexcept {
-    LockGuard lock(mutex_);
+    LockGuard lock(*mutex_);
 
     while (inflight_) {
-        UnlockGuard unlock(mutex_);
+        UnlockGuard unlock(*mutex_);
 
         sched_yield();
     }
@@ -147,12 +148,12 @@ void ThreadPoolImpl::flushLocal() noexcept {
 }
 
 void ThreadPoolImpl::workerLoop() {
-    LockGuard lock(mutex_);
+    LockGuard lock(*mutex_);
 
-    for (;; condVar_->wait(mutex_)) {
+    for (;; condVar_->wait(*mutex_)) {
         while (auto t = (Task*)queue_.popFrontOrNull()) {
             {
-                UnlockGuard unlock(mutex_);
+                UnlockGuard unlock(*mutex_);
 
                 t->run();
             }
@@ -495,7 +496,7 @@ void WorkStealingThreadPool::Worker::splitHalf(IntrusiveList* stolen) noexcept {
 ThreadPool* ThreadPool::workStealing(ObjPool* pool, size_t threads) {
     struct DefaultThreadPoolHooks: public ThreadPoolHooks {
         Mutex* createMutex(ObjPool* pool) override {
-            return Mutex::createDefault(pool);
+            return Mutex::create(pool);
         }
 
         CondVar* createCondVar(ObjPool* pool, size_t) override {

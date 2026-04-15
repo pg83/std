@@ -13,9 +13,10 @@ namespace stl {
     struct ThreadPool;
     struct EventIface;
     struct ThreadIface;
+    struct Mutex;
     struct CondVar;
+    struct Semaphore;
     struct CoroExecutor;
-    struct SemaphoreIface;
 
     struct SpawnParams {
         size_t stackSize;
@@ -47,9 +48,12 @@ namespace stl {
         virtual ThreadPool* pool() noexcept = 0;
 
         virtual void createEvent(void* buf) = 0;
-        virtual ThreadIface* createThread() = 0;
-        virtual CondVar* createCondVar() = 0;
-        virtual SemaphoreIface* createSemaphore(size_t initial) = 0;
+        virtual CondVar* createCondVar(ObjPool* pool) = 0;
+        virtual ThreadIface* createThread(ObjPool* pool) = 0;
+        virtual Mutex* createSemaphoreImpl(ObjPool* pool, size_t initial) = 0;
+
+        Semaphore* createSemaphore(ObjPool* pool, size_t initial);
+        Mutex* createMutex(ObjPool* pool);
 
         virtual void* currentCoroId() const noexcept = 0;
 

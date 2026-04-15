@@ -1,3 +1,4 @@
+#include "coro.h"
 #include "mutex.h"
 #include "cond_var.h"
 
@@ -39,4 +40,8 @@ namespace {
 
 CondVar* CondVar::create(ObjPool* pool) {
     return pool->make<PosixCondVarImpl>();
+}
+
+CondVar* CondVar::create(ObjPool* pool, CoroExecutor* exec) {
+    return exec->createCondVar(pool);
 }

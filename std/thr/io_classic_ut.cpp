@@ -449,7 +449,8 @@ STD_TEST_SUITE(IoClassicFS) {
             const char data[] = "concurrent";
             ::write(fd, data, sizeof(data));
 
-            Semaphore sem(0, exec);
+            auto spool = ObjPool::fromMemory();
+            auto& sem = *Semaphore::create(spool.mutPtr(), 0, exec);
 
             for (int i = 0; i < 8; ++i) {
                 exec->spawn([&] {

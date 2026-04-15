@@ -17,7 +17,7 @@ namespace stl {
     public:
         explicit Thread(Runable& runable);
         explicit Thread(ThreadIface* iface);
-        Thread(CoroExecutor* exec, Runable& runable);
+        Thread(ObjPool* pool, CoroExecutor* exec, Runable& runable);
 
         ~Thread() noexcept;
 

@@ -88,9 +88,9 @@ namespace {
     };
 
     struct ExternalRing: public Ring {
-        Mutex mutex_;
+        Mutex* mutex_;
 
-        ExternalRing();
+        ExternalRing(ObjPool* pool);
 
         void wakeUp(int targetFd) noexcept override;
     };
@@ -226,15 +226,16 @@ void Ring::wakeUp(int targetFd) noexcept {
     sendMsg(targetFd);
 }
 
-ExternalRing::ExternalRing()
+ExternalRing::ExternalRing(ObjPool* pool)
     : Ring(0)
+    , mutex_(Mutex::create(pool))
 {
 }
 
 void ExternalRing::wakeUp(int targetFd) noexcept {
-    mutex_.lock();
+    mutex_->lock();
     sendMsg(targetFd);
-    mutex_.unlock();
+    mutex_->unlock();
 }
 
 UringCondVarImpl::UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexcept
@@ -290,7 +291,7 @@ void UringCondVarImpl::broadcast() noexcept {
 }
 
 UringReactorImpl::UringReactorImpl(ObjPool* pool, CoroExecutor* exec, size_t threads)
-    : ext_(pool->make<ExternalRing>())
+    : ext_(pool->make<ExternalRing>(pool))
     , exec_(exec)
 {
     for (size_t i = 0; i < threads; ++i) {
@@ -362,7 +363,7 @@ void UringReactorImpl::submitReq(Req& req, F prep, u64 deadlineUs) noexcept {
 }
 
 Mutex* UringReactorImpl::createMutex(ObjPool* pool) {
-    return pool->make<Mutex>(Mutex::spinLock(pool, nullptr));
+    return Mutex::createSpinLock(pool);
 }
 
 CondVar* UringReactorImpl::createCondVar(ObjPool* pool, size_t index) {

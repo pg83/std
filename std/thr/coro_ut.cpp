@@ -120,7 +120,7 @@ STD_TEST_SUITE(CoroExecutor) {
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         auto f = async(exec, [&] {
-            Mutex mtx(exec);
+            auto& mtx = *Mutex::create(pool.mutPtr(), exec);
 
             mtx.lock();
             mtx.unlock();
@@ -134,7 +134,7 @@ STD_TEST_SUITE(CoroExecutor) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter = 0;
-        Mutex mtx(exec);
+        auto& mtx = *Mutex::create(pool.mutPtr(), exec);
 
         for (int i = 0; i < 2; ++i) {
             exec->spawn([&] {
@@ -155,7 +155,7 @@ STD_TEST_SUITE(CoroExecutor) {
         const int nCoros = 8;
         const int nIters = 200;
         int counter = 0;
-        Mutex mtx(exec);
+        auto& mtx = *Mutex::create(pool.mutPtr(), exec);
 
         for (int i = 0; i < nCoros; ++i) {
             exec->spawn([&] {
@@ -174,8 +174,8 @@ STD_TEST_SUITE(CoroExecutor) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int value = 0;
-        Mutex mtx(exec);
-        auto cv = exec->createCondVar();
+        auto& mtx = *Mutex::create(pool.mutPtr(), exec);
+        auto cv = exec->createCondVar(pool.mutPtr());
 
         exec->spawn([&] {
             LockGuard guard(mtx);
@@ -199,8 +199,8 @@ STD_TEST_SUITE(CoroExecutor) {
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         const int N = 5;
         int value = 0;
-        Mutex mtx(exec);
-        auto cv = exec->createCondVar();
+        auto& mtx = *Mutex::create(pool.mutPtr(), exec);
+        auto cv = exec->createCondVar(pool.mutPtr());
 
         for (int i = 0; i < N; ++i) {
             exec->spawn([&] {
@@ -227,8 +227,8 @@ STD_TEST_SUITE(CoroExecutor) {
         const int N = 10;
         int produced = 0;
         int consumed = 0;
-        Mutex mtx(exec);
-        auto cv = exec->createCondVar();
+        auto& mtx = *Mutex::create(pool.mutPtr(), exec);
+        auto cv = exec->createCondVar(pool.mutPtr());
 
         // consumer
         exec->spawn([&] {
@@ -261,8 +261,8 @@ STD_TEST_SUITE(CoroExecutor) {
         const int nIters = 20;
         int queue = 0;
         int consumed = 0;
-        Mutex mtx(exec);
-        auto cv = exec->createCondVar();
+        auto& mtx = *Mutex::create(pool.mutPtr(), exec);
+        auto cv = exec->createCondVar(pool.mutPtr());
 
         for (int i = 0; i < nCoros; ++i) {
             exec->spawn([&] {
@@ -295,7 +295,7 @@ STD_TEST_SUITE(CoroMisc) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int counter = 0;
-        Mutex mtx(exec);
+        auto& mtx = *Mutex::create(pool.mutPtr(), exec);
 
         for (int i = 0; i < 100; ++i) {
             exec->spawn([&] {

@@ -1,36 +1,25 @@
 #pragma once
 
+#include "semaphore.h"
+
 namespace stl {
-    class ObjPool;
+    struct Mutex: public Semaphore {
+        void lock() noexcept {
+            wait();
+        }
 
-    struct CoroExecutor;
-    struct SemaphoreIface;
+        void unlock() noexcept {
+            post();
+        }
 
-    class Mutex {
-        SemaphoreIface* impl;
+        bool tryLock() noexcept {
+            return tryWait();
+        }
 
-    public:
-        Mutex();
-        Mutex(bool lock);
-        Mutex(CoroExecutor* exec);
-        Mutex(SemaphoreIface* iface);
-
-        static Mutex* createDefault(ObjPool* pool);
+        static Mutex* create(ObjPool* pool);
+        static Mutex* create(ObjPool* pool, CoroExecutor* exec);
 
         static Mutex* createSpinLock(ObjPool* pool);
         static Mutex* createSpinLock(ObjPool* pool, CoroExecutor* exec);
-
-        static SemaphoreIface* defaultImpl(ObjPool* pool);
-
-        static SemaphoreIface* spinLock(CoroExecutor* exec);
-        static SemaphoreIface* spinLock(ObjPool* pool, CoroExecutor* exec);
-
-        ~Mutex() noexcept;
-
-        void lock() noexcept;
-        void unlock() noexcept;
-        bool tryLock() noexcept;
-
-        void* nativeHandle() noexcept;
     };
 }

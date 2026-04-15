@@ -161,10 +161,10 @@ void Tests::execute() {
         topN = (size_t)sv->stou();
     }
 
-    Mutex mu;
+    auto mu = Mutex::create(opool.mutPtr());
 
     if (topN) {
-        timingsMu = &mu;
+        timingsMu = mu;
     }
 
     StringBuilder sb;

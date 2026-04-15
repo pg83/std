@@ -4,6 +4,7 @@
 #include "guard.h"
 
 #include <std/sys/crt.h>
+#include <std/mem/obj_pool.h>
 #include <std/lib/list.h>
 #include <std/dbg/insist.h>
 #include <std/alg/bits.h>
@@ -18,20 +19,24 @@ struct Channel::Impl {
     };
 
     CoroExecutor* exec_;
-    Mutex mu_;
+    ObjPool::Ref muPool_;
+    Mutex* mu_;
     IntrusiveList senders_;
     IntrusiveList receivers_;
     bool closed_;
 
     Impl() noexcept
         : exec_(nullptr)
+        , muPool_(ObjPool::fromMemory())
+        , mu_(Mutex::create(muPool_.mutPtr()))
         , closed_(false)
     {
     }
 
     Impl(CoroExecutor* exec) noexcept
         : exec_(exec)
-        , mu_(Mutex::spinLock(exec))
+        , muPool_(ObjPool::fromMemory())
+        , mu_(Mutex::createSpinLock(muPool_.mutPtr(), exec))
         , closed_(false)
     {
     }
@@ -76,12 +81,12 @@ bool Channel::Impl::sendOne(void* v) noexcept {
 }
 
 void Channel::Impl::enqueue(void* v) noexcept {
-    mu_.lock();
+    mu_->lock();
 
     STD_INSIST(!closed_);
 
     if (sendOne(v)) {
-        mu_.unlock();
+        mu_->unlock();
         return;
     }
 
@@ -89,7 +94,7 @@ void Channel::Impl::enqueue(void* v) noexcept {
 }
 
 bool Channel::Impl::tryEnqueue(void* v) noexcept {
-    LockGuard guard(mu_);
+    LockGuard guard(*mu_);
 
     STD_INSIST(!closed_);
 
@@ -106,7 +111,7 @@ __attribute__((noinline)) void Channel::Impl::enqueueSlow(void* v) noexcept {
 
     senders_.pushBack(&w);
     ev.wait(makeRunable([this] {
-        mu_.unlock();
+        mu_->unlock();
     }));
 }
 
@@ -126,15 +131,15 @@ bool Channel::Impl::recvOne(void** out) noexcept {
 }
 
 bool Channel::Impl::dequeue(void** out) noexcept {
-    mu_.lock();
+    mu_->lock();
 
     if (recvOne(out)) {
-        mu_.unlock();
+        mu_->unlock();
         return true;
     }
 
     if (closed_) {
-        mu_.unlock();
+        mu_->unlock();
         return false;
     }
 
@@ -142,7 +147,7 @@ bool Channel::Impl::dequeue(void** out) noexcept {
 }
 
 bool Channel::Impl::tryDequeue(void** out) noexcept {
-    LockGuard guard(mu_);
+    LockGuard guard(*mu_);
 
     return recvOne(out);
 }
@@ -157,7 +162,7 @@ __attribute__((noinline)) bool Channel::Impl::dequeueSlow(void** out) noexcept {
 
     receivers_.pushBack(&w);
     ev.wait(makeRunable([this] {
-        mu_.unlock();
+        mu_->unlock();
     }));
 
     if (w.valueSet) {
@@ -182,19 +187,19 @@ size_t Channel::Impl::dequeue(void** to, size_t len) noexcept {
     size_t n = 1;
 
     // drain the rest under one lock
-    mu_.lock();
+    mu_->lock();
 
     while (n < len && recvOne(to + n)) {
         ++n;
     }
 
-    mu_.unlock();
+    mu_->unlock();
 
     return n;
 }
 
 void Channel::Impl::close() noexcept {
-    LockGuard guard(mu_);
+    LockGuard guard(*mu_);
 
     STD_INSIST(!closed_);
     STD_INSIST(senders_.empty());

@@ -60,7 +60,7 @@ namespace {
         CoroExecutor* exec_;
         ares_channel channel_;
         struct ares_addrinfo_hints hints_;
-        Mutex lock_;
+        Mutex* lock_;
         bool driving_ = false;
         IntrusiveList pending_;
         IntrusiveList waiters_;
@@ -150,7 +150,7 @@ void DnsResolverImpl::onSockState(ares_socket_t fd, int readable, int writable) 
 
 DnsResolverImpl::DnsResolverImpl(ObjPool* pool, CoroExecutor* exec, const DnsConfig& cfg)
     : exec_(exec)
-    , lock_(Mutex::spinLock(exec))
+    , lock_(Mutex::createSpinLock(pool, exec))
     , pollerPool_(ObjPool::fromMemory())
 {
     poller_ = PollerIface::createMultishot(pollerPool_.mutPtr(), exec->io()->createPoller(pollerPool_.mutPtr()));
@@ -193,13 +193,13 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
     req.event = &ev;
     req.name = (const char*)pool->intern(name).data();
 
-    lock_.lock();
+    lock_->lock();
 
     if (driving_) {
         pending_.pushBack(&req);
 
         req.event->wait(makeRunable([this] {
-            lock_.unlock();
+            lock_->unlock();
             parker_.unpark();
         }));
 
@@ -208,7 +208,7 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
         }
     } else {
         driving_ = true;
-        lock_.unlock();
+        lock_->unlock();
     }
 
     req.event = nullptr;
@@ -220,7 +220,7 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
 void DnsResolverImpl::submitPending() {
     IntrusiveList batch;
 
-    LockGuard(lock_).run([&] {
+    LockGuard(*lock_).run([&] {
         batch.xchg(pending_);
     });
 
@@ -262,17 +262,17 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
         ares_process_fd(channel_, ARES_SOCKET_BAD, ARES_SOCKET_BAD);
     }
 
-    lock_.lock();
+    lock_->lock();
 
     if (auto next = (DnsRequest*)waiters_.popFrontOrNull()) {
-        lock_.unlock();
+        lock_->unlock();
         next->event->signal();
     } else if (auto next = (DnsRequest*)pending_.popFrontOrNull()) {
-        lock_.unlock();
+        lock_->unlock();
         next->event->signal();
     } else {
         driving_ = false;
-        lock_.unlock();
+        lock_->unlock();
     }
 }
 

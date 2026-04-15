@@ -1,6 +1,5 @@
 #include "mutex.h"
 #include "coro.h"
-#include "semaphore_iface.h"
 
 #include <std/str/view.h>
 #include <std/mem/obj_pool.h>
@@ -14,11 +13,11 @@
 using namespace stl;
 
 namespace {
-    struct alignas(64) SpinSemImpl: public SemaphoreIface {
+    struct alignas(64) SpinMutexImpl: public Mutex {
         CoroExecutor* exec_;
         char flag_ = 0;
 
-        SpinSemImpl(CoroExecutor* exec) noexcept
+        SpinMutexImpl(CoroExecutor* exec) noexcept
             : exec_(exec)
         {
         }
@@ -56,14 +55,14 @@ namespace {
         }
     };
 
-    struct PosixMutexImpl: public SemaphoreIface, public pthread_mutex_t {
+    struct PosixMutexImpl: public Mutex, public pthread_mutex_t {
         PosixMutexImpl() {
             if (pthread_mutex_init(this, nullptr) != 0) {
                 Errno().raise(StringBuilder() << StringView(u8"pthread_mutex_init failed"));
             }
         }
 
-        ~PosixMutexImpl() noexcept override {
+        ~PosixMutexImpl() noexcept {
             STD_INSIST(pthread_mutex_destroy(this) == 0);
         }
 
@@ -85,85 +84,18 @@ namespace {
     };
 }
 
-Mutex::Mutex()
-    : Mutex(new PosixMutexImpl())
-{
+Mutex* Mutex::create(ObjPool* pool) {
+    return pool->make<PosixMutexImpl>();
 }
 
-Mutex::Mutex(CoroExecutor* exec)
-    : Mutex(exec->createSemaphore(1))
-{
-}
-
-SemaphoreIface* Mutex::defaultImpl(ObjPool* pool) {
-    struct Impl: public PosixMutexImpl {
-        bool owned() const noexcept override {
-            return true;
-        }
-    };
-
-    return pool->make<Impl>();
-}
-
-Mutex* Mutex::createDefault(ObjPool* pool) {
-    return pool->make<Mutex>(defaultImpl(pool));
+Mutex* Mutex::create(ObjPool* pool, CoroExecutor* exec) {
+    return exec->createMutex(pool);
 }
 
 Mutex* Mutex::createSpinLock(ObjPool* pool) {
-    return createSpinLock(pool, nullptr);
+    return pool->make<SpinMutexImpl>(nullptr);
 }
 
 Mutex* Mutex::createSpinLock(ObjPool* pool, CoroExecutor* exec) {
-    return pool->make<Mutex>(spinLock(pool, exec));
-}
-
-SemaphoreIface* Mutex::spinLock(CoroExecutor* exec) {
-    return new SpinSemImpl(exec);
-}
-
-SemaphoreIface* Mutex::spinLock(ObjPool* pool, CoroExecutor* exec) {
-    struct Impl: public SpinSemImpl {
-        using SpinSemImpl::SpinSemImpl;
-
-        bool owned() const noexcept override {
-            return true;
-        }
-    };
-
-    return pool->make<Impl>(exec);
-}
-
-Mutex::Mutex(SemaphoreIface* iface)
-    : impl(iface)
-{
-}
-
-Mutex::Mutex(bool locked)
-    : Mutex()
-{
-    if (locked) {
-        lock();
-    }
-}
-
-Mutex::~Mutex() noexcept {
-    if (!impl->owned()) {
-        delete impl;
-    }
-}
-
-void Mutex::lock() noexcept {
-    impl->wait();
-}
-
-void Mutex::unlock() noexcept {
-    impl->post();
-}
-
-bool Mutex::tryLock() noexcept {
-    return impl->tryWait();
-}
-
-void* Mutex::nativeHandle() noexcept {
-    return impl->nativeHandle();
+    return pool->make<SpinMutexImpl>(exec);
 }

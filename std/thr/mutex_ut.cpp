@@ -10,7 +10,8 @@ using namespace stl;
 
 STD_TEST_SUITE(Mutex) {
     STD_TEST(BasicLockUnlock) {
-        Mutex mutex;
+        auto pool = ObjPool::fromMemory();
+        auto& mutex = *Mutex::create(pool.mutPtr());
 
         mutex.lock();
         mutex.unlock();
@@ -20,7 +21,8 @@ STD_TEST_SUITE(Mutex) {
     }
 
     STD_TEST(TryLockSuccess) {
-        Mutex mutex;
+        auto pool = ObjPool::fromMemory();
+        auto& mutex = *Mutex::create(pool.mutPtr());
 
         bool locked = mutex.tryLock();
         STD_INSIST(locked == true);
@@ -29,7 +31,8 @@ STD_TEST_SUITE(Mutex) {
     }
 
     STD_TEST(TryLockFail) {
-        Mutex mutex;
+        auto pool = ObjPool::fromMemory();
+        auto& mutex = *Mutex::create(pool.mutPtr());
 
         mutex.lock();
         bool locked = mutex.tryLock();
@@ -39,7 +42,8 @@ STD_TEST_SUITE(Mutex) {
     }
 
     STD_TEST(MultipleLockUnlock) {
-        Mutex mutex;
+        auto pool = ObjPool::fromMemory();
+        auto& mutex = *Mutex::create(pool.mutPtr());
 
         for (int i = 0; i < 100; ++i) {
             mutex.lock();
@@ -48,7 +52,8 @@ STD_TEST_SUITE(Mutex) {
     }
 
     STD_TEST(TryLockMultiple) {
-        Mutex mutex;
+        auto pool = ObjPool::fromMemory();
+        auto& mutex = *Mutex::create(pool.mutPtr());
 
         for (int i = 0; i < 100; ++i) {
             bool locked = mutex.tryLock();
@@ -58,7 +63,8 @@ STD_TEST_SUITE(Mutex) {
     }
 
     STD_TEST(LockGuardBasic) {
-        Mutex mutex;
+        auto pool = ObjPool::fromMemory();
+        auto& mutex = *Mutex::create(pool.mutPtr());
 
         {
             LockGuard guard(mutex);
@@ -70,8 +76,9 @@ STD_TEST_SUITE(Mutex) {
     }
 
     STD_TEST(LockGuardNested) {
-        Mutex mutex1;
-        Mutex mutex2;
+        auto pool = ObjPool::fromMemory();
+        auto& mutex1 = *Mutex::create(pool.mutPtr());
+        auto& mutex2 = *Mutex::create(pool.mutPtr());
 
         {
             LockGuard guard1(mutex1);
@@ -91,7 +98,8 @@ STD_TEST_SUITE(Mutex) {
     }
 
     STD_TEST(LockGuardException) {
-        Mutex mutex;
+        auto pool = ObjPool::fromMemory();
+        auto& mutex = *Mutex::create(pool.mutPtr());
 
         try {
             LockGuard guard(mutex);
@@ -105,9 +113,10 @@ STD_TEST_SUITE(Mutex) {
     }
 
     STD_TEST(MutexConstruction) {
-        Mutex mutex1;
-        Mutex mutex2;
-        Mutex mutex3;
+        auto pool = ObjPool::fromMemory();
+        auto& mutex1 = *Mutex::create(pool.mutPtr());
+        auto& mutex2 = *Mutex::create(pool.mutPtr());
+        auto& mutex3 = *Mutex::create(pool.mutPtr());
 
         mutex1.lock();
         mutex2.lock();
@@ -119,7 +128,8 @@ STD_TEST_SUITE(Mutex) {
     }
 
     STD_TEST(LockUnlockSequence) {
-        Mutex mutex;
+        auto pool = ObjPool::fromMemory();
+        auto& mutex = *Mutex::create(pool.mutPtr());
 
         mutex.lock();
         mutex.unlock();
@@ -135,7 +145,8 @@ STD_TEST_SUITE(Mutex) {
 
 STD_TEST_SUITE(SpinMutex) {
     STD_TEST(BasicLockUnlock) {
-        Mutex mtx(Mutex::spinLock(nullptr));
+        auto pool = ObjPool::fromMemory();
+        auto& mtx = *Mutex::createSpinLock(pool.mutPtr());
 
         mtx.lock();
         mtx.unlock();
@@ -145,7 +156,8 @@ STD_TEST_SUITE(SpinMutex) {
     }
 
     STD_TEST(TryLockSuccess) {
-        Mutex mtx(Mutex::spinLock(nullptr));
+        auto pool = ObjPool::fromMemory();
+        auto& mtx = *Mutex::createSpinLock(pool.mutPtr());
 
         bool locked = mtx.tryLock();
         STD_INSIST(locked == true);
@@ -154,7 +166,8 @@ STD_TEST_SUITE(SpinMutex) {
     }
 
     STD_TEST(TryLockFail) {
-        Mutex mtx(Mutex::spinLock(nullptr));
+        auto pool = ObjPool::fromMemory();
+        auto& mtx = *Mutex::createSpinLock(pool.mutPtr());
 
         mtx.lock();
         bool locked = mtx.tryLock();
@@ -164,7 +177,8 @@ STD_TEST_SUITE(SpinMutex) {
     }
 
     STD_TEST(MultipleLockUnlock) {
-        Mutex mtx(Mutex::spinLock(nullptr));
+        auto pool = ObjPool::fromMemory();
+        auto& mtx = *Mutex::createSpinLock(pool.mutPtr());
 
         for (int i = 0; i < 100; ++i) {
             mtx.lock();
@@ -173,7 +187,8 @@ STD_TEST_SUITE(SpinMutex) {
     }
 
     STD_TEST(LockGuardBasic) {
-        Mutex mtx(Mutex::spinLock(nullptr));
+        auto pool = ObjPool::fromMemory();
+        auto& mtx = *Mutex::createSpinLock(pool.mutPtr());
 
         {
             LockGuard guard(mtx);
@@ -185,8 +200,8 @@ STD_TEST_SUITE(SpinMutex) {
     }
 
     STD_TEST(Contention) {
-        Mutex mtx(Mutex::spinLock(nullptr));
         auto opool = ObjPool::fromMemory();
+        auto& mtx = *Mutex::createSpinLock(opool.mutPtr());
         auto pool = ThreadPool::simple(opool.mutPtr(), 4);
         int counter = 0;
 
@@ -206,7 +221,7 @@ STD_TEST_SUITE(SpinMutex) {
     STD_TEST(CoroBasicLockUnlock) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Mutex mtx(Mutex::spinLock(exec));
+        auto& mtx = *Mutex::createSpinLock(pool.mutPtr(), exec);
 
         exec->spawn([&] {
             mtx.lock();
@@ -222,7 +237,7 @@ STD_TEST_SUITE(SpinMutex) {
     STD_TEST(CoroContention) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Mutex mtx(Mutex::spinLock(exec));
+        auto& mtx = *Mutex::createSpinLock(pool.mutPtr(), exec);
         int counter = 0;
 
         for (int i = 0; i < 4; ++i) {
@@ -242,7 +257,7 @@ STD_TEST_SUITE(SpinMutex) {
 STD_TEST_SUITE(PoolMutex) {
     STD_TEST(DefaultBasicLockUnlock) {
         auto pool = ObjPool::fromMemory();
-        auto mtx = Mutex::createDefault(pool.mutPtr());
+        auto mtx = Mutex::create(pool.mutPtr());
 
         mtx->lock();
         mtx->unlock();
@@ -253,7 +268,7 @@ STD_TEST_SUITE(PoolMutex) {
 
     STD_TEST(DefaultTryLock) {
         auto pool = ObjPool::fromMemory();
-        auto mtx = Mutex::createDefault(pool.mutPtr());
+        auto mtx = Mutex::create(pool.mutPtr());
 
         bool locked = mtx->tryLock();
         STD_INSIST(locked == true);
@@ -267,7 +282,7 @@ STD_TEST_SUITE(PoolMutex) {
 
     STD_TEST(DefaultLockGuard) {
         auto pool = ObjPool::fromMemory();
-        auto mtx = Mutex::createDefault(pool.mutPtr());
+        auto mtx = Mutex::create(pool.mutPtr());
 
         {
             LockGuard guard(*mtx);
@@ -280,7 +295,7 @@ STD_TEST_SUITE(PoolMutex) {
 
     STD_TEST(SpinLockBasicLockUnlock) {
         auto pool = ObjPool::fromMemory();
-        auto mtx = Mutex::createSpinLock(pool.mutPtr(), nullptr);
+        auto mtx = Mutex::createSpinLock(pool.mutPtr());
 
         mtx->lock();
         mtx->unlock();
@@ -291,7 +306,7 @@ STD_TEST_SUITE(PoolMutex) {
 
     STD_TEST(SpinLockTryLock) {
         auto pool = ObjPool::fromMemory();
-        auto mtx = Mutex::createSpinLock(pool.mutPtr(), nullptr);
+        auto mtx = Mutex::createSpinLock(pool.mutPtr());
 
         bool locked = mtx->tryLock();
         STD_INSIST(locked == true);
@@ -305,7 +320,7 @@ STD_TEST_SUITE(PoolMutex) {
 
     STD_TEST(SpinLockLockGuard) {
         auto pool = ObjPool::fromMemory();
-        auto mtx = Mutex::createSpinLock(pool.mutPtr(), nullptr);
+        auto mtx = Mutex::createSpinLock(pool.mutPtr());
 
         {
             LockGuard guard(*mtx);
@@ -318,7 +333,7 @@ STD_TEST_SUITE(PoolMutex) {
 
     STD_TEST(SpinLockContention) {
         auto opool = ObjPool::fromMemory();
-        auto mtx = Mutex::createSpinLock(opool.mutPtr(), nullptr);
+        auto mtx = Mutex::createSpinLock(opool.mutPtr());
         auto pool = ThreadPool::simple(opool.mutPtr(), 4);
         int counter = 0;
 
@@ -340,7 +355,7 @@ STD_TEST_SUITE(CoroMutex) {
     STD_TEST(BasicLockUnlock) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Mutex mtx(exec);
+        auto& mtx = *Mutex::create(pool.mutPtr(), exec);
 
         exec->spawn([&] {
             mtx.lock();
@@ -357,7 +372,7 @@ STD_TEST_SUITE(CoroMutex) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         bool result = false;
-        Mutex mtx(exec);
+        auto& mtx = *Mutex::create(pool.mutPtr(), exec);
 
         exec->spawn([&] {
             result = mtx.tryLock();
@@ -374,7 +389,7 @@ STD_TEST_SUITE(CoroMutex) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         bool result = true;
-        Mutex mtx(exec);
+        auto& mtx = *Mutex::create(pool.mutPtr(), exec);
 
         exec->spawn([&] {
             mtx.lock();
@@ -389,7 +404,7 @@ STD_TEST_SUITE(CoroMutex) {
     STD_TEST(MultipleLockUnlock) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Mutex mtx(exec);
+        auto& mtx = *Mutex::create(pool.mutPtr(), exec);
 
         exec->spawn([&] {
             for (int i = 0; i < 100; ++i) {
@@ -405,7 +420,7 @@ STD_TEST_SUITE(CoroMutex) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         bool ok = true;
-        Mutex mtx(exec);
+        auto& mtx = *Mutex::create(pool.mutPtr(), exec);
 
         exec->spawn([&] {
             for (int i = 0; i < 100; ++i) {
@@ -425,7 +440,7 @@ STD_TEST_SUITE(CoroMutex) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         bool result = false;
-        Mutex mtx(exec);
+        auto& mtx = *Mutex::create(pool.mutPtr(), exec);
 
         exec->spawn([&] {
             {
@@ -445,8 +460,8 @@ STD_TEST_SUITE(CoroMutex) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         bool r1 = false, r2 = false;
-        Mutex mtx1(exec);
-        Mutex mtx2(exec);
+        auto& mtx1 = *Mutex::create(pool.mutPtr(), exec);
+        auto& mtx2 = *Mutex::create(pool.mutPtr(), exec);
 
         exec->spawn([&] {
             {
@@ -473,9 +488,9 @@ STD_TEST_SUITE(CoroMutex) {
     STD_TEST(MutexConstruction) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Mutex mtx1(exec);
-        Mutex mtx2(exec);
-        Mutex mtx3(exec);
+        auto& mtx1 = *Mutex::create(pool.mutPtr(), exec);
+        auto& mtx2 = *Mutex::create(pool.mutPtr(), exec);
+        auto& mtx3 = *Mutex::create(pool.mutPtr(), exec);
 
         exec->spawn([&] {
             mtx1.lock();
@@ -493,7 +508,7 @@ STD_TEST_SUITE(CoroMutex) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         bool result = false;
-        Mutex mtx(exec);
+        auto& mtx = *Mutex::create(pool.mutPtr(), exec);
 
         exec->spawn([&] {
             mtx.lock();

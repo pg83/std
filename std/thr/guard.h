@@ -1,7 +1,7 @@
 #pragma once
 
 namespace stl {
-    class Mutex;
+    struct Mutex;
 
     class LockGuard {
         Mutex* mutex_;

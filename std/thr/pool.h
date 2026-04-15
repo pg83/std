@@ -5,7 +5,7 @@
 #include <std/sys/types.h>
 
 namespace stl {
-    class Mutex;
+    struct Mutex;
     class ObjPool;
     struct CondVar;
     class IntrusiveList;

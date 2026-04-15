@@ -18,7 +18,7 @@ namespace {
         int work;
         int counter;
         ObjPool::Ref opool;
-        Mutex mutex;
+        Mutex* mutex;
         CondVar* condVar;
 
         StressState(ThreadPool* p, int w)
@@ -26,6 +26,7 @@ namespace {
             , work(w)
             , counter(1)
             , opool(ObjPool::fromMemory())
+            , mutex(Mutex::create(opool.mutPtr()))
             , condVar(CondVar::create(opool.mutPtr()))
         {
         }
@@ -68,7 +69,7 @@ namespace {
             delete this;
 
             if (stdAtomicSubAndFetch(&state->counter, 1, MemoryOrder::Release) == 0) {
-                LockGuard lock(state->mutex);
+                LockGuard lock(*state->mutex);
                 state->condVar->signal();
             }
         }

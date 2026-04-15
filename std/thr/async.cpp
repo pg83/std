@@ -5,6 +5,7 @@
 #include "semaphore.h"
 
 #include <std/ptr/arc.h>
+#include <std/mem/obj_pool.h>
 #include <std/alg/exchange.h>
 
 using namespace stl;
@@ -12,19 +13,22 @@ using namespace stl;
 namespace {
     struct FutureImpl: public FutureIface {
         ARC arc;
-        Semaphore sem;
+        ObjPool::Ref semPool;
+        Semaphore* sem;
         void* value;
         ProducerIface* prod;
 
         FutureImpl(ProducerIface* p) noexcept
-            : sem(0)
+            : semPool(ObjPool::fromMemory())
+            , sem(Semaphore::create(semPool.mutPtr(), 0))
             , value(nullptr)
             , prod(p)
         {
         }
 
         FutureImpl(CoroExecutor* exec, ProducerIface* p) noexcept
-            : sem(0, exec)
+            : semPool(ObjPool::fromMemory())
+            , sem(Semaphore::create(semPool.mutPtr(), 0, exec))
             , value(nullptr)
             , prod(p)
         {
@@ -48,7 +52,7 @@ namespace {
         }
 
         void* wait() noexcept override {
-            sem.wait();
+            sem->wait();
             return value;
         }
 
@@ -62,7 +66,7 @@ namespace {
 
         void execute() {
             value = prod->run();
-            sem.post();
+            sem->post();
         }
     };
 }

@@ -7,6 +7,7 @@
 
 #include <std/mem/new.h>
 #include <std/sys/atomic.h>
+#include <std/mem/obj_pool.h>
 
 #ifdef __linux__
     #include <unistd.h>
@@ -49,33 +50,32 @@ namespace {
     using DefaultEventImpl = FutexEventImpl;
 #else
     struct PosixEventImpl: public EventIface, public Newable {
-        Mutex mu_;
+        ObjPool::Ref pool_;
+        Mutex* mu_;
         CondVar* cv_;
         bool signaled_;
 
         PosixEventImpl() noexcept
-            : cv_(CondVar::create())
+            : pool_(ObjPool::fromMemory())
+            , mu_(Mutex::create(pool_.mutPtr()))
+            , cv_(CondVar::create(pool_.mutPtr()))
             , signaled_(false)
         {
         }
 
-        ~PosixEventImpl() noexcept {
-            delete cv_;
-        }
-
         void wait(Runable& cb) noexcept override {
-            mu_.lock();
+            mu_->lock();
             cb.run();
 
             while (!signaled_) {
-                cv_->wait(mu_);
+                cv_->wait(*mu_);
             }
 
-            mu_.unlock();
+            mu_->unlock();
         }
 
         void signal() noexcept override {
-            LockGuard guard(mu_);
+            LockGuard guard(*mu_);
             signaled_ = true;
             cv_->signal();
         }

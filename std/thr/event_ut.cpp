@@ -54,7 +54,8 @@ STD_TEST_SUITE(EventDefault) {
 
     STD_TEST(CallbackUnlocksMutex) {
         Event ev;
-        Mutex mu;
+        auto pool = ObjPool::fromMemory();
+        auto& mu = *Mutex::create(pool.mutPtr());
         int value = 0;
 
         mu.lock();
@@ -148,7 +149,8 @@ STD_TEST_SUITE(EventDefault) {
 
         for (int i = 0; i < N; ++i) {
             Event ev;
-            Mutex mu;
+            auto pool = ObjPool::fromMemory();
+            auto& mu = *Mutex::create(pool.mutPtr());
             int slot = 0;
 
             mu.lock();

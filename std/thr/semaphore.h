@@ -3,21 +3,17 @@
 #include <std/sys/types.h>
 
 namespace stl {
+    class ObjPool;
+
     struct CoroExecutor;
-    struct SemaphoreIface;
 
-    class Semaphore {
-        SemaphoreIface* impl_;
+    struct Semaphore {
+        virtual void post() noexcept = 0;
+        virtual void wait() noexcept = 0;
+        virtual bool tryWait() noexcept = 0;
+        virtual void* nativeHandle() noexcept;
 
-    public:
-        explicit Semaphore(size_t initial);
-        Semaphore(size_t initial, CoroExecutor* exec);
-
-        ~Semaphore() noexcept;
-
-        void post() noexcept;
-        void wait() noexcept;
-        bool tryWait() noexcept;
-        void* nativeHandle() noexcept;
+        static Semaphore* create(ObjPool* pool, size_t initial);
+        static Semaphore* create(ObjPool* pool, size_t initial, CoroExecutor* exec);
     };
 }

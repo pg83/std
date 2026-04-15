@@ -1,8 +1,10 @@
 #pragma once
 
 namespace stl {
-    class Mutex;
     class ObjPool;
+
+    struct Mutex;
+    struct CoroExecutor;
 
     struct CondVar {
         virtual void wait(Mutex& mutex) noexcept = 0;
@@ -10,5 +12,6 @@ namespace stl {
         virtual void broadcast() noexcept = 0;
 
         static CondVar* create(ObjPool* pool);
+        static CondVar* create(ObjPool* pool, CoroExecutor* exec);
     };
 }
