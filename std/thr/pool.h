@@ -7,7 +7,7 @@
 namespace stl {
     class Mutex;
     class ObjPool;
-    class CondVar;
+    struct CondVar;
     class IntrusiveList;
 
     struct ThreadPoolHooks {

@@ -11,7 +11,8 @@ using namespace stl;
 
 STD_TEST_SUITE(WaitGroup) {
     STD_TEST(SingleThread) {
-        WaitGroup wg(0);
+        auto pool = ObjPool::fromMemory();
+        auto& wg = *WaitGroup::create(pool.mutPtr(), 0);
         int counter = 0;
 
         wg.add(1);
@@ -23,7 +24,8 @@ STD_TEST_SUITE(WaitGroup) {
     }
 
     STD_TEST(TwoThreads) {
-        WaitGroup wg(0);
+        auto pool = ObjPool::fromMemory();
+        auto& wg = *WaitGroup::create(pool.mutPtr(), 0);
         int counter = 0;
 
         wg.add(2);
@@ -42,7 +44,8 @@ STD_TEST_SUITE(WaitGroup) {
 
     STD_TEST(ManyThreads) {
         const int N = 8;
-        WaitGroup wg(0);
+        auto pool = ObjPool::fromMemory();
+        auto& wg = *WaitGroup::create(pool.mutPtr(), 0);
         int counter = 0;
 
         wg.add(N);
@@ -84,7 +87,8 @@ STD_TEST_SUITE(WaitGroup) {
     }
 
     STD_TEST(AddMultipleTimes) {
-        WaitGroup wg(0);
+        auto pool = ObjPool::fromMemory();
+        auto& wg = *WaitGroup::create(pool.mutPtr(), 0);
         int counter = 0;
 
         wg.add(1);
@@ -110,7 +114,8 @@ STD_TEST_SUITE(WaitGroup) {
     }
 
     STD_TEST(ReuseAfterWait) {
-        WaitGroup wg(0);
+        auto pool = ObjPool::fromMemory();
+        auto& wg = *WaitGroup::create(pool.mutPtr(), 0);
         int counter = 0;
 
         for (int round = 0; round < 3; ++round) {
@@ -128,7 +133,7 @@ STD_TEST_SUITE(WaitGroup) {
     STD_TEST(CoroBasic) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        WaitGroup wg(0, exec);
+        auto& wg = *WaitGroup::create(pool.mutPtr(), 0, exec);
         int counter = 0;
 
         exec->spawn([&] {
@@ -150,7 +155,7 @@ STD_TEST_SUITE(WaitGroup) {
         const int N = 8;
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        WaitGroup wg(0, exec);
+        auto& wg = *WaitGroup::create(pool.mutPtr(), 0, exec);
         int counter = 0;
 
         exec->spawn([&] {
@@ -173,7 +178,7 @@ STD_TEST_SUITE(WaitGroup) {
     STD_TEST(CoroReuseAfterWait) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        WaitGroup wg(0, exec);
+        auto& wg = *WaitGroup::create(pool.mutPtr(), 0, exec);
         int counter = 0;
 
         exec->spawn([&] {

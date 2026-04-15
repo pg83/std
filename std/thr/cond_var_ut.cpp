@@ -87,38 +87,47 @@ namespace {
 
 STD_TEST_SUITE(CondVar) {
     STD_TEST(BasicConstruction) {
-        CondVar cv1;
-        CondVar cv2;
-        CondVar cv3;
+        auto pool = ObjPool::fromMemory();
+
+        CondVar::create(pool.mutPtr());
+        CondVar::create(pool.mutPtr());
+        CondVar::create(pool.mutPtr());
     }
 
     STD_TEST(SignalWithoutWaiters) {
-        CondVar cv;
-        cv.signal();
-        cv.signal();
-        cv.signal();
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
+
+        cv->signal();
+        cv->signal();
+        cv->signal();
+
     }
 
     STD_TEST(BroadcastWithoutWaiters) {
-        CondVar cv;
-        cv.broadcast();
-        cv.broadcast();
-        cv.broadcast();
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
+
+        cv->broadcast();
+        cv->broadcast();
+        cv->broadcast();
+
     }
 
     STD_TEST(WaitAndSignal) {
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         bool ready = false;
         bool executed = false;
 
-        WaitSignalRunable runnable(&mutex, &cv, &ready, &executed);
+        WaitSignalRunable runnable(&mutex, cv, &ready, &executed);
         Thread thread(runnable);
 
         {
             LockGuard lock(mutex);
             ready = true;
-            cv.signal();
+            cv->signal();
         }
 
         thread.join();
@@ -127,17 +136,18 @@ STD_TEST_SUITE(CondVar) {
 
     STD_TEST(WaitAndBroadcast) {
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         bool ready = false;
         bool executed = false;
 
-        WaitSignalRunable runnable(&mutex, &cv, &ready, &executed);
+        WaitSignalRunable runnable(&mutex, cv, &ready, &executed);
         Thread thread(runnable);
 
         {
             LockGuard lock(mutex);
             ready = true;
-            cv.broadcast();
+            cv->broadcast();
         }
 
         thread.join();
@@ -146,13 +156,14 @@ STD_TEST_SUITE(CondVar) {
 
     STD_TEST(MultipleWaitersBroadcast) {
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         bool ready = false;
         int counter = 0;
 
-        WaitBroadcastRunable runnable1(&mutex, &cv, &ready, &counter);
-        WaitBroadcastRunable runnable2(&mutex, &cv, &ready, &counter);
-        WaitBroadcastRunable runnable3(&mutex, &cv, &ready, &counter);
+        WaitBroadcastRunable runnable1(&mutex, cv, &ready, &counter);
+        WaitBroadcastRunable runnable2(&mutex, cv, &ready, &counter);
+        WaitBroadcastRunable runnable3(&mutex, cv, &ready, &counter);
 
         Thread thread1(runnable1);
         Thread thread2(runnable2);
@@ -161,7 +172,7 @@ STD_TEST_SUITE(CondVar) {
         {
             LockGuard lock(mutex);
             ready = true;
-            cv.broadcast();
+            cv->broadcast();
         }
 
         thread1.join();
@@ -173,12 +184,13 @@ STD_TEST_SUITE(CondVar) {
 
     STD_TEST(SignalWakesOneWaiter) {
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         bool ready = false;
         int counter = 0;
 
-        WaitBroadcastRunable runnable1(&mutex, &cv, &ready, &counter);
-        WaitBroadcastRunable runnable2(&mutex, &cv, &ready, &counter);
+        WaitBroadcastRunable runnable1(&mutex, cv, &ready, &counter);
+        WaitBroadcastRunable runnable2(&mutex, cv, &ready, &counter);
 
         Thread thread1(runnable1);
         Thread thread2(runnable2);
@@ -186,8 +198,8 @@ STD_TEST_SUITE(CondVar) {
         {
             LockGuard lock(mutex);
             ready = true;
-            cv.signal();
-            cv.signal();
+            cv->signal();
+            cv->signal();
         }
 
         thread1.join();
@@ -198,18 +210,19 @@ STD_TEST_SUITE(CondVar) {
 
     STD_TEST(ProducerConsumerPattern) {
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         int data = 0;
         bool dataReady = false;
 
-        ProducerConsumerRunable consumer(&mutex, &cv, &data, &dataReady, 42);
+        ProducerConsumerRunable consumer(&mutex, cv, &data, &dataReady, 42);
         Thread consumerThread(consumer);
 
         {
             LockGuard lock(mutex);
             data = 42;
             dataReady = true;
-            cv.signal();
+            cv->signal();
         }
 
         consumerThread.join();
@@ -217,13 +230,14 @@ STD_TEST_SUITE(CondVar) {
 
     STD_TEST(MultipleProducersConsumers) {
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         int data = 0;
         bool dataReady = false;
 
-        ProducerConsumerRunable consumer1(&mutex, &cv, &data, &dataReady, 100);
-        ProducerConsumerRunable consumer2(&mutex, &cv, &data, &dataReady, 100);
-        ProducerConsumerRunable consumer3(&mutex, &cv, &data, &dataReady, 100);
+        ProducerConsumerRunable consumer1(&mutex, cv, &data, &dataReady, 100);
+        ProducerConsumerRunable consumer2(&mutex, cv, &data, &dataReady, 100);
+        ProducerConsumerRunable consumer3(&mutex, cv, &data, &dataReady, 100);
 
         Thread thread1(consumer1);
         Thread thread2(consumer2);
@@ -233,7 +247,7 @@ STD_TEST_SUITE(CondVar) {
             LockGuard lock(mutex);
             data = 100;
             dataReady = true;
-            cv.broadcast();
+            cv->broadcast();
         }
 
         thread1.join();
@@ -243,31 +257,32 @@ STD_TEST_SUITE(CondVar) {
 
     STD_TEST(SequentialWaitSignal) {
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         bool ready1 = false;
         bool ready2 = false;
         bool executed1 = false;
         bool executed2 = false;
 
-        WaitSignalRunable runnable1(&mutex, &cv, &ready1, &executed1);
+        WaitSignalRunable runnable1(&mutex, cv, &ready1, &executed1);
         Thread thread1(runnable1);
 
         {
             LockGuard lock(mutex);
             ready1 = true;
-            cv.signal();
+            cv->signal();
         }
 
         thread1.join();
         STD_INSIST(executed1 == true);
 
-        WaitSignalRunable runnable2(&mutex, &cv, &ready2, &executed2);
+        WaitSignalRunable runnable2(&mutex, cv, &ready2, &executed2);
         Thread thread2(runnable2);
 
         {
             LockGuard lock(mutex);
             ready2 = true;
-            cv.signal();
+            cv->signal();
         }
 
         thread2.join();
@@ -301,17 +316,18 @@ STD_TEST_SUITE(CondVar) {
         };
 
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         int value = 0;
         bool done = false;
 
-        SpuriousWaitRunable runnable(&mutex, &cv, &value, 5, &done);
+        SpuriousWaitRunable runnable(&mutex, cv, &value, 5, &done);
         Thread thread(runnable);
 
         for (int i = 1; i <= 5; ++i) {
             LockGuard lock(mutex);
             value = i;
-            cv.signal();
+            cv->signal();
         }
 
         thread.join();
@@ -321,15 +337,16 @@ STD_TEST_SUITE(CondVar) {
 
     STD_TEST(MultipleCondVarsOneMutex) {
         Mutex mutex;
-        CondVar cv1;
-        CondVar cv2;
+        auto pool = ObjPool::fromMemory();
+        auto cv1 = CondVar::create(pool.mutPtr());
+        auto cv2 = CondVar::create(pool.mutPtr());
         bool ready1 = false;
         bool ready2 = false;
         bool executed1 = false;
         bool executed2 = false;
 
-        WaitSignalRunable runnable1(&mutex, &cv1, &ready1, &executed1);
-        WaitSignalRunable runnable2(&mutex, &cv2, &ready2, &executed2);
+        WaitSignalRunable runnable1(&mutex, cv1, &ready1, &executed1);
+        WaitSignalRunable runnable2(&mutex, cv2, &ready2, &executed2);
 
         Thread thread1(runnable1);
         Thread thread2(runnable2);
@@ -337,13 +354,13 @@ STD_TEST_SUITE(CondVar) {
         {
             LockGuard lock(mutex);
             ready1 = true;
-            cv1.signal();
+            cv1->signal();
         }
 
         {
             LockGuard lock(mutex);
             ready2 = true;
-            cv2.signal();
+            cv2->signal();
         }
 
         thread1.join();
@@ -355,12 +372,13 @@ STD_TEST_SUITE(CondVar) {
 
     STD_TEST(BroadcastMultipleTimes) {
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         bool ready = false;
         int counter = 0;
 
-        WaitBroadcastRunable runnable1(&mutex, &cv, &ready, &counter);
-        WaitBroadcastRunable runnable2(&mutex, &cv, &ready, &counter);
+        WaitBroadcastRunable runnable1(&mutex, cv, &ready, &counter);
+        WaitBroadcastRunable runnable2(&mutex, cv, &ready, &counter);
 
         Thread thread1(runnable1);
         Thread thread2(runnable2);
@@ -368,9 +386,9 @@ STD_TEST_SUITE(CondVar) {
         {
             LockGuard lock(mutex);
             ready = true;
-            cv.broadcast();
-            cv.broadcast();
-            cv.broadcast();
+            cv->broadcast();
+            cv->broadcast();
+            cv->broadcast();
         }
 
         thread1.join();
@@ -404,17 +422,18 @@ STD_TEST_SUITE(CondVar) {
         };
 
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         bool predicate = false;
         int result = 0;
 
-        PredicateWaitRunable runnable(&mutex, &cv, &predicate, &result);
+        PredicateWaitRunable runnable(&mutex, cv, &predicate, &result);
         Thread thread(runnable);
 
         {
             LockGuard lock(mutex);
             predicate = true;
-            cv.signal();
+            cv->signal();
         }
 
         thread.join();
@@ -447,20 +466,21 @@ STD_TEST_SUITE(CondVar) {
         };
 
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         bool ready = false;
         bool done = false;
 
         {
             LockGuard lock(mutex);
-            DetachWaitRunable runnable(&mutex, &cv, &ready, &done);
+            DetachWaitRunable runnable(&mutex, cv, &ready, &done);
             detach(runnable);
 
             ready = true;
-            cv.signal();
+            cv->signal();
 
             while (!done) {
-                cv.wait(mutex);
+                cv->wait(mutex);
             }
         }
 
@@ -513,11 +533,12 @@ STD_TEST_SUITE(CondVar) {
         };
 
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         int phase = 0;
 
-        Phase1Runable runnable1(&mutex, &cv, &phase);
-        Phase2Runable runnable2(&mutex, &cv, &phase);
+        Phase1Runable runnable1(&mutex, cv, &phase);
+        Phase2Runable runnable2(&mutex, cv, &phase);
 
         Thread thread1(runnable1);
         Thread thread2(runnable2);
@@ -525,10 +546,10 @@ STD_TEST_SUITE(CondVar) {
         {
             LockGuard lock(mutex);
             phase = 1;
-            cv.broadcast();
+            cv->broadcast();
 
             while (phase != 3) {
-                cv.wait(mutex);
+                cv->wait(mutex);
             }
         }
 
@@ -540,41 +561,46 @@ STD_TEST_SUITE(CondVar) {
 
     STD_TEST(RapidSignaling) {
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
 
         for (int i = 0; i < 1000; ++i) {
             LockGuard lock(mutex);
-            cv.signal();
+            cv->signal();
         }
+
     }
 
     STD_TEST(RapidBroadcasting) {
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
 
         for (int i = 0; i < 1000; ++i) {
             LockGuard lock(mutex);
-            cv.broadcast();
+            cv->broadcast();
         }
+
     }
 
     STD_TEST(ManyWaitersBroadcast) {
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         bool ready = false;
         int counter = 0;
         const int numThreads = 10;
 
-        WaitBroadcastRunable runnable1(&mutex, &cv, &ready, &counter);
-        WaitBroadcastRunable runnable2(&mutex, &cv, &ready, &counter);
-        WaitBroadcastRunable runnable3(&mutex, &cv, &ready, &counter);
-        WaitBroadcastRunable runnable4(&mutex, &cv, &ready, &counter);
-        WaitBroadcastRunable runnable5(&mutex, &cv, &ready, &counter);
-        WaitBroadcastRunable runnable6(&mutex, &cv, &ready, &counter);
-        WaitBroadcastRunable runnable7(&mutex, &cv, &ready, &counter);
-        WaitBroadcastRunable runnable8(&mutex, &cv, &ready, &counter);
-        WaitBroadcastRunable runnable9(&mutex, &cv, &ready, &counter);
-        WaitBroadcastRunable runnable10(&mutex, &cv, &ready, &counter);
+        WaitBroadcastRunable runnable1(&mutex, cv, &ready, &counter);
+        WaitBroadcastRunable runnable2(&mutex, cv, &ready, &counter);
+        WaitBroadcastRunable runnable3(&mutex, cv, &ready, &counter);
+        WaitBroadcastRunable runnable4(&mutex, cv, &ready, &counter);
+        WaitBroadcastRunable runnable5(&mutex, cv, &ready, &counter);
+        WaitBroadcastRunable runnable6(&mutex, cv, &ready, &counter);
+        WaitBroadcastRunable runnable7(&mutex, cv, &ready, &counter);
+        WaitBroadcastRunable runnable8(&mutex, cv, &ready, &counter);
+        WaitBroadcastRunable runnable9(&mutex, cv, &ready, &counter);
+        WaitBroadcastRunable runnable10(&mutex, cv, &ready, &counter);
 
         Thread thread1(runnable1);
         Thread thread2(runnable2);
@@ -590,7 +616,7 @@ STD_TEST_SUITE(CondVar) {
         {
             LockGuard lock(mutex);
             ready = true;
-            cv.broadcast();
+            cv->broadcast();
         }
 
         thread1.join();
@@ -612,13 +638,12 @@ STD_TEST_SUITE(CoroCondVar) {
     STD_TEST(SignalWithoutWaiters) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         exec->spawn([&] {
-            cv.signal();
-            cv.signal();
-            cv.signal();
+            cv->signal();
+            cv->signal();
+            cv->signal();
         });
 
         exec->join();
@@ -627,12 +652,12 @@ STD_TEST_SUITE(CoroCondVar) {
     STD_TEST(BroadcastWithoutWaiters) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         exec->spawn([&] {
-            cv.broadcast();
-            cv.broadcast();
-            cv.broadcast();
+            cv->broadcast();
+            cv->broadcast();
+            cv->broadcast();
         });
 
         exec->join();
@@ -644,12 +669,12 @@ STD_TEST_SUITE(CoroCondVar) {
         bool ready = false;
         bool executed = false;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         exec->spawn([&] {
             LockGuard lock(mtx);
             while (!ready) {
-                cv.wait(mtx);
+                cv->wait(mtx);
             }
             executed = true;
         });
@@ -657,7 +682,7 @@ STD_TEST_SUITE(CoroCondVar) {
         exec->spawn([&] {
             LockGuard lock(mtx);
             ready = true;
-            cv.signal();
+            cv->signal();
         });
 
         exec->join();
@@ -670,12 +695,12 @@ STD_TEST_SUITE(CoroCondVar) {
         bool ready = false;
         bool executed = false;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         exec->spawn([&] {
             LockGuard lock(mtx);
             while (!ready) {
-                cv.wait(mtx);
+                cv->wait(mtx);
             }
             executed = true;
         });
@@ -683,7 +708,7 @@ STD_TEST_SUITE(CoroCondVar) {
         exec->spawn([&] {
             LockGuard lock(mtx);
             ready = true;
-            cv.broadcast();
+            cv->broadcast();
         });
 
         exec->join();
@@ -697,13 +722,13 @@ STD_TEST_SUITE(CoroCondVar) {
         bool ready = false;
         int counter = 0;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         for (int i = 0; i < N; ++i) {
             exec->spawn([&] {
                 LockGuard lock(mtx);
                 while (!ready) {
-                    cv.wait(mtx);
+                    cv->wait(mtx);
                 }
                 ++counter;
             });
@@ -712,7 +737,7 @@ STD_TEST_SUITE(CoroCondVar) {
         exec->spawn([&] {
             LockGuard lock(mtx);
             ready = true;
-            cv.broadcast();
+            cv->broadcast();
         });
 
         exec->join();
@@ -725,13 +750,13 @@ STD_TEST_SUITE(CoroCondVar) {
         bool ready = false;
         int counter = 0;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         for (int i = 0; i < 2; ++i) {
             exec->spawn([&] {
                 LockGuard lock(mtx);
                 while (!ready) {
-                    cv.wait(mtx);
+                    cv->wait(mtx);
                 }
                 ++counter;
             });
@@ -740,8 +765,8 @@ STD_TEST_SUITE(CoroCondVar) {
         exec->spawn([&] {
             LockGuard lock(mtx);
             ready = true;
-            cv.signal();
-            cv.signal();
+            cv->signal();
+            cv->signal();
         });
 
         exec->join();
@@ -754,12 +779,12 @@ STD_TEST_SUITE(CoroCondVar) {
         int data = 0;
         bool dataReady = false;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         exec->spawn([&] {
             LockGuard lock(mtx);
             while (!dataReady) {
-                cv.wait(mtx);
+                cv->wait(mtx);
             }
             STD_INSIST(data == 42);
         });
@@ -768,7 +793,7 @@ STD_TEST_SUITE(CoroCondVar) {
             LockGuard lock(mtx);
             data = 42;
             dataReady = true;
-            cv.signal();
+            cv->signal();
         });
 
         exec->join();
@@ -781,13 +806,13 @@ STD_TEST_SUITE(CoroCondVar) {
         int data = 0;
         bool dataReady = false;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         for (int i = 0; i < N; ++i) {
             exec->spawn([&] {
                 LockGuard lock(mtx);
                 while (!dataReady) {
-                    cv.wait(mtx);
+                    cv->wait(mtx);
                 }
                 STD_INSIST(data == 100);
             });
@@ -797,7 +822,7 @@ STD_TEST_SUITE(CoroCondVar) {
             LockGuard lock(mtx);
             data = 100;
             dataReady = true;
-            cv.broadcast();
+            cv->broadcast();
         });
 
         exec->join();
@@ -809,14 +834,14 @@ STD_TEST_SUITE(CoroCondVar) {
         bool ready1 = false, ready2 = false;
         bool executed1 = false, executed2 = false;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         {
-            WaitGroup done(1);
+            auto& done = *WaitGroup::create(pool.mutPtr(), 1);
             exec->spawn([&] {
                 LockGuard lock(mtx);
                 while (!ready1) {
-                    cv.wait(mtx);
+                    cv->wait(mtx);
                 }
                 executed1 = true;
                 done.done();
@@ -824,7 +849,7 @@ STD_TEST_SUITE(CoroCondVar) {
             exec->spawn([&] {
                 LockGuard lock(mtx);
                 ready1 = true;
-                cv.signal();
+                cv->signal();
             });
             done.wait();
         }
@@ -832,11 +857,11 @@ STD_TEST_SUITE(CoroCondVar) {
         STD_INSIST(executed1 == true);
 
         {
-            WaitGroup done(1);
+            auto& done = *WaitGroup::create(pool.mutPtr(), 1);
             exec->spawn([&] {
                 LockGuard lock(mtx);
                 while (!ready2) {
-                    cv.wait(mtx);
+                    cv->wait(mtx);
                 }
                 executed2 = true;
                 done.done();
@@ -844,7 +869,7 @@ STD_TEST_SUITE(CoroCondVar) {
             exec->spawn([&] {
                 LockGuard lock(mtx);
                 ready2 = true;
-                cv.signal();
+                cv->signal();
             });
             done.wait();
         }
@@ -858,12 +883,12 @@ STD_TEST_SUITE(CoroCondVar) {
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int value = 0;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         exec->spawn([&] {
             LockGuard lock(mtx);
             while (value != 5) {
-                cv.wait(mtx);
+                cv->wait(mtx);
             }
         });
 
@@ -871,7 +896,7 @@ STD_TEST_SUITE(CoroCondVar) {
             for (int i = 1; i <= 5; ++i) {
                 LockGuard lock(mtx);
                 value = i;
-                cv.signal();
+                cv->signal();
             }
         });
 
@@ -885,13 +910,13 @@ STD_TEST_SUITE(CoroCondVar) {
         bool ready1 = false, ready2 = false;
         bool executed1 = false, executed2 = false;
         Mutex mtx(exec);
-        CondVar cv1(exec);
-        CondVar cv2(exec);
+        auto cv1 = exec->createCondVar();
+        auto cv2 = exec->createCondVar();
 
         exec->spawn([&] {
             LockGuard lock(mtx);
             while (!ready1) {
-                cv1.wait(mtx);
+                cv1->wait(mtx);
             }
             executed1 = true;
         });
@@ -899,7 +924,7 @@ STD_TEST_SUITE(CoroCondVar) {
         exec->spawn([&] {
             LockGuard lock(mtx);
             while (!ready2) {
-                cv2.wait(mtx);
+                cv2->wait(mtx);
             }
             executed2 = true;
         });
@@ -907,13 +932,13 @@ STD_TEST_SUITE(CoroCondVar) {
         exec->spawn([&] {
             LockGuard lock(mtx);
             ready1 = true;
-            cv1.signal();
+            cv1->signal();
         });
 
         exec->spawn([&] {
             LockGuard lock(mtx);
             ready2 = true;
-            cv2.signal();
+            cv2->signal();
         });
 
         exec->join();
@@ -927,13 +952,13 @@ STD_TEST_SUITE(CoroCondVar) {
         bool ready = false;
         int counter = 0;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         for (int i = 0; i < 2; ++i) {
             exec->spawn([&] {
                 LockGuard lock(mtx);
                 while (!ready) {
-                    cv.wait(mtx);
+                    cv->wait(mtx);
                 }
                 ++counter;
             });
@@ -942,9 +967,9 @@ STD_TEST_SUITE(CoroCondVar) {
         exec->spawn([&] {
             LockGuard lock(mtx);
             ready = true;
-            cv.broadcast();
-            cv.broadcast();
-            cv.broadcast();
+            cv->broadcast();
+            cv->broadcast();
+            cv->broadcast();
         });
 
         exec->join();
@@ -957,12 +982,12 @@ STD_TEST_SUITE(CoroCondVar) {
         bool predicate = false;
         int result = 0;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         exec->spawn([&] {
             LockGuard lock(mtx);
             while (!predicate) {
-                cv.wait(mtx);
+                cv->wait(mtx);
             }
             result = 123;
         });
@@ -970,7 +995,7 @@ STD_TEST_SUITE(CoroCondVar) {
         exec->spawn([&] {
             LockGuard lock(mtx);
             predicate = true;
-            cv.signal();
+            cv->signal();
         });
 
         exec->join();
@@ -982,32 +1007,32 @@ STD_TEST_SUITE(CoroCondVar) {
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int phase = 0;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         exec->spawn([&] {
             LockGuard lock(mtx);
             while (phase != 1) {
-                cv.wait(mtx);
+                cv->wait(mtx);
             }
             phase = 2;
-            cv.broadcast();
+            cv->broadcast();
         });
 
         exec->spawn([&] {
             LockGuard lock(mtx);
             while (phase != 2) {
-                cv.wait(mtx);
+                cv->wait(mtx);
             }
             phase = 3;
-            cv.broadcast();
+            cv->broadcast();
         });
 
         exec->spawn([&] {
             LockGuard lock(mtx);
             phase = 1;
-            cv.broadcast();
+            cv->broadcast();
             while (phase != 3) {
-                cv.wait(mtx);
+                cv->wait(mtx);
             }
         });
 
@@ -1019,12 +1044,12 @@ STD_TEST_SUITE(CoroCondVar) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         exec->spawn([&] {
             for (int i = 0; i < 1000; ++i) {
                 LockGuard lock(mtx);
-                cv.signal();
+                cv->signal();
             }
         });
 
@@ -1035,12 +1060,12 @@ STD_TEST_SUITE(CoroCondVar) {
         auto pool = ObjPool::fromMemory();
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         exec->spawn([&] {
             for (int i = 0; i < 1000; ++i) {
                 LockGuard lock(mtx);
-                cv.broadcast();
+                cv->broadcast();
             }
         });
 
@@ -1054,13 +1079,13 @@ STD_TEST_SUITE(CoroCondVar) {
         bool ready = false;
         int counter = 0;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         for (int i = 0; i < N; ++i) {
             exec->spawn([&] {
                 LockGuard lock(mtx);
                 while (!ready) {
-                    cv.wait(mtx);
+                    cv->wait(mtx);
                 }
                 ++counter;
             });
@@ -1069,7 +1094,7 @@ STD_TEST_SUITE(CoroCondVar) {
         exec->spawn([&] {
             LockGuard lock(mtx);
             ready = true;
-            cv.broadcast();
+            cv->broadcast();
         });
 
         exec->join();

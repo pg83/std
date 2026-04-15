@@ -312,7 +312,7 @@ Mutex* PollIoReactor::createMutex(ObjPool* pool) {
 }
 
 CondVar* PollIoReactor::createCondVar(ObjPool* pool, size_t) {
-    return pool->make<CondVar>();
+    return CondVar::create(pool);
 }
 
 IoReactor* stl::createPollIoReactor(ObjPool* pool, CoroExecutor* exec, size_t reactors) {

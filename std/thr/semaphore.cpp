@@ -70,25 +70,30 @@ namespace {
 #else
     struct SemImpl: public SemaphoreIface {
         Mutex mu_;
-        CondVar cv_;
+        CondVar* cv_;
         size_t count_;
 
         SemImpl(size_t initial) noexcept
-            : count_(initial)
+            : cv_(CondVar::create())
+            , count_(initial)
         {
+        }
+
+        ~SemImpl() noexcept override {
+            delete cv_;
         }
 
         void post() noexcept override {
             LockGuard g(mu_);
             ++count_;
-            cv_.signal();
+            cv_->signal();
         }
 
         void wait() noexcept override {
             LockGuard g(mu_);
 
             while (count_ == 0) {
-                cv_.wait(mu_);
+                cv_->wait(mu_);
             }
 
             --count_;

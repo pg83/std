@@ -4,25 +4,11 @@ namespace stl {
     class Mutex;
     class ObjPool;
 
-    struct CondVarIface;
-    struct CoroExecutor;
-
-    class CondVar {
-        CondVarIface* impl;
-
-    public:
-        CondVar();
-        CondVar(CoroExecutor* exec);
-        CondVar(CondVarIface* iface);
+    struct CondVar {
+        virtual void wait(Mutex& mutex) noexcept = 0;
+        virtual void signal() noexcept = 0;
+        virtual void broadcast() noexcept = 0;
 
         static CondVar* create(ObjPool* pool);
-        static CondVarIface* createDefault();
-        static CondVarIface* createDefault(ObjPool* pool);
-
-        ~CondVar() noexcept;
-
-        void wait(Mutex& mutex) noexcept;
-        void signal() noexcept;
-        void broadcast() noexcept;
     };
 }

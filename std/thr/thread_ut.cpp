@@ -181,16 +181,17 @@ STD_TEST_SUITE(Thread) {
         };
 
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         bool executed = false;
 
         {
             LockGuard lock(mutex);
-            DetachRunable runnable(&mutex, &cv, &executed);
+            DetachRunable runnable(&mutex, cv, &executed);
             detach(runnable);
 
             while (!executed) {
-                cv.wait(mutex);
+                cv->wait(mutex);
             }
         }
 
@@ -218,16 +219,17 @@ STD_TEST_SUITE(Thread) {
         };
 
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         int counter = 0;
 
         {
             LockGuard lock(mutex);
-            DetachCounterRunable runnable(&mutex, &cv, &counter);
+            DetachCounterRunable runnable(&mutex, cv, &counter);
             detach(runnable);
 
             while (counter == 0) {
-                cv.wait(mutex);
+                cv->wait(mutex);
             }
         }
 
@@ -258,16 +260,17 @@ STD_TEST_SUITE(Thread) {
         };
 
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         int counter = 0;
         int completed = 0;
         const int numThreads = 5;
 
-        DetachMultiRunable runnable1(&mutex, &cv, &counter, &completed);
-        DetachMultiRunable runnable2(&mutex, &cv, &counter, &completed);
-        DetachMultiRunable runnable3(&mutex, &cv, &counter, &completed);
-        DetachMultiRunable runnable4(&mutex, &cv, &counter, &completed);
-        DetachMultiRunable runnable5(&mutex, &cv, &counter, &completed);
+        DetachMultiRunable runnable1(&mutex, cv, &counter, &completed);
+        DetachMultiRunable runnable2(&mutex, cv, &counter, &completed);
+        DetachMultiRunable runnable3(&mutex, cv, &counter, &completed);
+        DetachMultiRunable runnable4(&mutex, cv, &counter, &completed);
+        DetachMultiRunable runnable5(&mutex, cv, &counter, &completed);
 
         {
             LockGuard lock(mutex);
@@ -278,7 +281,7 @@ STD_TEST_SUITE(Thread) {
             detach(runnable5);
 
             while (completed < numThreads) {
-                cv.wait(mutex);
+                cv->wait(mutex);
             }
         }
 
@@ -318,18 +321,19 @@ STD_TEST_SUITE(Thread) {
         };
 
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         int counter = 0;
         bool done = false;
         const int iterations = 100;
 
         {
             LockGuard lock(mutex);
-            DetachMultiIncrRunable runnable(&mutex, &cv, &counter, iterations, &done);
+            DetachMultiIncrRunable runnable(&mutex, cv, &counter, iterations, &done);
             detach(runnable);
 
             while (!done) {
-                cv.wait(mutex);
+                cv->wait(mutex);
             }
         }
 
@@ -363,12 +367,13 @@ STD_TEST_SUITE(Thread) {
         };
 
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         int value = 0;
 
-        DetachSeqRunable runnable1(&mutex, &cv, &value, 0);
-        DetachSeqRunable runnable2(&mutex, &cv, &value, 1);
-        DetachSeqRunable runnable3(&mutex, &cv, &value, 2);
+        DetachSeqRunable runnable1(&mutex, cv, &value, 0);
+        DetachSeqRunable runnable2(&mutex, cv, &value, 1);
+        DetachSeqRunable runnable3(&mutex, cv, &value, 2);
 
         detach(runnable1);
         detach(runnable2);
@@ -377,7 +382,7 @@ STD_TEST_SUITE(Thread) {
         {
             LockGuard lock(mutex);
             while (value < 3) {
-                cv.wait(mutex);
+                cv->wait(mutex);
             }
         }
 
@@ -441,13 +446,14 @@ STD_TEST_SUITE(Thread) {
         };
 
         Mutex mutex;
-        CondVar cv;
+        auto pool = ObjPool::fromMemory();
+        auto cv = CondVar::create(pool.mutPtr());
         int resource = 0;
         bool done1 = false;
         bool done2 = false;
 
-        DetachSharedRunable runnable1(&mutex, &cv, &resource, 10, &done1);
-        DetachSharedRunable runnable2(&mutex, &cv, &resource, 20, &done2);
+        DetachSharedRunable runnable1(&mutex, cv, &resource, 10, &done1);
+        DetachSharedRunable runnable2(&mutex, cv, &resource, 20, &done2);
 
         detach(runnable1);
         detach(runnable2);
@@ -455,7 +461,7 @@ STD_TEST_SUITE(Thread) {
         {
             LockGuard lock(mutex);
             while (!done1 || !done2) {
-                cv.wait(mutex);
+                cv->wait(mutex);
             }
         }
 

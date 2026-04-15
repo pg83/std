@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
 
     auto addr = makeAddr(port);
 
-    WaitGroup wg(0, exec);
+    auto& wg = *WaitGroup::create(pool.mutPtr(), 0, exec);
 
     serve(
         pool.mutPtr(),

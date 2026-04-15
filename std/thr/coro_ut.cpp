@@ -175,19 +175,19 @@ STD_TEST_SUITE(CoroExecutor) {
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
         int value = 0;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         exec->spawn([&] {
             LockGuard guard(mtx);
             while (value == 0) {
-                cv.wait(mtx);
+                cv->wait(mtx);
             }
         });
 
         exec->spawn([&] {
             LockGuard guard(mtx);
             value = 1;
-            cv.signal();
+            cv->signal();
         });
 
         exec->join();
@@ -200,13 +200,13 @@ STD_TEST_SUITE(CoroExecutor) {
         const int N = 5;
         int value = 0;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         for (int i = 0; i < N; ++i) {
             exec->spawn([&] {
                 LockGuard guard(mtx);
                 while (value == 0) {
-                    cv.wait(mtx);
+                    cv->wait(mtx);
                 }
             });
         }
@@ -214,7 +214,7 @@ STD_TEST_SUITE(CoroExecutor) {
         exec->spawn([&] {
             LockGuard guard(mtx);
             value = 1;
-            cv.broadcast();
+            cv->broadcast();
         });
 
         exec->join();
@@ -228,14 +228,14 @@ STD_TEST_SUITE(CoroExecutor) {
         int produced = 0;
         int consumed = 0;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         // consumer
         exec->spawn([&] {
             for (int i = 0; i < N; ++i) {
                 LockGuard guard(mtx);
                 while (produced == consumed) {
-                    cv.wait(mtx);
+                    cv->wait(mtx);
                 }
                 ++consumed;
             }
@@ -246,7 +246,7 @@ STD_TEST_SUITE(CoroExecutor) {
             for (int i = 0; i < N; ++i) {
                 LockGuard guard(mtx);
                 ++produced;
-                cv.signal();
+                cv->signal();
             }
         });
 
@@ -262,14 +262,14 @@ STD_TEST_SUITE(CoroExecutor) {
         int queue = 0;
         int consumed = 0;
         Mutex mtx(exec);
-        CondVar cv(exec);
+        auto cv = exec->createCondVar();
 
         for (int i = 0; i < nCoros; ++i) {
             exec->spawn([&] {
                 for (int j = 0; j < nIters; ++j) {
                     LockGuard guard(mtx);
                     while (queue == 0) {
-                        cv.wait(mtx);
+                        cv->wait(mtx);
                     }
                     --queue;
                     ++consumed;
@@ -281,7 +281,7 @@ STD_TEST_SUITE(CoroExecutor) {
             for (int j = 0; j < nCoros * nIters; ++j) {
                 LockGuard guard(mtx);
                 ++queue;
-                cv.signal();
+                cv->signal();
             }
         });
 

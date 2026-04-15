@@ -13,7 +13,7 @@ namespace stl {
     struct ThreadPool;
     struct EventIface;
     struct ThreadIface;
-    struct CondVarIface;
+    struct CondVar;
     struct CoroExecutor;
     struct SemaphoreIface;
 
@@ -48,7 +48,7 @@ namespace stl {
 
         virtual void createEvent(void* buf) = 0;
         virtual ThreadIface* createThread() = 0;
-        virtual CondVarIface* createCondVar() = 0;
+        virtual CondVar* createCondVar() = 0;
         virtual SemaphoreIface* createSemaphore(size_t initial) = 0;
 
         virtual void* currentCoroId() const noexcept = 0;

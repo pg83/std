@@ -9,7 +9,7 @@ namespace stl {
     class Input;
     class Output;
     class ObjPool;
-    class WaitGroup;
+    struct WaitGroup;
     class ZeroCopyInput;
 
     struct SslCtx;

@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
 
     sysE << StringView(u8"resolved: ") << dns->record << endL;
 
-    WaitGroup wg(0, exec);
+    auto& wg = *WaitGroup::create(pool.mutPtr(), 0, exec);
 
     for (auto rec = dns->record; rec; rec = rec->next) {
         if (rec->family == AF_INET) {

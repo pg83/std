@@ -9,7 +9,7 @@ namespace stl {
     class ObjPool;
 
     struct PollerIface;
-    struct CondVarIface;
+    struct CondVar;
     struct CoroExecutor;
     struct ThreadPoolHooks;
 

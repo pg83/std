@@ -1,5 +1,6 @@
 #include "wait_group.h"
 
+#include "coro.h"
 #include "mutex.h"
 #include "guard.h"
 #include "cond_var.h"
@@ -9,90 +10,54 @@
 
 using namespace stl;
 
-struct WaitGroup::Impl {
-    Mutex mutex;
-    CondVar cv;
-    size_t counter;
+namespace {
+    struct WaitGroupImpl: public WaitGroup {
+        Mutex* mutex;
+        CondVar* cv;
+        size_t counter;
 
-    Impl(size_t init)
-        : counter(init)
-    {
-    }
-
-    Impl(size_t init, CoroExecutor* exec)
-        : mutex(exec)
-        , cv(exec)
-        , counter(init)
-    {
-    }
-
-    Impl(ObjPool* pool, size_t init)
-        : mutex(Mutex::defaultImpl(pool))
-        , cv(CondVar::createDefault(pool))
-        , counter(init)
-    {
-    }
-
-    void add(size_t n) noexcept {
-        LockGuard lock(mutex);
-        counter += n;
-    }
-
-    void done() noexcept {
-        LockGuard lock(mutex);
-
-        if (--counter == 0) {
-            cv.broadcast();
+        WaitGroupImpl(Mutex* m, CondVar* c, size_t init)
+            : mutex(m)
+            , cv(c)
+            , counter(init)
+        {
         }
-    }
 
-    void wait() noexcept {
-        LockGuard lock(mutex);
-
-        while (counter > 0) {
-            cv.wait(mutex);
+        void add(size_t n) noexcept override {
+            LockGuard lock(*mutex);
+            counter += n;
         }
-    }
-};
 
-WaitGroup::WaitGroup(Impl* impl, bool)
-    : impl(impl)
-{
-}
+        void done() noexcept override {
+            LockGuard lock(*mutex);
 
-WaitGroup::WaitGroup(size_t init)
-    : impl(new Impl(init))
-{
-}
+            if (--counter == 0) {
+                cv->broadcast();
+            }
+        }
 
-WaitGroup::WaitGroup(size_t init, CoroExecutor* exec)
-    : impl(new Impl(init, exec))
-{
-}
+        void wait() noexcept override {
+            LockGuard lock(*mutex);
 
-WaitGroup::~WaitGroup() noexcept {
-    delete impl;
-}
-
-void WaitGroup::add(size_t n) noexcept {
-    impl->add(n);
-}
-
-void WaitGroup::done() noexcept {
-    impl->done();
-}
-
-void WaitGroup::wait() noexcept {
-    impl->wait();
+            while (counter > 0) {
+                cv->wait(*mutex);
+            }
+        }
+    };
 }
 
 WaitGroup* WaitGroup::create(ObjPool* pool, size_t init) {
-    struct PoolImpl: public WaitGroup::Impl {
-        using Impl::Impl;
+    return pool->make<WaitGroupImpl>(
+        Mutex::createDefault(pool),
+        CondVar::create(pool),
+        init
+    );
+}
 
-        void operator delete(void*) noexcept {
-        }
-    };
-
-    return pool->make<WaitGroup>(pool->make<PoolImpl>(pool, init), false);
+WaitGroup* WaitGroup::create(ObjPool* pool, size_t init, CoroExecutor* exec) {
+    return pool->make<WaitGroupImpl>(
+        pool->make<Mutex>(exec),
+        exec->createCondVar(),
+        init
+    );
 }

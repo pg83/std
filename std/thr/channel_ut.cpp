@@ -328,7 +328,7 @@ STD_TEST_SUITE(Channel) {
         const int nConsumers = 4;
         const int nPerProducer = 50;
         const int total = nProducers * nPerProducer;
-        WaitGroup prodDone(nProducers);
+        auto& prodDone = *WaitGroup::create(pool.mutPtr(), nProducers);
         int consumed = 0;
 
         for (int i = 0; i < nProducers; ++i) {
@@ -396,7 +396,7 @@ STD_TEST_SUITE(Channel) {
         const int nConsumers = 4;
         const int nPerProducer = 100;
         const int total = nProducers * nPerProducer;
-        WaitGroup prodDone(nProducers);
+        auto& prodDone = *WaitGroup::create(pool.mutPtr(), nProducers);
         int consumed = 0;
 
         for (int i = 0; i < nProducers; ++i) {

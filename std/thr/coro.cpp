@@ -12,7 +12,6 @@
 #include "event_iface.h"
 #include "thread_iface.h"
 #include "io_reactor.h"
-#include "cond_var_iface.h"
 #include "semaphore_iface.h"
 
 #include <std/sys/fd.h>
@@ -152,7 +151,7 @@ namespace {
 
         void createEvent(void* buf) override;
         ThreadIface* createThread() override;
-        CondVarIface* createCondVar() override;
+        CondVar* createCondVar() override;
         SemaphoreIface* createSemaphore(size_t initial) override;
 
         IoReactor* io() noexcept override {
@@ -304,8 +303,8 @@ void CoroExecutorImpl::createEvent(void* buf) {
     new (buf) CoroEventImpl(this);
 }
 
-CondVarIface* CoroExecutorImpl::createCondVar() {
-    struct CoroCondVarImpl: public CondVarIface {
+CondVar* CoroExecutorImpl::createCondVar() {
+    struct CoroCondVarImpl: public CondVar {
         Mutex queueMutex_;
         IntrusiveList waiters_;
 

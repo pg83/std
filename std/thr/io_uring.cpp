@@ -7,7 +7,7 @@
 #include "poll_fd.h"
 #include "io_reactor.h"
 #include "cond_var.h"
-#include "cond_var_iface.h"
+#include "cond_var.h"
 
 #include <std/sys/crt.h>
 #include <std/lib/list.h>
@@ -97,13 +97,9 @@ namespace {
 
     struct UringReactorImpl;
 
-    struct UringCondVarImpl: public CondVarIface {
+    struct UringCondVarImpl: public CondVar {
         Ring* ring_;
         UringReactorImpl* reactor_;
-
-        bool owned() const noexcept override {
-            return true;
-        }
 
         UringCondVarImpl(Ring* ring, UringReactorImpl* reactor) noexcept;
 
@@ -370,7 +366,7 @@ Mutex* UringReactorImpl::createMutex(ObjPool* pool) {
 }
 
 CondVar* UringReactorImpl::createCondVar(ObjPool* pool, size_t index) {
-    return pool->make<CondVar>(pool->make<UringCondVarImpl>(rings_[index], this));
+    return pool->make<UringCondVarImpl>(rings_[index], this);
 }
 
 int UringReactorImpl::recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) {

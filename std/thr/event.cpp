@@ -50,12 +50,17 @@ namespace {
 #else
     struct PosixEventImpl: public EventIface, public Newable {
         Mutex mu_;
-        CondVar cv_;
+        CondVar* cv_;
         bool signaled_;
 
         PosixEventImpl() noexcept
-            : signaled_(false)
+            : cv_(CondVar::create())
+            , signaled_(false)
         {
+        }
+
+        ~PosixEventImpl() noexcept {
+            delete cv_;
         }
 
         void wait(Runable& cb) noexcept override {
@@ -63,7 +68,7 @@ namespace {
             cb.run();
 
             while (!signaled_) {
-                cv_.wait(mu_);
+                cv_->wait(mu_);
             }
 
             mu_.unlock();
@@ -72,7 +77,7 @@ namespace {
         void signal() noexcept override {
             LockGuard guard(mu_);
             signaled_ = true;
-            cv_.signal();
+            cv_->signal();
         }
 
         static void operator delete(void*) noexcept {

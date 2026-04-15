@@ -72,7 +72,7 @@ STD_TEST_SUITE(WaitQueue) {
         const int N = 8;
         auto opool = ObjPool::fromMemory();
         auto wq = WaitQueue::construct(opool.mutPtr(), N);
-        WaitGroup ready(N);
+        auto& ready = *WaitGroup::create(opool.mutPtr(), N);
 
         WaitQueue::Item items[N];
         for (int i = 0; i < N; ++i) {
@@ -104,7 +104,7 @@ STD_TEST_SUITE(WaitQueue) {
         const int N = 8;
         auto opool = ObjPool::fromMemory();
         auto wq = WaitQueue::construct(opool.mutPtr(), 65);
-        WaitGroup ready(N);
+        auto& ready = *WaitGroup::create(opool.mutPtr(), N);
         int enqueued = 0;
 
         WaitQueue::Item items[N];
