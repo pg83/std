@@ -101,7 +101,6 @@ STD_TEST_SUITE(CondVar) {
         cv->signal();
         cv->signal();
         cv->signal();
-
     }
 
     STD_TEST(BroadcastWithoutWaiters) {
@@ -111,7 +110,6 @@ STD_TEST_SUITE(CondVar) {
         cv->broadcast();
         cv->broadcast();
         cv->broadcast();
-
     }
 
     STD_TEST(WaitAndSignal) {
@@ -521,7 +519,6 @@ STD_TEST_SUITE(CondVar) {
             LockGuard lock(mutex);
             cv->signal();
         }
-
     }
 
     STD_TEST(RapidBroadcasting) {
@@ -533,7 +530,6 @@ STD_TEST_SUITE(CondVar) {
             LockGuard lock(mutex);
             cv->broadcast();
         }
-
     }
 
     STD_TEST(ManyWaitersBroadcast) {

@@ -38,7 +38,9 @@ STD_TEST_SUITE(WaitGroup) {
         });
 
         auto* t1 = Thread::create(pool.mutPtr(), r1);
-        STD_DEFER { t1->join(); };
+        STD_DEFER {
+            t1->join();
+        };
 
         auto r2 = makeRunable([&] {
             stdAtomicAddAndFetch(&counter, 1, MemoryOrder::Relaxed);
@@ -46,7 +48,9 @@ STD_TEST_SUITE(WaitGroup) {
         });
 
         auto* t2 = Thread::create(pool.mutPtr(), r2);
-        STD_DEFER { t2->join(); };
+        STD_DEFER {
+            t2->join();
+        };
 
         wg.wait();
         STD_INSIST(counter == 2);
@@ -75,21 +79,37 @@ STD_TEST_SUITE(WaitGroup) {
         auto r7 = makeRunable(work);
 
         auto* t0 = Thread::create(pool.mutPtr(), r0);
-        STD_DEFER { t0->join(); };
+        STD_DEFER {
+            t0->join();
+        };
         auto* t1 = Thread::create(pool.mutPtr(), r1);
-        STD_DEFER { t1->join(); };
+        STD_DEFER {
+            t1->join();
+        };
         auto* t2 = Thread::create(pool.mutPtr(), r2);
-        STD_DEFER { t2->join(); };
+        STD_DEFER {
+            t2->join();
+        };
         auto* t3 = Thread::create(pool.mutPtr(), r3);
-        STD_DEFER { t3->join(); };
+        STD_DEFER {
+            t3->join();
+        };
         auto* t4 = Thread::create(pool.mutPtr(), r4);
-        STD_DEFER { t4->join(); };
+        STD_DEFER {
+            t4->join();
+        };
         auto* t5 = Thread::create(pool.mutPtr(), r5);
-        STD_DEFER { t5->join(); };
+        STD_DEFER {
+            t5->join();
+        };
         auto* t6 = Thread::create(pool.mutPtr(), r6);
-        STD_DEFER { t6->join(); };
+        STD_DEFER {
+            t6->join();
+        };
         auto* t7 = Thread::create(pool.mutPtr(), r7);
-        STD_DEFER { t7->join(); };
+        STD_DEFER {
+            t7->join();
+        };
 
         wg.wait();
         STD_INSIST(counter == N);
@@ -108,7 +128,9 @@ STD_TEST_SUITE(WaitGroup) {
         });
 
         auto* t1 = Thread::create(pool.mutPtr(), r1);
-        STD_DEFER { t1->join(); };
+        STD_DEFER {
+            t1->join();
+        };
 
         wg.add(1);
 
@@ -118,7 +140,9 @@ STD_TEST_SUITE(WaitGroup) {
         });
 
         auto* t2 = Thread::create(pool.mutPtr(), r2);
-        STD_DEFER { t2->join(); };
+        STD_DEFER {
+            t2->join();
+        };
 
         wg.add(1);
 
@@ -128,7 +152,9 @@ STD_TEST_SUITE(WaitGroup) {
         });
 
         auto* t3 = Thread::create(pool.mutPtr(), r3);
-        STD_DEFER { t3->join(); };
+        STD_DEFER {
+            t3->join();
+        };
 
         wg.wait();
         STD_INSIST(counter == 3);
@@ -148,7 +174,9 @@ STD_TEST_SUITE(WaitGroup) {
             });
 
             auto* t = Thread::create(pool.mutPtr(), r);
-            STD_DEFER { t->join(); };
+            STD_DEFER {
+                t->join();
+            };
 
             wg.wait();
         }

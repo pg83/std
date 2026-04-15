@@ -67,7 +67,9 @@ STD_TEST_SUITE(ChannelThreaded) {
             });
 
             auto* t = Thread::create(pool.mutPtr(), r);
-            STD_DEFER { t->join(); };
+            STD_DEFER {
+                t->join();
+            };
 
             ch.enqueue((void*)42);
         }
@@ -88,7 +90,9 @@ STD_TEST_SUITE(ChannelThreaded) {
             });
 
             auto* t = Thread::create(pool.mutPtr(), r);
-            STD_DEFER { t->join(); };
+            STD_DEFER {
+                t->join();
+            };
 
             ch.enqueue((void*)1);
             ch.enqueue((void*)2);
@@ -120,9 +124,13 @@ STD_TEST_SUITE(ChannelThreaded) {
             });
 
             auto* tp = Thread::create(pool.mutPtr(), rp);
-            STD_DEFER { tp->join(); };
+            STD_DEFER {
+                tp->join();
+            };
             auto* tc = Thread::create(pool.mutPtr(), rc);
-            STD_DEFER { tc->join(); };
+            STD_DEFER {
+                tc->join();
+            };
         }
 
         STD_INSIST(sum == N * (N + 1) / 2);
@@ -165,21 +173,37 @@ STD_TEST_SUITE(ChannelThreaded) {
             auto rc3 = makeRunable(consume);
 
             auto* p0 = Thread::create(pool.mutPtr(), rp0);
-            STD_DEFER { p0->join(); };
+            STD_DEFER {
+                p0->join();
+            };
             auto* p1 = Thread::create(pool.mutPtr(), rp1);
-            STD_DEFER { p1->join(); };
+            STD_DEFER {
+                p1->join();
+            };
             auto* p2 = Thread::create(pool.mutPtr(), rp2);
-            STD_DEFER { p2->join(); };
+            STD_DEFER {
+                p2->join();
+            };
             auto* p3 = Thread::create(pool.mutPtr(), rp3);
-            STD_DEFER { p3->join(); };
+            STD_DEFER {
+                p3->join();
+            };
             auto* c0 = Thread::create(pool.mutPtr(), rc0);
-            STD_DEFER { c0->join(); };
+            STD_DEFER {
+                c0->join();
+            };
             auto* c1 = Thread::create(pool.mutPtr(), rc1);
-            STD_DEFER { c1->join(); };
+            STD_DEFER {
+                c1->join();
+            };
             auto* c2 = Thread::create(pool.mutPtr(), rc2);
-            STD_DEFER { c2->join(); };
+            STD_DEFER {
+                c2->join();
+            };
             auto* c3 = Thread::create(pool.mutPtr(), rc3);
-            STD_DEFER { c3->join(); };
+            STD_DEFER {
+                c3->join();
+            };
         }
 
         STD_INSIST(consumed == total);

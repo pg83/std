@@ -32,7 +32,9 @@ STD_TEST_SUITE(EventDefault) {
         });
 
         auto* t = Thread::create(pool.mutPtr(), r);
-        STD_DEFER { t->join(); };
+        STD_DEFER {
+            t->join();
+        };
 
         ev.wait(makeRunable([] {}));
         STD_INSIST(stdAtomicFetch(&value, MemoryOrder::Acquire) == 1);
@@ -52,7 +54,9 @@ STD_TEST_SUITE(EventDefault) {
             });
 
             auto* t = Thread::create(pool.mutPtr(), r);
-            STD_DEFER { t->join(); };
+            STD_DEFER {
+                t->join();
+            };
 
             ev.wait(makeRunable([&] {
                 stdAtomicStore(&order, 1, MemoryOrder::Release);
@@ -79,7 +83,9 @@ STD_TEST_SUITE(EventDefault) {
             });
 
             auto* t = Thread::create(pool.mutPtr(), r);
-            STD_DEFER { t->join(); };
+            STD_DEFER {
+                t->join();
+            };
 
             ev.wait(makeRunable([&] {
                 mu.unlock();
@@ -104,7 +110,9 @@ STD_TEST_SUITE(EventDefault) {
                 });
 
                 auto* t = Thread::create(pool.mutPtr(), r);
-                STD_DEFER { t->join(); };
+                STD_DEFER {
+                    t->join();
+                };
 
                 ev.wait(makeRunable([] {}));
             }
@@ -146,7 +154,9 @@ STD_TEST_SUITE(EventDefault) {
                         });
 
                         auto* t = Thread::create(ipool.mutPtr(), ri);
-                        STD_DEFER { t->join(); };
+                        STD_DEFER {
+                            t->join();
+                        };
 
                         ev.wait(makeRunable([] {}));
                     }
@@ -185,7 +195,9 @@ STD_TEST_SUITE(EventDefault) {
                 });
 
                 auto* t = Thread::create(pool.mutPtr(), r);
-                STD_DEFER { t->join(); };
+                STD_DEFER {
+                    t->join();
+                };
 
                 ev.wait(makeRunable([&] {
                     mu.unlock();

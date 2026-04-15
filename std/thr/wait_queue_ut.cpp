@@ -99,21 +99,37 @@ STD_TEST_SUITE(WaitQueue) {
         auto r7 = makeRunable(worker(7));
 
         auto* t0 = Thread::create(opool.mutPtr(), r0);
-        STD_DEFER { t0->join(); };
+        STD_DEFER {
+            t0->join();
+        };
         auto* t1 = Thread::create(opool.mutPtr(), r1);
-        STD_DEFER { t1->join(); };
+        STD_DEFER {
+            t1->join();
+        };
         auto* t2 = Thread::create(opool.mutPtr(), r2);
-        STD_DEFER { t2->join(); };
+        STD_DEFER {
+            t2->join();
+        };
         auto* t3 = Thread::create(opool.mutPtr(), r3);
-        STD_DEFER { t3->join(); };
+        STD_DEFER {
+            t3->join();
+        };
         auto* t4 = Thread::create(opool.mutPtr(), r4);
-        STD_DEFER { t4->join(); };
+        STD_DEFER {
+            t4->join();
+        };
         auto* t5 = Thread::create(opool.mutPtr(), r5);
-        STD_DEFER { t5->join(); };
+        STD_DEFER {
+            t5->join();
+        };
         auto* t6 = Thread::create(opool.mutPtr(), r6);
-        STD_DEFER { t6->join(); };
+        STD_DEFER {
+            t6->join();
+        };
         auto* t7 = Thread::create(opool.mutPtr(), r7);
-        STD_DEFER { t7->join(); };
+        STD_DEFER {
+            t7->join();
+        };
     }
 
     STD_TEST(ConcurrentEnqueueDequeue) {
@@ -147,21 +163,37 @@ STD_TEST_SUITE(WaitQueue) {
         auto r7 = makeRunable(worker(7));
 
         auto* t0 = Thread::create(opool.mutPtr(), r0);
-        STD_DEFER { t0->join(); };
+        STD_DEFER {
+            t0->join();
+        };
         auto* t1 = Thread::create(opool.mutPtr(), r1);
-        STD_DEFER { t1->join(); };
+        STD_DEFER {
+            t1->join();
+        };
         auto* t2 = Thread::create(opool.mutPtr(), r2);
-        STD_DEFER { t2->join(); };
+        STD_DEFER {
+            t2->join();
+        };
         auto* t3 = Thread::create(opool.mutPtr(), r3);
-        STD_DEFER { t3->join(); };
+        STD_DEFER {
+            t3->join();
+        };
         auto* t4 = Thread::create(opool.mutPtr(), r4);
-        STD_DEFER { t4->join(); };
+        STD_DEFER {
+            t4->join();
+        };
         auto* t5 = Thread::create(opool.mutPtr(), r5);
-        STD_DEFER { t5->join(); };
+        STD_DEFER {
+            t5->join();
+        };
         auto* t6 = Thread::create(opool.mutPtr(), r6);
-        STD_DEFER { t6->join(); };
+        STD_DEFER {
+            t6->join();
+        };
         auto* t7 = Thread::create(opool.mutPtr(), r7);
-        STD_DEFER { t7->join(); };
+        STD_DEFER {
+            t7->join();
+        };
     }
 
     STD_TEST(EnqueueDequeueOrdering) {

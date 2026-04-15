@@ -43,7 +43,9 @@ STD_TEST_SUITE(Semaphore) {
         });
 
         auto* t = Thread::create(pool.mutPtr(), r);
-        STD_DEFER { t->join(); };
+        STD_DEFER {
+            t->join();
+        };
 
         sem.wait();
         STD_INSIST(stdAtomicFetch(&value, MemoryOrder::Acquire) == 1);
@@ -70,21 +72,37 @@ STD_TEST_SUITE(Semaphore) {
         auto r7 = makeRunable(body);
 
         auto* t0 = Thread::create(pool.mutPtr(), r0);
-        STD_DEFER { t0->join(); };
+        STD_DEFER {
+            t0->join();
+        };
         auto* t1 = Thread::create(pool.mutPtr(), r1);
-        STD_DEFER { t1->join(); };
+        STD_DEFER {
+            t1->join();
+        };
         auto* t2 = Thread::create(pool.mutPtr(), r2);
-        STD_DEFER { t2->join(); };
+        STD_DEFER {
+            t2->join();
+        };
         auto* t3 = Thread::create(pool.mutPtr(), r3);
-        STD_DEFER { t3->join(); };
+        STD_DEFER {
+            t3->join();
+        };
         auto* t4 = Thread::create(pool.mutPtr(), r4);
-        STD_DEFER { t4->join(); };
+        STD_DEFER {
+            t4->join();
+        };
         auto* t5 = Thread::create(pool.mutPtr(), r5);
-        STD_DEFER { t5->join(); };
+        STD_DEFER {
+            t5->join();
+        };
         auto* t6 = Thread::create(pool.mutPtr(), r6);
-        STD_DEFER { t6->join(); };
+        STD_DEFER {
+            t6->join();
+        };
         auto* t7 = Thread::create(pool.mutPtr(), r7);
-        STD_DEFER { t7->join(); };
+        STD_DEFER {
+            t7->join();
+        };
 
         for (int i = 0; i < N; ++i) {
             sem.wait();
