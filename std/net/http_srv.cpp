@@ -238,17 +238,30 @@ void HttpServerResponseImpl::addHeader(StringView name, StringView value) {
 }
 
 void HttpServerResponseImpl::serialize(ZeroCopyOutput& out) {
-    out << StringView(u8"HTTP/1.1 ")
-        << (u64)status
-        << StringView(u8" ")
-        << reasonPhrase(status)
-        << StringView(u8"\r\n");
+    size_t need = 128;
 
     for (auto it = headers.begin(); it != headers.end(); ++it) {
-        out << (*it)->name << StringView(u8": ") << (*it)->value << StringView(u8"\r\n");
+        need += (*it)->name.length() + (*it)->value.length() + 4;
     }
 
-    out << StringView(u8"\r\n");
+    need += 2;
+
+    auto start = out.imbue(need);
+    auto buf = start;
+
+    buf = buf << StringView(u8"HTTP/1.1 ")
+              << (u64)status
+              << StringView(u8" ")
+              << reasonPhrase(status)
+              << StringView(u8"\r\n");
+
+    for (auto it = headers.begin(); it != headers.end(); ++it) {
+        buf = buf << (*it)->name << StringView(u8": ") << (*it)->value << StringView(u8"\r\n");
+    }
+
+    buf = buf << StringView(u8"\r\n");
+
+    out.commit(start.distance(buf));
 }
 
 void HttpServerResponseImpl::endHeaders() {

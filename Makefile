@@ -15,7 +15,7 @@ TSTA = tst/test
 
 BINS = $(filter-out tst/test,$(TSTS:%.cpp=%))
 
-OPTF = -O2 -g
+OPTF = -O2 -g -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer
 ifneq ($(filter x86_64%,$(shell $(CXX) -dumpmachine)),)
 OPTF += -mcx16 -Werror
 endif
