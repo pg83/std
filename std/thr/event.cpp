@@ -91,7 +91,7 @@ namespace {
 }
 
 Event* Event::create(Buf& buf) {
-    return new (&buf) DefaultEventImpl();
+    return new (buf.data) DefaultEventImpl();
 }
 
 Event* Event::create(Buf& buf, CoroExecutor* exec) {
@@ -99,5 +99,5 @@ Event* Event::create(Buf& buf, CoroExecutor* exec) {
         return exec->createEvent(&buf);
     }
 
-    return new (&buf) DefaultEventImpl();
+    return new (buf.data) DefaultEventImpl();
 }
