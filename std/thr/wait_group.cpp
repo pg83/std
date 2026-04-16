@@ -24,12 +24,12 @@ namespace {
         }
 
         void add(size_t n) noexcept override {
-            LockGuard lock(*mutex);
+            LockGuard lock(mutex);
             counter += n;
         }
 
         void done() noexcept override {
-            LockGuard lock(*mutex);
+            LockGuard lock(mutex);
 
             if (--counter == 0) {
                 cv->broadcast();
@@ -37,10 +37,10 @@ namespace {
         }
 
         void wait() noexcept override {
-            LockGuard lock(*mutex);
+            LockGuard lock(mutex);
 
             while (counter > 0) {
-                cv->wait(*mutex);
+                cv->wait(mutex);
             }
         }
     };

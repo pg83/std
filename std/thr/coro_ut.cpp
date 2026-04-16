@@ -139,7 +139,7 @@ STD_TEST_SUITE(CoroExecutor) {
         for (int i = 0; i < 2; ++i) {
             exec->spawn([&] {
                 for (int j = 0; j < 1000; ++j) {
-                    LockGuard guard(mtx);
+                    LockGuard guard(&mtx);
                     ++counter;
                 }
             });
@@ -160,7 +160,7 @@ STD_TEST_SUITE(CoroExecutor) {
         for (int i = 0; i < nCoros; ++i) {
             exec->spawn([&] {
                 for (int j = 0; j < nIters; ++j) {
-                    LockGuard guard(mtx);
+                    LockGuard guard(&mtx);
                     ++counter;
                 }
             });
@@ -178,14 +178,14 @@ STD_TEST_SUITE(CoroExecutor) {
         auto cv = exec->createCondVar(pool.mutPtr());
 
         exec->spawn([&] {
-            LockGuard guard(mtx);
+            LockGuard guard(&mtx);
             while (value == 0) {
-                cv->wait(mtx);
+                cv->wait(&mtx);
             }
         });
 
         exec->spawn([&] {
-            LockGuard guard(mtx);
+            LockGuard guard(&mtx);
             value = 1;
             cv->signal();
         });
@@ -204,15 +204,15 @@ STD_TEST_SUITE(CoroExecutor) {
 
         for (int i = 0; i < N; ++i) {
             exec->spawn([&] {
-                LockGuard guard(mtx);
+                LockGuard guard(&mtx);
                 while (value == 0) {
-                    cv->wait(mtx);
+                    cv->wait(&mtx);
                 }
             });
         }
 
         exec->spawn([&] {
-            LockGuard guard(mtx);
+            LockGuard guard(&mtx);
             value = 1;
             cv->broadcast();
         });
@@ -233,9 +233,9 @@ STD_TEST_SUITE(CoroExecutor) {
         // consumer
         exec->spawn([&] {
             for (int i = 0; i < N; ++i) {
-                LockGuard guard(mtx);
+                LockGuard guard(&mtx);
                 while (produced == consumed) {
-                    cv->wait(mtx);
+                    cv->wait(&mtx);
                 }
                 ++consumed;
             }
@@ -244,7 +244,7 @@ STD_TEST_SUITE(CoroExecutor) {
         // producer
         exec->spawn([&] {
             for (int i = 0; i < N; ++i) {
-                LockGuard guard(mtx);
+                LockGuard guard(&mtx);
                 ++produced;
                 cv->signal();
             }
@@ -267,9 +267,9 @@ STD_TEST_SUITE(CoroExecutor) {
         for (int i = 0; i < nCoros; ++i) {
             exec->spawn([&] {
                 for (int j = 0; j < nIters; ++j) {
-                    LockGuard guard(mtx);
+                    LockGuard guard(&mtx);
                     while (queue == 0) {
-                        cv->wait(mtx);
+                        cv->wait(&mtx);
                     }
                     --queue;
                     ++consumed;
@@ -279,7 +279,7 @@ STD_TEST_SUITE(CoroExecutor) {
 
         exec->spawn([&] {
             for (int j = 0; j < nCoros * nIters; ++j) {
-                LockGuard guard(mtx);
+                LockGuard guard(&mtx);
                 ++queue;
                 cv->signal();
             }
@@ -299,7 +299,7 @@ STD_TEST_SUITE(CoroMisc) {
 
         for (int i = 0; i < 100; ++i) {
             exec->spawn([&] {
-                LockGuard guard(mtx);
+                LockGuard guard(&mtx);
                 ++counter;
             });
         }

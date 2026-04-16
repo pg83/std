@@ -306,7 +306,7 @@ STD_TEST_SUITE(Thread) {
 
             void run() noexcept override {
                 for (int i = 0; i < iterations; ++i) {
-                    LockGuard guard(*mutex);
+                    LockGuard guard(mutex);
                     ++(*counter);
                 }
             }
@@ -346,9 +346,9 @@ STD_TEST_SUITE(Thread) {
             }
 
             void run() noexcept override {
-                LockGuard guard(*mutex);
+                LockGuard guard(mutex);
                 while (*counter < 10) {
-                    cond->wait(*mutex);
+                    cond->wait(mutex);
                 }
             }
         };
@@ -368,7 +368,7 @@ STD_TEST_SUITE(Thread) {
             void run() noexcept override {
                 for (int i = 0; i < 10; ++i) {
                     {
-                        LockGuard guard(*mutex);
+                        LockGuard guard(mutex);
                         ++(*counter);
                     }
                     cond->signal();
@@ -625,7 +625,7 @@ STD_TEST_SUITE(CoroThread) {
 
             void run() noexcept override {
                 for (int i = 0; i < iterations; ++i) {
-                    LockGuard guard(*mutex);
+                    LockGuard guard(mutex);
                     ++(*counter);
                 }
             }

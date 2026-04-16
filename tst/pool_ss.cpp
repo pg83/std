@@ -69,7 +69,7 @@ namespace {
             delete this;
 
             if (stdAtomicSubAndFetch(&state->counter, 1, MemoryOrder::Release) == 0) {
-                LockGuard lock(*state->mutex);
+                LockGuard lock(state->mutex);
                 state->condVar->signal();
             }
         }
@@ -87,10 +87,10 @@ int main() {
     });
 
     {
-        LockGuard lock(*state.mutex);
+        LockGuard lock(state.mutex);
 
         while (stdAtomicFetch(&state.counter, MemoryOrder::Acquire) > 0) {
-            state.condVar->wait(*state.mutex);
+            state.condVar->wait(state.mutex);
         }
     }
 

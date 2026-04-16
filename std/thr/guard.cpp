@@ -3,8 +3,8 @@
 
 using namespace stl;
 
-LockGuard::LockGuard(Mutex& mutex)
-    : mutex_(&mutex)
+LockGuard::LockGuard(Mutex* mutex)
+    : mutex_(mutex)
 {
     mutex_->lock();
 }
@@ -15,12 +15,12 @@ LockGuard::~LockGuard() noexcept {
     }
 }
 
-UnlockGuard::UnlockGuard(Mutex& mutex)
+UnlockGuard::UnlockGuard(Mutex* mutex)
     : mutex_(mutex)
 {
-    mutex_.unlock();
+    mutex_->unlock();
 }
 
 UnlockGuard::~UnlockGuard() noexcept {
-    mutex_.lock();
+    mutex_->lock();
 }

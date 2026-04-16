@@ -112,17 +112,17 @@ ThreadPoolImpl::ThreadPoolImpl(ObjPool* pool, size_t numThreads)
 }
 
 void ThreadPoolImpl::submitTasks(IntrusiveList& tasks) noexcept {
-    LockGuard lock(*mutex_);
+    LockGuard lock(mutex_);
     inflight_ += tasks.length();
     queue_.pushBack(tasks);
     condVar_->signal();
 }
 
 void ThreadPoolImpl::join() noexcept {
-    LockGuard lock(*mutex_);
+    LockGuard lock(mutex_);
 
     while (inflight_) {
-        UnlockGuard unlock(*mutex_);
+        UnlockGuard unlock(mutex_);
 
         sched_yield();
     }
@@ -148,12 +148,12 @@ void ThreadPoolImpl::flushLocal() noexcept {
 }
 
 void ThreadPoolImpl::workerLoop() {
-    LockGuard lock(*mutex_);
+    LockGuard lock(mutex_);
 
-    for (;; condVar_->wait(*mutex_)) {
+    for (;; condVar_->wait(mutex_)) {
         while (auto t = (Task*)queue_.popFrontOrNull()) {
             {
-                UnlockGuard unlock(*mutex_);
+                UnlockGuard unlock(mutex_);
 
                 t->run();
             }
@@ -247,22 +247,22 @@ namespace {
 
 void WorkStealingThreadPool::Worker::sleep() noexcept {
     pool_->wq->enqueue(this);
-    condVar_->wait(*mutex_);
+    condVar_->wait(mutex_);
 }
 
 void WorkStealingThreadPool::Worker::push(Task* task) noexcept {
-    LockGuard lock(*mutex_);
+    LockGuard lock(mutex_);
     tasks_.pushBack(task);
     condVar_->signal();
 }
 
 void WorkStealingThreadPool::Worker::pushNoSignal(IntrusiveList& tasks) noexcept {
-    LockGuard lock(*mutex_);
+    LockGuard lock(mutex_);
     tasks_.pushBack(tasks);
 }
 
 void WorkStealingThreadPool::Worker::push(IntrusiveList* tasks) noexcept {
-    LockGuard lock(*mutex_);
+    LockGuard lock(mutex_);
     tasks_.pushBack(*tasks);
     condVar_->signal();
 }
@@ -339,7 +339,7 @@ void WorkStealingThreadPool::flushLocal() noexcept {
         Worker* target = nullptr;
 
         {
-            LockGuard lock(*w->mutex_);
+            LockGuard lock(w->mutex_);
 
             w->flushLocal();
 
@@ -437,7 +437,7 @@ void WorkStealingThreadPool::Worker::run() noexcept {
 void WorkStealingThreadPool::Worker::loop() {
     condVar_ = pool_->hooks_->createCondVar(opool_, index_);
 
-    LockGuard lock(*mutex_);
+    LockGuard lock(mutex_);
 
     while (true) {
         while (auto task = popNoLock()) {
@@ -449,7 +449,7 @@ void WorkStealingThreadPool::Worker::loop() {
 
             stdAtomicSubAndFetch(&pool_->taskCount_, 1, MemoryOrder::Relaxed);
 
-            UnlockGuard(*mutex_).run([task] {
+            UnlockGuard(mutex_).run([task] {
                 task->run();
             });
 
@@ -460,7 +460,7 @@ void WorkStealingThreadPool::Worker::loop() {
 
         IntrusiveList stolen;
 
-        UnlockGuard(*mutex_).run([this, &stolen] {
+        UnlockGuard(mutex_).run([this, &stolen] {
             trySteal(&stolen);
         });
 

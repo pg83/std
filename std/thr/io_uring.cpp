@@ -3,6 +3,7 @@
 #include "coro.h"
 #include "pool.h"
 #include "mutex.h"
+#include "guard.h"
 #include "poller.h"
 #include "poll_fd.h"
 #include "cond_var.h"
@@ -107,7 +108,7 @@ namespace {
 
         void signal() noexcept override;
         void broadcast() noexcept override;
-        void wait(Mutex& mutex) noexcept override;
+        void wait(Mutex* mutex) noexcept override;
     };
 
     struct UringReactorImpl: public IoReactor, public ThreadPoolHooks {
@@ -273,13 +274,11 @@ bool UringCondVarImpl::cycle() noexcept {
     return signaled;
 }
 
-void UringCondVarImpl::wait(Mutex& mutex) noexcept {
-    mutex.unlock();
+void UringCondVarImpl::wait(Mutex* mutex) noexcept {
+    UnlockGuard unlock(mutex);
 
     while (!cycle()) {
     }
-
-    mutex.lock();
 }
 
 void UringCondVarImpl::signal() noexcept {

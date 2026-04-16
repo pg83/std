@@ -251,7 +251,7 @@ namespace {
         }
 
         void enqueue(Item* item) noexcept override {
-            LockGuard lock(*mutex_);
+            LockGuard lock(mutex_);
 
             item->next = head;
             head = item;
@@ -264,7 +264,7 @@ namespace {
                 return nullptr;
             }
 
-            LockGuard lock(*mutex_);
+            LockGuard lock(mutex_);
 
             Item* item = head;
 

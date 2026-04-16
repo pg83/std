@@ -225,7 +225,7 @@ DnsResult* DnsResolverImpl::resolve(ObjPool* pool, const StringView& name) {
 void DnsResolverImpl::submitPending() {
     IntrusiveList batch;
 
-    LockGuard(*lock_).run([&] {
+    LockGuard(lock_).run([&] {
         batch.xchg(pending_);
     });
 

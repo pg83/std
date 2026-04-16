@@ -24,8 +24,8 @@ namespace {
             STD_INSIST(pthread_cond_destroy(this) == 0);
         }
 
-        void wait(Mutex& mutex) noexcept override {
-            STD_INSIST(pthread_cond_wait(this, (pthread_mutex_t*)mutex.nativeHandle()) == 0);
+        void wait(Mutex* mutex) noexcept override {
+            STD_INSIST(pthread_cond_wait(this, (pthread_mutex_t*)mutex->nativeHandle()) == 0);
         }
 
         void signal() noexcept override {

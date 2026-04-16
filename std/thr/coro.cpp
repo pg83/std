@@ -315,19 +315,19 @@ CondVar* CoroExecutorImpl::createCondVar(ObjPool* pool) {
             return (CoroExecutorImpl*)queueMutex_->nativeHandle();
         }
 
-        void wait(Mutex& mutex) noexcept override {
+        void wait(Mutex* mutex) noexcept override {
             queueMutex_->lock();
             auto cont = exec()->currentCont();
             waiters_.pushBack(cont);
             cont->park([&] {
                 queueMutex_->unlock();
-                mutex.unlock();
+                mutex->unlock();
             });
-            mutex.lock();
+            mutex->lock();
         }
 
         void signal() noexcept override {
-            auto node = LockGuard(*queueMutex_).run([&] {
+            auto node = LockGuard(queueMutex_).run([&] {
                 return (ContImpl*)(Task*)waiters_.popFrontOrNull();
             });
 
@@ -339,7 +339,7 @@ CondVar* CoroExecutorImpl::createCondVar(ObjPool* pool) {
         void broadcast() noexcept override {
             IntrusiveList tmp;
 
-            LockGuard(*queueMutex_).run([&] {
+            LockGuard(queueMutex_).run([&] {
                 tmp.xchg(waiters_);
             });
 

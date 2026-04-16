@@ -152,7 +152,7 @@ void ChannelImpl::enqueue(void** from, size_t len) noexcept {
 }
 
 bool ChannelImpl::tryEnqueue(void* v) noexcept {
-    LockGuard guard(*mu_);
+    LockGuard guard(mu_);
 
     STD_INSIST(!closed_);
 
@@ -210,7 +210,7 @@ bool ChannelImpl::dequeue(void** out) noexcept {
 }
 
 bool ChannelImpl::tryDequeue(void** out) noexcept {
-    LockGuard guard(*mu_);
+    LockGuard guard(mu_);
 
     return recvOne(out);
 }
@@ -267,7 +267,7 @@ size_t ChannelImpl::dequeue(void** to, size_t len) noexcept {
 }
 
 void ChannelImpl::close() noexcept {
-    LockGuard guard(*mu_);
+    LockGuard guard(mu_);
 
     STD_INSIST(!closed_);
     STD_INSIST(senders_.empty());

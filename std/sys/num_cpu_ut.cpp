@@ -21,13 +21,13 @@ namespace {
 
 STD_TEST_SUITE(NumCpu) {
     STD_TEST(ReturnsPositive) {
-        LockGuard g(envMutex());
+        LockGuard g(&envMutex());
 
         STD_INSIST(numCpu() > 0);
     }
 
     STD_TEST(GomaxprocsOverride) {
-        LockGuard g(envMutex());
+        LockGuard g(&envMutex());
 
         auto prev = getenv("GOMAXPROCS");
 
@@ -45,7 +45,7 @@ STD_TEST_SUITE(NumCpu) {
     }
 
     STD_TEST(GomaxprocsZeroIgnored) {
-        LockGuard g(envMutex());
+        LockGuard g(&envMutex());
 
         auto prev = getenv("GOMAXPROCS");
 
@@ -60,7 +60,7 @@ STD_TEST_SUITE(NumCpu) {
     }
 
     STD_TEST(GomaxprocsGarbageIgnored) {
-        LockGuard g(envMutex());
+        LockGuard g(&envMutex());
 
         auto prev = getenv("GOMAXPROCS");
 
@@ -75,7 +75,7 @@ STD_TEST_SUITE(NumCpu) {
     }
 
     STD_TEST(WithoutEnvMatchesOs) {
-        LockGuard g(envMutex());
+        LockGuard g(&envMutex());
 
         auto prev = getenv("GOMAXPROCS");
 

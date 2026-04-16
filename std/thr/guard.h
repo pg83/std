@@ -7,7 +7,7 @@ namespace stl {
         Mutex* mutex_;
 
     public:
-        LockGuard(Mutex& m);
+        LockGuard(Mutex* m);
         ~LockGuard() noexcept;
 
         template <typename F>
@@ -21,10 +21,10 @@ namespace stl {
     };
 
     class UnlockGuard {
-        Mutex& mutex_;
+        Mutex* mutex_;
 
     public:
-        UnlockGuard(Mutex& m);
+        UnlockGuard(Mutex* m);
         ~UnlockGuard() noexcept;
 
         template <typename F>

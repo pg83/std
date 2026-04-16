@@ -195,7 +195,7 @@ void Tests::execute() {
 
                 if (timingsMu) {
                     u64 dt = monotonicNowUs() - t0;
-                    LockGuard guard(*timingsMu);
+                    LockGuard guard(timingsMu);
                     timings.pushBack(TestTiming{dt, test});
                 }
 

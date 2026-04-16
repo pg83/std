@@ -178,7 +178,7 @@ ReactorState::~ReactorState() noexcept {
 void ReactorState::drainQueue() {
     DeadlineTreap local;
 
-    LockGuard(*queueMutex_).run([this, &local] {
+    LockGuard(queueMutex_).run([this, &local] {
         queue_.xchg(local);
     });
 

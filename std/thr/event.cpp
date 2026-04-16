@@ -70,14 +70,14 @@ namespace {
             cb.run();
 
             while (!signaled_) {
-                cv_->wait(*mu_);
+                cv_->wait(mu_);
             }
 
             mu_->unlock();
         }
 
         void signal() noexcept override {
-            LockGuard guard(*mu_);
+            LockGuard guard(mu_);
             signaled_ = true;
             cv_->signal();
         }

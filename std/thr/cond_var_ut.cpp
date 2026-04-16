@@ -28,9 +28,9 @@ namespace {
         }
 
         void run() noexcept override {
-            LockGuard lock(*mutex);
+            LockGuard lock(mutex);
             while (!*ready) {
-                cv->wait(*mutex);
+                cv->wait(mutex);
             }
             *executed = true;
         }
@@ -51,9 +51,9 @@ namespace {
         }
 
         void run() noexcept override {
-            LockGuard lock(*mutex);
+            LockGuard lock(mutex);
             while (!*ready) {
-                cv->wait(*mutex);
+                cv->wait(mutex);
             }
             ++(*counter);
         }
@@ -76,9 +76,9 @@ namespace {
         }
 
         void run() noexcept override {
-            LockGuard lock(*mutex);
+            LockGuard lock(mutex);
             while (!*dataReady) {
-                cv->wait(*mutex);
+                cv->wait(mutex);
             }
             STD_INSIST(*data == expectedValue);
         }
@@ -123,7 +123,7 @@ STD_TEST_SUITE(CondVar) {
         auto& thread = *Thread::create(pool.mutPtr(), runnable);
 
         {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             ready = true;
             cv->signal();
         }
@@ -143,7 +143,7 @@ STD_TEST_SUITE(CondVar) {
         auto& thread = *Thread::create(pool.mutPtr(), runnable);
 
         {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             ready = true;
             cv->broadcast();
         }
@@ -168,7 +168,7 @@ STD_TEST_SUITE(CondVar) {
         auto& thread3 = *Thread::create(pool.mutPtr(), runnable3);
 
         {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             ready = true;
             cv->broadcast();
         }
@@ -194,7 +194,7 @@ STD_TEST_SUITE(CondVar) {
         auto& thread2 = *Thread::create(pool.mutPtr(), runnable2);
 
         {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             ready = true;
             cv->signal();
             cv->signal();
@@ -217,7 +217,7 @@ STD_TEST_SUITE(CondVar) {
         auto& consumerThread = *Thread::create(pool.mutPtr(), consumer);
 
         {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             data = 42;
             dataReady = true;
             cv->signal();
@@ -242,7 +242,7 @@ STD_TEST_SUITE(CondVar) {
         auto& thread3 = *Thread::create(pool.mutPtr(), consumer3);
 
         {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             data = 100;
             dataReady = true;
             cv->broadcast();
@@ -266,7 +266,7 @@ STD_TEST_SUITE(CondVar) {
         auto& thread1 = *Thread::create(pool.mutPtr(), runnable1);
 
         {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             ready1 = true;
             cv->signal();
         }
@@ -278,7 +278,7 @@ STD_TEST_SUITE(CondVar) {
         auto& thread2 = *Thread::create(pool.mutPtr(), runnable2);
 
         {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             ready2 = true;
             cv->signal();
         }
@@ -305,9 +305,9 @@ STD_TEST_SUITE(CondVar) {
             }
 
             void run() noexcept override {
-                LockGuard lock(*mutex);
+                LockGuard lock(mutex);
                 while (*value != targetValue) {
-                    cv->wait(*mutex);
+                    cv->wait(mutex);
                 }
                 *done = true;
             }
@@ -323,7 +323,7 @@ STD_TEST_SUITE(CondVar) {
         auto& thread = *Thread::create(pool.mutPtr(), runnable);
 
         for (int i = 1; i <= 5; ++i) {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             value = i;
             cv->signal();
         }
@@ -350,13 +350,13 @@ STD_TEST_SUITE(CondVar) {
         auto& thread2 = *Thread::create(pool.mutPtr(), runnable2);
 
         {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             ready1 = true;
             cv1->signal();
         }
 
         {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             ready2 = true;
             cv2->signal();
         }
@@ -382,7 +382,7 @@ STD_TEST_SUITE(CondVar) {
         auto& thread2 = *Thread::create(pool.mutPtr(), runnable2);
 
         {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             ready = true;
             cv->broadcast();
             cv->broadcast();
@@ -411,9 +411,9 @@ STD_TEST_SUITE(CondVar) {
             }
 
             void run() noexcept override {
-                LockGuard lock(*mutex);
+                LockGuard lock(mutex);
                 while (!*predicate) {
-                    cv->wait(*mutex);
+                    cv->wait(mutex);
                 }
                 *result = 123;
             }
@@ -429,7 +429,7 @@ STD_TEST_SUITE(CondVar) {
         auto& thread = *Thread::create(pool.mutPtr(), runnable);
 
         {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             predicate = true;
             cv->signal();
         }
@@ -452,9 +452,9 @@ STD_TEST_SUITE(CondVar) {
             }
 
             void run() noexcept override {
-                LockGuard lock(*mutex);
+                LockGuard lock(mutex);
                 while (*phase != 1) {
-                    cv->wait(*mutex);
+                    cv->wait(mutex);
                 }
                 *phase = 2;
                 cv->broadcast();
@@ -474,9 +474,9 @@ STD_TEST_SUITE(CondVar) {
             }
 
             void run() noexcept override {
-                LockGuard lock(*mutex);
+                LockGuard lock(mutex);
                 while (*phase != 2) {
-                    cv->wait(*mutex);
+                    cv->wait(mutex);
                 }
                 *phase = 3;
                 cv->broadcast();
@@ -495,12 +495,12 @@ STD_TEST_SUITE(CondVar) {
         auto& thread2 = *Thread::create(pool.mutPtr(), runnable2);
 
         {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             phase = 1;
             cv->broadcast();
 
             while (phase != 3) {
-                cv->wait(mutex);
+                cv->wait(&mutex);
             }
         }
 
@@ -516,7 +516,7 @@ STD_TEST_SUITE(CondVar) {
         auto cv = CondVar::create(pool.mutPtr());
 
         for (int i = 0; i < 1000; ++i) {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             cv->signal();
         }
     }
@@ -527,7 +527,7 @@ STD_TEST_SUITE(CondVar) {
         auto cv = CondVar::create(pool.mutPtr());
 
         for (int i = 0; i < 1000; ++i) {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             cv->broadcast();
         }
     }
@@ -563,7 +563,7 @@ STD_TEST_SUITE(CondVar) {
         auto& thread10 = *Thread::create(pool.mutPtr(), runnable10);
 
         {
-            LockGuard lock(mutex);
+            LockGuard lock(&mutex);
             ready = true;
             cv->broadcast();
         }
@@ -621,15 +621,15 @@ STD_TEST_SUITE(CoroCondVar) {
         auto cv = exec->createCondVar(pool.mutPtr());
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             while (!ready) {
-                cv->wait(mtx);
+                cv->wait(&mtx);
             }
             executed = true;
         });
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             ready = true;
             cv->signal();
         });
@@ -647,15 +647,15 @@ STD_TEST_SUITE(CoroCondVar) {
         auto cv = exec->createCondVar(pool.mutPtr());
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             while (!ready) {
-                cv->wait(mtx);
+                cv->wait(&mtx);
             }
             executed = true;
         });
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             ready = true;
             cv->broadcast();
         });
@@ -675,16 +675,16 @@ STD_TEST_SUITE(CoroCondVar) {
 
         for (int i = 0; i < N; ++i) {
             exec->spawn([&] {
-                LockGuard lock(mtx);
+                LockGuard lock(&mtx);
                 while (!ready) {
-                    cv->wait(mtx);
+                    cv->wait(&mtx);
                 }
                 ++counter;
             });
         }
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             ready = true;
             cv->broadcast();
         });
@@ -703,16 +703,16 @@ STD_TEST_SUITE(CoroCondVar) {
 
         for (int i = 0; i < 2; ++i) {
             exec->spawn([&] {
-                LockGuard lock(mtx);
+                LockGuard lock(&mtx);
                 while (!ready) {
-                    cv->wait(mtx);
+                    cv->wait(&mtx);
                 }
                 ++counter;
             });
         }
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             ready = true;
             cv->signal();
             cv->signal();
@@ -731,15 +731,15 @@ STD_TEST_SUITE(CoroCondVar) {
         auto cv = exec->createCondVar(pool.mutPtr());
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             while (!dataReady) {
-                cv->wait(mtx);
+                cv->wait(&mtx);
             }
             STD_INSIST(data == 42);
         });
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             data = 42;
             dataReady = true;
             cv->signal();
@@ -759,16 +759,16 @@ STD_TEST_SUITE(CoroCondVar) {
 
         for (int i = 0; i < N; ++i) {
             exec->spawn([&] {
-                LockGuard lock(mtx);
+                LockGuard lock(&mtx);
                 while (!dataReady) {
-                    cv->wait(mtx);
+                    cv->wait(&mtx);
                 }
                 STD_INSIST(data == 100);
             });
         }
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             data = 100;
             dataReady = true;
             cv->broadcast();
@@ -788,15 +788,15 @@ STD_TEST_SUITE(CoroCondVar) {
         {
             auto& done = *WaitGroup::create(pool.mutPtr(), 1);
             exec->spawn([&] {
-                LockGuard lock(mtx);
+                LockGuard lock(&mtx);
                 while (!ready1) {
-                    cv->wait(mtx);
+                    cv->wait(&mtx);
                 }
                 executed1 = true;
                 done.done();
             });
             exec->spawn([&] {
-                LockGuard lock(mtx);
+                LockGuard lock(&mtx);
                 ready1 = true;
                 cv->signal();
             });
@@ -808,15 +808,15 @@ STD_TEST_SUITE(CoroCondVar) {
         {
             auto& done = *WaitGroup::create(pool.mutPtr(), 1);
             exec->spawn([&] {
-                LockGuard lock(mtx);
+                LockGuard lock(&mtx);
                 while (!ready2) {
-                    cv->wait(mtx);
+                    cv->wait(&mtx);
                 }
                 executed2 = true;
                 done.done();
             });
             exec->spawn([&] {
-                LockGuard lock(mtx);
+                LockGuard lock(&mtx);
                 ready2 = true;
                 cv->signal();
             });
@@ -835,15 +835,15 @@ STD_TEST_SUITE(CoroCondVar) {
         auto cv = exec->createCondVar(pool.mutPtr());
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             while (value != 5) {
-                cv->wait(mtx);
+                cv->wait(&mtx);
             }
         });
 
         exec->spawn([&] {
             for (int i = 1; i <= 5; ++i) {
-                LockGuard lock(mtx);
+                LockGuard lock(&mtx);
                 value = i;
                 cv->signal();
             }
@@ -863,29 +863,29 @@ STD_TEST_SUITE(CoroCondVar) {
         auto cv2 = exec->createCondVar(pool.mutPtr());
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             while (!ready1) {
-                cv1->wait(mtx);
+                cv1->wait(&mtx);
             }
             executed1 = true;
         });
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             while (!ready2) {
-                cv2->wait(mtx);
+                cv2->wait(&mtx);
             }
             executed2 = true;
         });
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             ready1 = true;
             cv1->signal();
         });
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             ready2 = true;
             cv2->signal();
         });
@@ -905,16 +905,16 @@ STD_TEST_SUITE(CoroCondVar) {
 
         for (int i = 0; i < 2; ++i) {
             exec->spawn([&] {
-                LockGuard lock(mtx);
+                LockGuard lock(&mtx);
                 while (!ready) {
-                    cv->wait(mtx);
+                    cv->wait(&mtx);
                 }
                 ++counter;
             });
         }
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             ready = true;
             cv->broadcast();
             cv->broadcast();
@@ -934,15 +934,15 @@ STD_TEST_SUITE(CoroCondVar) {
         auto cv = exec->createCondVar(pool.mutPtr());
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             while (!predicate) {
-                cv->wait(mtx);
+                cv->wait(&mtx);
             }
             result = 123;
         });
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             predicate = true;
             cv->signal();
         });
@@ -959,29 +959,29 @@ STD_TEST_SUITE(CoroCondVar) {
         auto cv = exec->createCondVar(pool.mutPtr());
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             while (phase != 1) {
-                cv->wait(mtx);
+                cv->wait(&mtx);
             }
             phase = 2;
             cv->broadcast();
         });
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             while (phase != 2) {
-                cv->wait(mtx);
+                cv->wait(&mtx);
             }
             phase = 3;
             cv->broadcast();
         });
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             phase = 1;
             cv->broadcast();
             while (phase != 3) {
-                cv->wait(mtx);
+                cv->wait(&mtx);
             }
         });
 
@@ -997,7 +997,7 @@ STD_TEST_SUITE(CoroCondVar) {
 
         exec->spawn([&] {
             for (int i = 0; i < 1000; ++i) {
-                LockGuard lock(mtx);
+                LockGuard lock(&mtx);
                 cv->signal();
             }
         });
@@ -1013,7 +1013,7 @@ STD_TEST_SUITE(CoroCondVar) {
 
         exec->spawn([&] {
             for (int i = 0; i < 1000; ++i) {
-                LockGuard lock(mtx);
+                LockGuard lock(&mtx);
                 cv->broadcast();
             }
         });
@@ -1032,16 +1032,16 @@ STD_TEST_SUITE(CoroCondVar) {
 
         for (int i = 0; i < N; ++i) {
             exec->spawn([&] {
-                LockGuard lock(mtx);
+                LockGuard lock(&mtx);
                 while (!ready) {
-                    cv->wait(mtx);
+                    cv->wait(&mtx);
                 }
                 ++counter;
             });
         }
 
         exec->spawn([&] {
-            LockGuard lock(mtx);
+            LockGuard lock(&mtx);
             ready = true;
             cv->broadcast();
         });

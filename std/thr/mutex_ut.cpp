@@ -67,7 +67,7 @@ STD_TEST_SUITE(Mutex) {
         auto& mutex = *Mutex::create(pool.mutPtr());
 
         {
-            LockGuard guard(mutex);
+            LockGuard guard(&mutex);
         }
 
         bool locked = mutex.tryLock();
@@ -81,9 +81,9 @@ STD_TEST_SUITE(Mutex) {
         auto& mutex2 = *Mutex::create(pool.mutPtr());
 
         {
-            LockGuard guard1(mutex1);
+            LockGuard guard1(&mutex1);
             {
-                LockGuard guard2(mutex2);
+                LockGuard guard2(&mutex2);
             }
         }
 
@@ -102,7 +102,7 @@ STD_TEST_SUITE(Mutex) {
         auto& mutex = *Mutex::create(pool.mutPtr());
 
         try {
-            LockGuard guard(mutex);
+            LockGuard guard(&mutex);
             throw 42;
         } catch (int) {
         }
@@ -191,7 +191,7 @@ STD_TEST_SUITE(SpinMutex) {
         auto& mtx = *Mutex::createSpinLock(pool.mutPtr());
 
         {
-            LockGuard guard(mtx);
+            LockGuard guard(&mtx);
         }
 
         bool locked = mtx.tryLock();
@@ -208,7 +208,7 @@ STD_TEST_SUITE(SpinMutex) {
         for (int i = 0; i < 4; ++i) {
             pool->submit([&] {
                 for (int j = 0; j < 1000; ++j) {
-                    LockGuard guard(mtx);
+                    LockGuard guard(&mtx);
                     ++counter;
                 }
             });
@@ -243,7 +243,7 @@ STD_TEST_SUITE(SpinMutex) {
         for (int i = 0; i < 4; ++i) {
             exec->spawn([&] {
                 for (int j = 0; j < 1000; ++j) {
-                    LockGuard guard(mtx);
+                    LockGuard guard(&mtx);
                     ++counter;
                 }
             });
@@ -285,7 +285,7 @@ STD_TEST_SUITE(PoolMutex) {
         auto mtx = Mutex::create(pool.mutPtr());
 
         {
-            LockGuard guard(*mtx);
+            LockGuard guard(mtx);
         }
 
         bool locked = mtx->tryLock();
@@ -323,7 +323,7 @@ STD_TEST_SUITE(PoolMutex) {
         auto mtx = Mutex::createSpinLock(pool.mutPtr());
 
         {
-            LockGuard guard(*mtx);
+            LockGuard guard(mtx);
         }
 
         bool locked = mtx->tryLock();
@@ -340,7 +340,7 @@ STD_TEST_SUITE(PoolMutex) {
         for (int i = 0; i < 4; ++i) {
             pool->submit([&] {
                 for (int j = 0; j < 1000; ++j) {
-                    LockGuard guard(*mtx);
+                    LockGuard guard(mtx);
                     ++counter;
                 }
             });
@@ -444,7 +444,7 @@ STD_TEST_SUITE(CoroMutex) {
 
         exec->spawn([&] {
             {
-                LockGuard guard(mtx);
+                LockGuard guard(&mtx);
             }
             result = mtx.tryLock();
             if (result) {
@@ -465,9 +465,9 @@ STD_TEST_SUITE(CoroMutex) {
 
         exec->spawn([&] {
             {
-                LockGuard g1(mtx1);
+                LockGuard g1(&mtx1);
                 {
-                    LockGuard g2(mtx2);
+                    LockGuard g2(&mtx2);
                 }
             }
             r1 = mtx1.tryLock();
