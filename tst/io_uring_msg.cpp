@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+
+#if __has_include(<liburing.h>)
 #include <liburing.h>
 
 static constexpr unsigned long long COOKIE = 0xCAFE;
@@ -107,3 +109,7 @@ int main() {
 
     return 0;
 }
+#else
+int main() {
+}
+#endif

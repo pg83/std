@@ -10,8 +10,13 @@
 
 using namespace stl;
 
+#if defined(__APPLE__)
+template <>
+void stl::output<ZeroCopyOutput, DnsRecord>(ZeroCopyOutput& out, const DnsRecord& rec) {
+#else
 template <>
 void stl::output<ZeroCopyOutput, DnsRecord>(ZeroCopyOutput& out, DnsRecord rec) {
+#endif
     size_t avail = 64;
     auto buf = (char*)out.imbue(&avail);
 

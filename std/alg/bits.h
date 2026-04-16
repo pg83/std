@@ -3,11 +3,15 @@
 #include <std/sys/types.h>
 
 namespace stl {
-    inline u32 clp2(u32 v) noexcept {
-        return v <= 1 ? 1u : 1u << (32 - __builtin_clz(v - 1));
-    }
+    template <class T>
+    inline T clp2(T v) noexcept {
+        static_assert(T(-1) > T(0));
+        static_assert(sizeof(T) == 4 || sizeof(T) == 8);
 
-    inline u64 clp2(u64 v) noexcept {
-        return v <= 1 ? 1ull : 1ull << (64 - __builtin_clzll(v - 1));
+        if constexpr (sizeof(T) <= 4) {
+            return v <= 1 ? T(1) : T(1) << (32 - __builtin_clz(v - 1));
+        } else {
+            return v <= 1 ? T(1) : T(1) << (64 - __builtin_clzll(v - 1));
+        }
     }
 }

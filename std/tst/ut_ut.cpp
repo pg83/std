@@ -9,10 +9,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#ifdef __linux__
 #undef noexcept
 
 #include <map>
 #include <unordered_map>
+#endif
 
 using namespace stl;
 
