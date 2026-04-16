@@ -353,56 +353,31 @@ CondVar* CoroExecutorImpl::createCondVar(ObjPool* pool) {
 }
 
 Thread* CoroExecutorImpl::createThread(ObjPool* pool) {
-    struct State: public ARC {
+    struct CoroThreadImpl: public Thread {
         Semaphore* sem_;
 
-        State(ObjPool* pool, CoroExecutorImpl* exec)
-            : sem_(Semaphore::create(pool, 0, exec))
-        {
-        }
-
-        CoroExecutorImpl* exec() noexcept {
-            return (CoroExecutorImpl*)sem_->nativeHandle();
-        }
-
-        void run(Runable& runable) {
-            runable.run();
-            sem_->post();
-        }
-
-        void start(Runable& runable) {
-            exec()->spawn([ref = makeIntrusivePtr(this), &runable] mutable {
-                ref->run(runable);
-            });
-        }
-
-        void join() noexcept {
-            sem_->wait();
-        }
-    };
-
-    struct CoroThreadImpl: public Thread {
-        IntrusivePtr<State> state_;
-
-        CoroThreadImpl(State* s) noexcept
-            : state_(s)
+        CoroThreadImpl(Semaphore* sem) noexcept
+            : sem_(sem)
         {
         }
 
         void start(Runable& runable) override {
-            state_->start(runable);
+            ((CoroExecutor*)sem_->nativeHandle())->spawn([this, &runable] {
+                runable.run();
+                sem_->post();
+            });
         }
 
         void join() noexcept override {
-            state_->join();
+            sem_->wait();
         }
 
         u64 threadId() const noexcept override {
-            return (u64)(size_t)state_.ptr();
+            return (u64)(size_t)this;
         }
     };
 
-    return pool->make<CoroThreadImpl>(new State(pool, this));
+    return pool->make<CoroThreadImpl>(Semaphore::create(pool, 0, this));
 }
 
 Mutex* CoroExecutorImpl::createSemaphoreImpl(ObjPool* pool, size_t initial) {
