@@ -1,7 +1,9 @@
 #include "in_zc.h"
 #include "in_mem.h"
+#include "in_buf.h"
 
 #include <std/tst/ut.h>
+#include <std/str/view.h>
 #include <std/lib/buffer.h>
 #include <std/lib/vector.h>
 
@@ -310,6 +312,153 @@ STD_TEST_SUITE(ZeroCopyInputReadLine) {
         STD_INSIST(buf3.length() == 3);
         STD_INSIST(memcmp(buf3.data(), "\t  ", 3) == 0);
         STD_INSIST(hasData3);
+    }
+}
+
+STD_TEST_SUITE(ZeroCopyInputReadLineZc) {
+    STD_TEST(EmptyInput) {
+        MemoryInput input("", 0);
+        StringView out;
+        Buffer fallback;
+        STD_INSIST(!input.readLineZc(out, fallback));
+    }
+
+    STD_TEST(SingleLine) {
+        const char* data = "hello\n";
+        MemoryInput input(data, 6);
+        StringView out;
+        Buffer fallback;
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("hello"));
+    }
+
+    STD_TEST(ZeroCopyPointsIntoChunk) {
+        const char* data = "hello\nworld\n";
+        MemoryInput input(data, 12);
+        StringView out;
+        Buffer fallback;
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out.data() >= (const u8*)data);
+        STD_INSIST(out.data() < (const u8*)data + 12);
+    }
+
+    STD_TEST(EmptyLine) {
+        const char* data = "\n";
+        MemoryInput input(data, 1);
+        StringView out;
+        Buffer fallback;
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out.empty());
+    }
+
+    STD_TEST(MultipleLines) {
+        const char* data = "first\nsecond\nthird";
+        MemoryInput input(data, 18);
+        StringView out;
+        Buffer fallback;
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("first"));
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("second"));
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("third"));
+    }
+
+    STD_TEST(WithCarriageReturn) {
+        const char* data = "hello\r\nworld\r\n";
+        MemoryInput input(data, 14);
+        StringView out;
+        Buffer fallback;
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("hello\r"));
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("world\r"));
+    }
+
+    STD_TEST(WithoutNewline) {
+        const char* data = "hello";
+        MemoryInput input(data, 5);
+        StringView out;
+        Buffer fallback;
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("hello"));
+    }
+
+    STD_TEST(ExhaustionAfterNewline) {
+        const char* data = "line\n";
+        MemoryInput input(data, 5);
+        StringView out;
+        Buffer fallback;
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("line"));
+        STD_INSIST(!input.readLineZc(out, fallback));
+    }
+
+    STD_TEST(EmptyLines) {
+        const char* data = "\n\n\n";
+        MemoryInput input(data, 3);
+        StringView out;
+        Buffer fallback;
+        for (size_t i = 0; i < 3; ++i) {
+            STD_INSIST(input.readLineZc(out, fallback));
+            STD_INSIST(out.empty());
+        }
+    }
+
+    STD_TEST(FallbackPathViaInBuf) {
+        Vector<u8> data;
+
+        data.grow(300 + 7);
+
+        for (size_t i = 0; i < 300; ++i) {
+            data.mutData()[i] = 'A' + (i % 26);
+        }
+
+        data.mutData()[300] = '\n';
+        memcpy(data.mutData() + 301, "short\n", 6);
+
+        MemoryInput mem(data.data(), 307);
+        InBuf input(mem, 8);
+        StringView out;
+        Buffer fallback;
+
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out.length() == 300);
+        STD_INSIST(!fallback.empty());
+
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("short"));
+    }
+
+    STD_TEST(InBufFastPath) {
+        const char* data = "hi\nbye\n";
+        MemoryInput mem(data, 7);
+        InBuf input(mem, 1024);
+        StringView out;
+        Buffer fallback;
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("hi"));
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("bye"));
+    }
+
+    STD_TEST(HttpStyleHeaders) {
+        const char* data = "GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\n\r\n";
+        MemoryInput input(data, strlen(data));
+        StringView out;
+        Buffer fallback;
+
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("GET / HTTP/1.1\r"));
+
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("Host: localhost\r"));
+
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("Content-Length: 0\r"));
+
+        STD_INSIST(input.readLineZc(out, fallback));
+        STD_INSIST(out == StringView("\r"));
     }
 }
 
