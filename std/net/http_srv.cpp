@@ -48,7 +48,7 @@ namespace {
         ZeroCopyInput* reqIn;
         bool keepAlive = false;
 
-        HttpServerRequestImpl(ObjPool* pool, HttpConnection* conn);
+        HttpServerRequestImpl(ObjPool* pool, HttpConnection* conn, StringView reqLine);
 
         bool serve();
 
@@ -126,13 +126,13 @@ namespace {
     }
 }
 
-HttpServerRequestImpl::HttpServerRequestImpl(ObjPool* pool, HttpConnection* conn)
+HttpServerRequestImpl::HttpServerRequestImpl(ObjPool* pool, HttpConnection* conn, StringView reqLine)
     : pool(pool)
     , conn(conn)
 {
     StringView method, rest, path, version;
 
-    STD_VERIFY(StringView(conn->line).stripCr().split(' ', method, rest));
+    STD_VERIFY(reqLine.stripCr().split(' ', method, rest));
 
     rest.split(' ', path, version);
 
@@ -151,12 +151,15 @@ HttpServerRequestImpl::HttpServerRequestImpl(ObjPool* pool, HttpConnection* conn
     version = pool->intern(version);
 
     for (;;) {
-        conn->line.reset();
-        conn->in->readLine(conn->line);
+        StringView hdrLine;
+
+        if (!conn->in->readLineZc(hdrLine, conn->line)) {
+            break;
+        }
 
         StringView name, val;
 
-        if (!StringView(conn->line).stripCr().split(':', name, val)) {
+        if (!hdrLine.stripCr().split(':', name, val)) {
             break;
         }
 
@@ -392,15 +395,15 @@ void HttpConnection::run() {
 }
 
 bool HttpConnection::serve() {
-    line.reset();
+    StringView reqLine;
 
-    if (!in->readLine(line)) {
+    if (!in->readLineZc(reqLine, line)) {
         return false;
     }
 
     auto pool = ObjPool::fromMemory();
 
-    return HttpServerRequestImpl(pool.mutPtr(), this).serve();
+    return HttpServerRequestImpl(pool.mutPtr(), this, reqLine).serve();
 }
 
 HttpServerCtl* stl::serve(ObjPool* pool, HttpServeOpts opts) {

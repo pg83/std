@@ -31,6 +31,34 @@ bool ZeroCopyInput::readLine(Buffer& buf) {
     return readTo(buf, u8'\n');
 }
 
+bool ZeroCopyInput::readLineZc(StringView& out, Buffer& fallback) {
+    const void* chunk;
+    size_t len = next(&chunk);
+
+    if (!len) {
+        return false;
+    }
+
+    StringView part((const u8*)chunk, len);
+
+    if (auto p = part.memChr(u8'\n')) {
+        out = StringView(part.begin(), p);
+        commit(out.length() + 1);
+
+        return true;
+    }
+
+    fallback.reset();
+
+    if (!readTo(fallback, u8'\n')) {
+        return false;
+    }
+
+    out = StringView(fallback);
+
+    return true;
+}
+
 bool ZeroCopyInput::readTo(Buffer& buf, u8 delim) {
     const void* chunk;
 

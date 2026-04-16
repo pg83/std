@@ -6,6 +6,7 @@
 
 namespace stl {
     class Buffer;
+    class StringView;
 
     class ZeroCopyInput: public Input {
         void sendTo(Output& out) override;
@@ -20,6 +21,7 @@ namespace stl {
         void drain();
 
         bool readLine(Buffer& buf);
+        bool readLineZc(StringView& out, Buffer& fallback);
         bool readTo(Buffer& buf, u8 delim);
 
         size_t next(const void** chunk) {
