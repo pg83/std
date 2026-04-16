@@ -55,6 +55,7 @@ namespace {
         __attribute__((noinline)) bool dequeueSlow(void** out) noexcept;
 
         void enqueue(void* v) noexcept override;
+        void enqueue(void** from, size_t len) noexcept override;
         bool dequeue(void** out) noexcept override;
         size_t dequeue(void** to, size_t len) noexcept override;
 
@@ -127,6 +128,27 @@ void ChannelImpl::enqueue(void* v) noexcept {
     }
 
     enqueueSlow(v);
+}
+
+void ChannelImpl::enqueue(void** from, size_t len) noexcept {
+    for (size_t i = 0; i < len;) {
+        mu_->lock();
+
+        STD_INSIST(!closed_);
+
+        if (sendOne(from[i])) {
+            ++i;
+
+            while (i < len && sendOne(from[i])) {
+                ++i;
+            }
+
+            mu_->unlock();
+        } else {
+            enqueueSlow(from[i]);
+            ++i;
+        }
+    }
 }
 
 bool ChannelImpl::tryEnqueue(void* v) noexcept {

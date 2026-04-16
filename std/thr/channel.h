@@ -9,6 +9,8 @@ namespace stl {
 
     struct Channel {
         virtual void enqueue(void* v) noexcept = 0;
+        virtual void enqueue(void** from, size_t len) noexcept = 0;
+
         virtual bool dequeue(void** out) noexcept = 0;
         virtual size_t dequeue(void** to, size_t len) noexcept = 0;
 

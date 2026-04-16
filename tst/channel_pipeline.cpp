@@ -18,10 +18,18 @@ namespace {
 
         for (int i = 0; i < nStages; ++i) {
             exec->spawn([in = chArr[i], out = chArr[i + 1]] {
-                void* v;
-                while (in->dequeue(&v)) {
-                    out->enqueue(v);
+                void* batch[8];
+
+                for (;;) {
+                    size_t n = in->dequeue(batch, 8);
+
+                    if (!n) {
+                        break;
+                    }
+
+                    out->enqueue(batch, n);
                 }
+
                 out->close();
             });
         }
@@ -29,9 +37,18 @@ namespace {
         i64 sum = 0;
 
         exec->spawn([ch = chArr[nStages], &sum] {
-            void* v;
-            while (ch->dequeue(&v)) {
-                sum += (i64)(uintptr_t)v;
+            void* batch[8];
+
+            for (;;) {
+                size_t n = ch->dequeue(batch, 8);
+
+                if (!n) {
+                    break;
+                }
+
+                for (size_t j = 0; j < n; ++j) {
+                    sum += (i64)(uintptr_t)batch[j];
+                }
             }
         });
 
