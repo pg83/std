@@ -24,6 +24,10 @@ namespace {
 ZeroCopyOutput::~ZeroCopyOutput() noexcept {
 }
 
+ZeroCopyOutput* ZeroCopyOutput::upgrade() noexcept {
+    return this;
+}
+
 void ZeroCopyOutput::recvFromI(Input& in) {
     void* chunk;
     size_t clen;

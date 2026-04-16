@@ -15,6 +15,10 @@ using namespace stl;
 Output::~Output() noexcept {
 }
 
+ZeroCopyOutput* Output::upgrade() noexcept {
+    return nullptr;
+}
+
 void Output::flushImpl() {
 }
 

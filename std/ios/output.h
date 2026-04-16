@@ -22,6 +22,8 @@ namespace stl {
     public:
         virtual ~Output() noexcept;
 
+        virtual ZeroCopyOutput* upgrade() noexcept;
+
         void writeC(const void* data, size_t len);
 
         size_t writeP(const void* data, size_t len);

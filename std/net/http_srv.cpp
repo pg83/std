@@ -267,11 +267,18 @@ void HttpServerResponseImpl::serialize(ZeroCopyOutput& out) {
 void HttpServerResponseImpl::endHeaders() {
     auto pool = req->pool;
 
-    if (req->keepAlive && !headerIndex.find(StringView("content-length")) && !headerIndex.find(StringView("transfer-encoding"))) {
+    auto cl = headerIndex.find(StringView("content-length"));
+    auto te = headerIndex.find(StringView("transfer-encoding"));
+    bool chunked = te && (*te)->value == StringView("chunked");
+
+    if (req->keepAlive && !cl && !te) {
         addHeader(StringView("Transfer-Encoding"), StringView("chunked"));
+        chunked = true;
     }
 
-    {
+    if (auto zc = rawOut->upgrade()) {
+        serialize(*zc);
+    } else {
         StringBuilder sb;
 
         sb.xchg(req->conn->line);
@@ -281,9 +288,9 @@ void HttpServerResponseImpl::endHeaders() {
         sb.xchg(req->conn->line);
     }
 
-    if (auto cl = headerIndex.find(StringView("content-length")); cl) {
+    if (cl) {
         rawOut = createLimitedOutput(pool, rawOut, (*cl)->value.stou());
-    } else if (auto te = headerIndex.find(StringView("transfer-encoding")); te && (*te)->value == StringView("chunked")) {
+    } else if (chunked) {
         rawOut = createChunkedOutput(pool, rawOut);
     }
 

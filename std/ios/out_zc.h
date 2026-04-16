@@ -18,6 +18,8 @@ namespace stl {
     public:
         ~ZeroCopyOutput() noexcept override;
 
+        ZeroCopyOutput* upgrade() noexcept override;
+
         // zero-copy interface
         UnboundBuffer imbue(size_t len) {
             return {imbueImpl(&len)};
