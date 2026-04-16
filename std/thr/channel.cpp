@@ -4,6 +4,7 @@
 #include "guard.h"
 
 #include <std/sys/crt.h>
+#include <std/alg/defer.h>
 #include <std/mem/obj_pool.h>
 #include <std/lib/list.h>
 #include <std/dbg/insist.h>
@@ -137,15 +138,20 @@ bool ChannelImpl::tryEnqueue(void* v) noexcept {
 }
 
 __attribute__((noinline)) void ChannelImpl::enqueueSlow(void* v) noexcept {
-    Event ev(exec_);
+    Event::Buf buf;
+    auto* ev = Event::create(buf, exec_);
+    STD_DEFER {
+        delete ev;
+    };
+
     Waiter w;
 
-    w.ev = &ev;
+    w.ev = ev;
     w.value = v;
     w.valueSet = true;
 
     senders_.pushBack(&w);
-    ev.wait(makeRunable([this] {
+    ev->wait(makeRunable([this] {
         mu_->unlock();
     }));
 }
@@ -188,15 +194,20 @@ bool ChannelImpl::tryDequeue(void** out) noexcept {
 }
 
 __attribute__((noinline)) bool ChannelImpl::dequeueSlow(void** out) noexcept {
-    Event ev(exec_);
+    Event::Buf buf;
+    auto* ev = Event::create(buf, exec_);
+    STD_DEFER {
+        delete ev;
+    };
+
     Waiter w;
 
-    w.ev = &ev;
+    w.ev = ev;
     w.value = nullptr;
     w.valueSet = false;
 
     receivers_.pushBack(&w);
-    ev.wait(makeRunable([this] {
+    ev->wait(makeRunable([this] {
         mu_->unlock();
     }));
 

@@ -3,27 +3,23 @@
 #include "runable.h"
 
 namespace stl {
-    struct EventIface;
     struct CoroExecutor;
 
-    class alignas(64) Event {
-        char buf_[64];
+    struct Event {
+        struct alignas(64) Buf {
+            char data[64];
+        };
 
-        EventIface* impl() noexcept {
-            return reinterpret_cast<EventIface*>(buf_);
-        }
+        virtual ~Event() noexcept;
 
-    public:
-        Event();
-        Event(CoroExecutor* exec);
-
-        ~Event() noexcept;
-
-        void signal() noexcept;
-        void wait(Runable* cb) noexcept;
+        virtual void signal() noexcept = 0;
+        virtual void wait(Runable& cb) noexcept = 0;
 
         void wait(Runable&& cb) noexcept {
-            wait(&cb);
+            wait(cb);
         }
+
+        static Event* create(Buf& buf);
+        static Event* create(Buf& buf, CoroExecutor* exec);
     };
 }

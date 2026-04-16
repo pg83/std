@@ -3,7 +3,6 @@
 #include "guard.h"
 #include "mutex.h"
 #include "cond_var.h"
-#include "event_iface.h"
 
 #include <std/mem/new.h>
 #include <std/sys/atomic.h>
@@ -18,9 +17,12 @@
 
 using namespace stl;
 
+Event::~Event() noexcept {
+}
+
 namespace {
 #ifdef __linux__
-    struct alignas(64) FutexEventImpl: public EventIface, public Newable {
+    struct alignas(64) FutexEventImpl: public Event, public Newable {
         u32 state_;
 
         FutexEventImpl() noexcept
@@ -49,7 +51,7 @@ namespace {
 
     using DefaultEventImpl = FutexEventImpl;
 #else
-    struct PosixEventImpl: public EventIface, public Newable {
+    struct PosixEventImpl: public Event, public Newable {
         ObjPool::Ref pool_;
         Mutex* mu_;
         CondVar* cv_;
@@ -88,26 +90,14 @@ namespace {
 #endif
 }
 
-Event::Event() {
-    new (buf_) DefaultEventImpl();
+Event* Event::create(Buf& buf) {
+    return new (&buf) DefaultEventImpl();
 }
 
-Event::Event(CoroExecutor* exec) {
+Event* Event::create(Buf& buf, CoroExecutor* exec) {
     if (exec) {
-        exec->createEvent(buf_);
-    } else {
-        new (buf_) DefaultEventImpl();
+        return exec->createEvent(&buf);
     }
-}
 
-Event::~Event() noexcept {
-    delete impl();
-}
-
-void Event::wait(Runable* cb) noexcept {
-    impl()->wait(*cb);
-}
-
-void Event::signal() noexcept {
-    impl()->signal();
+    return new (&buf) DefaultEventImpl();
 }

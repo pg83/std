@@ -15,7 +15,7 @@ namespace stl {
     struct Semaphore;
     struct IoReactor;
     struct ThreadPool;
-    struct EventIface;
+    struct Event;
     struct CoroExecutor;
 
     struct SpawnParams {
@@ -47,7 +47,7 @@ namespace stl {
         virtual IoReactor* io() noexcept = 0;
         virtual ThreadPool* pool() noexcept = 0;
 
-        virtual void createEvent(void* buf) = 0;
+        virtual Event* createEvent(void* buf) = 0;
         virtual Thread* createThread(ObjPool* pool) = 0;
         virtual CondVar* createCondVar(ObjPool* pool) = 0;
         virtual Mutex* createSemaphoreImpl(ObjPool* pool, size_t initial) = 0;

@@ -15,20 +15,29 @@ using namespace stl;
 
 STD_TEST_SUITE(EventDefault) {
     STD_TEST(SignalThenWait) {
-        Event ev;
+        Event::Buf buf;
+        auto* ev = Event::create(buf);
+        STD_DEFER {
+            delete ev;
+        };
 
-        ev.signal();
-        ev.wait(makeRunable([] {}));
+        ev->signal();
+        ev->wait(makeRunable([] {}));
     }
 
     STD_TEST(WaitOnThread) {
-        Event ev;
+        Event::Buf buf;
+        auto* ev = Event::create(buf);
+        STD_DEFER {
+            delete ev;
+        };
+
         auto pool = ObjPool::fromMemory();
         int value = 0;
 
         auto r = makeRunable([&] {
             stdAtomicStore(&value, 1, MemoryOrder::Release);
-            ev.signal();
+            ev->signal();
         });
 
         auto* t = Thread::create(pool.mutPtr(), r);
@@ -36,12 +45,17 @@ STD_TEST_SUITE(EventDefault) {
             t->join();
         };
 
-        ev.wait(makeRunable([] {}));
+        ev->wait(makeRunable([] {}));
         STD_INSIST(stdAtomicFetch(&value, MemoryOrder::Acquire) == 1);
     }
 
     STD_TEST(CallbackRunsBeforeBlock) {
-        Event ev;
+        Event::Buf buf;
+        auto* ev = Event::create(buf);
+        STD_DEFER {
+            delete ev;
+        };
+
         auto pool = ObjPool::fromMemory();
         int order = 0;
 
@@ -50,7 +64,7 @@ STD_TEST_SUITE(EventDefault) {
                 while (stdAtomicFetch(&order, MemoryOrder::Acquire) < 1) {
                 }
 
-                ev.signal();
+                ev->signal();
             });
 
             auto* t = Thread::create(pool.mutPtr(), r);
@@ -58,7 +72,7 @@ STD_TEST_SUITE(EventDefault) {
                 t->join();
             };
 
-            ev.wait(makeRunable([&] {
+            ev->wait(makeRunable([&] {
                 stdAtomicStore(&order, 1, MemoryOrder::Release);
             }));
         }
@@ -67,7 +81,12 @@ STD_TEST_SUITE(EventDefault) {
     }
 
     STD_TEST(CallbackUnlocksMutex) {
-        Event ev;
+        Event::Buf buf;
+        auto* ev = Event::create(buf);
+        STD_DEFER {
+            delete ev;
+        };
+
         auto pool = ObjPool::fromMemory();
         auto& mu = *Mutex::create(pool.mutPtr());
         int value = 0;
@@ -79,7 +98,7 @@ STD_TEST_SUITE(EventDefault) {
                 mu.lock();
                 value = 42;
                 mu.unlock();
-                ev.signal();
+                ev->signal();
             });
 
             auto* t = Thread::create(pool.mutPtr(), r);
@@ -87,7 +106,7 @@ STD_TEST_SUITE(EventDefault) {
                 t->join();
             };
 
-            ev.wait(makeRunable([&] {
+            ev->wait(makeRunable([&] {
                 mu.unlock();
             }));
         }
@@ -100,13 +119,18 @@ STD_TEST_SUITE(EventDefault) {
         auto pool = ObjPool::fromMemory();
 
         for (int i = 0; i < N; ++i) {
-            Event ev;
+            Event::Buf buf;
+            auto* ev = Event::create(buf);
+            STD_DEFER {
+                delete ev;
+            };
+
             int value = 0;
 
             {
                 auto r = makeRunable([&] {
                     value = i + 1;
-                    ev.signal();
+                    ev->signal();
                 });
 
                 auto* t = Thread::create(pool.mutPtr(), r);
@@ -114,7 +138,7 @@ STD_TEST_SUITE(EventDefault) {
                     t->join();
                 };
 
-                ev.wait(makeRunable([] {}));
+                ev->wait(makeRunable([] {}));
             }
 
             STD_INSIST(value == i + 1);
@@ -125,10 +149,14 @@ STD_TEST_SUITE(EventDefault) {
         const int N = 20;
 
         for (int i = 0; i < N; ++i) {
-            Event ev;
+            Event::Buf buf;
+            auto* ev = Event::create(buf);
+            STD_DEFER {
+                delete ev;
+            };
 
-            ev.signal();
-            ev.wait(makeRunable([] {}));
+            ev->signal();
+            ev->wait(makeRunable([] {}));
         }
     }
 
@@ -143,14 +171,19 @@ STD_TEST_SUITE(EventDefault) {
         for (int j = 0; j < THREADS; ++j) {
             auto r = makeRunablePtr([&] {
                 for (int i = 0; i < N; ++i) {
-                    Event ev;
+                    Event::Buf buf;
+                    auto* ev = Event::create(buf);
+                    STD_DEFER {
+                        delete ev;
+                    };
+
                     auto ipool = ObjPool::fromMemory();
                     int v = 0;
 
                     {
                         auto ri = makeRunable([&] {
                             v = 1;
-                            ev.signal();
+                            ev->signal();
                         });
 
                         auto* t = Thread::create(ipool.mutPtr(), ri);
@@ -158,7 +191,7 @@ STD_TEST_SUITE(EventDefault) {
                             t->join();
                         };
 
-                        ev.wait(makeRunable([] {}));
+                        ev->wait(makeRunable([] {}));
                     }
 
                     stdAtomicAddAndFetch(&counter, (u32)v, MemoryOrder::Relaxed);
@@ -180,7 +213,12 @@ STD_TEST_SUITE(EventDefault) {
         auto pool = ObjPool::fromMemory();
 
         for (int i = 0; i < N; ++i) {
-            Event ev;
+            Event::Buf buf;
+            auto* ev = Event::create(buf);
+            STD_DEFER {
+                delete ev;
+            };
+
             auto& mu = *Mutex::create(pool.mutPtr());
             int slot = 0;
 
@@ -191,7 +229,7 @@ STD_TEST_SUITE(EventDefault) {
                     mu.lock();
                     slot = i + 1;
                     mu.unlock();
-                    ev.signal();
+                    ev->signal();
                 });
 
                 auto* t = Thread::create(pool.mutPtr(), r);
@@ -199,7 +237,7 @@ STD_TEST_SUITE(EventDefault) {
                     t->join();
                 };
 
-                ev.wait(makeRunable([&] {
+                ev->wait(makeRunable([&] {
                     mu.unlock();
                 }));
             }
@@ -215,15 +253,20 @@ STD_TEST_SUITE(EventCoro) {
         auto exec = CoroExecutor::create(pool.mutPtr(), 4);
 
         exec->spawn([&] {
-            Event ev(exec);
+            Event::Buf buf;
+            auto* ev = Event::create(buf, exec);
+            STD_DEFER {
+                delete ev;
+            };
+
             int value = 0;
 
             exec->spawn([&] {
                 value = 42;
-                ev.signal();
+                ev->signal();
             });
 
-            ev.wait(makeRunable([] {}));
+            ev->wait(makeRunable([] {}));
             STD_INSIST(value == 42);
         });
 
@@ -237,15 +280,20 @@ STD_TEST_SUITE(EventCoro) {
 
         exec->spawn([&] {
             for (int i = 0; i < N; ++i) {
-                Event ev(exec);
+                Event::Buf buf;
+                auto* ev = Event::create(buf, exec);
+                STD_DEFER {
+                    delete ev;
+                };
+
                 int result = 0;
 
                 exec->spawn([&] {
                     result = i + 1;
-                    ev.signal();
+                    ev->signal();
                 });
 
-                ev.wait(makeRunable([] {}));
+                ev->wait(makeRunable([] {}));
                 STD_INSIST(result == i + 1);
             }
         });
@@ -262,15 +310,20 @@ STD_TEST_SUITE(EventCoro) {
         exec->spawn([&] {
             for (int i = 0; i < N; ++i) {
                 exec->spawn([&] {
-                    Event ev(exec);
+                    Event::Buf buf;
+                    auto* ev = Event::create(buf, exec);
+                    STD_DEFER {
+                        delete ev;
+                    };
+
                     int val = 0;
 
                     exec->spawn([&] {
                         val = 1;
-                        ev.signal();
+                        ev->signal();
                     });
 
-                    ev.wait(makeRunable([] {}));
+                    ev->wait(makeRunable([] {}));
                     stdAtomicAddAndFetch(&counter, val, MemoryOrder::Relaxed);
                 });
             }

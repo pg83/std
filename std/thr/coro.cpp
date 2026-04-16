@@ -9,7 +9,7 @@
 #include "context.h"
 #include "cond_var.h"
 #include "semaphore.h"
-#include "event_iface.h"
+#include "event.h"
 #include "io_reactor.h"
 
 #include <std/sys/fd.h>
@@ -147,7 +147,7 @@ namespace {
 
         void yield() noexcept override;
 
-        void createEvent(void* buf) override;
+        Event* createEvent(void* buf) override;
         Thread* createThread(ObjPool* pool) override;
         CondVar* createCondVar(ObjPool* pool) override;
         Mutex* createSemaphoreImpl(ObjPool* pool, size_t initial) override;
@@ -275,8 +275,8 @@ void CoroExecutorImpl::offloadRun(ThreadPool* pool, Runable&& work) {
     });
 }
 
-void CoroExecutorImpl::createEvent(void* buf) {
-    struct CoroEventImpl: public EventIface, public Newable {
+Event* CoroExecutorImpl::createEvent(void* buf) {
+    struct CoroEventImpl: public Event, public Newable {
         CoroExecutorImpl* exec_;
         ContImpl* waiter_;
 
@@ -298,7 +298,7 @@ void CoroExecutorImpl::createEvent(void* buf) {
         }
     };
 
-    new (buf) CoroEventImpl(this);
+    return new (buf) CoroEventImpl(this);
 }
 
 CondVar* CoroExecutorImpl::createCondVar(ObjPool* pool) {
