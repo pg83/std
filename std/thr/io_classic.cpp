@@ -58,6 +58,8 @@ namespace {
         int recvfrom(int fd, size_t* nRead, void* buf, size_t len, sockaddr* addr, u32* addrLen, u64 deadlineUs) override;
         int send(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) override;
         int sendto(int fd, size_t* nWritten, const void* buf, size_t len, const sockaddr* addr, u32 addrLen, u64 deadlineUs) override;
+        int read(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) override;
+        int write(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) override;
         int writev(int fd, size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs) override;
         int accept(int fd, int* newFd, sockaddr* addr, u32* addrLen, u64 deadlineUs) override;
         int connect(int fd, const sockaddr* addr, u32 addrLen, u64 deadlineUs) override;
@@ -147,6 +149,44 @@ int PollIoReactor::send(int fd, size_t* nWritten, const void* buf, size_t len, u
 int PollIoReactor::sendto(int fd, size_t* nWritten, const void* buf, size_t len, const sockaddr* addr, u32 addrLen, u64 deadlineUs) {
     for (;;) {
         ssize_t n = ::sendto(fd, buf, len, MSG_NOSIGNAL, addr, addrLen);
+
+        if (n >= 0) {
+            *nWritten = (size_t)n;
+            return 0;
+        }
+
+        if (errno != EAGAIN) {
+            return errno;
+        }
+
+        if (!reactor(fd)->poll({fd, PollFlag::Out}, deadlineUs)) {
+            return EAGAIN;
+        }
+    }
+}
+
+int PollIoReactor::read(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) {
+    for (;;) {
+        ssize_t n = ::read(fd, buf, len);
+
+        if (n >= 0) {
+            *nRead = (size_t)n;
+            return 0;
+        }
+
+        if (errno != EAGAIN) {
+            return errno;
+        }
+
+        if (!reactor(fd)->poll({fd, PollFlag::In}, deadlineUs)) {
+            return EAGAIN;
+        }
+    }
+}
+
+int PollIoReactor::write(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
+    for (;;) {
+        ssize_t n = ::write(fd, buf, len);
 
         if (n >= 0) {
             *nWritten = (size_t)n;

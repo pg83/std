@@ -23,6 +23,13 @@ namespace stl {
         virtual int recvfrom(int fd, size_t* nRead, void* buf, size_t len, sockaddr* addr, u32* addrLen, u64 deadlineUs) = 0;
         virtual int sendto(int fd, size_t* nWritten, const void* buf, size_t len, const sockaddr* addr, u32 addrLen, u64 deadlineUs) = 0;
 
+        // Plain stream-fd I/O (no offset, no socket-only semantics) — for
+        // character devices like /dev/net/tun, pipes, and any non-seekable
+        // fd. recv/send won't work on those (ENOTSOCK), pread/pwrite needs
+        // an offset.
+        virtual int read(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) = 0;
+        virtual int write(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) = 0;
+
         virtual int fsync(int fd) = 0;
         virtual int fdatasync(int fd) = 0;
         virtual int pread(int fd, size_t* nRead, void* buf, size_t len, off_t offset) = 0;

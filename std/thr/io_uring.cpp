@@ -137,6 +137,8 @@ namespace {
         int recvfrom(int, size_t*, void*, size_t, sockaddr*, u32*, u64) override;
         int send(int, size_t*, const void*, size_t, u64) override;
         int sendto(int, size_t*, const void*, size_t, const sockaddr*, u32, u64) override;
+        int read(int, size_t*, void*, size_t, u64) override;
+        int write(int, size_t*, const void*, size_t, u64) override;
         int writev(int, size_t*, iovec*, size_t, u64) override;
         int accept(int, int*, sockaddr*, u32*, u64) override;
         int connect(int, const sockaddr*, u32, u64) override;
@@ -412,6 +414,21 @@ int UringReactorImpl::sendto(int fd, size_t* nWritten, const void* buf, size_t l
 
     return submit([&](auto sqe) {
         io_uring_prep_sendmsg(sqe, fd, &msg, MSG_NOSIGNAL);
+    }, deadlineUs).readInto(nWritten);
+}
+
+int UringReactorImpl::read(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) {
+    return submit([&](auto sqe) {
+        // offset = -1 tells io_uring "no offset, stream-style read",
+        // which is the right semantics for non-seekable fds (TUN,
+        // pipes, sockets used as streams).
+        io_uring_prep_read(sqe, fd, buf, len, (u64)-1);
+    }, deadlineUs).readInto(nRead);
+}
+
+int UringReactorImpl::write(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
+    return submit([&](auto sqe) {
+        io_uring_prep_write(sqe, fd, buf, len, (u64)-1);
     }, deadlineUs).readInto(nWritten);
 }
 
