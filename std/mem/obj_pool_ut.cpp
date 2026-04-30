@@ -704,4 +704,22 @@ STD_TEST_SUITE(ObjPool) {
 
         STD_INSIST(reinterpret_cast<uintptr_t>(o) % 64 == 0);
     }
+
+    STD_TEST(HugePagesStrictReturnsUsablePoolOrThrows) {
+        auto slave = ObjPool::fromMemory();
+        ObjPool* pool = nullptr;
+
+        try {
+            pool = ObjPool::hugePages(slave.mutPtr());
+        } catch (...) {
+            return;
+        }
+
+        STD_INSIST(pool != nullptr);
+        STD_INSIST(pool != slave.mutPtr());
+
+        void* p = pool->allocate(64);
+
+        STD_INSIST(p != nullptr);
+    }
 }

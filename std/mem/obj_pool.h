@@ -69,6 +69,9 @@ namespace stl {
         // 2 MiB hugetlb-backed bump arena owned by `slave`; falls back to `slave` itself if MAP_HUGETLB is refused.
         static ObjPool* fromHugePages(ObjPool* slave);
 
+        // Strict variant — returns a HugePool or throws if hugetlb pages are unavailable. No fallback to slave.
+        static ObjPool* hugePages(ObjPool* slave);
+
         static ObjPool* create(ObjPool* pool);
         static ObjPool* fromMemoryRaw();
     };

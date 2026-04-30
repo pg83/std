@@ -45,15 +45,15 @@ namespace {
     };
 
     static_assert(sizeof(Pool) == 256);
+
+    struct ChunkMapFailed {
+    };
 }
 
 #if defined(__linux__)
 namespace {
     constexpr size_t alignment = alignof(max_align_t);
     constexpr size_t HUGE_PAGE_SIZE = (size_t)2 << 20;
-
-    struct ChunkMapFailed {
-    };
 
     struct Chunk {
         void* page;
@@ -149,20 +149,23 @@ ObjPool* ObjPool::fromMemoryRaw() {
     return new Pool();
 }
 
-ObjPool* ObjPool::fromHugePages(ObjPool* slave) {
+ObjPool* ObjPool::hugePages(ObjPool* slave) {
 #if defined(__linux__)
-    Chunk* first;
-
-    try {
-        first = slave->make<Chunk>(HUGE_PAGE_SIZE);
-    } catch (const ChunkMapFailed&) {
-        return slave;
-    }
+    auto* first = slave->make<Chunk>(HUGE_PAGE_SIZE);
 
     return slave->make<HugePool>(slave, first);
 #else
-    return slave;
+    (void)slave;
+    throw ChunkMapFailed{};
 #endif
+}
+
+ObjPool* ObjPool::fromHugePages(ObjPool* slave) {
+    try {
+        return hugePages(slave);
+    } catch (const ChunkMapFailed&) {
+        return slave;
+    }
 }
 
 StringView ObjPool::intern(StringView s) {
