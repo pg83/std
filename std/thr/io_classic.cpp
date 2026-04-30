@@ -150,6 +150,7 @@ int PollIoReactor::recvmsg(int fd, msghdr* msg, int flags, size_t* nRead, u64 de
 }
 
 int PollIoReactor::recvmmsg(int fd, mmsghdr* msgs, unsigned vlen, int flags, unsigned* nMsgs, u64 deadlineUs) {
+#if defined(__linux__)
     for (;;) {
         int n = ::recvmmsg(fd, msgs, vlen, flags, nullptr);
 
@@ -166,6 +167,10 @@ int PollIoReactor::recvmmsg(int fd, mmsghdr* msgs, unsigned vlen, int flags, uns
             return EAGAIN;
         }
     }
+#else
+    (void)fd; (void)msgs; (void)vlen; (void)flags; (void)nMsgs; (void)deadlineUs;
+    return ENOSYS;
+#endif
 }
 
 int PollIoReactor::send(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
