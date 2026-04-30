@@ -61,25 +61,19 @@ namespace {
         }
     };
 
-    Chunk::Chunk(size_t requestedLen)
-        : len((requestedLen + HUGE_PAGE_SIZE - 1) & ~(HUGE_PAGE_SIZE - 1))
-    {
-        page = mmap(nullptr, len, PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_HUGE_2MB,
-                    -1, 0);
-
-        if (page == MAP_FAILED) {
-            throw ChunkMapFailed{};
-        }
-    }
-
     struct alignas(max_align_t) HugePool: public ObjPool {
         ObjPool* slave;
         Chunk* lastChunk;
         u8* cur;
         u8* end;
 
-        HugePool(ObjPool* s, Chunk* first) noexcept;
+        HugePool(ObjPool* s, Chunk* first) noexcept
+            : slave(s)
+            , lastChunk(first)
+            , cur((u8*)first->page)
+            , end((u8*)first->page + first->len)
+        {
+        }
 
         void* allocate(size_t len) override;
         void submit(Disposable* d) noexcept override;
@@ -87,43 +81,47 @@ namespace {
     private:
         void addChunk(size_t minLen);
     };
+}
 
-    HugePool::HugePool(ObjPool* s, Chunk* first) noexcept
-        : slave(s)
-        , lastChunk(first)
-        , cur((u8*)first->page)
-        , end((u8*)first->page + first->len)
-    {
+Chunk::Chunk(size_t requestedLen)
+    : len((requestedLen + HUGE_PAGE_SIZE - 1) & ~(HUGE_PAGE_SIZE - 1))
+{
+    page = mmap(nullptr, len, PROT_READ | PROT_WRITE,
+                MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_HUGE_2MB,
+                -1, 0);
+
+    if (page == MAP_FAILED) {
+        throw ChunkMapFailed{};
+    }
+}
+
+void* HugePool::allocate(size_t len) {
+    const size_t alignedLen = (len + alignment - 1) & ~(alignment - 1);
+
+    if (cur + alignedLen > end) {
+        addChunk(alignedLen);
     }
 
-    void* HugePool::allocate(size_t len) {
-        const size_t alignedLen = (len + alignment - 1) & ~(alignment - 1);
+    return exchange(cur, cur + alignedLen);
+}
 
-        if (cur + alignedLen > end) {
-            addChunk(alignedLen);
-        }
+// Forward to slave so chunks and user disposables interleave in one chain — LIFO drain destroys each user object while its chunk is still mapped.
+void HugePool::submit(Disposable* d) noexcept {
+    slave->submit(d);
+}
 
-        return exchange(cur, cur + alignedLen);
+void HugePool::addChunk(size_t minLen) {
+    size_t requested = lastChunk->len * 2;
+
+    while (requested < minLen) {
+        requested *= 2;
     }
 
-    // Forward to slave so chunks and user disposables interleave in one chain — LIFO drain destroys each user object while its chunk is still mapped.
-    void HugePool::submit(Disposable* d) noexcept {
-        slave->submit(d);
-    }
+    auto* c = slave->make<Chunk>(requested);
 
-    void HugePool::addChunk(size_t minLen) {
-        size_t requested = lastChunk->len * 2;
-
-        while (requested < minLen) {
-            requested *= 2;
-        }
-
-        auto* c = slave->make<Chunk>(requested);
-
-        lastChunk = c;
-        cur = (u8*)c->page;
-        end = cur + c->len;
-    }
+    lastChunk = c;
+    cur = (u8*)c->page;
+    end = cur + c->len;
 }
 
 ObjPool::~ObjPool() noexcept {
