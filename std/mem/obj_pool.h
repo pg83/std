@@ -10,12 +10,9 @@
 #include <std/ptr/intrusive.h>
 
 namespace stl {
-    class MemoryPool;
     class StringView;
 
     class ObjPool: public ARC {
-        virtual void submit(Disposable* d) noexcept = 0;
-
         template <size_t Size, size_t Align>
         void* allocFor() {
             if constexpr (Align > alignof(max_align_t)) {
@@ -36,7 +33,7 @@ namespace stl {
         virtual ~ObjPool() noexcept;
 
         virtual void* allocate(size_t len) = 0;
-        virtual MemoryPool* memoryPool() noexcept = 0;
+        virtual void submit(Disposable* d) noexcept = 0;
 
         StringView intern(StringView s);
         void* allocateOverAligned(size_t len, size_t align);
@@ -68,6 +65,15 @@ namespace stl {
         static Ref fromMemory() {
             return fromMemoryRaw();
         }
+
+        // Layers a 2 MiB hugetlb-backed bump arena over `slave`. The
+        // returned pool is owned by `slave` (allocated through
+        // slave->make and tracked in its Disposable chain) — NEVER take
+        // an IntrusivePtr to it; keep `slave`'s Ref alive instead. If
+        // the kernel can't satisfy MAP_HUGETLB (no nr_hugepages
+        // reservation, no support, ...), `slave` itself is returned and
+        // the caller transparently uses malloc-backed allocation.
+        static ObjPool* fromHugePages(ObjPool* slave);
 
         static ObjPool* create(ObjPool* pool);
         static ObjPool* fromMemoryRaw();

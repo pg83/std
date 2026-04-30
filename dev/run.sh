@@ -5,7 +5,7 @@ set -xue
 EXTRA=
 #EXTRA=lib/build/opt/O0
 
-~/ix/ix run \
+~/monorepo/ix/ix run \
     set/dev/cc \
     bld/make \
     bld/sh \

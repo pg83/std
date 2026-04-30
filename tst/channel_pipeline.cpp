@@ -7,13 +7,14 @@ using namespace stl;
 
 namespace {
     void dutchRudder(int nStages, int nMessages) {
-        auto opool = ObjPool::fromMemory();
-        auto exec = CoroExecutor::create(opool.mutPtr(), 8);
+        auto mpool = ObjPool::fromMemory();
+        auto opool = ObjPool::fromHugePages(mpool.mutPtr());
+        auto exec = CoroExecutor::create(opool, 8);
 
         Vector<Channel*> chArr;
 
         for (int i = 0; i <= nStages; ++i) {
-            chArr.pushBack(Channel::create(opool.mutPtr(), exec, (size_t)5));
+            chArr.pushBack(Channel::create(opool, exec, (size_t)5));
         }
 
         for (int i = 0; i < nStages; ++i) {

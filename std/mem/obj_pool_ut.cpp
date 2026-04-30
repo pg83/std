@@ -611,4 +611,102 @@ STD_TEST_SUITE(ObjPool) {
         STD_INSIST((*v2)[0] == 1);
         STD_INSIST((*v2)[1] == 2);
     }
+
+    // fromHugePages either succeeds with a hugetlb-backed pool or
+    // transparently falls back to the slave. The tests below exercise
+    // the public contract regardless of which path was taken; on a
+    // CI host without nr_hugepages reservation they cover the fallback
+    // by construction.
+    STD_TEST(fromHugePages_returns_usable_pool) {
+        auto slave = ObjPool::fromMemory();
+
+        ObjPool* pool = ObjPool::fromHugePages(slave.mutPtr());
+
+        STD_INSIST(pool != nullptr);
+
+        void* p = pool->allocate(64);
+
+        STD_INSIST(p != nullptr);
+    }
+
+    STD_TEST(fromHugePages_fires_destructors) {
+        int counter = 0;
+
+        {
+            auto slave = ObjPool::fromMemory();
+            ObjPool* pool = ObjPool::fromHugePages(slave.mutPtr());
+
+            for (int i = 0; i < 50; ++i) {
+                pool->make<WithDestructor>(&counter);
+            }
+
+            STD_INSIST(counter == 50);
+        }
+
+        STD_INSIST(counter == 0);
+    }
+
+    STD_TEST(fromHugePages_destruction_order_reverse) {
+        int lastDestroyed = 0;
+
+        struct OrderChecker {
+            int id;
+            int* lastDestroyed;
+
+            OrderChecker(int i, int* ld)
+                : id(i)
+                , lastDestroyed(ld)
+            {
+            }
+
+            ~OrderChecker() {
+                *lastDestroyed = id;
+            }
+        };
+
+        {
+            auto slave = ObjPool::fromMemory();
+            ObjPool* pool = ObjPool::fromHugePages(slave.mutPtr());
+
+            pool->make<OrderChecker>(1, &lastDestroyed);
+            pool->make<OrderChecker>(2, &lastDestroyed);
+            pool->make<OrderChecker>(3, &lastDestroyed);
+        }
+
+        STD_INSIST(lastDestroyed == 1);
+    }
+
+    STD_TEST(fromHugePages_intern_works) {
+        auto slave = ObjPool::fromMemory();
+        ObjPool* pool = ObjPool::fromHugePages(slave.mutPtr());
+
+        StringView s = pool->intern(StringView("hugepage"));
+
+        STD_INSIST(s == StringView("hugepage"));
+    }
+
+    STD_TEST(fromHugePages_many_small_allocations) {
+        auto slave = ObjPool::fromMemory();
+        ObjPool* pool = ObjPool::fromHugePages(slave.mutPtr());
+
+        for (int i = 0; i < 1000; ++i) {
+            SimpleStruct* obj = pool->make<SimpleStruct>(i, i * 2);
+
+            STD_INSIST(obj->x == i);
+            STD_INSIST(obj->y == i * 2);
+        }
+    }
+
+    STD_TEST(fromHugePages_overaligned) {
+        auto slave = ObjPool::fromMemory();
+        ObjPool* pool = ObjPool::fromHugePages(slave.mutPtr());
+
+        struct alignas(64) Over {
+            int v;
+        };
+
+        Over* o = pool->make<Over>();
+
+        STD_INSIST(reinterpret_cast<uintptr_t>(o) % 64 == 0);
+    }
 }
