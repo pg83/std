@@ -7,6 +7,7 @@
 #include "cond_var.h"
 
 #include <std/tst/ut.h>
+#include <std/lib/vector.h>
 #include <std/mem/obj_pool.h>
 
 using namespace stl;
@@ -440,6 +441,80 @@ STD_TEST_SUITE(Thread) {
 
         STD_INSIST(counter == 1);
         STD_INSIST(counter2 == 1);
+    }
+
+    STD_TEST(ExplicitStackBasic) {
+        auto pool = ObjPool::fromMemory();
+        constexpr size_t stackSize = 1 << 20;
+        void* stack = pool->allocateOverAligned(stackSize, 4096);
+        int counter = 0;
+        CounterRunable runnable(&counter);
+
+        auto t = Thread::create(pool.mutPtr(), runnable, stack, stackSize);
+        t->join();
+
+        STD_INSIST(counter == 1);
+    }
+
+    STD_TEST(ExplicitStackUsesProvidedRegion) {
+        struct StackProbe: public Runable {
+            void* lo;
+            void* hi;
+            void* observed = nullptr;
+
+            StackProbe(void* l, void* h) noexcept
+                : lo(l)
+                , hi(h)
+            {
+            }
+
+            void run() noexcept override {
+                int local;
+                observed = &local;
+            }
+        };
+
+        auto pool = ObjPool::fromMemory();
+        constexpr size_t stackSize = 1 << 20;
+        u8* stack = (u8*)pool->allocateOverAligned(stackSize, 4096);
+        StackProbe probe(stack, stack + stackSize);
+
+        auto t = Thread::create(pool.mutPtr(), probe, stack, stackSize);
+        t->join();
+
+        STD_INSIST(probe.observed >= probe.lo);
+        STD_INSIST(probe.observed < probe.hi);
+    }
+
+    STD_TEST(ExplicitStackMultipleThreads) {
+        auto pool = ObjPool::fromMemory();
+        constexpr size_t stackSize = 1 << 20;
+        constexpr int N = 8;
+
+        Vector<Thread*> threads;
+        Vector<int> counters;
+
+        for (int i = 0; i < N; ++i) {
+            counters.pushBack(0);
+        }
+
+        Vector<CounterRunable*> runs;
+        for (int i = 0; i < N; ++i) {
+            runs.pushBack(pool->make<CounterRunable>(&counters.mut(i)));
+        }
+
+        for (int i = 0; i < N; ++i) {
+            void* stack = pool->allocateOverAligned(stackSize, 4096);
+            threads.pushBack(Thread::create(pool.mutPtr(), *runs[i], stack, stackSize));
+        }
+
+        for (int i = 0; i < N; ++i) {
+            threads[i]->join();
+        }
+
+        for (int i = 0; i < N; ++i) {
+            STD_INSIST(counters[i] == 1);
+        }
     }
 }
 

@@ -16,5 +16,6 @@ namespace stl {
 
         static Thread* create(ObjPool* pool, Runable& runable);
         static Thread* create(ObjPool* pool, CoroExecutor* exec, Runable& runable);
+        static Thread* create(ObjPool* pool, Runable& runable, void* stack, size_t stackSize);
     };
 }
