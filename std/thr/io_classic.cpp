@@ -56,8 +56,11 @@ namespace {
 
         int recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) override;
         int recvfrom(int fd, size_t* nRead, void* buf, size_t len, sockaddr* addr, u32* addrLen, u64 deadlineUs) override;
+        int recvmsg(int fd, msghdr* msg, int flags, size_t* nRead, u64 deadlineUs) override;
+        int recvmmsg(int fd, mmsghdr* msgs, unsigned vlen, int flags, unsigned* nMsgs, u64 deadlineUs) override;
         int send(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) override;
         int sendto(int fd, size_t* nWritten, const void* buf, size_t len, const sockaddr* addr, u32 addrLen, u64 deadlineUs) override;
+        int sendmsg(int fd, const msghdr* msg, int flags, size_t* nWritten, u64 deadlineUs) override;
         int read(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) override;
         int write(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) override;
         int writev(int fd, size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs) override;
@@ -127,6 +130,44 @@ int PollIoReactor::recvfrom(int fd, size_t* nRead, void* buf, size_t len, sockad
     }
 }
 
+int PollIoReactor::recvmsg(int fd, msghdr* msg, int flags, size_t* nRead, u64 deadlineUs) {
+    for (;;) {
+        ssize_t n = ::recvmsg(fd, msg, flags);
+
+        if (n >= 0) {
+            *nRead = (size_t)n;
+            return 0;
+        }
+
+        if (errno != EAGAIN) {
+            return errno;
+        }
+
+        if (!reactor(fd)->poll({fd, PollFlag::In}, deadlineUs)) {
+            return EAGAIN;
+        }
+    }
+}
+
+int PollIoReactor::recvmmsg(int fd, mmsghdr* msgs, unsigned vlen, int flags, unsigned* nMsgs, u64 deadlineUs) {
+    for (;;) {
+        int n = ::recvmmsg(fd, msgs, vlen, flags, nullptr);
+
+        if (n >= 0) {
+            *nMsgs = (unsigned)n;
+            return 0;
+        }
+
+        if (errno != EAGAIN) {
+            return errno;
+        }
+
+        if (!reactor(fd)->poll({fd, PollFlag::In}, deadlineUs)) {
+            return EAGAIN;
+        }
+    }
+}
+
 int PollIoReactor::send(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
     for (;;) {
         ssize_t n = ::send(fd, buf, len, MSG_NOSIGNAL);
@@ -149,6 +190,25 @@ int PollIoReactor::send(int fd, size_t* nWritten, const void* buf, size_t len, u
 int PollIoReactor::sendto(int fd, size_t* nWritten, const void* buf, size_t len, const sockaddr* addr, u32 addrLen, u64 deadlineUs) {
     for (;;) {
         ssize_t n = ::sendto(fd, buf, len, MSG_NOSIGNAL, addr, addrLen);
+
+        if (n >= 0) {
+            *nWritten = (size_t)n;
+            return 0;
+        }
+
+        if (errno != EAGAIN) {
+            return errno;
+        }
+
+        if (!reactor(fd)->poll({fd, PollFlag::Out}, deadlineUs)) {
+            return EAGAIN;
+        }
+    }
+}
+
+int PollIoReactor::sendmsg(int fd, const msghdr* msg, int flags, size_t* nWritten, u64 deadlineUs) {
+    for (;;) {
+        ssize_t n = ::sendmsg(fd, msg, flags | MSG_NOSIGNAL);
 
         if (n >= 0) {
             *nWritten = (size_t)n;

@@ -135,8 +135,11 @@ namespace {
 
         int recv(int, size_t*, void*, size_t, u64) override;
         int recvfrom(int, size_t*, void*, size_t, sockaddr*, u32*, u64) override;
+        int recvmsg(int, msghdr*, int, size_t*, u64) override;
+        int recvmmsg(int, mmsghdr*, unsigned, int, unsigned*, u64) override;
         int send(int, size_t*, const void*, size_t, u64) override;
         int sendto(int, size_t*, const void*, size_t, const sockaddr*, u32, u64) override;
+        int sendmsg(int, const msghdr*, int, size_t*, u64) override;
         int read(int, size_t*, void*, size_t, u64) override;
         int write(int, size_t*, const void*, size_t, u64) override;
         int writev(int, size_t*, iovec*, size_t, u64) override;
@@ -397,6 +400,31 @@ int UringReactorImpl::recvfrom(int fd, size_t* nRead, void* buf, size_t len, soc
     return res;
 }
 
+int UringReactorImpl::recvmsg(int fd, msghdr* msg, int flags, size_t* nRead, u64 deadlineUs) {
+    return submit([&](auto sqe) {
+        io_uring_prep_recvmsg(sqe, fd, msg, flags);
+    }, deadlineUs).readInto(nRead);
+}
+
+int UringReactorImpl::recvmmsg(int fd, mmsghdr* msgs, unsigned vlen, int flags, unsigned* nMsgs, u64 deadlineUs) {
+    for (;;) {
+        int n = ::recvmmsg(fd, msgs, vlen, flags, nullptr);
+
+        if (n >= 0) {
+            *nMsgs = (unsigned)n;
+            return 0;
+        }
+
+        if (errno != EAGAIN) {
+            return errno;
+        }
+
+        if (!poll({fd, PollFlag::In}, deadlineUs)) {
+            return EAGAIN;
+        }
+    }
+}
+
 int UringReactorImpl::send(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
     return submit([&](auto sqe) {
         io_uring_prep_send(sqe, fd, buf, len, MSG_NOSIGNAL);
@@ -414,6 +442,12 @@ int UringReactorImpl::sendto(int fd, size_t* nWritten, const void* buf, size_t l
 
     return submit([&](auto sqe) {
         io_uring_prep_sendmsg(sqe, fd, &msg, MSG_NOSIGNAL);
+    }, deadlineUs).readInto(nWritten);
+}
+
+int UringReactorImpl::sendmsg(int fd, const msghdr* msg, int flags, size_t* nWritten, u64 deadlineUs) {
+    return submit([&](auto sqe) {
+        io_uring_prep_sendmsg(sqe, fd, msg, flags | MSG_NOSIGNAL);
     }, deadlineUs).readInto(nWritten);
 }
 
