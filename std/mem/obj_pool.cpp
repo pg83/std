@@ -6,18 +6,17 @@
 #include <std/str/view.h>
 #include <std/alg/exchange.h>
 
-#include <sys/mman.h>
+#if defined(__linux__)
+    #include <sys/mman.h>
 
-#ifndef MAP_HUGE_2MB
-    #define MAP_HUGE_2MB (21 << 26)
+    #ifndef MAP_HUGE_2MB
+        #define MAP_HUGE_2MB (21 << 26)
+    #endif
 #endif
 
 using namespace stl;
 
 namespace {
-    constexpr size_t alignment = alignof(max_align_t);
-    constexpr size_t HUGE_PAGE_SIZE = (size_t)2 << 20;
-
     struct alignas(max_align_t) Base: public ObjPool {
         MemoryPool mp;
         Disposer ds;
@@ -46,6 +45,12 @@ namespace {
     };
 
     static_assert(sizeof(Pool) == 256);
+}
+
+#if defined(__linux__)
+namespace {
+    constexpr size_t alignment = alignof(max_align_t);
+    constexpr size_t HUGE_PAGE_SIZE = (size_t)2 << 20;
 
     struct ChunkMapFailed {
     };
@@ -125,6 +130,7 @@ void HugePool::addChunk(size_t minLen) {
     cur = (u8*)c->page;
     end = cur + c->len;
 }
+#endif
 
 ObjPool::~ObjPool() noexcept {
 }
@@ -144,6 +150,7 @@ ObjPool* ObjPool::fromMemoryRaw() {
 }
 
 ObjPool* ObjPool::fromHugePages(ObjPool* slave) {
+#if defined(__linux__)
     Chunk* first;
 
     try {
@@ -153,6 +160,9 @@ ObjPool* ObjPool::fromHugePages(ObjPool* slave) {
     }
 
     return slave->make<HugePool>(slave, first);
+#else
+    return slave;
+#endif
 }
 
 StringView ObjPool::intern(StringView s) {
