@@ -612,12 +612,7 @@ STD_TEST_SUITE(ObjPool) {
         STD_INSIST((*v2)[1] == 2);
     }
 
-    // fromHugePages either succeeds with a hugetlb-backed pool or
-    // transparently falls back to the slave. The tests below exercise
-    // the public contract regardless of which path was taken; on a
-    // CI host without nr_hugepages reservation they cover the fallback
-    // by construction.
-    STD_TEST(fromHugePages_returns_usable_pool) {
+    STD_TEST(FromHugePagesReturnsUsablePool) {
         auto slave = ObjPool::fromMemory();
 
         ObjPool* pool = ObjPool::fromHugePages(slave.mutPtr());
@@ -629,7 +624,7 @@ STD_TEST_SUITE(ObjPool) {
         STD_INSIST(p != nullptr);
     }
 
-    STD_TEST(fromHugePages_fires_destructors) {
+    STD_TEST(FromHugePagesFiresDestructors) {
         int counter = 0;
 
         {
@@ -646,7 +641,7 @@ STD_TEST_SUITE(ObjPool) {
         STD_INSIST(counter == 0);
     }
 
-    STD_TEST(fromHugePages_destruction_order_reverse) {
+    STD_TEST(FromHugePagesDestructionOrderReverse) {
         int lastDestroyed = 0;
 
         struct OrderChecker {
@@ -676,7 +671,7 @@ STD_TEST_SUITE(ObjPool) {
         STD_INSIST(lastDestroyed == 1);
     }
 
-    STD_TEST(fromHugePages_intern_works) {
+    STD_TEST(FromHugePagesInternWorks) {
         auto slave = ObjPool::fromMemory();
         ObjPool* pool = ObjPool::fromHugePages(slave.mutPtr());
 
@@ -685,7 +680,7 @@ STD_TEST_SUITE(ObjPool) {
         STD_INSIST(s == StringView("hugepage"));
     }
 
-    STD_TEST(fromHugePages_many_small_allocations) {
+    STD_TEST(FromHugePagesManySmallAllocations) {
         auto slave = ObjPool::fromMemory();
         ObjPool* pool = ObjPool::fromHugePages(slave.mutPtr());
 
@@ -697,7 +692,7 @@ STD_TEST_SUITE(ObjPool) {
         }
     }
 
-    STD_TEST(fromHugePages_overaligned) {
+    STD_TEST(FromHugePagesOverAligned) {
         auto slave = ObjPool::fromMemory();
         ObjPool* pool = ObjPool::fromHugePages(slave.mutPtr());
 

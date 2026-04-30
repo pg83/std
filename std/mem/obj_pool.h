@@ -66,13 +66,7 @@ namespace stl {
             return fromMemoryRaw();
         }
 
-        // Layers a 2 MiB hugetlb-backed bump arena over `slave`. The
-        // returned pool is owned by `slave` (allocated through
-        // slave->make and tracked in its Disposable chain) — NEVER take
-        // an IntrusivePtr to it; keep `slave`'s Ref alive instead. If
-        // the kernel can't satisfy MAP_HUGETLB (no nr_hugepages
-        // reservation, no support, ...), `slave` itself is returned and
-        // the caller transparently uses malloc-backed allocation.
+        // 2 MiB hugetlb-backed bump arena owned by `slave`; falls back to `slave` itself if MAP_HUGETLB is refused.
         static ObjPool* fromHugePages(ObjPool* slave);
 
         static ObjPool* create(ObjPool* pool);

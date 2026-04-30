@@ -47,14 +47,6 @@ namespace {
 
     static_assert(sizeof(Pool) == 256);
 
-    // Owns one hugetlb mmap region. Allocated via slave->make<Chunk>:
-    // the slave's Disposable chain runs ~Chunk in LIFO order at slave-
-    // destruction time, doing the munmap.
-    //
-    // Throws ChunkMapFailed if the kernel won't satisfy MAP_HUGETLB —
-    // fromHugePages catches it on the first chunk to detect "no
-    // hugepages support" and fall back. Subsequent failures during
-    // operation propagate to the caller as a hard error.
     struct ChunkMapFailed {
     };
 
@@ -62,39 +54,25 @@ namespace {
         void* page;
         size_t len;
 
-        Chunk(size_t requestedLen)
-            : len((requestedLen + HUGE_PAGE_SIZE - 1) & ~(HUGE_PAGE_SIZE - 1))
-        {
-            page = mmap(nullptr, len, PROT_READ | PROT_WRITE,
-                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_HUGE_2MB,
-                        -1, 0);
-
-            if (page == MAP_FAILED) {
-                throw ChunkMapFailed{};
-            }
-        }
+        Chunk(size_t requestedLen);
 
         ~Chunk() noexcept {
             munmap(page, len);
         }
     };
 
-    // Bump-allocator over a chain of 2 MiB-hugetlb mmaps, layered on a
-    // slave ObjPool*. The slave provides storage for the HugePool
-    // object itself, the Chunk descriptors, and any user disposables;
-    // the hugetlb mmaps are the actual user-allocation arena.
-    //
-    // Lifetime: HugePool is allocated via slave->make<HugePool>, so the
-    // slave's Disposable chain owns it. The user gets a raw ObjPool*;
-    // they keep the slave's Ref alive for as long as they use HugePool.
-    //
-    // Disposable ordering: every disposable — chunks AND user objects
-    // submitted via HugePool::submit — lives in the slave's Disposable
-    // chain. submit() forwards straight to slave so the chain
-    // interleaves chunks with the user objects that allocated against
-    // them. LIFO drain at slave-destruction destroys each user object
-    // while its backing chunk is still mapped, then the chunk munmaps,
-    // walking back through the chain in submission-reverse order.
+    Chunk::Chunk(size_t requestedLen)
+        : len((requestedLen + HUGE_PAGE_SIZE - 1) & ~(HUGE_PAGE_SIZE - 1))
+    {
+        page = mmap(nullptr, len, PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_HUGE_2MB,
+                    -1, 0);
+
+        if (page == MAP_FAILED) {
+            throw ChunkMapFailed{};
+        }
+    }
+
     struct alignas(max_align_t) HugePool: public ObjPool {
         ObjPool* slave;
         Chunk* lastChunk;
@@ -128,8 +106,8 @@ namespace {
         return exchange(cur, cur + alignedLen);
     }
 
+    // Forward to slave so chunks and user disposables interleave in one chain — LIFO drain destroys each user object while its chunk is still mapped.
     void HugePool::submit(Disposable* d) noexcept {
-        // Forward to the slave's chain. See class comment for ordering.
         slave->submit(d);
     }
 
