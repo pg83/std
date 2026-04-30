@@ -61,7 +61,7 @@ namespace {
         }
     };
 
-    struct alignas(max_align_t) HugePool: public ObjPool {
+    struct HugePool: public ObjPool {
         ObjPool* slave;
         Chunk* lastChunk;
         u8* cur;
