@@ -67,13 +67,7 @@ namespace {
         u8* cur;
         u8* end;
 
-        HugePool(ObjPool* s, Chunk* first) noexcept
-            : slave(s)
-            , lastChunk(first)
-            , cur((u8*)first->page)
-            , end((u8*)first->page + first->len)
-        {
-        }
+        HugePool(ObjPool* s, Chunk* first) noexcept;
 
         void* allocate(size_t len) override;
         void submit(Disposable* d) noexcept override;
@@ -81,6 +75,14 @@ namespace {
     private:
         void addChunk(size_t minLen);
     };
+}
+
+HugePool::HugePool(ObjPool* s, Chunk* first) noexcept
+    : slave(s)
+    , lastChunk(first)
+    , cur((u8*)first->page)
+    , end((u8*)first->page + first->len)
+{
 }
 
 Chunk::Chunk(size_t requestedLen)
