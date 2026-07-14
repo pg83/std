@@ -55,31 +55,34 @@ namespace {
         }
     };
 
-    struct PosixMutexImpl: public Mutex, public pthread_mutex_t {
+    // pthread_mutex_t cannot be a base class: it is a union on glibc
+    struct PosixMutexImpl: public Mutex {
+        pthread_mutex_t mutex;
+
         PosixMutexImpl() {
-            if (pthread_mutex_init(this, nullptr) != 0) {
+            if (pthread_mutex_init(&mutex, nullptr) != 0) {
                 Errno().raise(StringBuilder() << StringView(u8"pthread_mutex_init failed"));
             }
         }
 
         ~PosixMutexImpl() noexcept {
-            STD_INSIST(pthread_mutex_destroy(this) == 0);
+            STD_INSIST(pthread_mutex_destroy(&mutex) == 0);
         }
 
         void wait() noexcept override {
-            STD_INSIST(pthread_mutex_lock(this) == 0);
+            STD_INSIST(pthread_mutex_lock(&mutex) == 0);
         }
 
         void post() noexcept override {
-            STD_INSIST(pthread_mutex_unlock(this) == 0);
+            STD_INSIST(pthread_mutex_unlock(&mutex) == 0);
         }
 
         bool tryWait() noexcept override {
-            return pthread_mutex_trylock(this) == 0;
+            return pthread_mutex_trylock(&mutex) == 0;
         }
 
         void* nativeHandle() noexcept override {
-            return static_cast<pthread_mutex_t*>(this);
+            return &mutex;
         }
     };
 }

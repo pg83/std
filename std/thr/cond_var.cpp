@@ -13,27 +13,30 @@
 using namespace stl;
 
 namespace {
-    struct PosixCondVarImpl: public CondVar, public pthread_cond_t {
+    // pthread_cond_t cannot be a base class: it is a union on glibc
+    struct PosixCondVarImpl: public CondVar {
+        pthread_cond_t cond;
+
         PosixCondVarImpl() {
-            if (pthread_cond_init(this, nullptr) != 0) {
+            if (pthread_cond_init(&cond, nullptr) != 0) {
                 Errno().raise(StringBuilder() << StringView(u8"pthread_cond_init failed"));
             }
         }
 
         ~PosixCondVarImpl() noexcept {
-            STD_INSIST(pthread_cond_destroy(this) == 0);
+            STD_INSIST(pthread_cond_destroy(&cond) == 0);
         }
 
         void wait(Mutex* mutex) noexcept override {
-            STD_INSIST(pthread_cond_wait(this, (pthread_mutex_t*)mutex->nativeHandle()) == 0);
+            STD_INSIST(pthread_cond_wait(&cond, (pthread_mutex_t*)mutex->nativeHandle()) == 0);
         }
 
         void signal() noexcept override {
-            STD_INSIST(pthread_cond_signal(this) == 0);
+            STD_INSIST(pthread_cond_signal(&cond) == 0);
         }
 
         void broadcast() noexcept override {
-            STD_INSIST(pthread_cond_broadcast(this) == 0);
+            STD_INSIST(pthread_cond_broadcast(&cond) == 0);
         }
     };
 }
