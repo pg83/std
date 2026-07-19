@@ -31,7 +31,7 @@ STD_TEST_SUITE(ListDir) {
     STD_TEST(CurrentDirectoryContainsExpectedItems) {
         bool foundTstDir = false;
         bool foundStdDir = false;
-        bool foundMakefile = false;
+        bool foundBuildFile = false;
 
         listDir(StringView(u8"."), [&](const TPathInfo& pi) {
             if (pi.item == StringView(u8"tst") && pi.isDir) {
@@ -40,13 +40,13 @@ STD_TEST_SUITE(ListDir) {
             if (pi.item == StringView(u8"std") && pi.isDir) {
                 foundStdDir = true;
             }
-            if (pi.item == StringView(u8"Makefile") && !pi.isDir) {
-                foundMakefile = true;
+            if (pi.item == StringView(u8"build.py") && !pi.isDir) {
+                foundBuildFile = true;
             }
         });
 
         STD_INSIST(foundTstDir);
         STD_INSIST(foundStdDir);
-        STD_INSIST(foundMakefile);
+        STD_INSIST(foundBuildFile);
     }
 }

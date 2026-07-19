@@ -1,17 +1,21 @@
 # Build system
 
-## Makefile
+## Build runner
 
-Source and test discovery is fully automatic via `wildcard`:
+Source and test discovery is fully automatic via `build.glob`:
 
-- `std/*/*.cpp` — all sources. Files ending in `_ut.cpp` are separated out as tests, the rest go into `std/libstd.a`.
+- `std/*/*.cpp` — all sources. Files ending in `_ut.cpp` are separated out as unit tests, the rest go into `.build/libstd.a`.
 - `tst/*.cpp` — test runner and additional test code.
 
-Adding a new `.cpp` file to any `std/*/` directory is enough — no need to edit the Makefile.
+Adding a new `.cpp` file to either location is enough; `build.py` does not contain
+a hardcoded source or binary list.
 
-Build: `make -j`. Run: `./tst/test`. Install: `make install DESTDIR=/prefix`.
+Build everything with `./build`. Run the unit tests with
+`./.build/tst/test`. An explicit `./build libstd` builds only the library and
+publishes `./libstd` as a symlink into the content-addressed cache.
 
-The `install` target copies all `.h` files from `std/` into `$(DESTDIR)/include/std/...` preserving directory structure, and `libstd.a` into `$(DESTDIR)/lib/`.
+The build runner has no filesystem install target. Packagers copy
+`.build/libstd.a` and the headers under `std/` into their output tree.
 
 The helper script `./dev/run.sh` sets up the build environment via `ix` (package manager), invokes `./dev/build.sh`, and runs the tests.
 

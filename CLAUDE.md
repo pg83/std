@@ -8,11 +8,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 sh ./dev/run.sh
 ```
 
-This sets up deps via `ix`, builds with `make -j`, and runs `./tst/test --top=20`.
+This sets up deps via `ix`, builds with `./build`, and runs
+`./.build/tst/test --top=20`.
 
-To build only: `make -j`. To run tests only: `./tst/test`.
+To build only: `./build`. To run tests only: `./.build/tst/test`.
 
-Source/test discovery is automatic via `wildcard` — adding a new `.cpp` under `std/*/` is enough, no Makefile edits needed. Files ending in `_ut.cpp` are compiled as unit tests; the rest go into `std/libstd.a`.
+Source/test discovery uses `build.glob`: files ending in `_ut.cpp` are compiled
+into the unit-test runner, the other `std/*/*.cpp` files go into `libstd.a`, and
+every `tst/*.cpp` file becomes a binary without a hardcoded target list.
 
 ## Coding conventions
 

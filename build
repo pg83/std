@@ -1,0 +1,1183 @@
+#!/usr/bin/env python3
+
+"""Small, stateless build graph runner with a content-addressed cache."""
+
+from __future__ import annotations
+
+import sys
+
+sys.dont_write_bytecode = True
+
+import argparse
+import concurrent.futures
+import dataclasses
+import errno
+import fcntl
+import glob as globlib
+import hashlib
+import importlib.util
+import json
+import os
+import re
+import shlex
+import shutil
+import signal
+import stat
+import subprocess
+import tempfile
+import threading
+import types
+import uuid
+from collections import defaultdict, deque
+from pathlib import Path
+from typing import Any, Iterable
+
+
+S = "$(S)"
+B = "$(B)"
+
+ANSI_COLORS = {
+    "red": "31", "green": "32", "yellow": "33", "blue": "34",
+    "magenta": "35", "cyan": "36", "white": "37",
+    "light-red": "91", "light-green": "92", "light-yellow": "93",
+    "light-blue": "94", "light-magenta": "95", "light-cyan": "96",
+    "light-white": "97",
+}
+
+
+class BuildError(RuntimeError):
+    pass
+
+
+def _items(value: Any) -> list[Any]:
+    if value is None:
+        return []
+    if isinstance(value, (str, bytes)):
+        return [value]
+    return list(value)
+
+
+def _uniq(values: Iterable[Any]) -> list[Any]:
+    out: list[Any] = []
+    seen: set[Any] = set()
+    for value in values:
+        if value not in seen:
+            seen.add(value)
+            out.append(value)
+    return out
+
+
+def _source_path(path: str) -> str:
+    path = str(path)
+    if path.startswith((S + "/", B + "/")) or os.path.isabs(path):
+        return path
+    raise BuildError(f"input path must start with $(S)/ or $(B)/: {path}")
+
+
+def _output_path(path: str) -> str:
+    path = str(path)
+    if path.startswith(B + "/"):
+        return path
+    raise BuildError(f"output path must start with $(B)/: {path}")
+
+
+def _include_path(path: str) -> str:
+    path = str(path).rstrip("/")
+    if path in (S, B) or path.startswith((S + "/", B + "/")) or os.path.isabs(path):
+        return path
+    raise BuildError(f"include path must start with $(S)/ or $(B)/: {path}")
+
+
+def _cwd_path(path: str) -> str:
+    path = str(path).rstrip("/")
+    if path in (S, B) or path.startswith((S + "/", B + "/")) or os.path.isabs(path):
+        return path
+    raise BuildError(f"cwd path must start with $(S)/ or $(B)/: {path}")
+
+
+@dataclasses.dataclass(eq=False)
+class Node:
+    inputs: list[str]
+    outputs: list[str]
+    commands: list[list[str]]
+    deps: list["Node"] = dataclasses.field(default_factory=list)
+    cwd: str = B
+    env: dict[str, str] = dataclasses.field(default_factory=dict)
+    descr: str = "CMD"
+    color: str = ""
+    include_roots: list[str] = dataclasses.field(default_factory=list)
+    scan_sources: bool = False
+    source_inputs: set[str] = dataclasses.field(default_factory=set)
+    uid: str | None = None
+
+    def canonical(self) -> dict[str, Any]:
+        return {
+            "inputs": self.inputs,
+            "outputs": self.outputs,
+            "cmd": self.commands,
+            "cwd": self.cwd,
+            "env": self.env,
+        }
+
+
+@dataclasses.dataclass(eq=False)
+class Target:
+    kind: str
+    name: str | None = None
+    srcs: list[str] = dataclasses.field(default_factory=list)
+    deps: list["Target"] = dataclasses.field(default_factory=list)
+    cflags: list[str] = dataclasses.field(default_factory=list)
+    cxxflags: list[str] = dataclasses.field(default_factory=list)
+    cppflags: list[str] = dataclasses.field(default_factory=list)
+    public_cflags: list[str] = dataclasses.field(default_factory=list)
+    public_cxxflags: list[str] = dataclasses.field(default_factory=list)
+    public_cppflags: list[str] = dataclasses.field(default_factory=list)
+    ldflags: list[str] = dataclasses.field(default_factory=list)
+    output: str | None = None
+    commands: list[list[str]] = dataclasses.field(default_factory=list)
+    inputs: list[str] = dataclasses.field(default_factory=list)
+    outputs: list[str] = dataclasses.field(default_factory=list)
+    cwd: str = B
+    env: dict[str, str] = dataclasses.field(default_factory=dict)
+    descr: str = "GN"
+    color: str = "yellow"
+    linker: str | None = None
+    enabled: bool = True
+    root: Node | None = None
+    nodes: list[Node] = dataclasses.field(default_factory=list)
+    uses_cxx: bool = False
+
+    def __bool__(self) -> bool:
+        return self.enabled
+
+
+class BuildContext:
+    def __init__(self, source_root: Path, build_root: Path):
+        self.source_root = source_root.resolve()
+        self.build_root = build_root.resolve()
+        self.targets: list[Target] = []
+        self.installed: list[Target] = []
+        self.nodes: list[Node] = []
+        self.output_nodes: dict[str, Node] = {}
+        self.target_names: dict[str, Target] = {}
+        self.file_hashes: dict[str, str] = {}
+        self.includes: list[str] = []
+        self.cflags = shlex.split(os.environ.get("CFLAGS", ""))
+        self.cxxflags = shlex.split(os.environ.get("CXXFLAGS", ""))
+        self.cppflags = shlex.split(os.environ.get("CPPFLAGS", ""))
+        self.ldflags = shlex.split(os.environ.get("LDFLAGS", ""))
+        self.ldflags += shlex.split(os.environ.get("CTRFLAGS", ""))
+        self.cc = os.environ.get("CC", "cc")
+        self.cxx = os.environ.get("CXX", "c++")
+        self.ar = os.environ.get("AR") or shutil.which("ar") or shutil.which("llvm-ar") or "ar"
+
+    def interface(self, *, cflags=(), cxxflags=(), cppflags=(), ldflags=(), enabled=True, name=None) -> Target:
+        target = Target(
+            "interface", name=name,
+            public_cflags=_items(cflags), public_cxxflags=_items(cxxflags),
+            public_cppflags=_items(cppflags), ldflags=_items(ldflags),
+            enabled=enabled,
+        )
+        self.targets.append(target)
+        return target
+
+    def pkg_config(self, *packages: str, required: bool = True) -> Target:
+        tool = os.environ.get("PKG_CONFIG", "pkg-config")
+        base = [tool, *packages]
+        stderr = None if required else subprocess.DEVNULL
+        try:
+            cflags = shlex.split(subprocess.check_output(base + ["--cflags"], text=True, stderr=stderr).strip())
+            ldflags = shlex.split(subprocess.check_output(base + ["--libs"], text=True, stderr=stderr).strip())
+        except (OSError, subprocess.CalledProcessError) as exc:
+            if required:
+                raise BuildError(f"pkg-config failed for {' '.join(packages)}: {exc}") from exc
+            return self.interface(enabled=False, name="pkg:" + ",".join(packages))
+        return self.interface(cflags=cflags, ldflags=ldflags, name="pkg:" + ",".join(packages))
+
+    def pkg_config_variable(self, package: str, variable: str) -> str:
+        tool = os.environ.get("PKG_CONFIG", "pkg-config")
+        try:
+            return subprocess.check_output(
+                [tool, f"--variable={variable}", package], text=True,
+            ).strip()
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise BuildError(f"pkg-config variable {package}:{variable} failed: {exc}") from exc
+
+    def glob(self, pattern: str) -> list[str]:
+        pattern = str(pattern)
+        if pattern.startswith(S + "/"):
+            relative_pattern = pattern[len(S) + 1:]
+            matches = globlib.glob(str(self.source_root / relative_pattern), recursive=True)
+            result: list[str] = []
+            for match in matches:
+                try:
+                    relative = Path(match).relative_to(self.source_root)
+                except ValueError as exc:
+                    raise BuildError(f"glob escaped $(S): {pattern}") from exc
+                result.append(S + "/" + relative.as_posix())
+            return sorted(result)
+        if os.path.isabs(pattern):
+            return sorted(globlib.glob(pattern, recursive=True))
+        raise BuildError(f"glob pattern must start with $(S)/ or be absolute: {pattern}")
+
+    def library(self, *, srcs, name=None, cflags=(), cxxflags=(), cppflags=(),
+                public_cflags=(), public_cxxflags=(), public_cppflags=(),
+                deps=(), ldflags=(), output=None) -> Target:
+        return self._compiled_target(
+            "library", srcs, name, cflags, cxxflags, cppflags,
+            public_cflags, public_cxxflags, public_cppflags,
+            deps, ldflags, output, None,
+        )
+
+    def program(self, *, srcs, name=None, cflags=(), cxxflags=(), cppflags=(),
+                public_cflags=(), public_cxxflags=(), public_cppflags=(),
+                deps=(), ldflags=(), output=None, linker=None) -> Target:
+        return self._compiled_target(
+            "program", srcs, name, cflags, cxxflags, cppflags,
+            public_cflags, public_cxxflags, public_cppflags,
+            deps, ldflags, output, linker,
+        )
+
+    def _compiled_target(self, kind, srcs, name, cflags, cxxflags, cppflags,
+                         public_cflags, public_cxxflags, public_cppflags,
+                         deps, ldflags, output, linker) -> Target:
+        target = Target(
+            kind, name=name, srcs=[_source_path(x) for x in _items(srcs)],
+            deps=_items(deps),
+            cflags=_items(cflags), cxxflags=_items(cxxflags), cppflags=_items(cppflags),
+            public_cflags=_items(public_cflags),
+            public_cxxflags=_items(public_cxxflags),
+            public_cppflags=_items(public_cppflags),
+            ldflags=_items(ldflags), output=_output_path(output) if output else None,
+            linker=linker,
+        )
+        self._validate_deps(target)
+        self.targets.append(target)
+        return target
+
+    def command(self, *, inputs=(), outputs, cmd, deps=(), name=None, cwd=B, env=None,
+                cflags=(), cxxflags=(), cppflags=(), ldflags=(), descr="GEN", color="yellow") -> Target:
+        commands = cmd
+        if not commands or isinstance(commands[0], (str, bytes)):
+            commands = [commands]
+        target = Target(
+            "command", name=name, deps=_items(deps), inputs=[_source_path(x) for x in _items(inputs)],
+            outputs=[_output_path(x) for x in _items(outputs)],
+            commands=[[str(x) for x in command] for command in commands], cwd=_cwd_path(cwd),
+            env=dict(env or {}),
+            public_cflags=_items(cflags), public_cxxflags=_items(cxxflags),
+            public_cppflags=_items(cppflags), ldflags=_items(ldflags),
+            descr=str(descr), color=str(color),
+        )
+        self._validate_deps(target)
+        self.targets.append(target)
+        return target
+
+    def install(self, *targets: Target) -> None:
+        for target in targets:
+            if not isinstance(target, Target):
+                raise BuildError(f"install expects targets, got {target!r}")
+            self.installed.append(target)
+
+    @staticmethod
+    def _validate_deps(target: Target) -> None:
+        for dep in target.deps:
+            if not isinstance(dep, Target):
+                raise BuildError(f"{target.kind} dependency is not a target: {dep!r}")
+
+    def load(self, path: Path) -> Any:
+        spec = importlib.util.spec_from_file_location("_project_build", path)
+        if spec is None or spec.loader is None:
+            raise BuildError(f"cannot load {path}")
+        module = importlib.util.module_from_spec(spec)
+        build_module = types.ModuleType("build")
+        build_module.includes = []
+        build_module.glob = self.glob
+        for name in ("cflags", "cxxflags", "cppflags", "ldflags"):
+            setattr(build_module, name, getattr(self, name).copy())
+        module.__dict__.update({
+            "pkg_config": self.pkg_config,
+            "pkg_config_variable": self.pkg_config_variable,
+            "dependency": self.interface,
+            "library": self.library,
+            "program": self.program,
+            "command": self.command,
+            "install": self.install,
+        })
+        sys.modules[spec.name] = module
+        missing = object()
+        previous_build = sys.modules.get("build", missing)
+        sys.modules["build"] = build_module
+        try:
+            spec.loader.exec_module(module)
+        finally:
+            if previous_build is missing:
+                del sys.modules["build"]
+            else:
+                sys.modules["build"] = previous_build
+        self.includes = [_include_path(path) for path in _items(build_module.includes)]
+        for name in ("cflags", "cxxflags", "cppflags", "ldflags"):
+            setattr(self, name, [str(flag) for flag in _items(getattr(build_module, name))])
+        self._infer_names(module)
+        return module
+
+    def _infer_names(self, module: Any) -> None:
+        aliases: dict[Target, list[str]] = defaultdict(list)
+        for name, value in vars(module).items():
+            if not name.startswith("_") and isinstance(value, Target):
+                aliases[value].append(name)
+        for target in self.targets:
+            if target.kind == "interface":
+                continue
+            if target.name is None:
+                names = aliases.get(target, [])
+                if len(names) != 1:
+                    raise BuildError(
+                        f"anonymous {target.kind} target needs exactly one global name, got {names}",
+                    )
+                target.name = names[0]
+            previous = self.target_names.get(target.name)
+            if previous is not None and previous is not target:
+                raise BuildError(f"duplicate target name: {target.name}")
+            self.target_names[target.name] = target
+
+    def build_graph(self) -> None:
+        for target in self.targets:
+            if target.kind == "command":
+                self._emit_target(target, set())
+        for target in self.targets:
+            if target.kind not in ("interface", "command"):
+                self._emit_target(target, set())
+        scanner = IncludeScanner(self)
+        for node in self.nodes:
+            if node.scan_sources:
+                scanner.scan_node(node)
+        self._validate_graph()
+
+    def _emit_target(self, target: Target, active: set[Target]) -> Node | None:
+        if target.root is not None or target.kind == "interface":
+            return target.root
+        if target in active:
+            raise BuildError(f"target dependency cycle at {target.name}")
+        active.add(target)
+        for dep in target.deps:
+            self._emit_target(dep, active)
+        if target.kind == "command":
+            dep_nodes = [dep.root for dep in target.deps if dep.root is not None]
+            node = Node(
+                inputs=target.inputs.copy(), outputs=target.outputs.copy(),
+                commands=[x.copy() for x in target.commands], deps=dep_nodes,
+                cwd=target.cwd, env=target.env.copy(),
+                descr=target.descr, color=target.color,
+            )
+            for inp in node.inputs:
+                if inp.startswith(S + "/") or os.path.isabs(inp):
+                    node.source_inputs.add(inp)
+            self._add_node(node)
+            target.root = node
+            target.nodes = [node]
+        else:
+            self._emit_compiled(target)
+        active.remove(target)
+        return target.root
+
+    def _emit_compiled(self, target: Target) -> None:
+        assert target.name is not None
+        global_includes = _uniq([S, *[_include_path(path) for path in self.includes]])
+        include_flags = ["-I" + path for path in global_includes]
+        objects: list[Node] = []
+        uses_cxx = False
+        for src in target.srcs:
+            ext = Path(src).suffix.lower()
+            cxx = ext in (".cc", ".cpp", ".cxx", ".c++")
+            uses_cxx |= cxx
+            compiler = self.cxx if cxx else self.cc
+            common = [*self.cppflags, *self.cflags]
+            if cxx:
+                common.extend(self.cxxflags)
+            common.extend(include_flags)
+            common.extend(self._usage_compile_flags(target.deps, cxx))
+            common.extend(target.cppflags)
+            common.extend(target.cflags)
+            if cxx:
+                common.extend(target.cxxflags)
+            include_roots = _uniq([*global_includes, *self._include_roots_from_flags(common)])
+            rel = src.replace(S + "/", "").replace(B + "/", "generated/")
+            rel = re.sub(r"[^A-Za-z0-9_./+-]", "_", rel)
+            obj = f"{B}/obj/{target.name}/{rel}.o"
+            deps: list[Node] = []
+            if src.startswith(B + "/"):
+                producer = self.output_nodes.get(src)
+                if producer is None:
+                    raise BuildError(f"no producer for generated source {src}")
+                deps.append(producer)
+            node = Node(
+                inputs=[src], outputs=[obj],
+                commands=[[compiler, *common, "-c", src, "-o", obj]], deps=deps,
+                descr="CC", color="green", include_roots=include_roots,
+                scan_sources=src.startswith(S + "/"),
+            )
+            if src.startswith(S + "/") or os.path.isabs(src):
+                node.source_inputs.add(src)
+            self._add_node(node)
+            objects.append(node)
+        target.uses_cxx = uses_cxx or any(dep.uses_cxx for dep in target.deps)
+        if target.kind == "library":
+            output = target.output or f"{B}/lib{target.name}.a"
+            command = [self.ar, "rcs", output, *[node.outputs[0] for node in objects]]
+            root = Node([], [output], [command], deps=objects, descr="AR", color="light-red")
+        else:
+            output = target.output or f"{B}/{target.name}"
+            libraries = self._link_libraries(target.deps)
+            lib_nodes = [lib.root for lib in libraries if lib.root is not None]
+            other_nodes = [dep.root for dep in target.deps if dep.root is not None and dep.kind != "library"]
+            archives = [lib.root.outputs[0] for lib in libraries if lib.root is not None]
+            ldflags = self.ldflags + self._link_flags(target.deps) + target.ldflags
+            linker = target.linker or (self.cxx if target.uses_cxx else self.cc)
+            command = [linker, "-o", output, *[node.outputs[0] for node in objects], *archives, *ldflags]
+            root = Node(
+                [], [output], [command], deps=_uniq([*objects, *lib_nodes, *other_nodes]),
+                descr="LD", color="light-blue",
+            )
+        self._add_node(root)
+        target.root = root
+        target.nodes = [*objects, root]
+
+    def _usage_compile_flags(self, targets: Iterable[Target], cxx: bool) -> list[str]:
+        out: list[str] = []
+        seen: set[Target] = set()
+        def walk(target: Target) -> None:
+            if target in seen or not target.enabled:
+                return
+            seen.add(target)
+            for dep in target.deps:
+                walk(dep)
+            out.extend(target.public_cppflags)
+            out.extend(target.public_cflags)
+            if cxx:
+                out.extend(target.public_cxxflags)
+        for target in targets:
+            walk(target)
+        return _uniq(out)
+
+    @staticmethod
+    def _include_roots_from_flags(flags: Iterable[str]) -> list[str]:
+        out: list[str] = []
+        flags = list(flags)
+        i = 0
+        while i < len(flags):
+            flag = flags[i]
+            if flag == "-I" and i + 1 < len(flags):
+                out.append(_include_path(flags[i + 1]))
+                i += 2
+                continue
+            if flag.startswith("-I") and len(flag) > 2:
+                out.append(_include_path(flag[2:]))
+            i += 1
+        return out
+
+    def _link_libraries(self, targets: Iterable[Target]) -> list[Target]:
+        out: list[Target] = []
+        def walk(target: Target) -> None:
+            if not target.enabled:
+                return
+            if target.kind == "library":
+                if target in out:
+                    out.remove(target)
+                out.append(target)
+            for dep in target.deps:
+                walk(dep)
+        for target in targets:
+            walk(target)
+        return out
+
+    def _link_flags(self, targets: Iterable[Target]) -> list[str]:
+        out: list[str] = []
+        seen: set[Target] = set()
+        def walk(target: Target) -> None:
+            if target in seen or not target.enabled:
+                return
+            seen.add(target)
+            for dep in target.deps:
+                walk(dep)
+            out.extend(target.ldflags)
+        for target in targets:
+            walk(target)
+        return _uniq(out)
+
+    def _add_node(self, node: Node) -> None:
+        for output in node.outputs:
+            previous = self.output_nodes.get(output)
+            if previous is not None:
+                raise BuildError(f"multiple producers for {output}")
+            self.output_nodes[output] = node
+        self.nodes.append(node)
+
+    def _validate_graph(self) -> None:
+        state: dict[Node, int] = {}
+        def visit(node: Node) -> None:
+            mark = state.get(node, 0)
+            if mark == 1:
+                raise BuildError(f"build graph cycle at {node.outputs}")
+            if mark == 2:
+                return
+            state[node] = 1
+            for dep in node.deps:
+                visit(dep)
+            state[node] = 2
+        for node in self.nodes:
+            visit(node)
+
+    def physical(self, path: str, build_root: Path | None = None) -> Path:
+        if path == S:
+            return self.source_root
+        if path.startswith(S + "/"):
+            return self.source_root / path[len(S) + 1:]
+        root = build_root or self.build_root
+        if path == B:
+            return root
+        if path.startswith(B + "/"):
+            return root / path[len(B) + 1:]
+        return Path(path)
+
+    def publish(self, targets: Iterable[Target]) -> None:
+        publications: list[tuple[Path, str]] = []
+        for target in _uniq(targets):
+            if not target.name or Path(target.name).name != target.name:
+                raise BuildError(f"target name cannot be published in source root: {target.name!r}")
+            if target.root is None or not target.root.outputs:
+                raise BuildError(f"target has no output to publish: {target.name}")
+            link = self.source_root / target.name
+            try:
+                info = link.lstat()
+            except FileNotFoundError:
+                pass
+            else:
+                if not stat.S_ISLNK(info.st_mode):
+                    raise BuildError(f"refusing to replace non-symlink: {link}")
+            output = self.physical(target.root.outputs[0])
+            publications.append((link, os.path.relpath(output, self.source_root)))
+        for link, relative in publications:
+            temporary = link.with_name("." + link.name + "." + uuid.uuid4().hex)
+            try:
+                os.symlink(relative, temporary)
+                os.replace(temporary, link)
+            finally:
+                temporary.unlink(missing_ok=True)
+
+    def source_hash(self, path: str) -> str:
+        cached = self.file_hashes.get(path)
+        if cached is not None:
+            return cached
+        physical = self.physical(path)
+        try:
+            digest = hashlib.md5(physical.read_bytes()).hexdigest()
+        except OSError as exc:
+            raise BuildError(f"cannot hash input {path}: {exc}") from exc
+        self.file_hashes[path] = digest
+        return digest
+
+    def calculate_uids(self, roots: Iterable[Node]) -> None:
+        active: set[Node] = set()
+        def calc(node: Node) -> str:
+            if node.uid is not None:
+                return node.uid
+            if node in active:
+                raise BuildError(f"UID dependency cycle at {node.outputs}")
+            active.add(node)
+            dep_uids = [calc(dep) for dep in node.deps]
+            inputs = [[path, self.source_hash(path)] for path in sorted(node.source_inputs)]
+            data = json.dumps(
+                [node.canonical(), dep_uids, inputs], sort_keys=True,
+                separators=(",", ":"), ensure_ascii=False,
+            ).encode()
+            node.uid = hashlib.md5(data).hexdigest()
+            active.remove(node)
+            return node.uid
+        for root in roots:
+            calc(root)
+
+
+class IncludeScanner:
+    directive = re.compile(r'^\s*#\s*(?:include|import)\s*([<"])([^>"]+)[>"]')
+
+    def __init__(self, context: BuildContext):
+        self.context = context
+        self.parsed: dict[str, list[tuple[bool, str]]] = {}
+        self.resolved: dict[tuple[str, bool, str, tuple[str, ...]], tuple[str | None, Node | None]] = {}
+        self.closures: dict[tuple[str, tuple[str, ...]], tuple[set[str], set[Node]]] = {}
+
+    def scan_node(self, node: Node) -> None:
+        roots = tuple(_uniq(node.include_roots or [S]))
+        for source in node.inputs:
+            if not source.startswith(S + "/"):
+                continue
+            files, producers = self._closure(source, roots, set())
+            node.source_inputs.update(files)
+            ordered = sorted(producers, key=lambda producer: producer.outputs)
+            node.deps = _uniq([*node.deps, *ordered])
+
+    def _closure(self, path: str, roots: tuple[str, ...], active: set[str]) -> tuple[set[str], set[Node]]:
+        key = (path, roots)
+        cached = self.closures.get(key)
+        if cached is not None:
+            return set(cached[0]), set(cached[1])
+        if path in active:
+            return {path}, set()
+        active.add(path)
+        files = {path}
+        producers: set[Node] = set()
+        for quoted, target in self._parse(path):
+            resolved, producer = self._resolve(path, quoted, target, roots)
+            if producer is not None:
+                producers.add(producer)
+            elif resolved is not None:
+                child_files, child_producers = self._closure(resolved, roots, active)
+                files.update(child_files)
+                producers.update(child_producers)
+        active.remove(path)
+        self.closures[key] = (set(files), set(producers))
+        return files, producers
+
+    def _parse(self, path: str) -> list[tuple[bool, str]]:
+        cached = self.parsed.get(path)
+        if cached is not None:
+            return cached
+        try:
+            text = self.context.physical(path).read_text(errors="replace")
+        except OSError as exc:
+            raise BuildError(f"cannot scan includes in {path}: {exc}") from exc
+        clean = self._strip_comments(text)
+        result: list[tuple[bool, str]] = []
+        for line in clean.splitlines():
+            match = self.directive.match(line)
+            if match:
+                result.append((match.group(1) == '"', match.group(2)))
+        self.parsed[path] = result
+        return result
+
+    @staticmethod
+    def _strip_comments(text: str) -> str:
+        out = list(text)
+        i = 0
+        block = False
+        quote = ""
+        while i < len(out):
+            c = out[i]
+            n = out[i + 1] if i + 1 < len(out) else ""
+            if block:
+                if c == "*" and n == "/":
+                    out[i] = out[i + 1] = " "
+                    block = False
+                    i += 2
+                else:
+                    if c != "\n":
+                        out[i] = " "
+                    i += 1
+                continue
+            if quote:
+                if c == "\\":
+                    i += 2
+                    continue
+                if c == quote:
+                    quote = ""
+                i += 1
+                continue
+            if c in ('"', "'"):
+                quote = c
+                i += 1
+                continue
+            if c == "/" and n == "*":
+                out[i] = out[i + 1] = " "
+                block = True
+                i += 2
+                continue
+            if c == "/" and n == "/":
+                while i < len(out) and out[i] != "\n":
+                    out[i] = " "
+                    i += 1
+                continue
+            i += 1
+        return "".join(out)
+
+    def _resolve(self, includer: str, quoted: bool, target: str,
+                 roots: tuple[str, ...]) -> tuple[str | None, Node | None]:
+        key = (includer, quoted, target, roots)
+        cached = self.resolved.get(key)
+        if cached is not None:
+            return cached
+        candidates: list[str] = []
+        if quoted:
+            directory = includer.rsplit("/", 1)[0]
+            candidates.append(directory + "/" + target)
+        candidates.extend(root + "/" + target for root in roots)
+        for candidate in _uniq(candidates):
+            candidate = self._normal_symbolic(candidate)
+            if candidate.startswith(S + "/") and self.context.physical(candidate).is_file():
+                result = (candidate, None)
+                self.resolved[key] = result
+                return result
+            if candidate.startswith(B + "/"):
+                producer = self.context.output_nodes.get(candidate)
+                if producer is not None:
+                    result = (None, producer)
+                    self.resolved[key] = result
+                    return result
+        result = (None, None)
+        self.resolved[key] = result
+        return result
+
+    @staticmethod
+    def _normal_symbolic(path: str) -> str:
+        if path.startswith(S + "/"):
+            tail = os.path.normpath(path[len(S) + 1:])
+            return S + "/" + tail
+        if path.startswith(B + "/"):
+            tail = os.path.normpath(path[len(B) + 1:])
+            return B + "/" + tail
+        return os.path.normpath(path)
+
+
+class Executor:
+    def __init__(self, context: BuildContext, jobs: int, verbose: bool, keep_going: bool,
+                 ninja: bool = False):
+        self.context = context
+        self.jobs = max(1, jobs)
+        self.verbose = verbose
+        self.keep_going = keep_going
+        self.ninja = ninja
+        self.cas = context.build_root / "cas"
+        self.uids = context.build_root / "uid"
+        self.tmp = context.build_root / "tmp"
+        self.grb = context.build_root / "grb"
+        self.print_lock = threading.Lock()
+        self.progress_done = 0
+        self.progress_total = 0
+        self.progress_active = False
+        self.interactive = sys.stderr.isatty()
+
+    def run(self, roots: list[Node]) -> None:
+        try:
+            self._run(roots)
+        finally:
+            self._finish_progress()
+
+    def _run(self, roots: list[Node]) -> None:
+        self.progress_done = 0
+        needed = self._closure(roots)
+        consumers: dict[Node, list[Node]] = defaultdict(list)
+        remaining: dict[Node, int] = {}
+        for node in needed:
+            deps = [dep for dep in node.deps if dep in needed]
+            remaining[node] = len(deps)
+            for dep in deps:
+                consumers[dep].append(node)
+        ready = deque(node for node in needed if remaining[node] == 0)
+        cache_misses = {node for node in needed if not self._cached(node.uid)}
+        self.progress_total = len(cache_misses)
+        errors: dict[Node, BaseException] = {}
+        blocked: set[Node] = set()
+        running: dict[concurrent.futures.Future[None], Node] = {}
+        completed = 0
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.jobs) as pool:
+            while ready or running:
+                while ready and len(running) < self.jobs:
+                    node = ready.popleft()
+                    future = pool.submit(self._execute, node, node in cache_misses)
+                    running[future] = node
+                if not running:
+                    break
+                done, _ = concurrent.futures.wait(running, return_when=concurrent.futures.FIRST_COMPLETED)
+                for future in done:
+                    node = running.pop(future)
+                    completed += 1
+                    try:
+                        future.result()
+                    except BaseException as exc:
+                        errors[node] = exc
+                        self._report(f"FAIL {self._node_name(node)}: {exc}")
+                        if not self.keep_going:
+                            for other in running:
+                                other.cancel()
+                            raise BuildError(str(exc)) from exc
+                    for consumer in consumers[node]:
+                        remaining[consumer] -= 1
+                        if node in errors or node in blocked:
+                            blocked.add(consumer)
+                        if remaining[consumer] == 0:
+                            if consumer in blocked:
+                                errors[consumer] = BuildError("broken by dependency")
+                                for downstream in consumers[consumer]:
+                                    blocked.add(downstream)
+                            else:
+                                ready.append(consumer)
+        if errors:
+            roots_failed = [root for root in roots if root in errors or root in blocked]
+            raise BuildError(f"{len(errors)} node(s) failed, {len(roots_failed)} requested target(s) broken")
+        for root in roots:
+            assert root.uid is not None
+            self._restore(root.uid, self.context.build_root, symlink=True)
+        if self.verbose:
+            self._report(f"done: {completed} nodes")
+
+    @staticmethod
+    def _closure(roots: Iterable[Node]) -> set[Node]:
+        out: set[Node] = set()
+        stack = list(roots)
+        while stack:
+            node = stack.pop()
+            if node in out:
+                continue
+            out.add(node)
+            stack.extend(node.deps)
+        return out
+
+    def _execute(self, node: Node, expected_miss: bool = True) -> None:
+        assert node.uid is not None
+        if self._cached(node.uid):
+            if self.verbose:
+                self._report(f"HIT  {node.descr:3} {self._node_name(node)}")
+            return
+        if not expected_miss:
+            with self.print_lock:
+                self.progress_total += 1
+        work = self.tmp / node.uid
+        work.mkdir(parents=True, exist_ok=True)
+        fd = os.open(work, os.O_RDONLY)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            if self._cached(node.uid):
+                return
+            self._remove_contents(work)
+            for dep in node.deps:
+                assert dep.uid is not None
+                self._restore(dep.uid, work, symlink=False)
+            for output in node.outputs:
+                self.context.physical(output, work).parent.mkdir(parents=True, exist_ok=True)
+            if self.verbose:
+                self._report(f"RUN  {node.descr:3} {self._node_name(node)}")
+            for command in node.commands:
+                self._run_command(node, command, work)
+            self._store(node, work)
+            self._progress(node)
+        finally:
+            os.close(fd)
+            self._discard_contents(work)
+
+    def _run_command(self, node: Node, command: list[str], work: Path) -> None:
+        args = [self._mount(arg, work) for arg in command]
+        env = os.environ.copy()
+        env.update({key: self._mount(value, work) for key, value in node.env.items()})
+        cwd = self._mount(node.cwd, work)
+        if not args:
+            raise BuildError(f"empty command in {node.outputs}")
+        result = subprocess.run(args, cwd=cwd, env=env, text=True, stdout=None, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            detail = result.stderr.rstrip()
+            message = f"command exited {result.returncode}: {shlex.join(args)}"
+            if detail:
+                message += "\n" + detail
+            raise BuildError(message)
+        if result.stderr:
+            with self.print_lock:
+                self._clear_progress()
+                sys.stderr.write(result.stderr)
+                if not result.stderr.endswith("\n"):
+                    sys.stderr.write("\n")
+                sys.stderr.flush()
+
+    def _mount(self, value: str, work: Path) -> str:
+        return str(value).replace(S, str(self.context.source_root)).replace(B, str(work))
+
+    def _manifest_path(self, uid: str) -> Path:
+        return self.uids / uid[0] / uid
+
+    def _cas_path(self, digest: str) -> Path:
+        return self.cas / digest[:2] / digest
+
+    def _cached(self, uid: str) -> bool:
+        path = self._manifest_path(uid)
+        try:
+            manifest = json.loads(path.read_text())
+            for entry in manifest.values():
+                if "cas" in entry and not self._cas_path(entry["cas"]).is_file():
+                    raise OSError("missing CAS blob")
+            return True
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
+            return False
+
+    def _store(self, node: Node, work: Path) -> None:
+        manifest: dict[str, dict[str, Any]] = {}
+        for output in node.outputs:
+            self._store_path(self.context.physical(output, work), output, manifest)
+        path = self._manifest_path(node.uid)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd, temporary = tempfile.mkstemp(prefix="." + node.uid + ".", dir=path.parent)
+        try:
+            with os.fdopen(fd, "w") as stream:
+                json.dump(manifest, stream, sort_keys=True, separators=(",", ":"))
+            os.replace(temporary, path)
+        finally:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
+
+    def _store_path(self, physical: Path, symbolic: str,
+                    manifest: dict[str, dict[str, Any]]) -> None:
+        try:
+            info = physical.lstat()
+        except OSError as exc:
+            raise BuildError(f"declared output was not produced: {symbolic}: {exc}") from exc
+        if stat.S_ISLNK(info.st_mode):
+            manifest[symbolic] = {"link": os.readlink(physical)}
+            return
+        if stat.S_ISDIR(info.st_mode):
+            for child in physical.iterdir():
+                self._store_path(child, symbolic + "/" + child.name, manifest)
+            return
+        mode = stat.S_IMODE(info.st_mode)
+        digest = self._cas_digest(physical, mode)
+        destination = self._cas_path(digest)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            os.link(physical, destination)
+        except FileExistsError:
+            pass
+        except OSError as exc:
+            if exc.errno != errno.EXDEV:
+                raise
+            temporary = destination.with_name("." + destination.name + "." + uuid.uuid4().hex)
+            shutil.copy2(physical, temporary)
+            try:
+                os.link(temporary, destination)
+            except FileExistsError:
+                pass
+            finally:
+                temporary.unlink(missing_ok=True)
+        manifest[symbolic] = {"cas": digest, "mode": mode}
+
+    @staticmethod
+    def _cas_digest(path: Path, mode: int) -> str:
+        digest = hashlib.sha256(f"{mode:o}\0".encode())
+        with path.open("rb") as stream:
+            while chunk := stream.read(1024 * 1024):
+                digest.update(chunk)
+        return digest.hexdigest()
+
+    def _restore(self, uid: str, where: Path, symlink: bool) -> None:
+        path = self._manifest_path(uid)
+        try:
+            manifest = json.loads(path.read_text())
+            for symbolic, entry in manifest.items():
+                target = self.context.physical(symbolic, where)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                if "link" in entry:
+                    self._replace_symlink(entry["link"], target)
+                else:
+                    source = self._cas_path(entry["cas"])
+                    if symlink:
+                        self._replace_symlink(str(source.resolve()), target)
+                    else:
+                        self._unlink(target)
+                        try:
+                            os.link(source, target)
+                        except OSError:
+                            os.symlink(source.resolve(), target)
+        except BaseException:
+            path.unlink(missing_ok=True)
+            raise
+
+    def _replace_symlink(self, source: str, target: Path) -> None:
+        if target.is_dir() and not target.is_symlink():
+            shutil.rmtree(target)
+        temporary = target.with_name("." + target.name + "." + uuid.uuid4().hex)
+        try:
+            os.symlink(source, temporary)
+            os.replace(temporary, target)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    @staticmethod
+    def _unlink(path: Path) -> None:
+        try:
+            if path.is_dir() and not path.is_symlink():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+        except FileNotFoundError:
+            pass
+
+    @staticmethod
+    def _remove_contents(path: Path) -> None:
+        for child in path.iterdir():
+            if child.is_dir() and not child.is_symlink():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+
+    def _discard_contents(self, path: Path) -> None:
+        if not path.exists():
+            return
+        self.grb.mkdir(parents=True, exist_ok=True)
+        destination = self.grb / uuid.uuid4().hex
+        try:
+            path.rename(destination)
+        except OSError:
+            return
+        threading.Thread(
+            target=shutil.rmtree, args=(destination,),
+            kwargs={"ignore_errors": True}, daemon=True,
+        ).start()
+
+    def _report(self, message: str) -> None:
+        with self.print_lock:
+            self._clear_progress()
+            print(message, file=sys.stderr)
+
+    def _progress(self, node: Node) -> None:
+        with self.print_lock:
+            self.progress_done += 1
+            descr = self._color(node.color, node.descr)
+            record = (
+                f"[{descr}] {{{self.progress_done}/{self.progress_total}}} "
+                f"{self._node_name(node)}"
+            )
+            if self.ninja and self.interactive:
+                sys.stderr.write("\x1b[2K\r" + record + "\r")
+                sys.stderr.flush()
+                self.progress_active = True
+            else:
+                print(record, file=sys.stderr)
+
+    def _finish_progress(self) -> None:
+        with self.print_lock:
+            if self.progress_active:
+                sys.stderr.write("\n")
+                sys.stderr.flush()
+                self.progress_active = False
+
+    def _clear_progress(self) -> None:
+        if self.progress_active:
+            sys.stderr.write("\x1b[2K\r")
+            self.progress_active = False
+
+    def _color(self, name: str, value: str) -> str:
+        code = ANSI_COLORS.get(name)
+        if not self.interactive or code is None:
+            return value
+        return f"\x1b[{code}m{value}\x1b[0m"
+
+    @staticmethod
+    def _node_name(node: Node) -> str:
+        return node.outputs[0] if node.outputs else "<no output>"
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(prog="build")
+    parser.add_argument("targets", nargs="*")
+    parser.add_argument("-B", "--build-dir", default=os.environ.get("B", ".build"))
+    parser.add_argument("-j", "--jobs", type=int, default=os.cpu_count() or 4)
+    parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument("-k", "--keep-going", action="store_true")
+    parser.add_argument(
+        "-T", "--ninja", action="store_true",
+        help="repaint progress in place instead of keeping one line per node",
+    )
+    parser.add_argument("--clear", action="store_true")
+    parser.add_argument("--list", action="store_true")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(sys.argv[1:] if argv is None else argv)
+    source_root = Path(__file__).resolve().parent
+    context = BuildContext(source_root, source_root / args.build_dir)
+    try:
+        context.load(source_root / "build.py")
+        context.build_graph()
+        if args.list:
+            for name in sorted(context.target_names):
+                print(name)
+            return 0
+        if args.targets:
+            selected: list[Target] = []
+            for name in args.targets:
+                target = context.target_names.get(name)
+                if target is None:
+                    raise BuildError(f"unknown target: {name}")
+                selected.append(target)
+        else:
+            selected = context.installed
+            if not selected:
+                raise BuildError("no targets requested and build.py installed no defaults")
+        roots = _uniq(target.root for target in selected if target.root is not None)
+        context.calculate_uids(roots)
+        if args.clear:
+            for directory in ("cas", "uid", "tmp", "grb"):
+                shutil.rmtree(context.build_root / directory, ignore_errors=True)
+        context.build_root.mkdir(parents=True, exist_ok=True)
+        Executor(context, args.jobs, args.verbose, args.keep_going, args.ninja).run(roots)
+        if args.targets:
+            context.publish(selected)
+        return 0
+    except BuildError as exc:
+        print(f"build: {exc}", file=sys.stderr)
+        return 1
+
+
+def supervised_main(argv: list[str] | None = None) -> int:
+    """Keep signal handling outside the process group that does the work."""
+    watched = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT)
+    old_mask = signal.pthread_sigmask(signal.SIG_BLOCK, watched)
+    pid = os.fork()
+
+    if pid == 0:
+        os.setpgid(0, 0)
+        signal.pthread_sigmask(signal.SIG_SETMASK, old_mask)
+        return main(argv)
+
+    try:
+        os.setpgid(pid, pid)
+    except (ProcessLookupError, PermissionError):
+        pass
+
+    interrupted = [0]
+
+    def terminate(signum, _frame):
+        interrupted[0] = interrupted[0] or signum
+
+        try:
+            os.killpg(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+    old_handlers = {signum: signal.signal(signum, terminate) for signum in watched}
+    signal.pthread_sigmask(signal.SIG_SETMASK, old_mask)
+
+    try:
+        while True:
+            try:
+                _, status = os.waitpid(pid, 0)
+                break
+            except InterruptedError:
+                continue
+    finally:
+        for signum, handler in old_handlers.items():
+            signal.signal(signum, handler)
+
+    if interrupted[0]:
+        return 128 + interrupted[0]
+    if os.WIFEXITED(status):
+        return os.WEXITSTATUS(status)
+    if os.WIFSIGNALED(status):
+        return 128 + os.WTERMSIG(status)
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(supervised_main())

@@ -7,7 +7,7 @@ EXTRA=
 
 ~/monorepo/ix/ix run \
     set/dev/cc \
-    bld/make \
+    bld/python \
     bld/sh \
     bld/box \
     ${EXTRA} \
@@ -20,4 +20,4 @@ EXTRA=
     ${EXTRA} \
     -- ./dev/build.sh
 
-time timeout 10s ./tst/test --top=20
+time timeout 10s ./.build/tst/test --top=20

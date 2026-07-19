@@ -5,6 +5,7 @@
 *.o.tmp
 *~
 *#
+.build/
 bld
 *bld*
 test
