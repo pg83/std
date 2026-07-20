@@ -780,9 +780,21 @@ class IncludeScanner:
         self.parsed: dict[str, list[tuple[bool, str]]] = {}
         self.resolved: dict[tuple[str, bool, str, tuple[str, ...]], tuple[str | None, Node | None]] = {}
         self.closures: dict[tuple[str, tuple[str, ...]], tuple[set[str], set[Node]]] = {}
+        self.includes: dict[str, dict[str, tuple[str | None, Node | None]]] = defaultdict(dict)
+        self.paths: dict[str, tuple[str | None, Node | None]] = {}
+        self.root_includes: dict[str, dict[str, tuple[str | None, Node | None]]] = {}
+        self.root_resolutions: dict[tuple[str, ...], dict[str, tuple[str | None, Node | None]]] = {}
+        roots: list[str] = []
+        for node in context.nodes:
+            if node.scan_sources:
+                roots.extend(node.include_roots or [S])
+        for root in _uniq(self._normal_symbolic(root) for root in roots):
+            self._index_root(root)
 
     def scan_node(self, node: Node) -> None:
-        roots = tuple(_uniq(node.include_roots or [S]))
+        roots = tuple(_uniq(
+            self._normal_symbolic(root) for root in (node.include_roots or [S])
+        ))
         for source in node.inputs:
             if not source.startswith(S + "/"):
                 continue
@@ -806,6 +818,8 @@ class IncludeScanner:
             if producer is not None:
                 producers.add(producer)
             elif resolved is not None:
+                if resolved.startswith("/ix/store/"):
+                    continue
                 child_files, child_producers = self._closure(resolved, roots, active)
                 files.update(child_files)
                 producers.update(child_producers)
@@ -880,27 +894,73 @@ class IncludeScanner:
         cached = self.resolved.get(key)
         if cached is not None:
             return cached
-        candidates: list[str] = []
         if quoted:
             directory = includer.rsplit("/", 1)[0]
-            candidates.append(directory + "/" + target)
-        candidates.extend(root + "/" + target for root in roots)
-        for candidate in _uniq(candidates):
-            candidate = self._normal_symbolic(candidate)
-            if ((candidate.startswith(S + "/") or os.path.isabs(candidate))
-                    and self.context.physical(candidate).is_file()):
-                result = (candidate, None)
-                self.resolved[key] = result
-                return result
-            if candidate.startswith(B + "/"):
-                producer = self.context.output_nodes.get(candidate)
-                if producer is not None:
-                    result = (None, producer)
+            if not directory and includer.startswith("/"):
+                directory = "/"
+            by_directory = self.includes.get(target)
+            if by_directory is not None:
+                result = by_directory.get(directory)
+                if result is not None:
                     self.resolved[key] = result
                     return result
-        result = (None, None)
+            candidate = self._normal_symbolic(directory + "/" + target)
+            result = self.paths.get(candidate)
+            if result is not None:
+                self.resolved[key] = result
+                return result
+        table = self.root_resolutions.get(roots)
+        if table is None:
+            table = {}
+            for root in reversed(roots):
+                table.update(self.root_includes[root])
+            self.root_resolutions[roots] = table
+        result = table.get(target, (None, None))
         self.resolved[key] = result
         return result
+
+    def _index_root(self, root: str) -> None:
+        root = self._normal_symbolic(root)
+        if root in self.root_includes:
+            return
+        direct: dict[str, tuple[str | None, Node | None]] = {}
+        self.root_includes[root] = direct
+        if root == B or root.startswith(B + "/"):
+            prefix = root + "/"
+            for output, producer in self.context.output_nodes.items():
+                if not output.startswith(prefix):
+                    continue
+                relative = output[len(prefix):]
+                value = (None, producer)
+                direct[relative] = value
+                self.paths[output] = value
+                self._index_suffixes(root, relative, value)
+            return
+
+        physical_root = self.context.physical(root)
+        if not physical_root.is_dir():
+            return
+        for directory, _directories, filenames in os.walk(physical_root):
+            relative_directory = os.path.relpath(directory, physical_root)
+            if relative_directory == ".":
+                relative_directory = ""
+            else:
+                relative_directory = relative_directory.replace(os.sep, "/")
+            for filename in filenames:
+                relative = "/".join(filter(None, (relative_directory, filename)))
+                symbolic = self._normal_symbolic(root + "/" + relative)
+                value = (symbolic, None)
+                direct[relative] = value
+                self.paths[symbolic] = value
+                self._index_suffixes(root, relative, value)
+
+    def _index_suffixes(self, root: str, relative: str,
+                        value: tuple[str | None, Node | None]) -> None:
+        parts = relative.split("/")
+        for offset in range(len(parts)):
+            target = "/".join(parts[offset:])
+            directory = "/".join([root, *parts[:offset]])
+            self.includes[target].setdefault(directory, value)
 
     @staticmethod
     def _normal_symbolic(path: str) -> str:
