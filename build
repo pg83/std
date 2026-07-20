@@ -167,6 +167,8 @@ class BuildContext:
         self.cppflags = shlex.split(os.environ.get("CPPFLAGS", ""))
         self.ldflags = shlex.split(os.environ.get("LDFLAGS", ""))
         self.ldflags += shlex.split(os.environ.get("CTRFLAGS", ""))
+        self.extra_cflags = shlex.split(
+            os.environ.get("BUILD_EXTRA_CFLAGS", ""))
         self.cc = os.environ.get("CC", "cc")
         self.cxx = os.environ.get("CXX", "c++")
         self.ar = os.environ.get("AR") or shutil.which("ar") or shutil.which("llvm-ar") or "ar"
@@ -299,6 +301,7 @@ class BuildContext:
             "pkg_config": self.pkg_config,
             "pkg_config_variable": self.pkg_config_variable,
             "dependency": self.interface,
+            "import_build": self.import_build,
             "library": self.library,
             "program": self.program,
             "command": self.command,
@@ -320,6 +323,177 @@ class BuildContext:
             setattr(self, name, [str(flag) for flag in _items(getattr(build_module, name))])
         self._infer_names(module)
         return module
+
+    def import_build(self, path: str, output_name: str,
+                     extra_cflags=()) -> Target:
+        path = str(path)
+        if path.startswith(S + "/"):
+            build_file = self.physical(path)
+        elif os.path.isabs(path):
+            build_file = Path(path)
+        else:
+            build_file = self.source_root / path
+        build_file = build_file.resolve()
+        if not build_file.is_file():
+            raise BuildError(f"imported build file does not exist: {build_file}")
+        try:
+            namespace = build_file.parent.relative_to(self.source_root).as_posix()
+        except ValueError as exc:
+            raise BuildError(
+                f"imported build file is outside the source tree: {build_file}"
+            ) from exc
+        if namespace in ("", "."):
+            raise BuildError("cannot import the root build file into itself")
+
+        env = os.environ.copy()
+        imported_cflags = [*shlex.split(env.get("BUILD_EXTRA_CFLAGS", "")),
+                           *[str(flag) for flag in _items(extra_cflags)]]
+        if imported_cflags:
+            env["BUILD_EXTRA_CFLAGS"] = shlex.join(imported_cflags)
+        result = subprocess.run(
+            [sys.executable, str(Path(__file__).resolve()), "-G",
+             "--build-file", str(build_file)],
+            cwd=build_file.parent,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if result.returncode != 0:
+            detail = result.stderr.rstrip()
+            message = f"cannot import build graph from {build_file}"
+            if detail:
+                message += "\n" + detail
+            raise BuildError(message)
+
+        source_prefix = f"{S}/{namespace}"
+        build_prefix = f"{B}/{namespace}"
+        encoded = result.stdout.replace(S, source_prefix).replace(B, build_prefix)
+        try:
+            graph = json.loads(encoded)
+        except json.JSONDecodeError as exc:
+            raise BuildError(f"invalid build graph from {build_file}: {exc}") from exc
+        if not isinstance(graph, dict) or graph.get("version") != 1:
+            raise BuildError(f"unsupported build graph from {build_file}")
+        records = graph.get("nodes")
+        if not isinstance(records, list):
+            raise BuildError(f"build graph has no node list: {build_file}")
+
+        nodes: list[Node] = []
+        record_inputs: list[list[str]] = []
+        producers: dict[str, Node] = {}
+        roots: list[Node] = []
+        for record in records:
+            if not isinstance(record, dict):
+                raise BuildError(f"invalid node in build graph from {build_file}")
+            inputs = record.get("inputs")
+            outputs = record.get("outputs")
+            commands = record.get("cmd")
+            cwd = record.get("cwd", B)
+            env = record.get("env", {})
+            if (not isinstance(inputs, list) or not all(isinstance(x, str) for x in inputs)
+                    or not isinstance(outputs, list)
+                    or not all(isinstance(x, str) for x in outputs)
+                    or not isinstance(commands, list)
+                    or not all(isinstance(command, list)
+                               and all(isinstance(x, str) for x in command)
+                               for command in commands)
+                    or not isinstance(cwd, str) or not isinstance(env, dict)
+                    or not all(isinstance(key, str) and isinstance(value, str)
+                               for key, value in env.items())):
+                raise BuildError(f"invalid node fields in build graph from {build_file}")
+            node = Node(
+                inputs=[], outputs=outputs, commands=commands,
+                cwd=cwd, env=env,
+                descr=str(record.get("descr", "IMP")),
+                color=str(record.get("color", "yellow")),
+            )
+            nodes.append(node)
+            record_inputs.append(inputs)
+            for output in outputs:
+                if output in producers:
+                    raise BuildError(f"multiple imported producers for {output}")
+                producers[output] = node
+                if Path(output).name == output_name:
+                    roots.append(node)
+
+        if len(roots) != 1:
+            raise BuildError(
+                f"expected one imported output named {output_name!r}, got {len(roots)}"
+            )
+        for node, inputs in zip(nodes, record_inputs):
+            for path in inputs:
+                producer = producers.get(path)
+                if producer is not None:
+                    node.deps.append(producer)
+                else:
+                    if path.startswith(B + "/"):
+                        raise BuildError(f"imported input has no producer: {path}")
+                    node.inputs.append(path)
+                    if path.startswith(S + "/") or os.path.isabs(path):
+                        node.source_inputs.add(path)
+            node.deps = _uniq(node.deps)
+            node.inputs = _uniq(node.inputs)
+
+        closure: set[Node] = set()
+        stack = roots.copy()
+        while stack:
+            node = stack.pop()
+            if node in closure:
+                continue
+            closure.add(node)
+            stack.extend(node.deps)
+        imported_nodes = [node for node in nodes if node in closure]
+        for node in imported_nodes:
+            self._add_node(node)
+
+        target = Target(
+            "library",
+            public_cppflags=["-I" + source_prefix],
+            output=roots[0].outputs[0],
+            root=roots[0],
+            nodes=imported_nodes,
+            uses_cxx=True,
+        )
+        self.targets.append(target)
+        return target
+
+    def serialize_graph(self) -> str:
+        records: list[dict[str, Any]] = []
+        for node in self.nodes:
+            dependency_outputs: list[str] = []
+            for dep in node.deps:
+                if not dep.outputs:
+                    raise BuildError(
+                        f"cannot serialize dependency without outputs: {dep.commands}"
+                    )
+                dependency_outputs.extend(dep.outputs)
+            inputs = sorted(set(node.inputs) | node.source_inputs
+                            | set(dependency_outputs))
+            record: dict[str, Any] = {
+                "inputs": inputs,
+                "outputs": node.outputs,
+                "cmd": node.commands,
+            }
+            if node.cwd != B:
+                record["cwd"] = node.cwd
+            if node.env:
+                record["env"] = node.env
+            if node.descr != "CMD":
+                record["descr"] = node.descr
+            if node.color:
+                record["color"] = node.color
+            canonical = json.dumps(
+                record, sort_keys=True, separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode()
+            record["self_uid"] = hashlib.md5(canonical).hexdigest()
+            records.append(record)
+        records.sort(key=lambda record: (record["outputs"], record["self_uid"]))
+        return json.dumps(
+            {"version": 1, "nodes": records},
+            sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+        )
 
     def _infer_names(self, module: Any) -> None:
         aliases: dict[Target, list[str]] = defaultdict(list)
@@ -392,15 +566,15 @@ class BuildContext:
             cxx = ext in (".cc", ".cpp", ".cxx", ".c++")
             uses_cxx |= cxx
             compiler = self.cxx if cxx else self.cc
-            common = [*self.cppflags, *self.cflags]
+            common = [*include_flags, *self.cppflags, *self.cflags]
             if cxx:
                 common.extend(self.cxxflags)
-            common.extend(include_flags)
             common.extend(self._usage_compile_flags(target.deps, cxx))
             common.extend(target.cppflags)
             common.extend(target.cflags)
             if cxx:
                 common.extend(target.cxxflags)
+            common.extend(self.extra_cflags)
             include_roots = _uniq([*global_includes, *self._include_roots_from_flags(common)])
             rel = src.replace(S + "/", "").replace(B + "/", "generated/")
             rel = re.sub(r"[^A-Za-z0-9_./+-]", "_", rel)
@@ -415,7 +589,7 @@ class BuildContext:
                 inputs=[src], outputs=[obj],
                 commands=[[compiler, *common, "-c", src, "-o", obj]], deps=deps,
                 descr="CC", color="green", include_roots=include_roots,
-                scan_sources=src.startswith(S + "/"),
+                scan_sources=src.startswith(S + "/") or os.path.isabs(src),
             )
             if src.startswith(S + "/") or os.path.isabs(src):
                 node.source_inputs.add(src)
@@ -713,7 +887,8 @@ class IncludeScanner:
         candidates.extend(root + "/" + target for root in roots)
         for candidate in _uniq(candidates):
             candidate = self._normal_symbolic(candidate)
-            if candidate.startswith(S + "/") and self.context.physical(candidate).is_file():
+            if ((candidate.startswith(S + "/") or os.path.isabs(candidate))
+                    and self.context.physical(candidate).is_file()):
                 result = (candidate, None)
                 self.resolved[key] = result
                 return result
@@ -1090,16 +1265,23 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument("--clear", action="store_true")
     parser.add_argument("--list", action="store_true")
+    parser.add_argument("-G", "--graph", action="store_true")
+    parser.add_argument("--build-file", help=argparse.SUPPRESS)
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
-    source_root = Path(__file__).resolve().parent
+    build_file = (Path(args.build_file).resolve() if args.build_file
+                  else Path(__file__).resolve().with_name("build.py"))
+    source_root = build_file.parent
     context = BuildContext(source_root, source_root / args.build_dir)
     try:
-        context.load(source_root / "build.py")
+        context.load(build_file)
         context.build_graph()
+        if args.graph:
+            print(context.serialize_graph())
+            return 0
         if args.list:
             for name in sorted(context.target_names):
                 print(name)
