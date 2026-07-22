@@ -49,6 +49,83 @@ class BuildError(RuntimeError):
     pass
 
 
+class AllowSpec(Exception):
+    """Raised by Flags.allow() in --help mode to hand the declared flag
+    spec back to main() for rendering; never seen during a real build."""
+
+    def __init__(self, spec: dict[str, dict]):
+        super().__init__("flag spec")
+        self.spec = spec
+
+
+class Flags(types.ModuleType):
+    """`-D` build flags, exposed to build.py as `build.flags`.
+
+    An unset flag reads as the empty string, so `if f.A:` is a plain
+    truthiness test with no string comparison. `-DA=B` sets A to "B",
+    a bare `-DA` sets it to "yes".
+
+    `allow({name: {'descr': ..., 'default': ...}})` declares the accepted
+    flags: a `-D` outside the set is an error (an empty set forbids all -D),
+    and an unset declared flag reads as its default. Under `--help` allow()
+    instead raises AllowSpec so the flags can be listed in the help text.
+    """
+
+    def __init__(self, values: dict[str, str], help_mode: bool = False):
+        super().__init__("build.flags")
+        object.__setattr__(self, "_values", dict(values))
+        object.__setattr__(self, "_spec", None)
+        object.__setattr__(self, "_help", help_mode)
+
+    def allow(self, spec: dict[str, dict]) -> None:
+        norm = {
+            str(name): {
+                "descr": str((meta or {}).get("descr", "")),
+                "default": (meta or {}).get("default", ""),
+            }
+            for name, meta in (spec or {}).items()
+        }
+        if object.__getattribute__(self, "_help"):
+            raise AllowSpec(norm)
+        unknown = [k for k in object.__getattribute__(self, "_values") if k not in norm]
+        if unknown:
+            allowed = ", ".join(sorted(norm)) or "(none)"
+            raise BuildError(
+                f"unknown -D flag(s): {', '.join(sorted(unknown))}; allowed: {allowed}"
+            )
+        object.__setattr__(self, "_spec", norm)
+
+    def _get(self, name: str) -> str:
+        values = object.__getattribute__(self, "_values")
+        if name in values:
+            return values[name]
+        spec = object.__getattribute__(self, "_spec")
+        if spec is not None and name in spec:
+            return spec[name]["default"]
+        return ""
+
+    def __getattr__(self, name: str) -> str:
+        if name.startswith("__"):
+            raise AttributeError(name)
+        return self._get(name)
+
+    def __getitem__(self, name: str) -> str:
+        return self._get(name)
+
+    def __contains__(self, name: str) -> bool:
+        return name in object.__getattribute__(self, "_values")
+
+
+def parse_defines(items: Iterable[str]) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for item in items:
+        key, sep, value = item.partition("=")
+        if not key:
+            raise BuildError(f"malformed -D flag: {item!r}")
+        values[key] = value if sep else "yes"
+    return values
+
+
 def _items(value: Any) -> list[Any]:
     if value is None:
         return []
@@ -152,9 +229,10 @@ class Target:
 
 
 class BuildContext:
-    def __init__(self, source_root: Path, build_root: Path):
+    def __init__(self, source_root: Path, build_root: Path, flags: Flags | None = None):
         self.source_root = source_root.resolve()
         self.build_root = build_root.resolve()
+        self.flags = flags if flags is not None else Flags({})
         self.targets: list[Target] = []
         self.installed: list[Target] = []
         self.nodes: list[Node] = []
@@ -172,6 +250,21 @@ class BuildContext:
         self.cc = os.environ.get("CC", "cc")
         self.cxx = os.environ.get("CXX", "c++")
         self.ar = os.environ.get("AR") or shutil.which("ar") or shutil.which("llvm-ar") or "ar"
+        self.tool_paths: dict[str, str] = {}
+
+    def resolve_tool(self, name: str) -> str:
+        cached = self.tool_paths.get(name)
+        if cached is None:
+            found = shutil.which(name)
+            if found is None:
+                raise BuildError(f"command not found in PATH: {name}")
+            # realpath, not abspath: PATH entries are usually realm symlinks
+            # into /ix/store/<hash>-.../; hashing the store path makes an
+            # environment drift change the node UID instead of silently
+            # serving artifacts built by another toolchain
+            cached = os.path.realpath(found)
+            self.tool_paths[name] = cached
+        return cached
 
     def interface(self, *, cflags=(), cxxflags=(), cppflags=(), ldflags=(), enabled=True, name=None) -> Target:
         target = Target(
@@ -295,6 +388,7 @@ class BuildContext:
         build_module = types.ModuleType("build")
         build_module.includes = []
         build_module.glob = self.glob
+        build_module.flags = self.flags
         for name in ("cflags", "cxxflags", "cppflags", "ldflags"):
             setattr(build_module, name, getattr(self, name).copy())
         module.__dict__.update({
@@ -310,7 +404,10 @@ class BuildContext:
         sys.modules[spec.name] = module
         missing = object()
         previous_build = sys.modules.get("build", missing)
+        previous_flags = sys.modules.get("build.flags", missing)
         sys.modules["build"] = build_module
+        # so `import build.flags as f` resolves straight from sys.modules
+        sys.modules["build.flags"] = self.flags
         try:
             spec.loader.exec_module(module)
         finally:
@@ -318,6 +415,10 @@ class BuildContext:
                 del sys.modules["build"]
             else:
                 sys.modules["build"] = previous_build
+            if previous_flags is missing:
+                del sys.modules["build.flags"]
+            else:
+                sys.modules["build.flags"] = previous_flags
         self.includes = [_include_path(path) for path in _items(build_module.includes)]
         for name in ("cflags", "cxxflags", "cppflags", "ldflags"):
             setattr(self, name, [str(flag) for flag in _items(getattr(build_module, name))])
@@ -759,6 +860,10 @@ class BuildContext:
             if node in active:
                 raise BuildError(f"UID dependency cycle at {node.outputs}")
             active.add(node)
+            for command in node.commands:
+                head = command[0] if command else ""
+                if head and not head.startswith((S + "/", B + "/")) and not os.path.isabs(head):
+                    command[0] = self.resolve_tool(head)
             dep_uids = [calc(dep) for dep in node.deps]
             inputs = [[path, self.source_hash(path)] for path in sorted(node.source_inputs)]
             data = json.dumps(
@@ -1312,11 +1417,20 @@ class Executor:
         return node.outputs[0] if node.outputs else "<no output>"
 
 
-def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog="build")
+def make_parser() -> argparse.ArgumentParser:
+    # add_help=False so we can load build.py and list its -D flags before
+    # printing help, instead of argparse exiting immediately
+    parser = argparse.ArgumentParser(prog="build", add_help=False)
+    parser.add_argument("-h", "--help", action="store_true",
+                        help="show this help (including the build's -D flags)")
     parser.add_argument("targets", nargs="*")
     parser.add_argument("-B", "--build-dir", default=os.environ.get("B", ".build"))
     parser.add_argument("-j", "--jobs", type=int, default=os.cpu_count() or 4)
+    parser.add_argument(
+        "-D", "--define", action="append", default=[], metavar="KEY[=VALUE]",
+        help="build flag readable in build.py as build.flags.KEY "
+             "(bare -DKEY sets it to 'yes')",
+    )
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-k", "--keep-going", action="store_true")
     parser.add_argument(
@@ -1327,15 +1441,51 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--list", action="store_true")
     parser.add_argument("-G", "--graph", action="store_true")
     parser.add_argument("--build-file", help=argparse.SUPPRESS)
-    return parser.parse_args(argv)
+    return parser
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    return make_parser().parse_args(argv)
+
+
+def flag_help(build_file: Path, source_root: Path, build_dir: str) -> str:
+    # load build.py in help mode: allow() raises AllowSpec with the declared
+    # flags. A build that never calls allow() has no declared -D flags.
+    flags = Flags({}, help_mode=True)
+    context = BuildContext(source_root, source_root / build_dir, flags)
+    try:
+        context.load(build_file)
+    except AllowSpec as spec:
+        rows = spec.spec
+    except Exception:
+        return ""  # build.py failed before declaring flags
+    else:
+        rows = {}
+    if not rows:
+        return "\nBuild flags (-D):\n  (this build declares none)\n"
+    width = max(len(name) for name in rows)
+    out = ["\nBuild flags (-D KEY[=VALUE]):"]
+    for name in sorted(rows):
+        meta = rows[name]
+        descr = meta["descr"] or ""
+        default = meta["default"]
+        suffix = f" (default: {default})" if default != "" else ""
+        out.append(f"  {name:<{width}}  {descr}{suffix}")
+    return "\n".join(out) + "\n"
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = parse_args(sys.argv[1:] if argv is None else argv)
+    parser = make_parser()
+    args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     build_file = (Path(args.build_file).resolve() if args.build_file
                   else Path(__file__).resolve().with_name("build.py"))
     source_root = build_file.parent
-    context = BuildContext(source_root, source_root / args.build_dir)
+    if args.help:
+        sys.stdout.write(parser.format_help())
+        sys.stdout.write(flag_help(build_file, source_root, args.build_dir))
+        return 0
+    flags = Flags(parse_defines(args.define))
+    context = BuildContext(source_root, source_root / args.build_dir, flags)
     try:
         context.load(build_file)
         context.build_graph()
