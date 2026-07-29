@@ -13,8 +13,10 @@ build.cxxflags += [
     "-fno-omit-frame-pointer",
     "-mno-omit-leaf-frame-pointer",
 ]
+if build.target.startswith("x86_64"):
+    build.cxxflags += ["-mcx16"]
 if platform.machine() == "x86_64":
-    build.cxxflags += ["-mcx16", "-Werror"]
+    build.cxxflags += ["-Werror"]
 
 
 std_sources = sorted(build.glob("$(S)/std/*/*.cpp"))
