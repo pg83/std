@@ -81,11 +81,14 @@ namespace {
         Vector<StringView> includes;
         Vector<StringView> excludes;
         TestArgs opts{pool_.mutPtr()};
+        size_t group = 0;
+        size_t groupCount = 1;
 
         GetOpt(Ctx& ctx) noexcept;
 
         void help() const noexcept;
 
+        bool matchesGroup(size_t testIndex) const noexcept;
         bool matchesFilter(StringView testName) const noexcept;
         bool matchesFilterStrong(StringView testName) const noexcept;
         bool matchesExclude(StringView testName) const noexcept;
@@ -168,9 +171,14 @@ void Tests::execute() {
     }
 
     StringBuilder sb;
+    size_t testIndex = 0;
 
     visit([&](void* el) {
         auto test = (TestFunc*)el;
+
+        if (!opt->matchesGroup(testIndex++)) {
+            return;
+        }
 
         sb.reset();
         sb << *test;
@@ -293,6 +301,19 @@ GetOpt::GetOpt(Ctx& ctx) noexcept {
     }
 
     help();
+
+    if (auto value = opts.find(StringView(u8"group")); value) {
+        group = (size_t)value->stou();
+    }
+
+    if (auto value = opts.find(StringView(u8"group-count")); value) {
+        groupCount = (size_t)value->stou();
+    }
+
+    if (!groupCount || group >= groupCount) {
+        sysE << StringView(u8"invalid test group: require 0 <= group < group-count") << endL << flsH;
+        exit(2);
+    }
 }
 
 void GetOpt::help() const noexcept {
@@ -311,6 +332,8 @@ void GetOpt::help() const noexcept {
         << endL
         << StringView(u8"Options:") << endL
         << StringView(u8"  --help         print this help") << endL
+        << StringView(u8"  --group=N      run shard N (zero based)") << endL
+        << StringView(u8"  --group-count=N  split tests into N shards") << endL
         << StringView(u8"  --threads=N    run tests in parallel using N threads") << endL
         << StringView(u8"  --top=N        show N slowest tests") << endL
         << StringView(u8"  --OPT          equivalent to --OPT=1") << endL
@@ -318,6 +341,10 @@ void GetOpt::help() const noexcept {
         << flsH;
 
     exit(0);
+}
+
+bool GetOpt::matchesGroup(size_t testIndex) const noexcept {
+    return testIndex % groupCount == group;
 }
 
 bool GetOpt::matchesFilter(StringView testName) const noexcept {
