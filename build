@@ -24,8 +24,10 @@ import shutil
 import signal
 import stat
 import subprocess
+import sysconfig
 import tempfile
 import threading
+import time
 import types
 import uuid
 from collections import defaultdict, deque
@@ -43,6 +45,15 @@ ANSI_COLORS = {
     "light-blue": "94", "light-magenta": "95", "light-cyan": "96",
     "light-white": "97",
 }
+
+
+def native_target() -> str:
+    target = sysconfig.get_config_var("HOST_GNU_TYPE")
+    if isinstance(target, str) and target:
+        return target
+    machine = os.uname().machine
+    machine = {"amd64": "x86_64", "arm64": "aarch64"}.get(machine, machine)
+    return f"{machine}-unknown-linux-gnu"
 
 
 class BuildError(RuntimeError):
@@ -172,6 +183,11 @@ def _cwd_path(path: str) -> str:
     raise BuildError(f"cwd path must start with $(S)/ or $(B)/: {path}")
 
 
+def _validate_descr(descr: str) -> None:
+    if len(descr) != 2 or not descr.isascii() or not descr.isalpha():
+        raise BuildError(f"descr must be exactly two ASCII letters: {descr!r}")
+
+
 @dataclasses.dataclass(eq=False)
 class Node:
     inputs: list[str]
@@ -180,12 +196,15 @@ class Node:
     deps: list["Node"] = dataclasses.field(default_factory=list)
     cwd: str = B
     env: dict[str, str] = dataclasses.field(default_factory=dict)
-    descr: str = "CMD"
+    descr: str = "GN"
     color: str = ""
     include_roots: list[str] = dataclasses.field(default_factory=list)
     scan_sources: bool = False
     source_inputs: set[str] = dataclasses.field(default_factory=set)
     uid: str | None = None
+
+    def __post_init__(self) -> None:
+        _validate_descr(self.descr)
 
     def canonical(self) -> dict[str, Any]:
         return {
@@ -201,7 +220,7 @@ class Node:
 class Target:
     kind: str
     name: str | None = None
-    srcs: list[str] = dataclasses.field(default_factory=list)
+    srcs: list[Any] = dataclasses.field(default_factory=list)
     deps: list["Target"] = dataclasses.field(default_factory=list)
     cflags: list[str] = dataclasses.field(default_factory=list)
     cxxflags: list[str] = dataclasses.field(default_factory=list)
@@ -220,6 +239,7 @@ class Target:
     color: str = "yellow"
     linker: str | None = None
     enabled: bool = True
+    host_deps: list["Target"] = dataclasses.field(default_factory=list)
     root: Node | None = None
     nodes: list[Node] = dataclasses.field(default_factory=list)
     uses_cxx: bool = False
@@ -228,16 +248,32 @@ class Target:
         return self.enabled
 
 
+@dataclasses.dataclass
+class ImportedGraph:
+    nodes: list[Node]
+    primary: set[Node]
+    exports: list[dict[str, Any]]
+    index_primary: bool
+    registered: set[Node] = dataclasses.field(default_factory=set)
+    selections: dict[tuple[str, bool, str | None], tuple[Node, str]] = dataclasses.field(default_factory=dict)
+
+
 class BuildContext:
-    def __init__(self, source_root: Path, build_root: Path, flags: Flags | None = None):
+    def __init__(self, source_root: Path, build_root: Path, flags: Flags | None = None,
+                 *, target: str | None = None, host: str | None = None):
         self.source_root = source_root.resolve()
         self.build_root = build_root.resolve()
         self.flags = flags if flags is not None else Flags({})
+        self.host = host or native_target()
+        self.target = target or self.host
+        self.build_file: Path | None = None
         self.targets: list[Target] = []
-        self.installed: list[Target] = []
+        self.groups: dict[str, list[Target]] = {}
         self.nodes: list[Node] = []
         self.output_nodes: dict[str, Node] = {}
         self.target_names: dict[str, Target] = {}
+        self.program_outputs: dict[str, Target] = {}
+        self.command_host_deps: dict[Target, list[Target]] = {}
         self.file_hashes: dict[str, str] = {}
         self.includes: list[str] = []
         self.cflags = shlex.split(os.environ.get("CFLAGS", ""))
@@ -247,10 +283,19 @@ class BuildContext:
         self.ldflags += shlex.split(os.environ.get("CTRFLAGS", ""))
         self.extra_cflags = shlex.split(
             os.environ.get("BUILD_EXTRA_CFLAGS", ""))
+        self.extra_cxxflags = shlex.split(
+            os.environ.get("BUILD_EXTRA_CXXFLAGS", ""))
+        self.extra_cppflags = shlex.split(
+            os.environ.get("BUILD_EXTRA_CPPFLAGS", ""))
+        self.host_cflags = shlex.split(os.environ.get("HOST_CFLAGS", ""))
+        self.host_cxxflags = shlex.split(os.environ.get("HOST_CXXFLAGS", ""))
+        self.host_cppflags = shlex.split(os.environ.get("HOST_CPPFLAGS", ""))
         self.cc = os.environ.get("CC", "cc")
         self.cxx = os.environ.get("CXX", "c++")
         self.ar = os.environ.get("AR") or shutil.which("ar") or shutil.which("llvm-ar") or "ar"
         self.tool_paths: dict[str, str] = {}
+        self.tool_kinds: dict[str, str] = {}
+        self.imported_graphs: dict[tuple[Any, ...], ImportedGraph] = {}
 
     def resolve_tool(self, name: str) -> str:
         cached = self.tool_paths.get(name)
@@ -265,6 +310,77 @@ class BuildContext:
             cached = os.path.realpath(found)
             self.tool_paths[name] = cached
         return cached
+
+    def _compiler_kind(self, name: str, *, allow_unknown: bool = False) -> str:
+        path = self.resolve_tool(name)
+        cached = self.tool_kinds.get(path)
+        if cached is not None:
+            return cached
+        basename = Path(path).name.lower()
+        if "clang" in basename:
+            kind = "clang"
+        elif re.search(r"(?:^|-)(?:gcc|g\+\+)(?:-\d+(?:\.\d+)*)?$", basename):
+            kind = "gcc"
+        else:
+            try:
+                version = subprocess.check_output(
+                    [path, "--version"], text=True, stderr=subprocess.STDOUT,
+                )
+            except (OSError, subprocess.CalledProcessError) as exc:
+                if allow_unknown:
+                    self.tool_kinds[path] = "other"
+                    return "other"
+                raise BuildError(f"cannot identify C/C++ compiler {name}: {exc}") from exc
+            lowered = version.lower()
+            if "clang" in lowered:
+                kind = "clang"
+            elif "gcc" in lowered or "free software foundation" in lowered:
+                kind = "gcc"
+            else:
+                kind = "other"
+        self.tool_kinds[path] = kind
+        return kind
+
+    def _compiler_command(self, name: str, *, allow_other: bool = False) -> list[str]:
+        kind = self._compiler_kind(name, allow_unknown=allow_other)
+        if kind == "clang":
+            return [name, f"--target={self.target}"]
+        if kind == "gcc" and self.target != self.host:
+            raise BuildError(
+                f"GCC cross-compilation is not supported: host {self.host}, target {self.target}"
+            )
+        if kind == "other" and not allow_other:
+            raise BuildError(f"unsupported C/C++ compiler: {self.resolve_tool(name)}")
+        return [name]
+
+    @staticmethod
+    def _configuration_uid(target: str, defines: dict[str, str],
+                           cflags: Iterable[str], cxxflags: Iterable[str],
+                           cppflags: Iterable[str]) -> str:
+        data = json.dumps(
+            {
+                "target": target,
+                "defines": defines,
+                "extra_cflags": list(cflags),
+                "extra_cxxflags": list(cxxflags),
+                "extra_cppflags": list(cppflags),
+            },
+            sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+        ).encode()
+        return hashlib.md5(data).hexdigest()
+
+    def _target_configuration_uid(self) -> str:
+        defines = dict(object.__getattribute__(self.flags, "_values"))
+        return self._configuration_uid(
+            self.target, defines,
+            self.extra_cflags, self.extra_cxxflags, self.extra_cppflags,
+        )
+
+    def _host_configuration_uid(self) -> str:
+        return self._configuration_uid(
+            self.host, {},
+            self.host_cflags, self.host_cxxflags, self.host_cppflags,
+        )
 
     def interface(self, *, cflags=(), cxxflags=(), cppflags=(), ldflags=(), enabled=True, name=None) -> Target:
         target = Target(
@@ -336,8 +452,22 @@ class BuildContext:
     def _compiled_target(self, kind, srcs, name, cflags, cxxflags, cppflags,
                          public_cflags, public_cxxflags, public_cppflags,
                          deps, ldflags, output, linker) -> Target:
+        sources = []
+        for source in _items(srcs):
+            if isinstance(source, dict):
+                source = dict(source)
+                if "src" not in source:
+                    raise BuildError("source mapping has no 'src' field")
+                source["src"] = _source_path(source["src"])
+                source["inputs"] = [_source_path(path) for path in _items(source.get("inputs", ()))]
+                unknown = set(source) - {"src", "inputs"}
+                if unknown:
+                    raise BuildError(f"unknown source field(s): {', '.join(sorted(unknown))}")
+                sources.append(source)
+            else:
+                sources.append(_source_path(source))
         target = Target(
-            kind, name=name, srcs=[_source_path(x) for x in _items(srcs)],
+            kind, name=name, srcs=sources,
             deps=_items(deps),
             cflags=_items(cflags), cxxflags=_items(cxxflags), cppflags=_items(cppflags),
             public_cflags=_items(public_cflags),
@@ -351,7 +481,7 @@ class BuildContext:
         return target
 
     def command(self, *, inputs=(), outputs, cmd, deps=(), name=None, cwd=B, env=None,
-                cflags=(), cxxflags=(), cppflags=(), ldflags=(), descr="GEN", color="yellow") -> Target:
+                cflags=(), cxxflags=(), cppflags=(), ldflags=(), descr="GN", color="yellow") -> Target:
         commands = cmd
         if not commands or isinstance(commands[0], (str, bytes)):
             commands = [commands]
@@ -368,11 +498,16 @@ class BuildContext:
         self.targets.append(target)
         return target
 
-    def install(self, *targets: Target) -> None:
+    def group(self, name: str, *targets: Target) -> None:
+        if not isinstance(name, str) or not name:
+            raise BuildError(f"group name must be a non-empty string, got {name!r}")
         for target in targets:
             if not isinstance(target, Target):
-                raise BuildError(f"install expects targets, got {target!r}")
-            self.installed.append(target)
+                raise BuildError(f"group {name!r} expects targets, got {target!r}")
+        self.groups.setdefault(name, []).extend(targets)
+
+    def install(self, *targets: Target) -> None:
+        self.group("install", *targets)
 
     @staticmethod
     def _validate_deps(target: Target) -> None:
@@ -381,6 +516,9 @@ class BuildContext:
                 raise BuildError(f"{target.kind} dependency is not a target: {dep!r}")
 
     def load(self, path: Path) -> Any:
+        self.build_file = path.resolve()
+        if not self.build_file.is_file():
+            raise BuildError(f"build file does not exist: {self.build_file}")
         spec = importlib.util.spec_from_file_location("_project_build", path)
         if spec is None or spec.loader is None:
             raise BuildError(f"cannot load {path}")
@@ -389,6 +527,8 @@ class BuildContext:
         build_module.includes = []
         build_module.glob = self.glob
         build_module.flags = self.flags
+        build_module.host = self.host
+        build_module.target = self.target
         for name in ("cflags", "cxxflags", "cppflags", "ldflags"):
             setattr(build_module, name, getattr(self, name).copy())
         module.__dict__.update({
@@ -399,6 +539,7 @@ class BuildContext:
             "library": self.library,
             "program": self.program,
             "command": self.command,
+            "group": self.group,
             "install": self.install,
         })
         sys.modules[spec.name] = module
@@ -425,8 +566,267 @@ class BuildContext:
         self._infer_names(module)
         return module
 
+    def _invoke_graph(self, build_file: Path, target: str,
+                      env: dict[str, str]) -> str:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(Path(__file__).resolve()),
+                "-G",
+                "--target",
+                target,
+                "--build-file",
+                str(build_file),
+            ],
+            cwd=build_file.parent,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if result.returncode != 0:
+            detail = result.stderr.rstrip()
+            message = f"cannot import build graph from {build_file}"
+            if detail:
+                message += "\n" + detail
+            raise BuildError(message)
+        return result.stdout
+
+    @staticmethod
+    def _decode_graph(graph: Any, origin: Path) -> tuple[
+            list[Node], set[Node], list[dict[str, Any]]]:
+        if not isinstance(graph, dict) or graph.get("version") not in (1, 2):
+            raise BuildError(f"unsupported build graph from {origin}")
+        version = graph["version"]
+        records = graph.get("nodes")
+        if not isinstance(records, list):
+            raise BuildError(f"build graph has no node list: {origin}")
+
+        nodes: list[Node] = []
+        record_inputs: list[list[str]] = []
+        record_deps: list[list[str]] = []
+        ids: dict[str, Node] = {}
+        primary: set[Node] = set()
+        producers: dict[str, Node] = {}
+        for record in records:
+            if not isinstance(record, dict):
+                raise BuildError(f"invalid node in build graph from {origin}")
+            inputs = record.get("inputs")
+            outputs = record.get("outputs")
+            commands = record.get("cmd")
+            cwd = record.get("cwd", B)
+            env = record.get("env", {})
+            node_id = record.get("id")
+            deps = record.get("deps", [])
+            if (not isinstance(inputs, list) or not all(isinstance(x, str) for x in inputs)
+                    or not isinstance(outputs, list)
+                    or not all(isinstance(x, str) for x in outputs)
+                    or not isinstance(commands, list)
+                    or not all(isinstance(command, list)
+                               and all(isinstance(x, str) for x in command)
+                               for command in commands)
+                    or not isinstance(cwd, str) or not isinstance(env, dict)
+                    or not all(isinstance(key, str) and isinstance(value, str)
+                               for key, value in env.items())
+                    or version == 2 and (
+                        not isinstance(node_id, str) or not node_id
+                        or not isinstance(deps, list)
+                        or not all(isinstance(dep, str) for dep in deps)
+                        or not isinstance(record.get("primary", False), bool)
+                    )):
+                raise BuildError(f"invalid node fields in build graph from {origin}")
+            node = Node(
+                inputs=[] if version == 1 else _uniq(inputs),
+                outputs=outputs,
+                commands=commands,
+                cwd=cwd,
+                env=env,
+                descr=str(record.get("descr", "GN")),
+                color=str(record.get("color", "" if version == 2 else "yellow")),
+            )
+            for path in inputs:
+                if path.startswith(S + "/") or os.path.isabs(path):
+                    node.source_inputs.add(path)
+            nodes.append(node)
+            record_inputs.append(inputs)
+            record_deps.append(deps)
+            if version == 2:
+                if node_id in ids:
+                    raise BuildError(f"duplicate node id in build graph from {origin}: {node_id}")
+                ids[node_id] = node
+                if record.get("primary", False):
+                    primary.add(node)
+            else:
+                primary.add(node)
+                for output in outputs:
+                    if output in producers:
+                        raise BuildError(f"multiple imported producers for {output}")
+                    producers[output] = node
+
+        if version == 2:
+            for node, deps in zip(nodes, record_deps):
+                try:
+                    node.deps = _uniq(ids[dep] for dep in deps)
+                except KeyError as exc:
+                    raise BuildError(
+                        f"imported dependency has no node: {exc.args[0]}"
+                    ) from exc
+        else:
+            for node, inputs in zip(nodes, record_inputs):
+                for path in inputs:
+                    producer = producers.get(path)
+                    if producer is not None:
+                        node.deps.append(producer)
+                    else:
+                        if path.startswith(B + "/"):
+                            raise BuildError(f"imported input has no producer: {path}")
+                        node.inputs.append(path)
+                node.deps = _uniq(node.deps)
+                node.inputs = _uniq(node.inputs)
+
+        exports: list[dict[str, Any]] = []
+        if version == 2:
+            encoded_exports = graph.get("exports", [])
+            if (not isinstance(encoded_exports, list)
+                    or not all(isinstance(export, dict) for export in encoded_exports)):
+                raise BuildError(f"invalid exports in build graph from {origin}")
+            for export in encoded_exports:
+                node_id = export.get("node")
+                name = export.get("name")
+                kind = export.get("kind")
+                output = export.get("output")
+                if (not isinstance(node_id, str) or node_id not in ids
+                        or not isinstance(name, str) or not isinstance(kind, str)
+                        or not isinstance(output, str)):
+                    raise BuildError(f"invalid export in build graph from {origin}")
+                exports.append({
+                    "node": ids[node_id],
+                    "name": name,
+                    "kind": kind,
+                    "output": output,
+                })
+        return nodes, primary, exports
+
+    @staticmethod
+    def _select_imported_root(nodes: Iterable[Node],
+                              exports: Iterable[dict[str, Any]],
+                              output_name: str, *,
+                              exact: bool = False,
+                              target_name: str | None = None) -> tuple[Node, str]:
+        matches: list[tuple[Node, str]] = []
+        for export in exports:
+            output = export["output"]
+            if target_name is not None and export["name"] != target_name:
+                continue
+            matched = output == output_name if exact else Path(output).name == output_name
+            if matched:
+                matches.append((export["node"], export["kind"]))
+        if not matches:
+            for node in nodes:
+                for output in node.outputs:
+                    matched = output == output_name if exact else Path(output).name == output_name
+                    if matched:
+                        matches.append((node, "library"))
+        matches = _uniq(matches)
+        if len(matches) != 1:
+            label = "output" if exact else "output named"
+            raise BuildError(f"expected one imported {label} {output_name!r}, got {len(matches)}")
+        return matches[0]
+
+    @staticmethod
+    def _node_closure(roots: Iterable[Node]) -> set[Node]:
+        closure: set[Node] = set()
+        stack = list(roots)
+        while stack:
+            node = stack.pop()
+            if node in closure:
+                continue
+            closure.add(node)
+            stack.extend(node.deps)
+        return closure
+
+    def _load_imported_graph(self, build_file: Path, target: str, *,
+                             extra_cflags: Iterable[str] = (),
+                             extra_cxxflags: Iterable[str] = (),
+                             extra_cppflags: Iterable[str] = (),
+                             source_prefix: str | None = None,
+                             build_prefix: str | None = None,
+                             index_primary: bool) -> ImportedGraph:
+        extras = (
+            tuple(str(flag) for flag in extra_cflags),
+            tuple(str(flag) for flag in extra_cxxflags),
+            tuple(str(flag) for flag in extra_cppflags),
+        )
+        key = (
+            str(build_file),
+            target,
+            extras,
+            source_prefix,
+            build_prefix,
+            index_primary,
+        )
+        cached = self.imported_graphs.get(key)
+        if cached is not None:
+            return cached
+
+        env = os.environ.copy()
+        for variable, values in zip(
+                (
+                    "BUILD_EXTRA_CFLAGS",
+                    "BUILD_EXTRA_CXXFLAGS",
+                    "BUILD_EXTRA_CPPFLAGS",
+                ),
+                extras):
+            if values:
+                env[variable] = shlex.join(values)
+            else:
+                env.pop(variable, None)
+        encoded = self._invoke_graph(build_file, target, env)
+        if source_prefix is not None:
+            assert build_prefix is not None
+            encoded = encoded.replace(S, source_prefix).replace(B, build_prefix)
+        try:
+            graph = json.loads(encoded)
+        except json.JSONDecodeError as exc:
+            raise BuildError(f"invalid build graph from {build_file}: {exc}") from exc
+        nodes, primary, exports = self._decode_graph(graph, build_file)
+        imported = ImportedGraph(nodes, primary, exports, index_primary)
+        self.imported_graphs[key] = imported
+        return imported
+
+    def _select_graph_root(self, graph: ImportedGraph, output_name: str, *,
+                           exact: bool = False,
+                           target_name: str | None = None) -> tuple[Node, str]:
+        key = (output_name, exact, target_name)
+        cached = graph.selections.get(key)
+        if cached is None:
+            cached = self._select_imported_root(
+                graph.nodes,
+                graph.exports,
+                output_name,
+                exact=exact,
+                target_name=target_name,
+            )
+            graph.selections[key] = cached
+        return cached
+
+    def _register_imported_nodes(self, graph: ImportedGraph,
+                                 roots: Iterable[Node]) -> list[Node]:
+        closure = self._node_closure(roots)
+        imported_nodes = [node for node in graph.nodes if node in closure]
+        for node in imported_nodes:
+            if node in graph.registered:
+                continue
+            if graph.index_primary and node in graph.primary:
+                self._add_node(node)
+            else:
+                self.nodes.append(node)
+            graph.registered.add(node)
+        return imported_nodes
+
     def import_build(self, path: str, output_name: str,
-                     extra_cflags=()) -> Target:
+                     extra_cflags=(), extra_cxxflags=(),
+                     extra_cppflags=()) -> Target:
         path = str(path)
         if path.startswith(S + "/"):
             build_file = self.physical(path)
@@ -446,113 +846,26 @@ class BuildContext:
         if namespace in ("", "."):
             raise BuildError("cannot import the root build file into itself")
 
-        env = os.environ.copy()
-        imported_cflags = [*shlex.split(env.get("BUILD_EXTRA_CFLAGS", "")),
-                           *[str(flag) for flag in _items(extra_cflags)]]
-        if imported_cflags:
-            env["BUILD_EXTRA_CFLAGS"] = shlex.join(imported_cflags)
-        result = subprocess.run(
-            [sys.executable, str(Path(__file__).resolve()), "-G",
-             "--build-file", str(build_file)],
-            cwd=build_file.parent,
-            env=env,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        if result.returncode != 0:
-            detail = result.stderr.rstrip()
-            message = f"cannot import build graph from {build_file}"
-            if detail:
-                message += "\n" + detail
-            raise BuildError(message)
-
         source_prefix = f"{S}/{namespace}"
         build_prefix = f"{B}/{namespace}"
-        encoded = result.stdout.replace(S, source_prefix).replace(B, build_prefix)
-        try:
-            graph = json.loads(encoded)
-        except json.JSONDecodeError as exc:
-            raise BuildError(f"invalid build graph from {build_file}: {exc}") from exc
-        if not isinstance(graph, dict) or graph.get("version") != 1:
-            raise BuildError(f"unsupported build graph from {build_file}")
-        records = graph.get("nodes")
-        if not isinstance(records, list):
-            raise BuildError(f"build graph has no node list: {build_file}")
-
-        nodes: list[Node] = []
-        record_inputs: list[list[str]] = []
-        producers: dict[str, Node] = {}
-        roots: list[Node] = []
-        for record in records:
-            if not isinstance(record, dict):
-                raise BuildError(f"invalid node in build graph from {build_file}")
-            inputs = record.get("inputs")
-            outputs = record.get("outputs")
-            commands = record.get("cmd")
-            cwd = record.get("cwd", B)
-            env = record.get("env", {})
-            if (not isinstance(inputs, list) or not all(isinstance(x, str) for x in inputs)
-                    or not isinstance(outputs, list)
-                    or not all(isinstance(x, str) for x in outputs)
-                    or not isinstance(commands, list)
-                    or not all(isinstance(command, list)
-                               and all(isinstance(x, str) for x in command)
-                               for command in commands)
-                    or not isinstance(cwd, str) or not isinstance(env, dict)
-                    or not all(isinstance(key, str) and isinstance(value, str)
-                               for key, value in env.items())):
-                raise BuildError(f"invalid node fields in build graph from {build_file}")
-            node = Node(
-                inputs=[], outputs=outputs, commands=commands,
-                cwd=cwd, env=env,
-                descr=str(record.get("descr", "IMP")),
-                color=str(record.get("color", "yellow")),
-            )
-            nodes.append(node)
-            record_inputs.append(inputs)
-            for output in outputs:
-                if output in producers:
-                    raise BuildError(f"multiple imported producers for {output}")
-                producers[output] = node
-                if Path(output).name == output_name:
-                    roots.append(node)
-
-        if len(roots) != 1:
-            raise BuildError(
-                f"expected one imported output named {output_name!r}, got {len(roots)}"
-            )
-        for node, inputs in zip(nodes, record_inputs):
-            for path in inputs:
-                producer = producers.get(path)
-                if producer is not None:
-                    node.deps.append(producer)
-                else:
-                    if path.startswith(B + "/"):
-                        raise BuildError(f"imported input has no producer: {path}")
-                    node.inputs.append(path)
-                    if path.startswith(S + "/") or os.path.isabs(path):
-                        node.source_inputs.add(path)
-            node.deps = _uniq(node.deps)
-            node.inputs = _uniq(node.inputs)
-
-        closure: set[Node] = set()
-        stack = roots.copy()
-        while stack:
-            node = stack.pop()
-            if node in closure:
-                continue
-            closure.add(node)
-            stack.extend(node.deps)
-        imported_nodes = [node for node in nodes if node in closure]
-        for node in imported_nodes:
-            self._add_node(node)
+        graph = self._load_imported_graph(
+            build_file,
+            self.target,
+            extra_cflags=[*self.extra_cflags, *[str(x) for x in _items(extra_cflags)]],
+            extra_cxxflags=[*self.extra_cxxflags, *[str(x) for x in _items(extra_cxxflags)]],
+            extra_cppflags=[*self.extra_cppflags, *[str(x) for x in _items(extra_cppflags)]],
+            source_prefix=source_prefix,
+            build_prefix=build_prefix,
+            index_primary=True,
+        )
+        root, kind = self._select_graph_root(graph, output_name)
+        imported_nodes = self._register_imported_nodes(graph, [root])
 
         target = Target(
-            "library",
+            kind,
             public_cppflags=["-I" + source_prefix],
-            output=roots[0].outputs[0],
-            root=roots[0],
+            output=root.outputs[0],
+            root=root,
             nodes=imported_nodes,
             uses_cxx=True,
         )
@@ -560,19 +873,10 @@ class BuildContext:
         return target
 
     def serialize_graph(self) -> str:
-        records: list[dict[str, Any]] = []
+        bases: dict[Node, dict[str, Any]] = {}
         for node in self.nodes:
-            dependency_outputs: list[str] = []
-            for dep in node.deps:
-                if not dep.outputs:
-                    raise BuildError(
-                        f"cannot serialize dependency without outputs: {dep.commands}"
-                    )
-                dependency_outputs.extend(dep.outputs)
-            inputs = sorted(set(node.inputs) | node.source_inputs
-                            | set(dependency_outputs))
             record: dict[str, Any] = {
-                "inputs": inputs,
+                "inputs": sorted(set(node.inputs) | node.source_inputs),
                 "outputs": node.outputs,
                 "cmd": node.commands,
             }
@@ -580,19 +884,68 @@ class BuildContext:
                 record["cwd"] = node.cwd
             if node.env:
                 record["env"] = node.env
-            if node.descr != "CMD":
+            if node.descr != "GN":
                 record["descr"] = node.descr
             if node.color:
                 record["color"] = node.color
+            if any(self.output_nodes.get(output) is node for output in node.outputs):
+                record["primary"] = True
+            bases[node] = record
+
+        identities: dict[Node, str] = {}
+        active: set[Node] = set()
+        def identify(node: Node) -> str:
+            cached = identities.get(node)
+            if cached is not None:
+                return cached
+            if node in active:
+                raise BuildError(f"cannot serialize cyclic node: {node.outputs}")
+            active.add(node)
+            deps = [identify(dep) for dep in node.deps]
             canonical = json.dumps(
-                record, sort_keys=True, separators=(",", ":"),
-                ensure_ascii=False,
+                [bases[node], deps],
+                sort_keys=True, separators=(",", ":"), ensure_ascii=False,
             ).encode()
-            record["self_uid"] = hashlib.md5(canonical).hexdigest()
-            records.append(record)
-        records.sort(key=lambda record: (record["outputs"], record["self_uid"]))
+            identity = hashlib.md5(canonical).hexdigest()
+            identities[node] = identity
+            active.remove(node)
+            return identity
+        for node in self.nodes:
+            identify(node)
+
+        records_by_id: dict[str, dict[str, Any]] = {}
+        for node in self.nodes:
+            identity = identities[node]
+            record = {
+                **bases[node],
+                "id": identity,
+                "deps": [identities[dep] for dep in node.deps],
+            }
+            previous = records_by_id.get(identity)
+            if previous is not None and previous != record:
+                raise BuildError(f"node identity collision at {node.outputs}")
+            records_by_id[identity] = record
+        records = sorted(
+            records_by_id.values(),
+            key=lambda record: (record["outputs"], record["id"]),
+        )
+
+        exports: list[dict[str, str]] = []
+        for target in self.targets:
+            if target.name is None or target.root is None or not target.root.outputs:
+                continue
+            identity = identities.get(target.root)
+            if identity is None:
+                continue
+            exports.append({
+                "name": target.name,
+                "kind": target.kind,
+                "output": target.root.outputs[0],
+                "node": identity,
+            })
+        exports.sort(key=lambda export: (export["output"], export["name"]))
         return json.dumps(
-            {"version": 1, "nodes": records},
+            {"version": 2, "nodes": records, "exports": exports},
             sort_keys=True, separators=(",", ":"), ensure_ascii=False,
         )
 
@@ -615,8 +968,76 @@ class BuildContext:
             if previous is not None and previous is not target:
                 raise BuildError(f"duplicate target name: {target.name}")
             self.target_names[target.name] = target
+            if target.kind == "program":
+                output = target.output or f"{B}/{target.name}"
+                producer = self.program_outputs.get(output)
+                if producer is not None and producer is not target:
+                    raise BuildError(f"multiple program targets produce {output}")
+                self.program_outputs[output] = target
+        for name in self.groups:
+            if name in self.target_names:
+                raise BuildError(f"group name conflicts with target name: {name}")
+
+    def _prepare_host_dependencies(self) -> None:
+        referenced: list[Target] = []
+        for target in self.targets:
+            if target.kind != "command":
+                continue
+            host_deps = self.command_host_deps.get(target)
+            if host_deps is None:
+                values = [*target.inputs]
+                for command in target.commands:
+                    values.extend(command)
+                host_deps = _uniq(
+                    self.program_outputs[value]
+                    for value in values
+                    if value in self.program_outputs
+                )
+                self.command_host_deps[target] = host_deps
+            target.host_deps = host_deps
+            referenced.extend(host_deps)
+        referenced = _uniq(referenced)
+        if not referenced:
+            return
+        if self._target_configuration_uid() == self._host_configuration_uid():
+            return
+        if self.build_file is None:
+            raise BuildError("cannot import host graph before loading build.py")
+
+        graph = self._load_imported_graph(
+            self.build_file,
+            self.host,
+            extra_cflags=self.host_cflags,
+            extra_cxxflags=self.host_cxxflags,
+            extra_cppflags=self.host_cppflags,
+            index_primary=False,
+        )
+
+        roots: dict[Target, Node] = {}
+        for program in referenced:
+            assert program.name is not None
+            output = program.output or f"{B}/{program.name}"
+            root, kind = self._select_graph_root(
+                graph,
+                output,
+                exact=True,
+                target_name=program.name,
+            )
+            if kind != "program":
+                raise BuildError(
+                    f"host dependency {program.name!r} is exported as {kind}, not program"
+                )
+            roots[program] = root
+
+        imported_nodes = self._register_imported_nodes(graph, roots.values())
+        for program, root in roots.items():
+            program_closure = self._node_closure([root])
+            program.root = root
+            program.nodes = [node for node in imported_nodes if node in program_closure]
+            program.uses_cxx = True
 
     def build_graph(self) -> None:
+        self._prepare_host_dependencies()
         for target in self.targets:
             if target.kind == "command":
                 self._emit_target(target, set())
@@ -635,10 +1056,13 @@ class BuildContext:
         if target in active:
             raise BuildError(f"target dependency cycle at {target.name}")
         active.add(target)
-        for dep in target.deps:
+        for dep in [*target.deps, *target.host_deps]:
             self._emit_target(dep, active)
         if target.kind == "command":
-            dep_nodes = [dep.root for dep in target.deps if dep.root is not None]
+            dep_nodes = [
+                dep.root for dep in [*target.deps, *target.host_deps]
+                if dep.root is not None
+            ]
             node = Node(
                 inputs=target.inputs.copy(), outputs=target.outputs.copy(),
                 commands=[x.copy() for x in target.commands], deps=dep_nodes,
@@ -660,40 +1084,69 @@ class BuildContext:
         assert target.name is not None
         global_includes = _uniq([S, *[_include_path(path) for path in self.includes]])
         include_flags = ["-I" + path for path in global_includes]
+        usage_cflags = self._usage_compile_flags(target.deps, False)
+        usage_cxxflags = self._usage_compile_flags(target.deps, True)
         objects: list[Node] = []
         uses_cxx = False
-        for src in target.srcs:
+        for source in target.srcs:
+            if isinstance(source, dict):
+                src = source["src"]
+                source_inputs = source["inputs"]
+            else:
+                src = source
+                source_inputs = []
             ext = Path(src).suffix.lower()
-            cxx = ext in (".cc", ".cpp", ".cxx", ".c++")
+            cxx = ext in (".cc", ".cpp", ".cxx", ".c++", ".mm")
             uses_cxx |= cxx
             compiler = self.cxx if cxx else self.cc
             common = [*include_flags, *self.cppflags, *self.cflags]
             if cxx:
                 common.extend(self.cxxflags)
-            common.extend(self._usage_compile_flags(target.deps, cxx))
+            common.extend(usage_cxxflags if cxx else usage_cflags)
             common.extend(target.cppflags)
             common.extend(target.cflags)
             if cxx:
                 common.extend(target.cxxflags)
+            common.extend(self.extra_cppflags)
             common.extend(self.extra_cflags)
+            if cxx:
+                common.extend(self.extra_cxxflags)
             include_roots = _uniq([*global_includes, *self._include_roots_from_flags(common)])
             rel = src.replace(S + "/", "").replace(B + "/", "generated/")
             rel = re.sub(r"[^A-Za-z0-9_./+-]", "_", rel)
             obj = f"{B}/obj/{target.name}/{rel}.o"
             deps: list[Node] = []
+            inputs = [src]
+            for source_input in source_inputs:
+                producer = self.output_nodes.get(source_input)
+                if producer is None:
+                    if source_input.startswith(B + "/"):
+                        raise BuildError(f"no producer for generated input {source_input}")
+                    inputs.append(source_input)
+                else:
+                    deps.append(producer)
             if src.startswith(B + "/"):
                 producer = self.output_nodes.get(src)
                 if producer is None:
                     raise BuildError(f"no producer for generated source {src}")
                 deps.append(producer)
             node = Node(
-                inputs=[src], outputs=[obj],
-                commands=[[compiler, *common, "-c", src, "-o", obj]], deps=deps,
+                inputs=inputs, outputs=[obj],
+                commands=[[
+                    *self._compiler_command(compiler),
+                    *common,
+                    "-c",
+                    src,
+                    "-o",
+                    obj,
+                ]],
+                deps=deps,
                 descr="CC", color="green", include_roots=include_roots,
                 scan_sources=src.startswith(S + "/") or os.path.isabs(src),
             )
-            if src.startswith(S + "/") or os.path.isabs(src):
-                node.source_inputs.add(src)
+            for source_input in inputs:
+                if source_input.startswith(S + "/") or os.path.isabs(source_input):
+                    node.source_inputs.add(source_input)
             self._add_node(node)
             objects.append(node)
         target.uses_cxx = uses_cxx or any(dep.uses_cxx for dep in target.deps)
@@ -709,7 +1162,14 @@ class BuildContext:
             archives = [lib.root.outputs[0] for lib in libraries if lib.root is not None]
             ldflags = self.ldflags + self._link_flags(target.deps) + target.ldflags
             linker = target.linker or (self.cxx if target.uses_cxx else self.cc)
-            command = [linker, "-o", output, *[node.outputs[0] for node in objects], *archives, *ldflags]
+            command = [
+                *self._compiler_command(linker, allow_other=target.linker is not None),
+                "-o",
+                output,
+                *[node.outputs[0] for node in objects],
+                *archives,
+                *ldflags,
+            ]
             root = Node(
                 [], [output], [command], deps=_uniq([*objects, *lib_nodes, *other_nodes]),
                 descr="LD", color="light-blue",
@@ -878,7 +1338,17 @@ class BuildContext:
 
 
 class IncludeScanner:
-    directive = re.compile(r'^\s*#\s*(?:include|import)\s*([<"])([^>"]+)[>"]')
+    directive = re.compile(
+        r'^[^\S\r\n]*#[^\S\r\n]*(?:include|import)[^\S\r\n]*'
+        r'([<"])([^>"]+)[>"]',
+        re.MULTILINE,
+    )
+    comment_or_literal = re.compile(
+        r'//[^\n]*|/\*.*?(?:\*/|\Z)|'
+        r'"(?:\\(?:.|\Z)|[^"\\])*(?:"|\Z)|'
+        r"'(?:\\(?:.|\Z)|[^'\\])*(?:'|\Z)",
+        re.DOTALL,
+    )
 
     def __init__(self, context: BuildContext):
         self.context = context
@@ -901,7 +1371,7 @@ class IncludeScanner:
             self._normal_symbolic(root) for root in (node.include_roots or [S])
         ))
         for source in node.inputs:
-            if not source.startswith(S + "/"):
+            if not (source.startswith(S + "/") or os.path.isabs(source)):
                 continue
             files, producers = self._closure(source, roots, set())
             node.source_inputs.update(files)
@@ -941,57 +1411,22 @@ class IncludeScanner:
         except OSError as exc:
             raise BuildError(f"cannot scan includes in {path}: {exc}") from exc
         clean = self._strip_comments(text)
-        result: list[tuple[bool, str]] = []
-        for line in clean.splitlines():
-            match = self.directive.match(line)
-            if match:
-                result.append((match.group(1) == '"', match.group(2)))
+        result = [
+            (match.group(1) == '"', match.group(2))
+            for match in self.directive.finditer(clean)
+        ]
         self.parsed[path] = result
         return result
 
-    @staticmethod
-    def _strip_comments(text: str) -> str:
-        out = list(text)
-        i = 0
-        block = False
-        quote = ""
-        while i < len(out):
-            c = out[i]
-            n = out[i + 1] if i + 1 < len(out) else ""
-            if block:
-                if c == "*" and n == "/":
-                    out[i] = out[i + 1] = " "
-                    block = False
-                    i += 2
-                else:
-                    if c != "\n":
-                        out[i] = " "
-                    i += 1
-                continue
-            if quote:
-                if c == "\\":
-                    i += 2
-                    continue
-                if c == quote:
-                    quote = ""
-                i += 1
-                continue
-            if c in ('"', "'"):
-                quote = c
-                i += 1
-                continue
-            if c == "/" and n == "*":
-                out[i] = out[i + 1] = " "
-                block = True
-                i += 2
-                continue
-            if c == "/" and n == "/":
-                while i < len(out) and out[i] != "\n":
-                    out[i] = " "
-                    i += 1
-                continue
-            i += 1
-        return "".join(out)
+    @classmethod
+    def _strip_comments(cls, text: str) -> str:
+        def replace(match: re.Match[str]) -> str:
+            value = match.group()
+            if value.startswith("/"):
+                return " " + "\n" * value.count("\n")
+            return value
+
+        return cls.comment_or_literal.sub(replace, text)
 
     def _resolve(self, includer: str, quoted: bool, target: str,
                  roots: tuple[str, ...]) -> tuple[str | None, Node | None]:
@@ -1011,6 +1446,8 @@ class IncludeScanner:
                     return result
             candidate = self._normal_symbolic(directory + "/" + target)
             result = self.paths.get(candidate)
+            if result is None and os.path.isabs(candidate) and Path(candidate).is_file():
+                result = (candidate, None)
             if result is not None:
                 self.resolved[key] = result
                 return result
@@ -1045,13 +1482,18 @@ class IncludeScanner:
         physical_root = self.context.physical(root)
         if not physical_root.is_dir():
             return
-        for directory, _directories, filenames in os.walk(physical_root):
+        for directory, directories, filenames in os.walk(physical_root):
+            directories[:] = [
+                name for name in directories if not name.startswith(".")
+            ]
             relative_directory = os.path.relpath(directory, physical_root)
             if relative_directory == ".":
                 relative_directory = ""
             else:
                 relative_directory = relative_directory.replace(os.sep, "/")
             for filename in filenames:
+                if filename.startswith("."):
+                    continue
                 relative = "/".join(filter(None, (relative_directory, filename)))
                 symbolic = self._normal_symbolic(root + "/" + relative)
                 value = (symbolic, None)
@@ -1095,8 +1537,10 @@ class Executor:
         self.progress_total = 0
         self.progress_active = False
         self.interactive = sys.stderr.isatty()
+        self.garbage_collector_started = False
 
     def run(self, roots: list[Node]) -> None:
+        self._start_garbage_collector()
         try:
             self._run(roots)
         finally:
@@ -1176,7 +1620,7 @@ class Executor:
         assert node.uid is not None
         if self._cached(node.uid):
             if self.verbose:
-                self._report(f"HIT  {node.descr:3} {self._node_name(node)}")
+                self._report(f"HIT  {node.descr} {self._node_name(node)}")
             return
         if not expected_miss:
             with self.print_lock:
@@ -1195,7 +1639,7 @@ class Executor:
             for output in node.outputs:
                 self.context.physical(output, work).parent.mkdir(parents=True, exist_ok=True)
             if self.verbose:
-                self._report(f"RUN  {node.descr:3} {self._node_name(node)}")
+                self._report(f"RUN  {node.descr} {self._node_name(node)}")
             for command in node.commands:
                 self._run_command(node, command, work)
             self._store(node, work)
@@ -1361,18 +1805,36 @@ class Executor:
                 child.unlink()
 
     def _discard_contents(self, path: Path) -> None:
-        if not path.exists():
+        while True:
+            self.grb.mkdir(parents=True, exist_ok=True)
+            destination = self.grb / uuid.uuid4().hex
+            try:
+                path.rename(destination)
+                return
+            except OSError:
+                try:
+                    path.lstat()
+                except OSError:
+                    return
+
+    def _start_garbage_collector(self) -> None:
+        if self.garbage_collector_started:
             return
-        self.grb.mkdir(parents=True, exist_ok=True)
-        destination = self.grb / uuid.uuid4().hex
-        try:
-            path.rename(destination)
-        except OSError:
-            return
-        threading.Thread(
-            target=shutil.rmtree, args=(destination,),
-            kwargs={"ignore_errors": True}, daemon=True,
-        ).start()
+        self.garbage_collector_started = True
+        threading.Thread(target=self._garbage_collector, daemon=True).start()
+
+    def _garbage_collector(self) -> None:
+        while True:
+            try:
+                subprocess.run(
+                    ["rm", "-rf", str(self.grb)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
+                )
+            except OSError:
+                pass
+            time.sleep(1)
 
     def _report(self, message: str) -> None:
         with self.print_lock:
@@ -1425,6 +1887,10 @@ def make_parser() -> argparse.ArgumentParser:
                         help="show this help (including the build's -D flags)")
     parser.add_argument("targets", nargs="*")
     parser.add_argument("-B", "--build-dir", default=os.environ.get("B", ".build"))
+    parser.add_argument(
+        "--target",
+        help="target triple; defaults to the current host platform",
+    )
     parser.add_argument("-j", "--jobs", type=int, default=os.cpu_count() or 4)
     parser.add_argument(
         "-D", "--define", action="append", default=[], metavar="KEY[=VALUE]",
@@ -1448,11 +1914,17 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return make_parser().parse_args(argv)
 
 
-def flag_help(build_file: Path, source_root: Path, build_dir: str) -> str:
+def flag_help(build_file: Path, source_root: Path, build_dir: str,
+              target: str | None = None) -> str:
     # load build.py in help mode: allow() raises AllowSpec with the declared
     # flags. A build that never calls allow() has no declared -D flags.
     flags = Flags({}, help_mode=True)
-    context = BuildContext(source_root, source_root / build_dir, flags)
+    context = BuildContext(
+        source_root,
+        source_root / build_dir,
+        flags,
+        target=target,
+    )
     try:
         context.load(build_file)
     except AllowSpec as spec:
@@ -1482,10 +1954,20 @@ def main(argv: list[str] | None = None) -> int:
     source_root = build_file.parent
     if args.help:
         sys.stdout.write(parser.format_help())
-        sys.stdout.write(flag_help(build_file, source_root, args.build_dir))
+        sys.stdout.write(flag_help(
+            build_file,
+            source_root,
+            args.build_dir,
+            args.target,
+        ))
         return 0
     flags = Flags(parse_defines(args.define))
-    context = BuildContext(source_root, source_root / args.build_dir, flags)
+    context = BuildContext(
+        source_root,
+        source_root / args.build_dir,
+        flags,
+        target=args.target,
+    )
     try:
         context.load(build_file)
         context.build_graph()
@@ -1493,20 +1975,27 @@ def main(argv: list[str] | None = None) -> int:
             print(context.serialize_graph())
             return 0
         if args.list:
-            for name in sorted(context.target_names):
+            for name in sorted(context.target_names.keys() | context.groups.keys()):
                 print(name)
             return 0
+        publish: list[Target] = []
         if args.targets:
             selected: list[Target] = []
             for name in args.targets:
                 target = context.target_names.get(name)
-                if target is None:
-                    raise BuildError(f"unknown target: {name}")
-                selected.append(target)
+                if target is not None:
+                    selected.append(target)
+                    publish.append(target)
+                    continue
+                targets = context.groups.get(name)
+                if targets is None:
+                    raise BuildError(f"unknown target or group: {name}")
+                selected.extend(targets)
         else:
-            selected = context.installed
+            selected = context.groups.get("install", [])
             if not selected:
-                raise BuildError("no targets requested and build.py installed no defaults")
+                raise BuildError("no targets requested and build.py defined no install group")
+        selected = _uniq(selected)
         roots = _uniq(target.root for target in selected if target.root is not None)
         context.calculate_uids(roots)
         if args.clear:
@@ -1514,8 +2003,8 @@ def main(argv: list[str] | None = None) -> int:
                 shutil.rmtree(context.build_root / directory, ignore_errors=True)
         context.build_root.mkdir(parents=True, exist_ok=True)
         Executor(context, args.jobs, args.verbose, args.keep_going, args.ninja).run(roots)
-        if args.targets:
-            context.publish(selected)
+        if publish:
+            context.publish(publish)
         return 0
     except BuildError as exc:
         print(f"build: {exc}", file=sys.stderr)
