@@ -1538,6 +1538,7 @@ class Executor:
         self.progress_active = False
         self.interactive = sys.stderr.isatty()
         self.garbage_collector_started = False
+        self.garbage_lock = threading.Lock()
 
     def run(self, roots: list[Node]) -> None:
         self._start_garbage_collector()
@@ -1805,17 +1806,18 @@ class Executor:
                 child.unlink()
 
     def _discard_contents(self, path: Path) -> None:
-        while True:
-            self.grb.mkdir(parents=True, exist_ok=True)
-            destination = self.grb / uuid.uuid4().hex
-            try:
-                path.rename(destination)
-                return
-            except OSError:
+        with self.garbage_lock:
+            while True:
+                self.grb.mkdir(parents=True, exist_ok=True)
+                destination = self.grb / uuid.uuid4().hex
                 try:
-                    path.lstat()
-                except OSError:
+                    path.rename(destination)
                     return
+                except OSError:
+                    try:
+                        path.lstat()
+                    except OSError:
+                        return
 
     def _start_garbage_collector(self) -> None:
         if self.garbage_collector_started:
@@ -1826,12 +1828,13 @@ class Executor:
     def _garbage_collector(self) -> None:
         while True:
             try:
-                subprocess.run(
-                    ["rm", "-rf", str(self.grb)],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    start_new_session=True,
-                )
+                with self.garbage_lock:
+                    subprocess.run(
+                        ["rm", "-rf", str(self.grb)],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        start_new_session=True,
+                    )
             except OSError:
                 pass
             time.sleep(1)
