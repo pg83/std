@@ -10,9 +10,19 @@
 #include <std/lib/vector.h>
 #include <std/mem/obj_pool.h>
 
+#include <unistd.h>
+
 using namespace stl;
 
 namespace {
+    size_t pageSize() {
+        auto size = sysconf(_SC_PAGESIZE);
+
+        STD_INSIST(size > 0);
+
+        return (size_t)size;
+    }
+
     struct CounterRunable: public Runable {
         int* counter;
 
@@ -440,7 +450,7 @@ STD_TEST_SUITE(Thread) {
     STD_TEST(ExplicitStackBasic) {
         auto pool = ObjPool::fromMemory();
         constexpr size_t stackSize = 1 << 20;
-        void* stack = pool->allocateOverAligned(stackSize, 4096);
+        void* stack = pool->allocateOverAligned(stackSize, pageSize());
         int counter = 0;
         CounterRunable runnable(&counter);
 
@@ -469,7 +479,7 @@ STD_TEST_SUITE(Thread) {
 
         auto pool = ObjPool::fromMemory();
         constexpr size_t stackSize = 1 << 20;
-        u8* stack = (u8*)pool->allocateOverAligned(stackSize, 4096);
+        u8* stack = (u8*)pool->allocateOverAligned(stackSize, pageSize());
         StackProbe probe(stack, stack + stackSize);
 
         auto t = Thread::create(pool.mutPtr(), probe, stack, stackSize);
@@ -497,7 +507,7 @@ STD_TEST_SUITE(Thread) {
         }
 
         for (int i = 0; i < N; ++i) {
-            void* stack = pool->allocateOverAligned(stackSize, 4096);
+            void* stack = pool->allocateOverAligned(stackSize, pageSize());
             threads.pushBack(Thread::create(pool.mutPtr(), *runs[i], stack, stackSize));
         }
 
