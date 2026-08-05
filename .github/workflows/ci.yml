@@ -33,9 +33,12 @@ jobs:
             bash -euxo pipefail -c '
               export DEBIAN_FRONTEND=noninteractive
               apt-get update
-              apt-get install --yes --no-install-recommends clang python3
+              apt-get install --yes --no-install-recommends clang lld python3
               clang++ --version
-              CC=clang CXX=clang++ ./build -B .build-ci -j "$(nproc)"
+              export CC="$(command -v clang)"
+              export CXX="$(command -v clang++)"
+              export LDFLAGS=-fuse-ld=lld
+              ./build -B .build-ci -j "$(nproc)"
             '
 
   tests-glibc:
@@ -78,9 +81,12 @@ jobs:
             --workdir /workspace \
             "$ALPINE_IMAGE" \
             sh -eux -c '
-              apk add --no-cache binutils clang21 linux-headers python3
+              apk add --no-cache binutils clang21 linux-headers lld python3
               clang++-21 --version
-              CC=clang-21 CXX=clang++-21 ./build -B .build-ci -j "$(nproc)" test
+              export CC="$(command -v clang-21)"
+              export CXX="$(command -v clang++-21)"
+              export LDFLAGS=-fuse-ld=lld
+              ./build -B .build-ci -j "$(nproc)" test
               ./.build-ci/tst/test --top=20
             '
 
@@ -102,11 +108,11 @@ jobs:
             bash -euxo pipefail -c '
               export DEBIAN_FRONTEND=noninteractive
               apt-get update
-              apt-get install --yes --no-install-recommends clang libclang-rt-dev llvm python3
-              export CC=clang
-              export CXX=clang++
+              apt-get install --yes --no-install-recommends clang libclang-rt-dev lld llvm python3
+              export CC="$(command -v clang)"
+              export CXX="$(command -v clang++)"
               export CXXFLAGS="-fsanitize=address -fno-sanitize-recover=all -fno-omit-frame-pointer -fPIE"
-              export LDFLAGS="-fsanitize=address -pie"
+              export LDFLAGS="-fsanitize=address -fuse-ld=lld -pie"
               export ASAN_OPTIONS="detect_leaks=1:abort_on_error=1"
               clang++ --version
               ./build -B .build-ci -j "$(nproc)" test
@@ -131,11 +137,11 @@ jobs:
             bash -euxo pipefail -c '
               export DEBIAN_FRONTEND=noninteractive
               apt-get update
-              apt-get install --yes --no-install-recommends clang libclang-rt-dev llvm python3
-              export CC=clang
-              export CXX=clang++
+              apt-get install --yes --no-install-recommends clang libclang-rt-dev lld llvm python3
+              export CC="$(command -v clang)"
+              export CXX="$(command -v clang++)"
               export CXXFLAGS="-fsanitize=undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -fPIE"
-              export LDFLAGS="-fsanitize=undefined -pie"
+              export LDFLAGS="-fsanitize=undefined -fuse-ld=lld -pie"
               export UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1"
               clang++ --version
               ./build -B .build-ci -j "$(nproc)" test
