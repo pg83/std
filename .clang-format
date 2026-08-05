@@ -1,5 +1,4 @@
 ---
-Language: Cpp
 BasedOnStyle: LLVM
 Standard: c++17
 

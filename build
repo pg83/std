@@ -9,6 +9,8 @@ import sys
 sys.dont_write_bytecode = True
 
 import argparse
+import ast
+import base64
 import concurrent.futures
 import dataclasses
 import errno
@@ -22,6 +24,7 @@ import re
 import shlex
 import shutil
 import signal
+import sqlite3
 import stat
 import subprocess
 import sysconfig
@@ -255,7 +258,7 @@ class ImportedGraph:
     exports: list[dict[str, Any]]
     index_primary: bool
     registered: set[Node] = dataclasses.field(default_factory=set)
-    selections: dict[tuple[str, bool, str | None], tuple[Node, str]] = dataclasses.field(default_factory=dict)
+    selections: dict[tuple[str, bool, str | None], tuple[Node, str, str | None]] = dataclasses.field(default_factory=dict)
 
 
 class BuildContext:
@@ -281,12 +284,6 @@ class BuildContext:
         self.cppflags = shlex.split(os.environ.get("CPPFLAGS", ""))
         self.ldflags = shlex.split(os.environ.get("LDFLAGS", ""))
         self.ldflags += shlex.split(os.environ.get("CTRFLAGS", ""))
-        self.extra_cflags = shlex.split(
-            os.environ.get("BUILD_EXTRA_CFLAGS", ""))
-        self.extra_cxxflags = shlex.split(
-            os.environ.get("BUILD_EXTRA_CXXFLAGS", ""))
-        self.extra_cppflags = shlex.split(
-            os.environ.get("BUILD_EXTRA_CPPFLAGS", ""))
         self.host_cflags = shlex.split(os.environ.get("HOST_CFLAGS", ""))
         self.host_cxxflags = shlex.split(os.environ.get("HOST_CXXFLAGS", ""))
         self.host_cppflags = shlex.split(os.environ.get("HOST_CPPFLAGS", ""))
@@ -354,16 +351,11 @@ class BuildContext:
         return [name]
 
     @staticmethod
-    def _configuration_uid(target: str, defines: dict[str, str],
-                           cflags: Iterable[str], cxxflags: Iterable[str],
-                           cppflags: Iterable[str]) -> str:
+    def _configuration_uid(target: str, defines: dict[str, str]) -> str:
         data = json.dumps(
             {
                 "target": target,
                 "defines": defines,
-                "extra_cflags": list(cflags),
-                "extra_cxxflags": list(cxxflags),
-                "extra_cppflags": list(cppflags),
             },
             sort_keys=True, separators=(",", ":"), ensure_ascii=False,
         ).encode()
@@ -371,16 +363,10 @@ class BuildContext:
 
     def _target_configuration_uid(self) -> str:
         defines = dict(object.__getattribute__(self.flags, "_values"))
-        return self._configuration_uid(
-            self.target, defines,
-            self.extra_cflags, self.extra_cxxflags, self.extra_cppflags,
-        )
+        return self._configuration_uid(self.target, defines)
 
     def _host_configuration_uid(self) -> str:
-        return self._configuration_uid(
-            self.host, {},
-            self.host_cflags, self.host_cxxflags, self.host_cppflags,
-        )
+        return self._configuration_uid(self.host, {})
 
     def interface(self, *, cflags=(), cxxflags=(), cppflags=(), ldflags=(), enabled=True, name=None) -> Target:
         target = Target(
@@ -712,21 +698,21 @@ class BuildContext:
                               exports: Iterable[dict[str, Any]],
                               output_name: str, *,
                               exact: bool = False,
-                              target_name: str | None = None) -> tuple[Node, str]:
-        matches: list[tuple[Node, str]] = []
+                              target_name: str | None = None) -> tuple[Node, str, str | None]:
+        matches: list[tuple[Node, str, str | None]] = []
         for export in exports:
             output = export["output"]
             if target_name is not None and export["name"] != target_name:
                 continue
             matched = output == output_name if exact else Path(output).name == output_name
             if matched:
-                matches.append((export["node"], export["kind"]))
+                matches.append((export["node"], export["kind"], export["name"]))
         if not matches:
             for node in nodes:
                 for output in node.outputs:
                     matched = output == output_name if exact else Path(output).name == output_name
                     if matched:
-                        matches.append((node, "library"))
+                        matches.append((node, "library", None))
         matches = _uniq(matches)
         if len(matches) != 1:
             label = "output" if exact else "output named"
@@ -770,17 +756,14 @@ class BuildContext:
             return cached
 
         env = os.environ.copy()
-        for variable, values in zip(
-                (
-                    "BUILD_EXTRA_CFLAGS",
-                    "BUILD_EXTRA_CXXFLAGS",
-                    "BUILD_EXTRA_CPPFLAGS",
-                ),
-                extras):
-            if values:
-                env[variable] = shlex.join(values)
-            else:
-                env.pop(variable, None)
+        # Each import appends its flags to the ordinary inherited environment.
+        # Nested imports therefore accumulate flags in parent-to-child order,
+        # and the imported build.py can inspect them through build.*flags.
+        for variable, values in zip(("CFLAGS", "CXXFLAGS", "CPPFLAGS"), extras):
+            if not values:
+                continue
+            existing = env.get(variable, "")
+            env[variable] = f"{existing} {shlex.join(values)}".strip() if existing else shlex.join(values)
         encoded = self._invoke_graph(build_file, target, env)
         if source_prefix is not None:
             assert build_prefix is not None
@@ -796,7 +779,7 @@ class BuildContext:
 
     def _select_graph_root(self, graph: ImportedGraph, output_name: str, *,
                            exact: bool = False,
-                           target_name: str | None = None) -> tuple[Node, str]:
+                           target_name: str | None = None) -> tuple[Node, str, str | None]:
         key = (output_name, exact, target_name)
         cached = graph.selections.get(key)
         if cached is None:
@@ -826,7 +809,7 @@ class BuildContext:
 
     def import_build(self, path: str, output_name: str,
                      extra_cflags=(), extra_cxxflags=(),
-                     extra_cppflags=()) -> Target:
+                     extra_cppflags=(), deps=()) -> Target:
         path = str(path)
         if path.startswith(S + "/"):
             build_file = self.physical(path)
@@ -851,18 +834,42 @@ class BuildContext:
         graph = self._load_imported_graph(
             build_file,
             self.target,
-            extra_cflags=[*self.extra_cflags, *[str(x) for x in _items(extra_cflags)]],
-            extra_cxxflags=[*self.extra_cxxflags, *[str(x) for x in _items(extra_cxxflags)]],
-            extra_cppflags=[*self.extra_cppflags, *[str(x) for x in _items(extra_cppflags)]],
+            extra_cflags=[str(x) for x in _items(extra_cflags)],
+            extra_cxxflags=[str(x) for x in _items(extra_cxxflags)],
+            extra_cppflags=[str(x) for x in _items(extra_cppflags)],
             source_prefix=source_prefix,
             build_prefix=build_prefix,
             index_primary=True,
         )
-        root, kind = self._select_graph_root(graph, output_name)
+        root, kind, exported_name = self._select_graph_root(graph, output_name)
+
+        # Link importer-built targets into the imported root. The imported
+        # graph cannot reference this graph's outputs itself: its markers are
+        # namespaced during the import, so a path smuggled in through flags
+        # would be rewritten. Injecting after the rewrite keeps paths intact.
+        dep_targets = _items(deps)
+        if dep_targets and kind != "program":
+            raise BuildError(
+                f"import_build deps apply to a program root, got {kind!r} for {output_name!r}")
+        for dep in dep_targets:
+            if not isinstance(dep, Target) or dep.root is None or not dep.output:
+                raise BuildError(
+                    f"import_build dep for {output_name!r} must be a built target with an output")
+            if dep.output in root.inputs:
+                continue
+            root.inputs.append(dep.output)
+            # Appended past the imported link line, after the archives it
+            # references; static resolution order stays correct.
+            root.commands[-1].append(dep.output)
+            root.deps.append(dep.root)
+
         imported_nodes = self._register_imported_nodes(graph, [root])
 
         target = Target(
             kind,
+            # The exported name, so an imported target held in a local can
+            # skip the global-alias naming pass.
+            name=exported_name,
             public_cppflags=["-I" + source_prefix],
             output=root.outputs[0],
             root=root,
@@ -1017,7 +1024,7 @@ class BuildContext:
         for program in referenced:
             assert program.name is not None
             output = program.output or f"{B}/{program.name}"
-            root, kind = self._select_graph_root(
+            root, kind, _ = self._select_graph_root(
                 graph,
                 output,
                 exact=True,
@@ -1107,10 +1114,6 @@ class BuildContext:
             common.extend(target.cflags)
             if cxx:
                 common.extend(target.cxxflags)
-            common.extend(self.extra_cppflags)
-            common.extend(self.extra_cflags)
-            if cxx:
-                common.extend(self.extra_cxxflags)
             include_roots = _uniq([*global_includes, *self._include_roots_from_flags(common)])
             rel = src.replace(S + "/", "").replace(B + "/", "generated/")
             rel = re.sub(r"[^A-Za-z0-9_./+-]", "_", rel)
@@ -1520,14 +1523,382 @@ class IncludeScanner:
         return os.path.normpath(path)
 
 
+_STRACE_LINE = re.compile(
+    r"^(?:\[pid\s+(\d+)\]\s+|(\d+)\s+)?([A-Za-z0-9_]+)\("
+)
+_STRACE_RESULT = re.compile(
+    r"\)\s+=\s+(-?\d+|0x[0-9a-fA-F]+)(?:<[^>]*>)?"
+)
+_STRACE_ANNOTATION = re.compile(r"<(/(?:\\.|[^>])*)>")
+_STRACE_LITERAL = re.compile(r'"(?:\\.|[^"\\])*"')
+_STRACE_RESUMED = re.compile(
+    r"^(?:\[pid\s+(\d+)\]\s+|(\d+)\s+)?<\.\.\. ([A-Za-z0-9_]+) resumed>(.*)$"
+)
+_STRACE_PATH_CALLS = {
+    "access", "faccessat", "faccessat2",
+    "creat",
+    "execve", "execveat",
+    "fgetxattr", "flistxattr", "fstat", "fstat64", "fstatfs",
+    "getxattr", "lgetxattr", "listxattr", "llistxattr",
+    "lstat", "lstat64",
+    "name_to_handle_at", "newfstatat",
+    "open", "open64", "openat", "openat2",
+    "readlink", "readlinkat",
+    "stat", "stat64", "statfs", "statx",
+}
+_STRACE_AT_CALLS = {
+    "execveat", "faccessat", "faccessat2", "fstatat64",
+    "name_to_handle_at", "newfstatat", "openat", "openat2",
+    "readlinkat", "statx",
+}
+_STRACE_DIRECTORY_CREATE_CALLS = {"mkdir", "mkdirat"}
+_STRACE_PATH_CREATE_CALLS = {
+    "link", "linkat", "rename", "renameat", "renameat2",
+    "symlink", "symlinkat",
+}
+
+
+def _strace_text(value: str) -> str:
+    try:
+        decoded = ast.literal_eval('"' + value.replace('"', '\\"') + '"')
+    except (SyntaxError, ValueError):
+        return value
+    return decoded if isinstance(decoded, str) else value
+
+
+def _strace_literal(line: str) -> str | None:
+    match = _STRACE_LITERAL.search(line)
+    if match is None:
+        return None
+    try:
+        value = ast.literal_eval(match.group(0))
+    except (SyntaxError, ValueError):
+        return None
+    return value if isinstance(value, str) else None
+
+
+def _strace_path(value: str, base: Path) -> Path | None:
+    value = value.removesuffix(" (deleted)")
+    if not value:
+        return None
+    path = Path(value)
+    if not path.is_absolute():
+        path = base / path
+    try:
+        return path.resolve()
+    except (OSError, RuntimeError):
+        return Path(os.path.abspath(path))
+
+
+def _strace_complete_lines(trace: str) -> Iterable[str]:
+    pending: dict[tuple[str, str], str] = {}
+    for line in trace.splitlines():
+        if line.endswith("<unfinished ...>"):
+            match = _STRACE_LINE.match(line)
+            if match is not None:
+                pid = match.group(1) or match.group(2) or "main"
+                pending[(pid, match.group(3))] = line.removesuffix("<unfinished ...>")
+            continue
+        resumed = _STRACE_RESUMED.match(line)
+        if resumed is not None:
+            pid = resumed.group(1) or resumed.group(2) or "main"
+            initial = pending.pop((pid, resumed.group(3)), None)
+            if initial is not None:
+                yield initial + resumed.group(4)
+            continue
+        yield line
+
+
+def _strace_accesses(trace: str, initial_cwd: str) -> set[Path]:
+    initial = Path(initial_cwd).resolve()
+    current_cwds: dict[str, Path] = {}
+    last_cwd = initial
+    accesses: set[Path] = set()
+    created_files: set[Path] = set()
+    created_directories: set[Path] = set()
+
+    def created(path: Path) -> bool:
+        return path in created_files or any(
+            parent in created_directories for parent in (path, *path.parents)
+        )
+
+    def add_accesses(paths: Iterable[Path]) -> None:
+        accesses.update(path for path in paths if not created(path))
+
+    for line in _strace_complete_lines(trace):
+        call_match = _STRACE_LINE.match(line)
+        result_match = _STRACE_RESULT.search(line)
+        if call_match is None or result_match is None:
+            continue
+        result = result_match.group(1)
+        if result.startswith("-"):
+            continue
+
+        pid = call_match.group(1) or call_match.group(2) or "main"
+        call = call_match.group(3)
+        cwd = current_cwds.get(pid, last_cwd)
+        annotation_items = [
+            (match.start(), path)
+            for match in _STRACE_ANNOTATION.finditer(line)
+            if (path := _strace_path(_strace_text(match.group(1)), cwd)) is not None
+        ]
+        annotations = [path for _, path in annotation_items]
+        literal_items = []
+        for match in _STRACE_LITERAL.finditer(line):
+            try:
+                value = ast.literal_eval(match.group(0))
+            except (SyntaxError, ValueError):
+                continue
+            if isinstance(value, str):
+                literal_items.append((match.start(), value))
+        literals = [value for _, value in literal_items]
+        bases: list[Path] = []
+        base_annotations: set[int] = set()
+        previous_literal = -1
+        for literal_position, _ in literal_items:
+            candidates = [
+                (position, path)
+                for position, path in annotation_items
+                if previous_literal < position < literal_position
+            ]
+            if candidates:
+                position, base = candidates[-1]
+                bases.append(base)
+                base_annotations.add(position)
+            else:
+                bases.append(cwd)
+            previous_literal = literal_position
+        file_annotations = [
+            path for position, path in annotation_items
+            if call not in _STRACE_AT_CALLS or position not in base_annotations
+        ]
+
+        if call == "chdir":
+            value = _strace_literal(line)
+            path = _strace_path(value, cwd) if value is not None else None
+            if path is not None:
+                current_cwds[pid] = path
+                last_cwd = path
+            continue
+        if call == "fchdir":
+            if annotations:
+                current_cwds[pid] = annotations[0]
+                last_cwd = annotations[0]
+            continue
+
+        if call in _STRACE_DIRECTORY_CREATE_CALLS:
+            if literals:
+                base = bases[-1] if call.endswith("at") else cwd
+                path = _strace_path(literals[-1], base)
+                if path is not None:
+                    created_directories.add(path)
+            continue
+        if call in _STRACE_PATH_CREATE_CALLS:
+            if literals:
+                base = bases[-1] if "at" in call else cwd
+                path = _strace_path(literals[-1], base)
+                if path is not None:
+                    created_files.add(path)
+            continue
+
+        if call in ("mmap", "mmap2"):
+            if "PROT_READ" in line:
+                add_accesses(file_annotations)
+            continue
+        if call not in _STRACE_PATH_CALLS:
+            continue
+        if call in ("open", "open64", "openat", "openat2"):
+            value = literals[0] if literals else None
+            base = bases[0] if call in _STRACE_AT_CALLS and bases else cwd
+            path = _strace_path(value, base) \
+                if value is not None else None
+            if path is not None and any(flag in line for flag in (
+                "O_EXCL", "O_TRUNC", "O_TMPFILE",
+            )):
+                created_files.add(path)
+            if "O_WRONLY" in line and "O_RDWR" not in line:
+                continue
+        elif call == "creat":
+            value = literals[0] if literals else None
+            path = _strace_path(value, cwd) if value is not None else None
+            if path is not None:
+                created_files.add(path)
+            continue
+
+        add_accesses(file_annotations)
+        value = literals[0] if literals else None
+        if value is None:
+            continue
+        base = bases[0] if call in _STRACE_AT_CALLS and bases else cwd
+        path = _strace_path(value, base)
+        if path is not None and not created(path):
+            accesses.add(path)
+
+    return accesses
+
+
+def _path_below(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _python_cache_source(path: Path) -> Path | None:
+    if path.suffix not in (".pyc", ".pyo"):
+        return None
+    if path.parent.name == "__pycache__":
+        module = path.name.split(".", 1)[0]
+        source = path.parent.parent / (module + ".py")
+        if source.is_file():
+            return source.resolve()
+        match = re.fullmatch(r"(.+?)cpython-\d+", module)
+        if match is not None:
+            return (path.parent.parent / match.group(1)).resolve()
+        return source.resolve()
+    return path.with_suffix(".py").resolve()
+
+
+def _strace_missing_inputs(payload: dict[str, Any], trace: str) -> list[str]:
+    source_root = Path(payload["source_root"]).resolve()
+    build_root = Path(payload["build_root"]).resolve()
+    ignored_roots = [
+        build_root,
+        source_root / ".git",
+        *(Path(path) for path in payload.get("ignore_roots", [])),
+    ]
+    candidates: set[Path] = set()
+    for path in _strace_accesses(trace, payload["cwd"]):
+        if (not _path_below(path, source_root)
+                or any(_path_below(path, root) for root in ignored_roots)):
+            continue
+        relative = path.relative_to(source_root)
+        if not relative.parts or path.is_dir():
+            continue
+        cache_source = _python_cache_source(path)
+        if cache_source is not None and cache_source.is_file():
+            path = cache_source
+        candidates.add(path)
+
+    if "inputs" in payload:
+        declared = {Path(path).resolve() for path in payload["inputs"]}
+    else:
+        declared = set()
+        paths = sorted(map(str, candidates))
+        with sqlite3.connect(payload["index"]) as database:
+            for offset in range(0, len(paths), 400):
+                batch = paths[offset:offset + 400]
+                placeholders = ",".join("?" for _ in batch)
+                query = f"""
+                    WITH RECURSIVE closure(node) AS (
+                        VALUES (?)
+                        UNION
+                        SELECT edges.dependency
+                        FROM edges JOIN closure ON edges.node = closure.node
+                    )
+                    SELECT inputs.path
+                    FROM inputs JOIN closure ON inputs.node = closure.node
+                    WHERE inputs.path IN ({placeholders})
+                """
+                declared.update(
+                    Path(row[0])
+                    for row in database.execute(query, [payload["node_id"], *batch])
+                )
+
+    return sorted(
+        S + "/" + path.relative_to(source_root).as_posix()
+        for path in candidates - declared
+    )
+
+
+def strace_main(argv: list[str]) -> int:
+    if len(argv) < 3 or argv[1] != "--":
+        print("usage: build strace PAYLOAD -- COMMAND...", file=sys.stderr)
+        return 2
+    try:
+        payload = json.loads(base64.b64decode(argv[0], validate=True))
+        if not isinstance(payload, dict):
+            raise ValueError("invalid payload")
+        inline = (
+            isinstance(payload.get("inputs"), list)
+            and all(isinstance(path, str) for path in payload["inputs"])
+        )
+        indexed = (
+            isinstance(payload.get("index"), str)
+            and isinstance(payload.get("node_id"), int)
+            and not isinstance(payload.get("node_id"), bool)
+            and payload["node_id"] >= 0
+        )
+        valid = (
+            payload.get("version") == 1
+            and all(isinstance(payload.get(key), str) for key in (
+                "node", "source_root", "build_root", "cwd",
+            ))
+            and isinstance(payload.get("ignore_roots", []), list)
+            and all(
+                isinstance(path, str) for path in payload.get("ignore_roots", [])
+            )
+            and (inline or indexed)
+        )
+        if not valid:
+            raise ValueError("invalid payload")
+    except (ValueError, TypeError, json.JSONDecodeError) as exc:
+        print(f"build strace: malformed payload: {exc}", file=sys.stderr)
+        return 2
+
+    tracer = shutil.which("strace")
+    if tracer is None:
+        print("build strace: strace executable not found", file=sys.stderr)
+        return 1
+    descriptor, trace_path = tempfile.mkstemp(prefix="build-strace-", suffix=".log")
+    os.close(descriptor)
+    try:
+        result = subprocess.run([
+            tracer,
+            "-f", "-qq", "-yy", "-s", "4096",
+            "-e", "trace=%file,mmap,mmap2",
+            "-o", trace_path,
+            "--",
+            *argv[2:],
+        ])
+        try:
+            trace = Path(trace_path).read_text(errors="replace")
+        except OSError as exc:
+            print(f"build strace: cannot read trace: {exc}", file=sys.stderr)
+            return result.returncode or 1
+        try:
+            missing = _strace_missing_inputs(payload, trace)
+        except (OSError, sqlite3.Error) as exc:
+            print(f"build strace: cannot match trace: {exc}", file=sys.stderr)
+            return result.returncode or 1
+        if missing:
+            print(
+                f"build strace: undeclared source input(s) for {payload['node']}:",
+                file=sys.stderr,
+            )
+            for path in missing:
+                print(f"  {path}", file=sys.stderr)
+        return result.returncode or int(bool(missing))
+    except OSError as exc:
+        print(f"build strace: cannot run strace: {exc}", file=sys.stderr)
+        return 1
+    finally:
+        try:
+            os.unlink(trace_path)
+        except FileNotFoundError:
+            pass
+
+
 class Executor:
     def __init__(self, context: BuildContext, jobs: int, verbose: bool, keep_going: bool,
-                 ninja: bool = False):
+                 ninja: bool = False, strace: bool = False):
         self.context = context
         self.jobs = max(1, jobs)
         self.verbose = verbose
         self.keep_going = keep_going
         self.ninja = ninja
+        self.strace = strace
         self.cas = context.build_root / "cas"
         self.uids = context.build_root / "uid"
         self.tmp = context.build_root / "tmp"
@@ -1539,6 +1910,9 @@ class Executor:
         self.interactive = sys.stderr.isatty()
         self.garbage_collector_started = False
         self.garbage_lock = threading.Lock()
+        self.strace_index: Path | None = None
+        self.strace_node_ids: dict[Node, int] = {}
+        self.strace_ignore_roots: list[str] = []
 
     def run(self, roots: list[Node]) -> None:
         self._start_garbage_collector()
@@ -1546,10 +1920,20 @@ class Executor:
             self._run(roots)
         finally:
             self._finish_progress()
+            if self.strace_index is not None:
+                try:
+                    self.strace_index.unlink()
+                except FileNotFoundError:
+                    pass
+                self.strace_index = None
+                self.strace_node_ids.clear()
+                self.strace_ignore_roots.clear()
 
     def _run(self, roots: list[Node]) -> None:
         self.progress_done = 0
         needed = self._closure(roots)
+        if self.strace:
+            self._prepare_strace_index(needed)
         consumers: dict[Node, list[Node]] = defaultdict(list)
         remaining: dict[Node, int] = {}
         for node in needed:
@@ -1558,8 +1942,9 @@ class Executor:
             for dep in deps:
                 consumers[dep].append(node)
         ready = deque(node for node in needed if remaining[node] == 0)
-        cache_misses = {node for node in needed if not self._cached(node.uid)}
-        self.progress_total = len(cache_misses)
+        uncached = {node for node in needed if not self._cached(node.uid)}
+        executed = set(needed) if self.strace else uncached
+        self.progress_total = len(executed)
         errors: dict[Node, BaseException] = {}
         blocked: set[Node] = set()
         running: dict[concurrent.futures.Future[None], Node] = {}
@@ -1568,7 +1953,12 @@ class Executor:
             while ready or running:
                 while ready and len(running) < self.jobs:
                     node = ready.popleft()
-                    future = pool.submit(self._execute, node, node in cache_misses)
+                    future = pool.submit(
+                        self._execute,
+                        node,
+                        node in executed,
+                        not self.strace or node in uncached,
+                    )
                     running[future] = node
                 if not running:
                     break
@@ -1617,9 +2007,10 @@ class Executor:
             stack.extend(node.deps)
         return out
 
-    def _execute(self, node: Node, expected_miss: bool = True) -> None:
+    def _execute(self, node: Node, expected_miss: bool = True,
+                 store_result: bool = True) -> None:
         assert node.uid is not None
-        if self._cached(node.uid):
+        if not self.strace and self._cached(node.uid):
             if self.verbose:
                 self._report(f"HIT  {node.descr} {self._node_name(node)}")
             return
@@ -1627,27 +2018,32 @@ class Executor:
             with self.print_lock:
                 self.progress_total += 1
         work = self.tmp / node.uid
-        work.mkdir(parents=True, exist_ok=True)
-        fd = os.open(work, os.O_RDONLY)
+        locks = self.tmp / ".locks"
+        locks.mkdir(parents=True, exist_ok=True)
+        fd = os.open(locks / node.uid, os.O_CREAT | os.O_RDWR, 0o600)
         try:
             fcntl.flock(fd, fcntl.LOCK_EX)
-            if self._cached(node.uid):
-                return
-            self._remove_contents(work)
-            for dep in node.deps:
-                assert dep.uid is not None
-                self._restore(dep.uid, work, symlink=False)
-            for output in node.outputs:
-                self.context.physical(output, work).parent.mkdir(parents=True, exist_ok=True)
-            if self.verbose:
-                self._report(f"RUN  {node.descr} {self._node_name(node)}")
-            for command in node.commands:
-                self._run_command(node, command, work)
-            self._store(node, work)
-            self._progress(node)
+            work.mkdir(parents=True, exist_ok=True)
+            try:
+                if not self.strace and self._cached(node.uid):
+                    return
+                self._remove_contents(work)
+                for dep in node.deps:
+                    assert dep.uid is not None
+                    self._restore(dep.uid, work, symlink=False)
+                for output in node.outputs:
+                    self.context.physical(output, work).parent.mkdir(parents=True, exist_ok=True)
+                if self.verbose:
+                    self._report(f"RUN  {node.descr} {self._node_name(node)}")
+                for command in node.commands:
+                    self._run_command(node, command, work)
+                if store_result:
+                    self._store(node, work)
+                self._progress(node)
+            finally:
+                self._discard_contents(work)
         finally:
             os.close(fd)
-            self._discard_contents(work)
 
     def _run_command(self, node: Node, command: list[str], work: Path) -> None:
         args = [self._mount(arg, work) for arg in command]
@@ -1656,10 +2052,21 @@ class Executor:
         cwd = self._mount(node.cwd, work)
         if not args:
             raise BuildError(f"empty command in {node.outputs}")
+        display_args = args
+        if self.strace:
+            env["BUILD_STRACE_ACTIVE"] = "1"
+            payload = base64.b64encode(json.dumps(
+                self._strace_payload(node, work, cwd),
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()).decode("ascii")
+            # Through the interpreter, not the shebang: the nix sandbox has
+            # no /usr/bin/env.
+            args = [sys.executable, str(Path(__file__).resolve()), "strace", payload, "--", *args]
         result = subprocess.run(args, cwd=cwd, env=env, text=True, stdout=None, stderr=subprocess.PIPE)
         if result.returncode != 0:
             detail = result.stderr.rstrip()
-            message = f"command exited {result.returncode}: {shlex.join(args)}"
+            message = f"command exited {result.returncode}: {shlex.join(display_args)}"
             if detail:
                 message += "\n" + detail
             raise BuildError(message)
@@ -1670,6 +2077,79 @@ class Executor:
                 if not result.stderr.endswith("\n"):
                     sys.stderr.write("\n")
                 sys.stderr.flush()
+
+    def _strace_payload(self, node: Node, work: Path, cwd: str) -> dict[str, Any]:
+        assert self.strace_index is not None
+        return {
+            "version": 1,
+            "node": self._node_name(node),
+            "source_root": str(self.context.source_root.resolve()),
+            "build_root": str(self.context.build_root.resolve()),
+            "cwd": cwd,
+            "index": str(self.strace_index),
+            "node_id": self.strace_node_ids[node],
+            "ignore_roots": self.strace_ignore_roots,
+        }
+
+    def _prepare_strace_index(self, nodes: set[Node]) -> None:
+        descriptor, index_path = tempfile.mkstemp(
+            prefix="build-strace-index-", suffix=".sqlite",
+        )
+        os.close(descriptor)
+        self.strace_index = Path(index_path)
+        self.strace_ignore_roots = sorted(
+            str(path.resolve())
+            for path in self.context.source_root.iterdir()
+            if path.is_dir() and (path / "cas").is_dir() and (path / "uid").is_dir()
+        )
+        ordered = sorted(
+            nodes,
+            key=lambda node: (node.uid or "", node.outputs, node.commands),
+        )
+        self.strace_node_ids = {node: index for index, node in enumerate(ordered)}
+        source_root = self.context.source_root
+        build_root = self.context.build_root
+        resolved: dict[str, Path] = {}
+
+        with sqlite3.connect(index_path) as database:
+            database.executescript("""
+                PRAGMA journal_mode=OFF;
+                PRAGMA synchronous=OFF;
+                CREATE TABLE edges (
+                    node INTEGER NOT NULL,
+                    dependency INTEGER NOT NULL
+                );
+                CREATE INDEX edges_by_node ON edges(node);
+                CREATE TABLE inputs (
+                    node INTEGER NOT NULL,
+                    path TEXT NOT NULL
+                );
+                CREATE INDEX inputs_by_node_path ON inputs(node, path);
+            """)
+            database.executemany(
+                "INSERT INTO edges VALUES (?, ?)",
+                (
+                    (self.strace_node_ids[node], self.strace_node_ids[dependency])
+                    for node in ordered
+                    for dependency in node.deps
+                    if dependency in self.strace_node_ids
+                ),
+            )
+            input_rows: list[tuple[int, str]] = []
+            for node in ordered:
+                for path in sorted(set(node.inputs) | node.source_inputs):
+                    if path.startswith(B + "/") or path == B:
+                        continue
+                    if not (path.startswith(S + "/") or path == S or os.path.isabs(path)):
+                        continue
+                    physical = resolved.get(path)
+                    if physical is None:
+                        physical = self.context.physical(path).resolve()
+                        resolved[path] = physical
+                    if (_path_below(physical, source_root)
+                            and not _path_below(physical, build_root)):
+                        input_rows.append((self.strace_node_ids[node], str(physical)))
+            database.executemany("INSERT INTO inputs VALUES (?, ?)", input_rows)
 
     def _mount(self, value: str, work: Path) -> str:
         return str(value).replace(S, str(self.context.source_root)).replace(B, str(work))
@@ -1906,6 +2386,10 @@ def make_parser() -> argparse.ArgumentParser:
         "-T", "--ninja", action="store_true",
         help="repaint progress in place instead of keeping one line per node",
     )
+    parser.add_argument(
+        "--strace", action="store_true",
+        help="rerun nodes under strace and reject undeclared source reads",
+    )
     parser.add_argument("--clear", action="store_true")
     parser.add_argument("--list", action="store_true")
     parser.add_argument("-G", "--graph", action="store_true")
@@ -1998,6 +2482,9 @@ def main(argv: list[str] | None = None) -> int:
             selected = context.groups.get("install", [])
             if not selected:
                 raise BuildError("no targets requested and build.py defined no install group")
+            # A bare build publishes its deliverables: the install group
+            # holds real binaries, unlike test groups full of stamps.
+            publish.extend(selected)
         selected = _uniq(selected)
         roots = _uniq(target.root for target in selected if target.root is not None)
         context.calculate_uids(roots)
@@ -2005,7 +2492,14 @@ def main(argv: list[str] | None = None) -> int:
             for directory in ("cas", "uid", "tmp", "grb"):
                 shutil.rmtree(context.build_root / directory, ignore_errors=True)
         context.build_root.mkdir(parents=True, exist_ok=True)
-        Executor(context, args.jobs, args.verbose, args.keep_going, args.ninja).run(roots)
+        Executor(
+            context,
+            args.jobs,
+            args.verbose,
+            args.keep_going,
+            args.ninja,
+            args.strace,
+        ).run(roots)
         if publish:
             context.publish(publish)
         return 0
@@ -2064,4 +2558,6 @@ def supervised_main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "strace":
+        raise SystemExit(strace_main(sys.argv[2:]))
     raise SystemExit(supervised_main())
