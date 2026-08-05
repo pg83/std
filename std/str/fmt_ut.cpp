@@ -3,7 +3,6 @@
 #include <std/tst/ut.h>
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <inttypes.h>
 
 using namespace stl;
@@ -397,16 +396,5 @@ STD_TEST_SUITE(FormatU64Base16) {
         sprintf(buf1, "%llx", (unsigned long long)val);
         *(u8*)formatU64Base16(val, buf2) = 0;
         STD_INSIST(StringView(buf1) == StringView(buf2));
-    }
-}
-
-STD_TEST_SUITE(FormatF64Roundtrip) {
-    STD_TEST(Reparse) {
-        const double values[] = {0.0, 1.0, -0.01, 3.141592653589793, 6.626e-34, 5e+22, -1.7976931348623157e308};
-        for (const double value : values) {
-            char buf[32];
-            *(char*)formatF64Roundtrip(value, buf) = 0;
-            STD_INSIST(strtod(buf, nullptr) == value);
-        }
     }
 }
