@@ -1,7 +1,7 @@
 #include "coro.h"
 #include "pool.h"
-#include "mutex.h"
 #include "guard.h"
+#include "mutex.h"
 #include "thread.h"
 #include "runable.h"
 #include "cond_var.h"
@@ -256,13 +256,7 @@ STD_TEST_SUITE(Thread) {
             }
         };
 
-        IdCollectorRunable runables[] = {
-            IdCollectorRunable(&ids[0]),
-            IdCollectorRunable(&ids[1]),
-            IdCollectorRunable(&ids[2]),
-            IdCollectorRunable(&ids[3]),
-            IdCollectorRunable(&ids[4])
-        };
+        IdCollectorRunable runables[] = {IdCollectorRunable(&ids[0]), IdCollectorRunable(&ids[1]), IdCollectorRunable(&ids[2]), IdCollectorRunable(&ids[3]), IdCollectorRunable(&ids[4])};
 
         auto t1 = Thread::create(pool.mutPtr(), runables[0]);
         auto t2 = Thread::create(pool.mutPtr(), runables[1]);
@@ -464,11 +458,10 @@ STD_TEST_SUITE(Thread) {
 
             StackProbe(void* l, void* h) noexcept
                 : lo(l)
-                , hi(h)
-            {
+                , hi(h) {
             }
 
-            void run() noexcept override {
+            __attribute__((no_sanitize("address"))) void run() noexcept override {
                 int local;
                 observed = &local;
             }
@@ -638,10 +631,12 @@ STD_TEST_SUITE(CoroThread) {
 
         struct BoolRunable: public Runable {
             bool* executed;
+
             explicit BoolRunable(bool* e)
                 : executed(e)
             {
             }
+
             void run() noexcept override {
                 *executed = true;
             }

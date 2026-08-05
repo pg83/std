@@ -1,11 +1,28 @@
 #include "disposer.h"
 
 #include <std/tst/ut.h>
+#include <std/mem/new.h>
+#include <std/typ/support.h>
 
 using namespace stl;
 
 namespace {
-    struct TestDisposable: public Disposable {
+    struct TestArena {
+        alignas(max_align_t) u8 storage[4096];
+        size_t used = 0;
+
+        template <typename T, typename... A>
+        T* make(A&&... a) {
+            size_t offset = (used + alignof(T) - 1) & ~(alignof(T) - 1);
+
+            STD_INSIST(offset + sizeof(T) <= sizeof(storage));
+            used = offset + sizeof(T);
+
+            return new (storage + offset) T(forward<A>(a)...);
+        }
+    };
+
+    struct TestDisposable: public Disposable, public Newable {
         int* counter;
 
         TestDisposable(int* c)
@@ -19,7 +36,7 @@ namespace {
         }
     };
 
-    struct OrderTracker: public Disposable {
+    struct OrderTracker: public Disposable, public Newable {
         int id;
         int* lastDestroyed;
 
@@ -34,7 +51,7 @@ namespace {
         }
     };
 
-    struct SimpleDisposable: public Disposable {
+    struct SimpleDisposable: public Disposable, public Newable {
         int value;
 
         SimpleDisposable(int v)
@@ -54,7 +71,8 @@ STD_TEST_SUITE(Disposer) {
 
     STD_TEST(submit_single) {
         int counter = 0;
-        auto obj = new TestDisposable(&counter);
+        TestArena arena;
+        auto obj = arena.make<TestDisposable>(&counter);
 
         {
             Disposer disposer;
@@ -69,12 +87,13 @@ STD_TEST_SUITE(Disposer) {
 
     STD_TEST(submit_multiple) {
         int counter = 0;
+        TestArena arena;
 
         {
             Disposer disposer;
-            disposer.submit(new TestDisposable(&counter));
-            disposer.submit(new TestDisposable(&counter));
-            disposer.submit(new TestDisposable(&counter));
+            disposer.submit(arena.make<TestDisposable>(&counter));
+            disposer.submit(arena.make<TestDisposable>(&counter));
+            disposer.submit(arena.make<TestDisposable>(&counter));
 
             STD_INSIST(disposer.length() == 3);
             STD_INSIST(counter == 3);
@@ -85,10 +104,11 @@ STD_TEST_SUITE(Disposer) {
 
     STD_TEST(dispose_destroys_objects) {
         int counter = 0;
+        TestArena arena;
 
         Disposer disposer;
-        disposer.submit(new TestDisposable(&counter));
-        disposer.submit(new TestDisposable(&counter));
+        disposer.submit(arena.make<TestDisposable>(&counter));
+        disposer.submit(arena.make<TestDisposable>(&counter));
 
         STD_INSIST(counter == 2);
         STD_INSIST(disposer.length() == 2);
@@ -101,9 +121,10 @@ STD_TEST_SUITE(Disposer) {
 
     STD_TEST(dispose_called_multiple_times) {
         int counter = 0;
+        TestArena arena;
 
         Disposer disposer;
-        disposer.submit(new TestDisposable(&counter));
+        disposer.submit(arena.make<TestDisposable>(&counter));
 
         STD_INSIST(counter == 1);
 
@@ -116,10 +137,11 @@ STD_TEST_SUITE(Disposer) {
 
     STD_TEST(destructor_calls_dispose) {
         int counter = 0;
+        TestArena arena;
 
         {
             Disposer disposer;
-            disposer.submit(new TestDisposable(&counter));
+            disposer.submit(arena.make<TestDisposable>(&counter));
             STD_INSIST(counter == 1);
         }
 
@@ -128,21 +150,23 @@ STD_TEST_SUITE(Disposer) {
 
     STD_TEST(disposal_order_lifo) {
         int lastDestroyed = 0;
+        TestArena arena;
 
         {
             Disposer disposer;
-            disposer.submit(new OrderTracker(1, &lastDestroyed));
-            disposer.submit(new OrderTracker(2, &lastDestroyed));
-            disposer.submit(new OrderTracker(3, &lastDestroyed));
+            disposer.submit(arena.make<OrderTracker>(1, &lastDestroyed));
+            disposer.submit(arena.make<OrderTracker>(2, &lastDestroyed));
+            disposer.submit(arena.make<OrderTracker>(3, &lastDestroyed));
         }
 
         STD_INSIST(lastDestroyed == 1);
     }
 
     STD_TEST(length_after_dispose) {
+        TestArena arena;
         Disposer disposer;
-        disposer.submit(new SimpleDisposable(1));
-        disposer.submit(new SimpleDisposable(2));
+        disposer.submit(arena.make<SimpleDisposable>(1));
+        disposer.submit(arena.make<SimpleDisposable>(2));
 
         STD_INSIST(disposer.length() == 2);
 
@@ -153,17 +177,18 @@ STD_TEST_SUITE(Disposer) {
 
     STD_TEST(submit_after_dispose) {
         int counter = 0;
+        TestArena arena;
 
         {
             Disposer disposer;
-            disposer.submit(new TestDisposable(&counter));
+            disposer.submit(arena.make<TestDisposable>(&counter));
 
             STD_INSIST(counter == 1);
 
             disposer.dispose();
             STD_INSIST(counter == 0);
 
-            disposer.submit(new TestDisposable(&counter));
+            disposer.submit(arena.make<TestDisposable>(&counter));
             STD_INSIST(counter == 1);
             STD_INSIST(disposer.length() == 1);
         }
@@ -173,12 +198,13 @@ STD_TEST_SUITE(Disposer) {
 
     STD_TEST(many_objects) {
         int counter = 0;
+        TestArena arena;
 
         {
             Disposer disposer;
 
             for (int i = 0; i < 100; ++i) {
-                disposer.submit(new TestDisposable(&counter));
+                disposer.submit(arena.make<TestDisposable>(&counter));
             }
 
             STD_INSIST(counter == 100);
@@ -198,8 +224,9 @@ STD_TEST_SUITE(Disposer) {
     STD_TEST(mixed_types) {
         int counter1 = 0;
         int counter2 = 0;
+        TestArena arena;
 
-        struct OtherDisposable: public Disposable {
+        struct OtherDisposable: public Disposable, public Newable {
             int* counter;
 
             OtherDisposable(int* c)
@@ -215,9 +242,9 @@ STD_TEST_SUITE(Disposer) {
 
         {
             Disposer disposer;
-            disposer.submit(new TestDisposable(&counter1));
-            disposer.submit(new OtherDisposable(&counter2));
-            disposer.submit(new TestDisposable(&counter1));
+            disposer.submit(arena.make<TestDisposable>(&counter1));
+            disposer.submit(arena.make<OtherDisposable>(&counter2));
+            disposer.submit(arena.make<TestDisposable>(&counter1));
 
             STD_INSIST(counter1 == 2);
             STD_INSIST(counter2 == 1);

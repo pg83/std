@@ -1,0 +1,164 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UBUNTU_IMAGE: ubuntu:26.04
+  GCC_IMAGE: gcc:16.1.0-trixie
+  ALPINE_IMAGE: alpine:3.24.1
+
+jobs:
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build with Clang and glibc
+        run: |
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/workspace" \
+            --workdir /workspace \
+            "$UBUNTU_IMAGE" \
+            bash -euxo pipefail -c '
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install --yes --no-install-recommends clang python3
+              clang++ --version
+              CC=clang CXX=clang++ ./build -B .build-ci -j "$(nproc)"
+            '
+
+  tests-glibc:
+    name: Tests Glibc
+    needs: build-linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Test with GCC and glibc
+        run: |
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/workspace" \
+            --workdir /workspace \
+            "$GCC_IMAGE" \
+            bash -euxo pipefail -c '
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install --yes --no-install-recommends python3
+              g++ --version
+              CC=gcc CXX=g++ ./build -B .build-ci -j "$(nproc)" test
+              ./.build-ci/tst/test --top=20
+            '
+
+  tests-musl:
+    name: Tests Musl
+    needs: build-linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Test with Clang and musl on Alpine
+        run: |
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/workspace" \
+            --workdir /workspace \
+            "$ALPINE_IMAGE" \
+            sh -eux -c '
+              apk add --no-cache binutils clang21 linux-headers python3
+              clang++-21 --version
+              CC=clang-21 CXX=clang++-21 ./build -B .build-ci -j "$(nproc)" test
+              ./.build-ci/tst/test --top=20
+            '
+
+  tests-asan:
+    name: Tests ASan
+    needs: build-linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Test with AddressSanitizer
+        run: |
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/workspace" \
+            --workdir /workspace \
+            "$UBUNTU_IMAGE" \
+            bash -euxo pipefail -c '
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install --yes --no-install-recommends clang libclang-rt-dev llvm python3
+              export CC=clang
+              export CXX=clang++
+              export CXXFLAGS="-fsanitize=address -fno-sanitize-recover=all -fno-omit-frame-pointer -fPIE"
+              export LDFLAGS="-fsanitize=address -pie"
+              export ASAN_OPTIONS="detect_leaks=1:abort_on_error=1"
+              clang++ --version
+              ./build -B .build-ci -j "$(nproc)" test
+              ./.build-ci/tst/test --top=20
+            '
+
+  tests-ubsan:
+    name: Tests UBSan
+    needs: build-linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Test with UndefinedBehaviorSanitizer
+        run: |
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/workspace" \
+            --workdir /workspace \
+            "$UBUNTU_IMAGE" \
+            bash -euxo pipefail -c '
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install --yes --no-install-recommends clang libclang-rt-dev llvm python3
+              export CC=clang
+              export CXX=clang++
+              export CXXFLAGS="-fsanitize=undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -fPIE"
+              export LDFLAGS="-fsanitize=undefined -pie"
+              export UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1"
+              clang++ --version
+              ./build -B .build-ci -j "$(nproc)" test
+              ./.build-ci/tst/test --top=20
+            '
+
+  tests-darwin:
+    name: Tests Darwin
+    needs: build-linux
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install LLVM
+        run: brew install llvm@21
+
+      - name: Test on Darwin
+        run: |
+          LLVM_PREFIX="$(brew --prefix llvm@21)"
+          export CC="$LLVM_PREFIX/bin/clang"
+          export CXX="$LLVM_PREFIX/bin/clang++"
+          "$CXX" --version
+          ./build -B .build-ci -j "$(sysctl -n hw.ncpu)" test
+          ./.build-ci/tst/test --top=20
