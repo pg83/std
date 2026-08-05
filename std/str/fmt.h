@@ -7,4 +7,6 @@ namespace stl {
     void* formatI64Base10(i64 v, void* buf) noexcept;
     void* formatU64Base16(u64 v, void* buf) noexcept;
     void* formatLongDouble(long double v, void* buf) noexcept;
+    // Enough digits to reparse the exact same double; needs 32 bytes.
+    void* formatF64Roundtrip(double v, void* buf) noexcept;
 }

@@ -41,11 +41,9 @@ void* SmallObjAllocatorImpl::allocate(size_t size) {
 
     const size_t index = classFor(size);
     FreeList*& freeList = classes_[index];
-
     if (freeList == nullptr) {
         freeList = FreeList::create(pool_, minimumSize << index);
     }
-
     return freeList->allocate();
 }
 

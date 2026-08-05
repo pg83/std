@@ -2,7 +2,22 @@
 
 namespace stl {
     template <typename T>
-    using rem_ref = __remove_reference_t(T);
+    struct RemoveReference {
+        using Type = T;
+    };
+
+    template <typename T>
+    struct RemoveReference<T&> {
+        using Type = T;
+    };
+
+    template <typename T>
+    struct RemoveReference<T&&> {
+        using Type = T;
+    };
+
+    template <typename T>
+    using rem_ref = typename RemoveReference<T>::Type;
 
     // move semantics
     template <typename T>

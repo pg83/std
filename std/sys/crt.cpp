@@ -49,6 +49,7 @@ void stl::memZero(void* from, void* to) noexcept {
     }
 }
 
+#ifndef STL_EXTERNAL_MONOTONIC_NOW_US
 u64 stl::monotonicNowUs() noexcept {
     timespec ts;
 
@@ -56,3 +57,4 @@ u64 stl::monotonicNowUs() noexcept {
 
     return (u64)ts.tv_sec * 1000000ULL + (u64)ts.tv_nsec / 1000;
 }
+#endif

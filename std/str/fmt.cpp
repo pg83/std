@@ -50,3 +50,7 @@ void* stl::formatU64Base16(u64 v, void* ptr) noexcept {
 void* stl::formatLongDouble(long double v, void* buf) noexcept {
     return advancePtr(buf, sprintf((char*)buf, "%Lf", v));
 }
+
+void* stl::formatF64Roundtrip(double v, void* buf) noexcept {
+    return advancePtr(buf, sprintf((char*)buf, "%.17g", v));
+}
