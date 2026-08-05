@@ -81,7 +81,7 @@ jobs:
             --workdir /workspace \
             "$ALPINE_IMAGE" \
             sh -eux -c '
-              apk add --no-cache binutils clang21 linux-headers lld python3
+              apk add --no-cache binutils clang21 g++ linux-headers lld python3
               clang++-21 --version
               export CC="$(command -v clang-21)"
               export CXX="$(command -v clang++-21)"
