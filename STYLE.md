@@ -1,9 +1,13 @@
 # C++ style
 
-This project follows the house style used by `libstd`. Readability and a
-stable, unsurprising shape are more important than saving vertical space.
-`.clang-format` encodes the mechanical subset; the naming, organization and
-constructor rules below remain part of review.
+This is the shared house C++ style, common to all our projects. Readability
+and a stable, unsurprising shape are more important than saving vertical
+space. `.clang-format` encodes the mechanical subset; the naming, organization
+and constructor rules below remain part of review.
+
+This file is identical in every project that follows it. The few settings
+that differ per project — the project macro prefix, the public namespace, and
+any documented deviations — live in `STYLE_PRJ.md` next to this file.
 
 ## Names
 
@@ -12,9 +16,9 @@ constructor rules below remain part of review.
 - Private data members use `lowerCamelCase_` with a trailing underscore.
 - Compile-time constants use `lowerCamelCase` unless they are C-style ABI
   constants or macros.
-- Macros use `UPPER_SNAKE_CASE` and project-owned macros use a `SHITTY_`
-  prefix. Names required by a system header or protocol retain their external
-  spelling.
+- Macros use `UPPER_SNAKE_CASE` and project-owned macros use the project's
+  prefix named in `STYLE_PRJ.md`. Names required by a system header or
+  protocol retain their external spelling.
 - Acronyms are words inside an identifier: `HttpClient`, `IoReactor`,
   `utf8Decoder`, not `HTTPClient`, `IOReactor` or `utf8_decoder`.
 - Source filenames are lowercase `snake_case`. Every `.h` has a corresponding
@@ -52,9 +56,10 @@ struct Example: public Interface {
 };
 ```
 
-Shitty is a program, not a library. Do not wrap its code in a project namespace.
-Use anonymous namespaces for translation-unit-local declarations, indent their
-contents, and do not add comments to namespace-closing braces.
+A program's code is not wrapped in a project namespace; a library declares its
+public API in the namespace named in `STYLE_PRJ.md`. Use anonymous namespaces
+for translation-unit-local declarations, indent their contents, and do not add
+comments to namespace-closing braces.
 
 ## Constructors
 
@@ -145,18 +150,16 @@ functionCall(
 
 - Ordinary process-memory allocation failure is not recoverable in our Linux
   environment. Do not put `new`, `SmallObjAllocator::make`, `ObjPool::make`,
-  or container/buffer growth behind `try`/`catch`, and do not translate their
-  failure to `wl_client_post_no_memory`. If the process cannot allocate its
-  ordinary memory, let the exception reach the top-level handler.
+  or container/buffer growth behind `try`/`catch`. If the process cannot
+  allocate its ordinary memory, let the exception reach the top-level handler.
 - Validate and cap client-controlled sizes before allocating. This is input
   validation, not allocation-failure recovery.
 - Handle failures locally only when the operation has a meaningful recovery
-  path: filesystem and device I/O, explicit kernel mappings/resources,
-  Wayland resource creation, or GPU allocation/import with a real backend
-  fallback. Otherwise let the error end the session.
-- `STD_VERIFY` is for our own invariants. `VK_CHECK` may be caught at a narrow
-  GPU fallback boundary; without such a fallback its failure reaches the
-  top-level handler.
+  path: filesystem and device I/O, explicit kernel mappings/resources, or
+  resource creation with a real fallback. Otherwise let the error end the
+  session.
+- `STD_VERIFY` is for our own invariants; its failure reaches the top-level
+  handler.
 
 ## Comments and formatting
 
@@ -170,6 +173,7 @@ functionCall(
 - Keep at most one empty line between logical blocks and no empty line at the
   start of a block.
 
-Run `./style.py` to format all tracked C++ and Objective-C++ sources. Set
+Run `style.py` to format all tracked C++ and Objective-C++ sources; each
+project names the script's location and its exclusions in `STYLE_PRJ.md`. Set
 `CLANG_FORMAT` when the binary is not named `clang-format` on `PATH`.
-Generated files and `render.comp` are intentionally excluded.
+Generated files are intentionally excluded.

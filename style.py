@@ -8,8 +8,9 @@ import sys
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent
-SOURCE_PATTERNS = ("*.cpp", "*.h", "*.mm")
+ROOT = Path.cwd()
+SOURCE_PATTERNS = ("*.cpp", "*.h", "*.hpp", "*.mm")
+EXCLUDED_DIRS = {"third_party", "ext"}
 INITIALIZER_LIST = re.compile(r"^(?P<indent> +):(?=\s)")
 INCLUDE = re.compile(r'^#include\s+(?P<open>["<])(?P<path>[^">]+)[">]\s*(?P<tail>//.*)?$')
 
@@ -204,7 +205,7 @@ def main():
         return
 
     for path in files:
-        if "third_party" not in path.parts:
+        if not EXCLUDED_DIRS.intersection(path.parts):
             reorder_includes(path)
     format_sources(files)
     for path in files:

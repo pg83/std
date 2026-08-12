@@ -279,11 +279,18 @@ class BuildContext:
         self.command_host_deps: dict[Target, list[Target]] = {}
         self.file_hashes: dict[str, str] = {}
         self.includes: list[str] = []
-        self.cflags = shlex.split(os.environ.get("CFLAGS", ""))
-        self.cxxflags = shlex.split(os.environ.get("CXXFLAGS", ""))
-        self.cppflags = shlex.split(os.environ.get("CPPFLAGS", ""))
-        self.ldflags = shlex.split(os.environ.get("LDFLAGS", ""))
-        self.ldflags += shlex.split(os.environ.get("CTRFLAGS", ""))
+        self.external_cflags = shlex.split(os.environ.get("CFLAGS", ""))
+        self.external_cxxflags = shlex.split(os.environ.get("CXXFLAGS", ""))
+        self.external_cppflags = shlex.split(os.environ.get("CPPFLAGS", ""))
+        self.external_ldflags = shlex.split(os.environ.get("LDFLAGS", ""))
+        self.external_ldflags += shlex.split(os.environ.get("CTRFLAGS", ""))
+        # Expose the external flags while build.py is evaluated. load() splits
+        # them back out afterwards so command-line flags can be emitted last
+        # and override project defaults (for example, -std=c++17 for Clang).
+        self.cflags = self.external_cflags.copy()
+        self.cxxflags = self.external_cxxflags.copy()
+        self.cppflags = self.external_cppflags.copy()
+        self.ldflags = self.external_ldflags.copy()
         self.host_cflags = shlex.split(os.environ.get("HOST_CFLAGS", ""))
         self.host_cxxflags = shlex.split(os.environ.get("HOST_CXXFLAGS", ""))
         self.host_cppflags = shlex.split(os.environ.get("HOST_CPPFLAGS", ""))
@@ -300,11 +307,13 @@ class BuildContext:
             found = shutil.which(name)
             if found is None:
                 raise BuildError(f"command not found in PATH: {name}")
-            # realpath, not abspath: PATH entries are usually realm symlinks
-            # into /ix/store/<hash>-.../; hashing the store path makes an
-            # environment drift change the node UID instead of silently
-            # serving artifacts built by another toolchain
-            cached = os.path.realpath(found)
+            # Preserve the name selected through PATH. Multi-call binaries use
+            # argv[0] to select an applet (for example Alpine's /bin/sh ->
+            # busybox), so replacing the symlink with its real path changes
+            # the command's meaning. Nix PATH entries already contain their
+            # store hash, making the absolute invocation path a stable UID
+            # input without dereferencing the final symlink.
+            cached = os.path.abspath(found)
             self.tool_paths[name] = cached
         return cached
 
@@ -399,6 +408,37 @@ class BuildContext:
             ).strip()
         except (OSError, subprocess.CalledProcessError) as exc:
             raise BuildError(f"pkg-config variable {package}:{variable} failed: {exc}") from exc
+
+    def have_header(self, header: str) -> bool:
+        if not re.fullmatch(r"[A-Za-z0-9_./+-]+", header):
+            raise BuildError(f"invalid header name: {header!r}")
+        flags = [
+            *self.cppflags,
+            *self.cflags,
+            *self.cxxflags,
+        ]
+        source = f"#include <{header}>\n"
+        command = [
+            *self._compiler_command(self.cxx),
+            *flags,
+            "-E", "-x", "c++", "-",
+        ]
+        command = [
+            argument.replace(S, str(self.source_root)).replace(B, str(self.build_root))
+            for argument in command
+        ]
+        try:
+            subprocess.run(
+                command,
+                input=source,
+                text=True,
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except (OSError, subprocess.CalledProcessError):
+            return False
+        return True
 
     def glob(self, pattern: str) -> list[str]:
         pattern = str(pattern)
@@ -517,9 +557,11 @@ class BuildContext:
         build_module.target = self.target
         for name in ("cflags", "cxxflags", "cppflags", "ldflags"):
             setattr(build_module, name, getattr(self, name).copy())
+        build_module.have_header = self.have_header
         module.__dict__.update({
             "pkg_config": self.pkg_config,
             "pkg_config_variable": self.pkg_config_variable,
+            "have_header": self.have_header,
             "dependency": self.interface,
             "import_build": self.import_build,
             "library": self.library,
@@ -548,7 +590,17 @@ class BuildContext:
                 sys.modules["build.flags"] = previous_flags
         self.includes = [_include_path(path) for path in _items(build_module.includes)]
         for name in ("cflags", "cxxflags", "cppflags", "ldflags"):
-            setattr(self, name, [str(flag) for flag in _items(getattr(build_module, name))])
+            values = [str(flag) for flag in _items(getattr(build_module, name))]
+            external_name = "external_" + name
+            external = getattr(self, external_name)
+            # The ordinary `build.foo += [...]` form preserves the initial
+            # external prefix. Keep supporting build files that deliberately
+            # replace or reorder the whole list by treating their result as-is.
+            if values[:len(external)] == external:
+                values = values[len(external):]
+            else:
+                setattr(self, external_name, [])
+            setattr(self, name, values)
         self._infer_names(module)
         return module
 
@@ -861,6 +913,11 @@ class BuildContext:
             # Appended past the imported link line, after the archives it
             # references; static resolution order stays correct.
             root.commands[-1].append(dep.output)
+            # The libraries the dep resolves against follow it for the same
+            # reason. The imported graph never saw this dependency, so it
+            # cannot have asked for them, and only CFLAGS, CXXFLAGS and
+            # CPPFLAGS reach an import through the environment.
+            root.commands[-1].extend(self._link_flags([dep]))
             root.deps.append(dep.root)
 
         imported_nodes = self._register_imported_nodes(graph, [root])
@@ -1114,6 +1171,13 @@ class BuildContext:
             common.extend(target.cflags)
             if cxx:
                 common.extend(target.cxxflags)
+            # Environment flags are user overrides, so keep them after flags
+            # supplied by build.py and by the target itself. CFLAGS applies to
+            # both C and C++ compilation, matching conventional build tools.
+            common.extend(self.external_cppflags)
+            common.extend(self.external_cflags)
+            if cxx:
+                common.extend(self.external_cxxflags)
             include_roots = _uniq([*global_includes, *self._include_roots_from_flags(common)])
             rel = src.replace(S + "/", "").replace(B + "/", "generated/")
             rel = re.sub(r"[^A-Za-z0-9_./+-]", "_", rel)
@@ -1163,7 +1227,14 @@ class BuildContext:
             lib_nodes = [lib.root for lib in libraries if lib.root is not None]
             other_nodes = [dep.root for dep in target.deps if dep.root is not None and dep.kind != "library"]
             archives = [lib.root.outputs[0] for lib in libraries if lib.root is not None]
-            ldflags = self.ldflags + self._link_flags(target.deps) + target.ldflags
+            compile_link_flags = self._compile_link_flags(target.uses_cxx)
+            ldflags = (
+                self.ldflags
+                + self._link_flags(target.deps)
+                + target.ldflags
+                + self.external_ldflags
+                + compile_link_flags
+            )
             linker = target.linker or (self.cxx if target.uses_cxx else self.cc)
             command = [
                 *self._compiler_command(linker, allow_other=target.linker is not None),
@@ -1180,6 +1251,21 @@ class BuildContext:
         self._add_node(root)
         target.root = root
         target.nodes = [*objects, root]
+
+    def _compile_link_flags(self, uses_cxx: bool) -> list[str]:
+        """Forward compiler-driver flags that select link-time runtimes."""
+        flags = [*self.external_cflags]
+        if uses_cxx:
+            flags.extend(self.external_cxxflags)
+        return _uniq(
+            flag for flag in flags
+            if flag.startswith((
+                "-fsanitize=",
+                "-fno-sanitize=",
+                "-fsanitize-recover=",
+                "-fno-sanitize-recover=",
+            ))
+        )
 
     def _usage_compile_flags(self, targets: Iterable[Target], cxx: bool) -> list[str]:
         out: list[str] = []
@@ -1292,7 +1378,11 @@ class BuildContext:
                 pass
             else:
                 if not stat.S_ISLNK(info.st_mode):
-                    raise BuildError(f"refusing to replace non-symlink: {link}")
+                    # A real file/dir shares this target's name: skip the
+                    # convenience symlink rather than clobbering source data.
+                    print(f"build: not publishing {target.name}: {link} exists",
+                          file=sys.stderr)
+                    continue
             output = self.physical(target.root.outputs[0])
             publications.append((link, os.path.relpath(output, self.source_root)))
         for link, relative in publications:
@@ -1892,17 +1982,19 @@ def strace_main(argv: list[str]) -> int:
 
 class Executor:
     def __init__(self, context: BuildContext, jobs: int, verbose: bool, keep_going: bool,
-                 ninja: bool = False, strace: bool = False):
+                 ninja: bool = False, strace: bool = False,
+                 cache_root: Path | None = None):
         self.context = context
         self.jobs = max(1, jobs)
         self.verbose = verbose
         self.keep_going = keep_going
         self.ninja = ninja
         self.strace = strace
-        self.cas = context.build_root / "cas"
-        self.uids = context.build_root / "uid"
-        self.tmp = context.build_root / "tmp"
-        self.grb = context.build_root / "grb"
+        self.cache_root = cache_root or context.build_root
+        self.cas = self.cache_root / "cas"
+        self.uids = self.cache_root / "uid"
+        self.tmp = self.cache_root / "tmp"
+        self.grb = self.cache_root / "grb"
         self.print_lock = threading.Lock()
         self.progress_done = 0
         self.progress_total = 0
@@ -2049,6 +2141,8 @@ class Executor:
         args = [self._mount(arg, work) for arg in command]
         env = os.environ.copy()
         env.update({key: self._mount(value, work) for key, value in node.env.items()})
+        env["BUILD_JOBS"] = str(self.jobs)
+        env["TMPDIR"] = str(work)
         cwd = self._mount(node.cwd, work)
         if not args:
             raise BuildError(f"empty command in {node.outputs}")
@@ -2063,7 +2157,16 @@ class Executor:
             # Through the interpreter, not the shebang: the nix sandbox has
             # no /usr/bin/env.
             args = [sys.executable, str(Path(__file__).resolve()), "strace", payload, "--", *args]
-        result = subprocess.run(args, cwd=cwd, env=env, text=True, stdout=None, stderr=subprocess.PIPE)
+        result = subprocess.run(
+            args,
+            cwd=cwd,
+            env=env,
+            text=True,
+            encoding="utf-8",
+            errors="surrogateescape",
+            stdout=None,
+            stderr=subprocess.PIPE,
+        )
         if result.returncode != 0:
             detail = result.stderr.rstrip()
             message = f"command exited {result.returncode}: {shlex.join(display_args)}"
@@ -2371,6 +2474,10 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("targets", nargs="*")
     parser.add_argument("-B", "--build-dir", default=os.environ.get("B", ".build"))
     parser.add_argument(
+        "--cache-dir", default=os.environ.get("BUILD_CACHE_DIR"),
+        help="shared CAS/UID root; defaults to the build root",
+    )
+    parser.add_argument(
         "--target",
         help="target triple; defaults to the current host platform",
     )
@@ -2434,6 +2541,8 @@ def flag_help(build_file: Path, source_root: Path, build_dir: str,
 
 
 def main(argv: list[str] | None = None) -> int:
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="surrogateescape")
     parser = make_parser()
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     build_file = (Path(args.build_file).resolve() if args.build_file
@@ -2488,9 +2597,14 @@ def main(argv: list[str] | None = None) -> int:
         selected = _uniq(selected)
         roots = _uniq(target.root for target in selected if target.root is not None)
         context.calculate_uids(roots)
+        cache_root = (
+            source_root / args.cache_dir
+            if args.cache_dir is not None
+            else context.build_root
+        )
         if args.clear:
             for directory in ("cas", "uid", "tmp", "grb"):
-                shutil.rmtree(context.build_root / directory, ignore_errors=True)
+                shutil.rmtree(cache_root / directory, ignore_errors=True)
         context.build_root.mkdir(parents=True, exist_ok=True)
         Executor(
             context,
@@ -2499,6 +2613,7 @@ def main(argv: list[str] | None = None) -> int:
             args.keep_going,
             args.ninja,
             args.strace,
+            cache_root,
         ).run(roots)
         if publish:
             context.publish(publish)
