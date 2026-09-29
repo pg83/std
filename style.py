@@ -3,6 +3,7 @@
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -11,8 +12,21 @@ from pathlib import Path
 ROOT = Path.cwd()
 SOURCE_PATTERNS = ("*.cpp", "*.h", "*.hpp", "*.mm")
 EXCLUDED_DIRS = {"third_party", "ext"}
+# Vendored trees keep their upstream formatting.
+VENDORED_ROOTS = (
+    ROOT / "bin" / "vulkan" / "llvm",
+    ROOT / "bin" / "vulkan" / "musl",
+    ROOT / "bin" / "vulkan" / "png",
+    ROOT / "bin" / "vulkan" / "vulkan",
+    ROOT / "bin" / "vulkan" / "zlib",
+)
 INITIALIZER_LIST = re.compile(r"^(?P<indent> +):(?=\s)")
 INCLUDE = re.compile(r'^#include\s+(?P<open>["<])(?P<path>[^">]+)[">]\s*(?P<tail>//.*)?$')
+RAW_STRING = re.compile(r'(?:u8|u|U|L)?R"(?P<delimiter>[^ ()\\\t\r\n]{0,16})\(')
+
+
+def vendored(path):
+    return any(path.is_relative_to(root) for root in VENDORED_ROOTS)
 
 
 def source_files(arguments):
@@ -22,7 +36,11 @@ def source_files(arguments):
     output = subprocess.check_output(
         ["git", "ls-files", "-z", "--", *SOURCE_PATTERNS], cwd=ROOT
     )
-    return [ROOT / name for name in output.decode().split("\0") if name]
+    return [
+        path
+        for name in output.decode().split("\0")
+        if name and not vendored(path := ROOT / name)
+    ]
 
 
 def format_sources(files):
@@ -138,6 +156,97 @@ def restore_constructor_braces(path):
         path.write_text("".join(lines))
 
 
+def strip_brace_boundary_blank_lines(path):
+    lines = path.read_text().splitlines(keepends=True)
+    code_lines = []
+    block_comment = False
+    quote = None
+    raw_close = None
+
+    for line in lines:
+        code = []
+        column = 0
+        while column < len(line):
+            if raw_close is not None:
+                closing = line.find(raw_close, column)
+                if closing == -1:
+                    column = len(line)
+                else:
+                    column = closing + len(raw_close)
+                    raw_close = None
+                continue
+
+            if block_comment:
+                closing = line.find("*/", column)
+                if closing == -1:
+                    column = len(line)
+                else:
+                    column = closing + 2
+                    block_comment = False
+                continue
+
+            if quote is not None:
+                char = line[column]
+                if char == "\\":
+                    column += 2
+                elif char == quote:
+                    quote = None
+                    column += 1
+                else:
+                    column += 1
+                continue
+
+            if line.startswith("//", column):
+                break
+            if line.startswith("/*", column):
+                block_comment = True
+                column += 2
+                continue
+
+            raw_match = RAW_STRING.match(line, column)
+            if raw_match is not None and (
+                column == 0 or not (line[column - 1].isalnum() or line[column - 1] == "_")
+            ):
+                raw_close = ")" + raw_match.group("delimiter") + '"'
+                column = raw_match.end()
+                continue
+
+            char = line[column]
+            if char in ('"', "'"):
+                quote = char
+                column += 1
+                continue
+            code.append(char)
+            column += 1
+
+        if quote is not None and line.endswith(("\n", "\r")):
+            content = line.rstrip("\r\n")
+            backslashes = len(content) - len(content.rstrip("\\"))
+            if backslashes % 2 == 0:
+                quote = None
+        code_lines.append("".join(code))
+
+    keep = [True] * len(lines)
+    line_number = 0
+    while line_number < len(lines):
+        if lines[line_number].strip(" \t\r\n"):
+            line_number += 1
+            continue
+        end = line_number + 1
+        while end < len(lines) and not lines[end].strip(" \t\r\n"):
+            end += 1
+        after_open = line_number > 0 and code_lines[line_number - 1].rstrip().endswith("{")
+        before_close = end < len(lines) and code_lines[end].lstrip().startswith("}")
+        if after_open or before_close:
+            for blank in range(line_number, end):
+                keep[blank] = False
+        line_number = end
+
+    replacement = "".join(line for line, retain in zip(lines, keep) if retain)
+    if replacement != "".join(lines):
+        path.write_text(replacement)
+
+
 def reorder_includes(path):
     """Rewrite the leading include block into the canonical order: the
     paired header, project headers, <std/...>, then everything else — least
@@ -150,9 +259,21 @@ def reorder_includes(path):
 
     pragma = []
     includes = []
+    preamble = []
     end = 0
+    in_comment = False
     for line_number, line in enumerate(lines):
         stripped = line.strip()
+        if not includes and (in_comment or stripped.startswith("/*")):
+            # The license header (and any other leading comment) sits
+            # above the include run; keep it in place verbatim.
+            preamble.append(line)
+            if in_comment:
+                in_comment = not stripped.endswith("*/")
+            else:
+                in_comment = not (stripped.endswith("*/") and len(stripped) > 3)
+            end = line_number + 1
+            continue
         if not stripped:
             end = line_number + 1
             continue
@@ -170,20 +291,27 @@ def reorder_includes(path):
         return
 
     paired = path.stem + ".h"
-    groups = ([], [], [], [])
+    groups = ([], [], [], [], [])
     for open_char, include_path, line in includes:
         if open_char == '"' and include_path == paired and path.suffix != ".h":
             group = 0
         elif open_char == '"':
             group = 1
-        elif include_path.startswith("std/"):
+        elif include_path.startswith("lib/"):
+            # Cross-library project headers by full path, e.g.
+            # <lib/vterm/...>: still project code, ahead of libstd.
             group = 2
-        else:
+        elif include_path.startswith("std/"):
             group = 3
+        else:
+            group = 4
         groups[group].append((include_path, line.rstrip("\n").rstrip("\r")))
 
     newline = "\r\n" if lines[0].endswith("\r\n") else "\n"
-    block = "".join(pragma)
+    block = "".join(preamble)
+    if preamble:
+        block += newline
+    block += "".join(pragma)
     if pragma:
         block += newline
     parts = []
@@ -200,16 +328,24 @@ def reorder_includes(path):
 
 
 def main():
-    files = source_files(sys.argv[1:])
+    command = shlex.split(os.environ.get("CLANG_FORMAT", "clang-format"))
+    if shutil.which(command[0]) is None:
+        raise SystemExit(f"style.py: {command[0]} not found; nothing was touched")
+
+    files = [
+        path
+        for path in source_files(sys.argv[1:])
+        if not EXCLUDED_DIRS.intersection(path.parts)
+    ]
     if not files:
         return
 
     for path in files:
-        if not EXCLUDED_DIRS.intersection(path.parts):
-            reorder_includes(path)
+        reorder_includes(path)
     format_sources(files)
     for path in files:
         restore_constructor_braces(path)
+        strip_brace_boundary_blank_lines(path)
 
 
 if __name__ == "__main__":
